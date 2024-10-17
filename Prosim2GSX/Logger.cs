@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 
-namespace Fenix2GSX
+namespace Prosim2GSX
 {
     public enum LogLevel
     {

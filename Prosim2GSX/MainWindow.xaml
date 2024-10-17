@@ -1,11 +1,11 @@
-﻿<Window x:Class="Fenix2GSX.MainWindow"
+﻿<Window x:Class="Prosim2GSX.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:Fenix2GSX"
+        xmlns:local="clr-namespace:Prosim2GSX"
         mc:Ignorable="d"
-        Title="Fenix2GSX" Height="792" Width="532" ResizeMode="NoResize" IsVisibleChanged="Window_IsVisibleChanged" Closing="Window_Closing">
+        Title="Prosim2GSX" Height="792" Width="532" ResizeMode="NoResize" IsVisibleChanged="Window_IsVisibleChanged" Closing="Window_Closing">
     <Window.Resources>
         <Style TargetType="GroupBox">
             <Setter Property="HeaderTemplate">
@@ -32,7 +32,7 @@
             <StackPanel Orientation="Horizontal">
                 <Label Name="lblConnStatMSFS" Height="40" VerticalContentAlignment="Center" VerticalAlignment="Center" TextBlock.Foreground="Red" Padding="8,0,16,0">MSFS</Label>
                 <Label Name="lblConnStatSimConnect" Height="40" VerticalContentAlignment="Center" VerticalAlignment="Center" TextBlock.Foreground="Red" Padding="8,0,16,0">SimConnect</Label>
-                <Label Name="lblConnStatFenix" Height="40" VerticalContentAlignment="Center" VerticalAlignment="Center" TextBlock.Foreground="Red" Padding="8,0,16,0">Fenix</Label>
+                <Label Name="lblConnStatProsim" Height="40" VerticalContentAlignment="Center" VerticalAlignment="Center" TextBlock.Foreground="Red" Padding="8,0,16,0">Prosim</Label>
                 <Label Name="lblConnStatSession" Height="40" VerticalContentAlignment="Center" VerticalAlignment="Center" TextBlock.Foreground="Red" Padding="8,0,16,0">Session</Label>
             </StackPanel>
         </GroupBox>

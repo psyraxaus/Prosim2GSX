@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
 
-namespace Fenix2GSX
+namespace Prosim2GSX
 {
     public partial class MainWindow : Window
     {
@@ -82,9 +82,9 @@ namespace Fenix2GSX
                 lblConnStatSimConnect.Foreground = new SolidColorBrush(Colors.Red);
 
             if (serviceModel.IsFenixRunning)
-                lblConnStatFenix.Foreground = new SolidColorBrush(Colors.DarkGreen);
+                lblConnStatProsim.Foreground = new SolidColorBrush(Colors.DarkGreen);
             else
-                lblConnStatFenix.Foreground = new SolidColorBrush(Colors.Red);
+                lblConnStatProsim.Foreground = new SolidColorBrush(Colors.Red);
 
             if (serviceModel.IsSessionRunning)
                 lblConnStatSession.Foreground = new SolidColorBrush(Colors.DarkGreen);

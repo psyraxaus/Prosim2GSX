@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace Fenix2GSX
+namespace Prosim2GSX
 {
     public enum MOBIFLIGHT_CLIENT_DATA_ID
     {

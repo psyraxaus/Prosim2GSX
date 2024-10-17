@@ -2,7 +2,7 @@
 using System;
 using System.Linq;
 
-namespace Fenix2GSX
+namespace Prosim2GSX
 {
     public class FenixContoller
     {

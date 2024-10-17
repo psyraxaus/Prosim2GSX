@@ -3,7 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using H.NotifyIcon;
 using System.Windows;
 
-namespace Fenix2GSX
+namespace Prosim2GSX
 {
     public partial class NotifyIconViewModel : ObservableObject
     {

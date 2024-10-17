@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 
-namespace Fenix2GSX
+namespace Prosim2GSX
 {
     public class ServiceController
     {

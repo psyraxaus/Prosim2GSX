@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 
-namespace Fenix2GSX
+namespace Prosim2GSX
 {
     public partial class App : Application
     {
@@ -47,7 +47,7 @@ namespace Fenix2GSX
             Cef.Shutdown();
             base.OnExit(e);
 
-            Logger.Log(LogLevel.Information, "App:OnExit", "Fenix2GSX exiting ...");
+            Logger.Log(LogLevel.Information, "App:OnExit", "Prosim2GSX exiting ...");
         }
 
         protected void OnTick(object sender, EventArgs e)
@@ -60,7 +60,7 @@ namespace Fenix2GSX
 
         protected void InitLog()
         {
-            string logFilePath = Model.GetSetting("logFilePath", "Fenix2GSX.log");
+            string logFilePath = Model.GetSetting("logFilePath", "Prosim2GSX.log");
             string logLevel = Model.GetSetting("logLevel", "Debug");
             LoggerConfiguration loggerConfiguration = new LoggerConfiguration().WriteTo.File(logFilePath, rollingInterval: RollingInterval.Day, retainedFileCountLimit: 3,
                                                     outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message} {NewLine}{Exception}");
@@ -72,14 +72,14 @@ namespace Fenix2GSX
                 loggerConfiguration.MinimumLevel.Information();
             Log.Logger = loggerConfiguration.CreateLogger();
             Log.Information($"-----------------------------------------------------------------------");
-            Logger.Log(LogLevel.Information, "App:InitLog", $"Fenix2GSX started! Log Level: {logLevel} Log File: {logFilePath}");
+            Logger.Log(LogLevel.Information, "App:InitLog", $"Prosim2GSX started! Log Level: {logLevel} Log File: {logFilePath}");
         }
 
         protected void InitSystray()
         {
             Logger.Log(LogLevel.Information, "App:InitSystray", $"Creating SysTray Icon ...");
             notifyIcon = (TaskbarIcon)FindResource("NotifyIcon");
-            notifyIcon.Icon = GetIcon("phoenix.ico");
+            notifyIcon.Icon = GetIcon("logo.ico");
             notifyIcon.ForceCreate(false);
         }
 
@@ -93,7 +93,7 @@ namespace Fenix2GSX
 
         public Icon GetIcon(string filename)
         {
-            using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream($"Fenix2GSX.{filename}");
+            using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream($"Prosim2GSX.{filename}");
             return new Icon(stream);
         }
     }

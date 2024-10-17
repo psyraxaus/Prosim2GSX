@@ -2,7 +2,7 @@
 using System.Configuration;
 using System.Globalization;
 
-namespace Fenix2GSX
+namespace Prosim2GSX
 {
     public class ServiceModel
     {

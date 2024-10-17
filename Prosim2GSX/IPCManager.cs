@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Threading;
 
-namespace Fenix2GSX
+namespace Prosim2GSX
 {
     public static class IPCManager
     {

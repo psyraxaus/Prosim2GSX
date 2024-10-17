@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 
-namespace Fenix2GSX
+namespace Prosim2GSX
 {
     public class MobiSimConnect : IDisposable
     {
@@ -13,7 +13,7 @@ namespace Fenix2GSX
         public const uint MOBIFLIGHT_MESSAGE_SIZE = 1024;
 
         public const uint WM_PILOTSDECK_SIMCONNECT = 0x1988;
-        public const string CLIENT_NAME = "Fenix2GSX";
+        public const string CLIENT_NAME = "Prosim2GSX";
         public const string PILOTSDECK_CLIENT_DATA_NAME_SIMVAR = $"{CLIENT_NAME}.LVars";
         public const string PILOTSDECK_CLIENT_DATA_NAME_COMMAND = $"{CLIENT_NAME}.Command";
         public const string PILOTSDECK_CLIENT_DATA_NAME_RESPONSE = $"{CLIENT_NAME}.Response";

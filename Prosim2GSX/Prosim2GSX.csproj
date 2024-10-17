@@ -5,14 +5,14 @@
     <TargetFramework>net7.0-windows10.0.17763.0</TargetFramework>
     <Nullable>disable</Nullable>
     <UseWPF>true</UseWPF>
-    <StartupObject>Fenix2GSX.App</StartupObject>
-    <ApplicationIcon>phoenix.ico</ApplicationIcon>
+    <StartupObject>Prosim2GSX.App</StartupObject>
+    <ApplicationIcon>logo.ico</ApplicationIcon>
     <PlatformTarget>x64</PlatformTarget>
-    <Title>Fenix2GSX</Title>
+    <Title>Prosim2GSX</Title>
     <Version>0.3.0</Version>
-    <Authors>Fragtality</Authors>
+    <Authors>Fragtality, Johncarlo Maddalena</Authors>
     <Copyright>Copyright © 2023</Copyright>
-    <Description>GSX Integration and Automation for the Fenix A320</Description>
+    <Description>GSX Integration and Automation for the Prosim A320</Description>
     <AssemblyVersion></AssemblyVersion>
     <FileVersion></FileVersion>
   </PropertyGroup>
@@ -26,7 +26,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="phoenix.ico">
+    <EmbeddedResource Include="logo.ico">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </EmbeddedResource>
   </ItemGroup>
