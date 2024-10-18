@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Prosim2GSX"
         mc:Ignorable="d"
-        Title="Prosim2GSX" Height="792" Width="532" ResizeMode="NoResize" IsVisibleChanged="Window_IsVisibleChanged" Closing="Window_Closing">
+        Title="Prosim2GSX" Height="792" Width="792" ResizeMode="NoResize" IsVisibleChanged="Window_IsVisibleChanged" Closing="Window_Closing">
     <Window.Resources>
         <Style TargetType="GroupBox">
             <Setter Property="HeaderTemplate">
@@ -36,8 +36,24 @@
                 <Label Name="lblConnStatSession" Height="40" VerticalContentAlignment="Center" VerticalAlignment="Center" TextBlock.Foreground="Red" Padding="8,0,16,0">Session</Label>
             </StackPanel>
         </GroupBox>
-
-        <GroupBox Grid.Row="1" BorderBrush="DarkGray" BorderThickness="1" Margin="10,10,10,8">
+        <GroupBox Grid.Row="1" BorderBrush="DarkGray" BorderThickness="1" Margin="10,10,465,8">
+            <GroupBox.Header>Prosim Settings</GroupBox.Header>
+            <StackPanel Orientation="Vertical" Margin="0,6,0,0">
+                <StackPanel Orientation="Vertical" Width="303">
+                    <StackPanel Orientation="Horizontal" Width="422">
+                        <Label Margin="4,5,7,0" ToolTip="Enter the Prosim hostname or IP">Prosim Hostname:</Label>
+                        <TextBox Name="txtProsimHostname" Margin="4,7,7,6" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Height="24" MaxHeight="24" MinHeight="24" Width="96" MinWidth="96" MaxWidth="96" LostFocus="txtProsimHostname_LostFocus" KeyUp="txtProsimHostname_KeyUp" ToolTip="Enter your Prosim Hostname here"></TextBox>
+                    </StackPanel>
+                    <CheckBox Name="chkUseProsimEFB" Margin="4,7,7,2" VerticalContentAlignment="Center" Click="chkUseProsimEFB_Click" ToolTip="You can now load the flight plan using the EFB instead of pulling from Simbrief.&#x0a;If you want to use the OFP from Simbrief uncheck this box.">
+                        <TextBlock>Use EFB to load Flightplan</TextBlock>
+                    </CheckBox>
+                    <CheckBox Name="chkUseActualPaxValue" Margin="4,7,7,2" VerticalContentAlignment="Center" Click="chkUseActualPaxValue_Click" ToolTip="The SimBrief Flightplan includes a Field for actual Passenger Count which can be different from the planned Passenger Count.&#x0a;If you don't want that (light) Randomization disable this Setting.">
+                        <TextBlock>Use actual Passenger Count from SimBrief OFP</TextBlock>
+                    </CheckBox>
+                </StackPanel>
+            </StackPanel>
+        </GroupBox>
+        <GroupBox Grid.Row="1" BorderBrush="DarkGray" BorderThickness="1" Margin="332,10,10,8">
             <GroupBox.Header>Service Calls</GroupBox.Header>
             <StackPanel Orientation="Vertical">
                 <CheckBox Name="chkAutoReposition" Margin="8,8,8,0" VerticalContentAlignment="Center" Click="chkAutoReposition_Click" ToolTip="Uses the 'Reposition here at current Gate' Option of GSX to position the Plane in accordance with the Airport Profile.&#x0a;The Repositioning is done when the Flight-Session becomes ready and after the configurable Delay below.">

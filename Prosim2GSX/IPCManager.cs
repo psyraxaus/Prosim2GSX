@@ -76,32 +76,6 @@ namespace Prosim2GSX
             }
         }
         
-        public static bool WaitForFenixBinary(ServiceModel model)
-        {
-            if (!IsSimRunning())
-                return false;
-
-            bool isRunning = IsProcessRunning(model.FenixExecutable);
-            if (!isRunning)
-            {
-                do
-                {
-                    Logger.Log(LogLevel.Information, "IPCManager:WaitForFenixBinary", $"{model.FenixExecutable} is not running - waiting {waitDuration / 2 / 1000}s for Retry");
-                    Thread.Sleep(waitDuration / 2);
-
-                    isRunning = IsProcessRunning(model.FenixExecutable);
-                }
-                while (!isRunning && IsSimRunning() && !model.CancellationRequested);
-
-                return isRunning && IsSimRunning();
-            }
-            else
-            {
-                Logger.Log(LogLevel.Information, "IPCManager:WaitForFenixBinary", $"{model.FenixExecutable} is running");
-                return true;
-            }
-        }
-        
         public static bool WaitForSessionReady(ServiceModel model)
         {
             int waitDuration = 5000;

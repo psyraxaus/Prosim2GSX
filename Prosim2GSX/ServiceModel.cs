@@ -8,12 +8,13 @@ namespace Prosim2GSX
     {
         public bool ServiceExited { get; set; } = false;
         public bool CancellationRequested { get; set; } = false;
-
+        public bool IsProsimRunning { get; set; } = false;
         public bool IsSimRunning { get; set; } = false;
-        public bool IsFenixRunning { get; set; } = false;
         public bool IsSessionRunning { get; set; } = false;
-
-        public string FenixExecutable { get; set; }
+        public string SimBriefURL { get; set; }
+        public string SimBriefID { get; set; }
+        public bool UseProsimEFB { get; set; }
+        public string ProsimHostname { get; set; }
         public bool WaitForConnect { get; set; }
         public bool TestArrival { get; set; }
         public bool GsxVolumeControl { get; set; }
@@ -34,6 +35,7 @@ namespace Prosim2GSX
         public float RefuelRate { get; set; }
         public string RefuelUnit { get; set; }
         public bool SynchBypass { get; set; }
+        public bool UseActualPaxValue { get; set; }
 
         protected Configuration AppConfiguration;
 
@@ -52,7 +54,10 @@ namespace Prosim2GSX
             AppConfiguration = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
             var settings = AppConfiguration.AppSettings.Settings;
 
-            FenixExecutable = Convert.ToString(settings["FenixExecutable"].Value) ?? "FenixSystem";
+            SimBriefURL = Convert.ToString(settings["simbriefURL"].Value);
+            SimBriefID = Convert.ToString(settings["pilotID"].Value);
+            UseProsimEFB = Convert.ToBoolean(settings["useProsimEFB"].Value);
+            ProsimHostname = Convert.ToString(settings["prosimHostname"].Value);
             WaitForConnect = Convert.ToBoolean(settings["waitForConnect"].Value);
             TestArrival = Convert.ToBoolean(settings["testArrival"].Value);
             GsxVolumeControl = Convert.ToBoolean(settings["gsxVolumeControl"].Value);
@@ -73,6 +78,7 @@ namespace Prosim2GSX
             RefuelRate = Convert.ToSingle(settings["refuelRate"].Value, CultureInfo.InvariantCulture);
             RefuelUnit = Convert.ToString(settings["refuelUnit"].Value);
             SynchBypass = Convert.ToBoolean(settings["synchBypass"].Value);
+            UseActualPaxValue = Convert.ToBoolean(settings["useActualValue"].Value);
         }
 
         protected void SaveConfiguration()
@@ -101,7 +107,7 @@ namespace Prosim2GSX
             if (RefuelUnit == "KGS")
                 return RefuelRate;
             else
-                return RefuelRate / FenixContoller.weightConversion;
+                return RefuelRate / ProsimController.weightConversion;
         }
     }
 }

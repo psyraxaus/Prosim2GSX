@@ -6,11 +6,14 @@ namespace Prosim2GSX
     public class ServiceController
     {
         protected ServiceModel Model;
+        protected ProsimController ProsimController;
+        protected FlightPlan FlightPlan;
         protected int Interval = 1000;
 
         public ServiceController(ServiceModel model)
         {
             this.Model = model;
+            this.ProsimController = new(model);
         }
 
         public void Run()
@@ -59,10 +62,10 @@ namespace Prosim2GSX
             if (!IPCManager.WaitForConnection(Model))
                 return false;
 
-            if (!IPCManager.WaitForFenixBinary(Model))
+            if (!ProsimController.IsProsimConnectionAvailable(Model))
                 return false;
             else
-                Model.IsFenixRunning = true;
+                Model.IsProsimRunning = true;
 
             if (!IPCManager.WaitForSessionReady(Model))
                 return false;
@@ -79,7 +82,7 @@ namespace Prosim2GSX
                 IPCManager.SimConnect?.Disconnect();
                 IPCManager.SimConnect = null;
                 Model.IsSessionRunning = false;
-                Model.IsFenixRunning = false;
+                Model.IsProsimRunning = false;
             }
             catch (Exception ex)
             {
@@ -89,12 +92,12 @@ namespace Prosim2GSX
 
         protected void ServiceLoop()
         {
-            var gsxController = new GsxController(Model);
+            var gsxController = new GsxController(Model, ProsimController, FlightPlan);
             int elapsedMS = gsxController.Interval;
             int delay = 100;
             Thread.Sleep(1000);
             Logger.Log(LogLevel.Information, "ServiceController:ServiceLoop", "Starting Service Loop");
-            while (!Model.CancellationRequested && IPCManager.IsProcessRunning(Model.FenixExecutable) && IPCManager.IsSimRunning() && IPCManager.IsCamReady())
+            while (!Model.CancellationRequested && Model.IsProsimRunning && IPCManager.IsSimRunning() && IPCManager.IsCamReady())
             {
                 try
                 {

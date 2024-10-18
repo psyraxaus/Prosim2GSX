@@ -28,6 +28,9 @@ namespace Prosim2GSX
 
         protected void LoadSettings()
         {
+            txtProsimHostname.Text = serviceModel.ProsimHostname;
+            chkUseProsimEFB.IsChecked = serviceModel.UseProsimEFB;
+            chkUseActualPaxValue.IsChecked = serviceModel.UseActualPaxValue;
             chkGsxVolumeControl.IsChecked = serviceModel.GsxVolumeControl;
             chkVhf1VolumeControl.IsChecked = serviceModel.Vhf1VolumeControl;
             chkDisableCrewBoarding.IsChecked = serviceModel.DisableCrew;
@@ -81,7 +84,7 @@ namespace Prosim2GSX
             else
                 lblConnStatSimConnect.Foreground = new SolidColorBrush(Colors.Red);
 
-            if (serviceModel.IsFenixRunning)
+            if (serviceModel.IsProsimRunning)
                 lblConnStatProsim.Foreground = new SolidColorBrush(Colors.DarkGreen);
             else
                 lblConnStatProsim.Foreground = new SolidColorBrush(Colors.Red);
@@ -117,6 +120,36 @@ namespace Prosim2GSX
         {
             e.Cancel = true;
             Hide();
+        }
+
+        private void txtProsimHostname_Set()
+        {
+            serviceModel.SetSetting("prosimHostname", txtProsimHostname.Text);
+
+            LoadSettings();
+        }
+        private void chkUseProsimEFB_Click(object sender, RoutedEventArgs e)
+        {
+            serviceModel.SetSetting("useProsimEFB", chkUseProsimEFB.IsChecked.ToString().ToLower());
+            //chkAutoRefuel.IsEnabled = (bool)chkUseProsimEFB.IsChecked;
+            //chkUseActualPaxValue.IsEnabled = !(bool)chkUseProsimEFB.IsChecked;
+        }
+        private void txtProsimHostname_LostFocus(object sender, RoutedEventArgs e)
+        {
+            txtProsimHostname_Set();
+        }
+
+        private void txtProsimHostname_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key != System.Windows.Input.Key.Enter || e.Key != System.Windows.Input.Key.Return)
+                return;
+
+            txtProsimHostname_Set();
+        }
+
+        private void chkUseActualPaxValue_Click(object sender, RoutedEventArgs e)
+        {
+            serviceModel.SetSetting("useActualValue", chkUseActualPaxValue.IsChecked.ToString().ToLower());
         }
 
         private void chkGsxVolumeControl_Click(object sender, RoutedEventArgs e)
@@ -249,14 +282,14 @@ namespace Prosim2GSX
 
             if (sender == unitKGS && serviceModel.RefuelUnit == "LBS")
             {
-                fuelRate /= FenixContoller.weightConversion;
+                fuelRate /= ProsimController.weightConversion;
                 serviceModel.SetSetting("refuelRate", Convert.ToString(fuelRate, CultureInfo.InvariantCulture));
                 serviceModel.SetSetting("refuelUnit", "KGS");
                 txtRefuelRate.Text = Convert.ToString(fuelRate, CultureInfo.InvariantCulture);
             }
             else if (sender == unitLBS && serviceModel.RefuelUnit == "KGS")
             {
-                fuelRate *= FenixContoller.weightConversion;
+                fuelRate *= ProsimController.weightConversion;
                 serviceModel.SetSetting("refuelRate", Convert.ToString(fuelRate, CultureInfo.InvariantCulture));
                 serviceModel.SetSetting("refuelUnit", "LBS");
                 txtRefuelRate.Text = Convert.ToString(fuelRate, CultureInfo.InvariantCulture);
