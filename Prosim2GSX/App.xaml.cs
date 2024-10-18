@@ -3,7 +3,9 @@ using CefSharp.OffScreen;
 using H.NotifyIcon;
 using Serilog;
 using System;
+using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
@@ -18,9 +20,32 @@ namespace Prosim2GSX
 
         private TaskbarIcon notifyIcon;
 
+        public static string ConfigFile = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\Prosim2GSX\Prosim2GSX.config";
+        public static string AppDir = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\Prosim2GSX\bin";
+
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+
+            if (Process.GetProcessesByName("Prosim2GSX").Length > 1)
+            {
+                MessageBox.Show("Prosim2GSX is already running!", "Critical Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                Application.Current.Shutdown();
+                return;
+            }
+
+            Directory.SetCurrentDirectory(AppDir);
+
+            if (!File.Exists(ConfigFile))
+            {
+                ConfigFile = Directory.GetCurrentDirectory() + @"\Prosim2GSX.config";
+                if (!File.Exists(ConfigFile))
+                {
+                    MessageBox.Show("No Configuration File found! Closing ...", "Critical Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    Application.Current.Shutdown();
+                    return;
+                }
+            }
 
             Model = new();
             InitLog();

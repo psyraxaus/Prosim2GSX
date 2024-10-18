@@ -37,7 +37,7 @@ namespace Prosim2GSX
         public bool SynchBypass { get; set; }
         public bool UseActualPaxValue { get; set; }
 
-        protected Configuration AppConfiguration;
+        protected ConfigurationFile ConfigurationFile = new();
 
         public ServiceModel()
         {
@@ -51,55 +51,45 @@ namespace Prosim2GSX
 
         protected void LoadConfiguration()
         {
-            AppConfiguration = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-            var settings = AppConfiguration.AppSettings.Settings;
+            ConfigurationFile.LoadConfiguration();
 
-            SimBriefURL = Convert.ToString(settings["simbriefURL"].Value);
-            SimBriefID = Convert.ToString(settings["pilotID"].Value);
-            UseProsimEFB = Convert.ToBoolean(settings["useProsimEFB"].Value);
-            ProsimHostname = Convert.ToString(settings["prosimHostname"].Value);
-            WaitForConnect = Convert.ToBoolean(settings["waitForConnect"].Value);
-            TestArrival = Convert.ToBoolean(settings["testArrival"].Value);
-            GsxVolumeControl = Convert.ToBoolean(settings["gsxVolumeControl"].Value);
-            Vhf1VolumeApp = Convert.ToString(settings["vhf1VolumeApp"].Value);
-            Vhf1VolumeControl = Convert.ToBoolean(settings["vhf1VolumeControl"].Value);
-            Vhf1LatchMute = Convert.ToBoolean(settings["vhf1LatchMute"].Value);
-            DisableCrew = Convert.ToBoolean(settings["disableCrew"].Value);
-            RepositionPlane = Convert.ToBoolean(settings["repositionPlane"].Value);
-            RepositionDelay = Convert.ToSingle(settings["repositionDelay"].Value, CultureInfo.InvariantCulture);
-            AutoConnect = Convert.ToBoolean(settings["autoConnect"].Value);
-            OperatorDelay = Convert.ToSingle(settings["operatorDelay"].Value, CultureInfo.InvariantCulture);
-            ConnectPCA = Convert.ToBoolean(settings["connectPCA"].Value);
-            PcaOnlyJetways = Convert.ToBoolean(settings["pcaOnlyJetway"].Value);
-            AutoRefuel = Convert.ToBoolean(settings["autoRefuel"].Value);
-            CallCatering = Convert.ToBoolean(settings["callCatering"].Value);
-            AutoBoarding = Convert.ToBoolean(settings["autoBoarding"].Value);
-            AutoDeboarding = Convert.ToBoolean(settings["autoDeboarding"].Value);
-            RefuelRate = Convert.ToSingle(settings["refuelRate"].Value, CultureInfo.InvariantCulture);
-            RefuelUnit = Convert.ToString(settings["refuelUnit"].Value);
-            SynchBypass = Convert.ToBoolean(settings["synchBypass"].Value);
-            UseActualPaxValue = Convert.ToBoolean(settings["useActualValue"].Value);
-        }
-
-        protected void SaveConfiguration()
-        {
-            AppConfiguration.Save(ConfigurationSaveMode.Modified);
-            ConfigurationManager.RefreshSection(AppConfiguration.AppSettings.SectionInformation.Name);
+            SimBriefURL = Convert.ToString(ConfigurationFile.GetSetting("simbriefURL", "https://www.simbrief.com/api/xml.fetcher.php?userid={0}"));
+            SimBriefID = Convert.ToString(ConfigurationFile.GetSetting("pilotID", "0"));
+            UseProsimEFB = Convert.ToBoolean(ConfigurationFile.GetSetting("useProsimEFB", "True"));
+            ProsimHostname = Convert.ToString(ConfigurationFile.GetSetting("prosimHostname", "127.0.0.1"));
+            UseActualPaxValue = Convert.ToBoolean(ConfigurationFile.GetSetting("useActualValue", "true"));
+            WaitForConnect = Convert.ToBoolean(ConfigurationFile.GetSetting("waitForConnect", "true"));
+            TestArrival = Convert.ToBoolean(ConfigurationFile.GetSetting("testArrival", "false"));
+            GsxVolumeControl = Convert.ToBoolean(ConfigurationFile.GetSetting("gsxVolumeControl", "true"));
+            Vhf1VolumeApp = Convert.ToString(ConfigurationFile.GetSetting("vhf1VolumeApp", "vPilot"));
+            Vhf1VolumeControl = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf1VolumeControl", "false"));
+            Vhf1LatchMute = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf1LatchMute", "true"));
+            DisableCrew = Convert.ToBoolean(ConfigurationFile.GetSetting("disableCrew", "true"));
+            RepositionPlane = Convert.ToBoolean(ConfigurationFile.GetSetting("repositionPlane", "true"));
+            RepositionDelay = Convert.ToSingle(ConfigurationFile.GetSetting("repositionDelay", "3"), new RealInvariantFormat(ConfigurationFile.GetSetting("repositionDelay", "3")));
+            AutoConnect = Convert.ToBoolean(ConfigurationFile.GetSetting("autoConnect", "true"));
+            OperatorDelay = Convert.ToSingle(ConfigurationFile.GetSetting("operatorDelay", "10"), new RealInvariantFormat(ConfigurationFile.GetSetting("operatorDelay", "10")));
+            ConnectPCA = Convert.ToBoolean(ConfigurationFile.GetSetting("connectPCA", "true"));
+            PcaOnlyJetways = Convert.ToBoolean(ConfigurationFile.GetSetting("pcaOnlyJetway", "true"));
+            AutoRefuel = Convert.ToBoolean(ConfigurationFile.GetSetting("autoRefuel", "true"));
+            CallCatering = Convert.ToBoolean(ConfigurationFile.GetSetting("callCatering", "true"));
+            AutoBoarding = Convert.ToBoolean(ConfigurationFile.GetSetting("autoBoarding", "true"));
+            AutoDeboarding = Convert.ToBoolean(ConfigurationFile.GetSetting("autoDeboarding", "true"));
+            RefuelRate = Convert.ToSingle(ConfigurationFile.GetSetting("refuelRate", "28"), new RealInvariantFormat(ConfigurationFile.GetSetting("refuelRate", "28")));
+            RefuelUnit = Convert.ToString(ConfigurationFile.GetSetting("refuelUnit", "KGS"));
+            SynchBypass = Convert.ToBoolean(ConfigurationFile.GetSetting("synchBypass", "true"));
         }
 
         public string GetSetting(string key, string defaultValue = "")
         {
-            return AppConfiguration.AppSettings.Settings[key].Value ?? defaultValue;
+            return ConfigurationFile[key] ?? defaultValue;
         }
 
-        public void SetSetting(string key, string value)
+        public void SetSetting(string key, string value, bool noLoad = false)
         {
-            if (AppConfiguration.AppSettings.Settings[key] != null)
-            {
-                AppConfiguration.AppSettings.Settings[key].Value = value;
-                SaveConfiguration();
+            ConfigurationFile[key] = value;
+            if (!noLoad)
                 LoadConfiguration();
-            }
         }
 
         public float GetFuelRateKGS()
