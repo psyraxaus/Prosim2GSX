@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Xml.Linq;
+using Microsoft.FlightSimulator.SimConnect;
 using Prosim2GSX.Models;
 
 namespace Prosim2GSX
@@ -16,6 +17,7 @@ namespace Prosim2GSX
         public ProsimInterface Interface;
         protected ServiceModel Model;
         protected FlightPlan FlightPlan;
+        private MobiSimConnect SimConnect;
         // Our main ProSim connection
         private readonly ProSimConnect _connection = new ProSimConnect();
 
@@ -39,8 +41,10 @@ namespace Prosim2GSX
         public bool enginesRunning = false;
         public static readonly float weightConversion = 2.205f;
 
+        public bool useZeroFuel;
+
         public ProsimController(ServiceModel model)
-        { 
+        {
             Interface = new(model, _connection);
             paxCurrent = new bool[132];
             paxSeats = null;
@@ -57,11 +61,13 @@ namespace Prosim2GSX
 
                 fuelCurrent = Interface.ReadDataRef("aircraft.fuel.total.amount.kg");
 
+                useZeroFuel = Model.SetZeroFuel;
+
                 fuelUnits = Interface.ReadDataRef("system.config.Units.Weight");
                 if (fuelUnits == "LBS")
                     fuelPlanned /= weightConversion;
 
-                if  (!Model.UseProsimEFB)
+                if (Model.FlightPlanType == "MCDU")
                 {
                     cargoPlanned = FlightPlan.CargoTotal;
                     fuelPlanned = FlightPlan.Fuel;
@@ -116,7 +122,7 @@ namespace Prosim2GSX
             Thread.Sleep(250);
             Interface.ConnectProsimSDK();
             Thread.Sleep(5000);
-            
+
             bool isProsimReady = Interface.IsProsimReady();
             Logger.Log(LogLevel.Debug, "ProsimController:IsProsimConnectionAvailable", $"Prosim Available: {isProsimReady}");
 
@@ -146,7 +152,7 @@ namespace Prosim2GSX
 
         public bool IsFlightplanLoaded()
         {
-            if (!Model.UseProsimEFB)
+            if (Model.FlightPlanType == "MCDU")
             {
                 return !string.IsNullOrEmpty((string)Interface.ReadDataRef("aircraft.fms.destination"));
             }
@@ -158,12 +164,12 @@ namespace Prosim2GSX
 
         public int GetPaxPlanned()
         {
-            return paxPlanned.Count(i => i);   
+            return paxPlanned.Count(i => i);
         }
 
         public int GetPaxCurrent()
         {
-            return paxCurrent.Count(i => i); 
+            return paxCurrent.Count(i => i);
         }
 
         public double GetFuelPlanned()
@@ -193,7 +199,7 @@ namespace Prosim2GSX
 
         public void TriggerFinal()
         {
-            if (!Model.UseProsimEFB)
+            if (Model.FlightPlanType == "MCDU")
             {
 
             }
@@ -205,21 +211,32 @@ namespace Prosim2GSX
             }
         }
 
-        public void RefuelStart()
+        public void SetInitialFuel()
         {
-            if (fuelCurrent > fuelPlanned)
+            if (useZeroFuel)
             {
-                Logger.Log(LogLevel.Information, "ProsimController:RefuelStart", $"Current Fuel higher than planned - Resetting to 1500kg (3307lbs)");
+                Logger.Log(LogLevel.Information, "ProsimController:SetInitialFuel", $"Start at Zero Fuel amount - Resetting to 0kg (0lbs)");
+                Interface.SetProsimVariable("aircraft.fuel.total.amount.kg", 0.0D);
+                fuelCurrent = 0D;
+            }
+            else if (fuelCurrent > fuelPlanned)
+            {
+                Logger.Log(LogLevel.Information, "ProsimController:SetInitialFuel", $"Current Fuel higher than planned - Resetting to 1500kg (3307lbs)");
                 Interface.SetProsimVariable("aircraft.fuel.total.amount.kg", 1500.0D);
-                fuelCurrent = 3000D;
+                fuelCurrent = 1500D;
             }
 
+        }
+        public void RefuelStart()
+        {
             Interface.SetProsimVariable("aircraft.refuel.refuelingRate", 0.0D);
             Interface.SetProsimVariable("aircraft.refuel.refuelingPower", true);
+
             if (fuelUnits == "KG")
                 Interface.SetProsimVariable("aircraft.refuel.fuelTarget", fuelPlanned);
             else
                 Interface.SetProsimVariable("aircraft.refuel.fuelTarget", fuelPlanned * weightConversion);
+
         }
 
         public bool Refuel()
@@ -232,13 +249,17 @@ namespace Prosim2GSX
                 fuelCurrent = fuelPlanned;
 
             Interface.SetProsimVariable("aircraft.fuel.total.amount.kg", fuelCurrent);
+            //Interface.SetProsimVariable("aircraft.fuel.total.amount", fuelCurrent);
 
             return fuelCurrent == fuelPlanned;
         }
 
         public void RefuelStop()
         {
+            Logger.Log(LogLevel.Information, "ProsimController:RefuelStop", $"RefuelStop Requested");
+
             Interface.SetProsimVariable("aircraft.refuel.refuelingPower", false);
+
         }
 
         public void BoardingStart()
@@ -247,7 +268,7 @@ namespace Prosim2GSX
             cargoLast = 0;
             paxSeats = new int[GetPaxPlanned()];
             int n = 0;
-            for (int i=0; i < paxPlanned.Length; i++)
+            for (int i = 0; i < paxPlanned.Length; i++)
             {
                 if (paxPlanned[i])
                 {
@@ -332,7 +353,6 @@ namespace Prosim2GSX
             float cargo = (float)cargoPlanned * (float)(cargoCurrent / 100.0f);
             Interface.SetProsimVariable("aircraft.cargo.forward.amount", (float)cargo * cargoDistMain);
             Interface.SetProsimVariable("aircraft.cargo.aft.amount", (float)cargo * cargoDistMain);
-            Interface.SetProsimVariable("aircraft.cargo.bulk.amount", (float)cargo * cargoDistMain);
         }
 
         public void BoardingStop()
@@ -347,7 +367,7 @@ namespace Prosim2GSX
             paxLast = GetPaxPlanned();
             if (GetPaxCurrent() != GetPaxPlanned())
                 paxCurrent = paxPlanned;
-            cargoLast = 100;            
+            cargoLast = 100;
         }
 
         private void DeboardPassengers(int num)
