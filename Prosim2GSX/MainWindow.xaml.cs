@@ -29,23 +29,39 @@ namespace Prosim2GSX
 
         protected void LoadSettings()
         {
-            txtProsimHostname.Text = serviceModel.ProsimHostname;
-            chkUseProsimEFB.IsChecked = serviceModel.UseProsimEFB;
-            chkUseActualPaxValue.IsChecked = serviceModel.UseActualPaxValue;
-            chkGsxVolumeControl.IsChecked = serviceModel.GsxVolumeControl;
-            chkVhf1VolumeControl.IsChecked = serviceModel.Vhf1VolumeControl;
-            chkDisableCrewBoarding.IsChecked = serviceModel.DisableCrew;
-            chkAutoReposition.IsChecked = serviceModel.RepositionPlane;
-            chkAutoConnect.IsChecked = serviceModel.AutoConnect;
-            chkConnectPCA.IsChecked = serviceModel.ConnectPCA;
-            chkPcaOnlyJetway.IsChecked = serviceModel.PcaOnlyJetways;
-            chkAutoRefuel.IsChecked = serviceModel.AutoRefuel;
-            chkCallCatering.IsChecked = serviceModel.CallCatering;
+            if (serviceModel.FlightPlanType == "EFB")
+            {
+                eFBPlan.IsChecked = true;
+                mCDUPlan.IsChecked = false;
+            }
+            else
+            {
+                eFBPlan.IsChecked = false;
+                mCDUPlan.IsChecked = true;
+            }
+
             chkAutoBoard.IsChecked = serviceModel.AutoBoarding;
+            chkAutoConnect.IsChecked = serviceModel.AutoConnect;
             chkAutoDeboard.IsChecked = serviceModel.AutoDeboarding;
+            chkAutoRefuel.IsChecked = serviceModel.AutoRefuel;
+            chkAutoReposition.IsChecked = serviceModel.RepositionPlane;
+            chkCallCatering.IsChecked = serviceModel.CallCatering;
+            chkConnectPCA.IsChecked = serviceModel.ConnectPCA;
+            chkDisableCrewBoarding.IsChecked = serviceModel.DisableCrew;
+            chkGsxVolumeControl.IsChecked = serviceModel.GsxVolumeControl;
+            chkPcaOnlyJetway.IsChecked = serviceModel.PcaOnlyJetways;
             chkSynchBypass.IsChecked = serviceModel.SynchBypass;
-            txtRepositionDelay.Text = serviceModel.RepositionDelay.ToString(CultureInfo.InvariantCulture);
+            chkSaveFuel.IsChecked = serviceModel.SetSaveFuel;
+            chkUseActualPaxValue.IsChecked = serviceModel.UseActualPaxValue;
+            chkVhf1LatchMute.IsChecked = serviceModel.Vhf1LatchMute;
+            chkVhf1VolumeControl.IsChecked = serviceModel.Vhf1VolumeControl;
+            chkZeroFuel.IsChecked = serviceModel.SetZeroFuel;
+
             txtRefuelRate.Text = serviceModel.RefuelRate.ToString(CultureInfo.InvariantCulture);
+            txtRepositionDelay.Text = serviceModel.RepositionDelay.ToString(CultureInfo.InvariantCulture);
+            txtVhf1VolumeApp.IsEnabled = serviceModel.Vhf1VolumeControl;
+            txtVhf1VolumeApp.Text = serviceModel.Vhf1VolumeApp;
+
             if (serviceModel.RefuelUnit == "KGS")
             {
                 unitKGS.IsChecked = true;
@@ -56,16 +72,13 @@ namespace Prosim2GSX
                 unitKGS.IsChecked = false;
                 unitLBS.IsChecked = true;
             }
-            txtVhf1VolumeApp.Text = serviceModel.Vhf1VolumeApp;
-            txtVhf1VolumeApp.IsEnabled = serviceModel.Vhf1VolumeControl;
-            chkVhf1LatchMute.IsChecked = serviceModel.Vhf1LatchMute;
         }
 
         protected void UpdateLogArea()
         {
             while (Logger.MessageQueue.Count > 0)
             {
-                
+
                 if (lineCounter > 5)
                     txtLogMessages.Text = txtLogMessages.Text[(txtLogMessages.Text.IndexOf('\n') + 1)..];
                 txtLogMessages.Text += Logger.MessageQueue.Dequeue().ToString() + "\n";
@@ -73,89 +86,81 @@ namespace Prosim2GSX
             }
         }
 
-        protected void UpdateStatus()
+        private void chkAutoBoard_Click(object sender, RoutedEventArgs e)
         {
-            if (serviceModel.IsSimRunning)
-                lblConnStatMSFS.Foreground = new SolidColorBrush(Colors.DarkGreen);
-            else
-                lblConnStatMSFS.Foreground = new SolidColorBrush(Colors.Red);
-
-            if (IPCManager.SimConnect != null && IPCManager.SimConnect.IsReady)
-                lblConnStatSimConnect.Foreground = new SolidColorBrush(Colors.DarkGreen);
-            else
-                lblConnStatSimConnect.Foreground = new SolidColorBrush(Colors.Red);
-
-            if (serviceModel.IsProsimRunning)
-                lblConnStatProsim.Foreground = new SolidColorBrush(Colors.DarkGreen);
-            else
-                lblConnStatProsim.Foreground = new SolidColorBrush(Colors.Red);
-
-            if (serviceModel.IsSessionRunning)
-                lblConnStatSession.Foreground = new SolidColorBrush(Colors.DarkGreen);
-            else
-                lblConnStatSession.Foreground = new SolidColorBrush(Colors.Red);
+            serviceModel.SetSetting("autoBoarding", chkAutoBoard.IsChecked.ToString().ToLower());
         }
 
-        protected void OnTick(object sender, EventArgs e)
+        private void chkAutoConnect_Click(object sender, RoutedEventArgs e)
         {
-            UpdateLogArea();
-            UpdateStatus();
+            serviceModel.SetSetting("autoConnect", chkAutoConnect.IsChecked.ToString().ToLower());
         }
 
-        protected void Window_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        private void chkAutoDeboard_Click(object sender, RoutedEventArgs e)
         {
-            if (!IsVisible)
-            {
-                notifyModel.CanExecuteHideWindow = false;
-                notifyModel.CanExecuteShowWindow = true;
-                timer.Stop();
-            }
-            else
-            {
-                LoadSettings();
-                timer.Start();
-            }
+            serviceModel.SetSetting("autoDeboarding", chkAutoDeboard.IsChecked.ToString().ToLower());
         }
 
-        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        private void chkAutoRefuel_Click(object sender, RoutedEventArgs e)
         {
-            e.Cancel = true;
-            Hide();
+            serviceModel.SetSetting("autoRefuel", chkAutoRefuel.IsChecked.ToString().ToLower());
         }
 
-        private void txtProsimHostname_Set()
+        private void chkAutoReposition_Click(object sender, RoutedEventArgs e)
         {
-            serviceModel.SetSetting("prosimHostname", txtProsimHostname.Text);
-
-            LoadSettings();
-        }
-        private void chkUseProsimEFB_Click(object sender, RoutedEventArgs e)
-        {
-            serviceModel.SetSetting("useProsimEFB", chkUseProsimEFB.IsChecked.ToString().ToLower());
-            //chkAutoRefuel.IsEnabled = (bool)chkUseProsimEFB.IsChecked;
-            //chkUseActualPaxValue.IsEnabled = !(bool)chkUseProsimEFB.IsChecked;
-        }
-        private void txtProsimHostname_LostFocus(object sender, RoutedEventArgs e)
-        {
-            txtProsimHostname_Set();
+            serviceModel.SetSetting("repositionPlane", chkAutoReposition.IsChecked.ToString().ToLower());
         }
 
-        private void txtProsimHostname_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
+        private void chkCallCatering_Click(object sender, RoutedEventArgs e)
         {
-            if (e.Key != System.Windows.Input.Key.Enter || e.Key != System.Windows.Input.Key.Return)
-                return;
-
-            txtProsimHostname_Set();
+            serviceModel.SetSetting("callCatering", chkCallCatering.IsChecked.ToString().ToLower());
         }
 
-        private void chkUseActualPaxValue_Click(object sender, RoutedEventArgs e)
+        private void chkConnectPCA_Click(object sender, RoutedEventArgs e)
         {
-            serviceModel.SetSetting("useActualValue", chkUseActualPaxValue.IsChecked.ToString().ToLower());
+            serviceModel.SetSetting("connectPCA", chkConnectPCA.IsChecked.ToString().ToLower());
+        }
+
+        private void chkDisableCrewBoarding_Click(object sender, RoutedEventArgs e)
+        {
+            serviceModel.SetSetting("disableCrew", chkDisableCrewBoarding.IsChecked.ToString().ToLower());
         }
 
         private void chkGsxVolumeControl_Click(object sender, RoutedEventArgs e)
         {
             serviceModel.SetSetting("gsxVolumeControl", chkGsxVolumeControl.IsChecked.ToString().ToLower());
+        }
+
+        private void chkOpenDoorCatering_Click(object sender, RoutedEventArgs e)
+        {
+            serviceModel.SetSetting("setOpenAftDoorCatering", chkOpenDoorCatering.IsChecked.ToString().ToLower());
+        }
+        
+        private void chkPcaOnlyJetway_Click(object sender, RoutedEventArgs e)
+        {
+            serviceModel.SetSetting("pcaOnlyJetway", chkPcaOnlyJetway.IsChecked.ToString().ToLower());
+        }
+
+        private void chkSaveFuel_Checked(object sender, RoutedEventArgs e)
+        {
+            chkZeroFuel.IsEnabled = false;
+            serviceModel.SetSetting("setSaveFuel", chkSaveFuel.IsChecked.ToString().ToLower());
+        }
+
+        private void chkSaveFuel_unChecked(object sender, RoutedEventArgs e)
+        {
+            chkZeroFuel.IsEnabled = true;
+            serviceModel.SetSetting("setSaveFuel", chkSaveFuel.IsChecked.ToString().ToLower());
+        }
+
+        private void chkSynchBypass_Click(object sender, RoutedEventArgs e)
+        {
+            serviceModel.SetSetting("synchBypass", chkSynchBypass.IsChecked.ToString().ToLower());
+        }
+
+        private void chkUseActualPaxValue_Click(object sender, RoutedEventArgs e)
+        {
+            serviceModel.SetSetting("useActualValue", chkUseActualPaxValue.IsChecked.ToString().ToLower());
         }
 
         private void chkVhf1VolumeControl_Click(object sender, RoutedEventArgs e)
@@ -169,59 +174,46 @@ namespace Prosim2GSX
             serviceModel.SetSetting("vhf1LatchMute", chkVhf1LatchMute.IsChecked.ToString().ToLower());
         }
 
-        private void chkAutoReposition_Click(object sender, RoutedEventArgs e)
+        private void chkZeroFuel_Click(object sender, RoutedEventArgs e)
         {
-            serviceModel.SetSetting("repositionPlane", chkAutoReposition.IsChecked.ToString().ToLower());
+            serviceModel.SetSetting("setZeroFuel", chkZeroFuel.IsChecked.ToString().ToLower());
         }
 
-        private void chkAutoConnect_Click(object sender, RoutedEventArgs e)
+        private void flightPlan_Click(object sender, RoutedEventArgs e)
         {
-            serviceModel.SetSetting("autoConnect", chkAutoConnect.IsChecked.ToString().ToLower());
+            if (sender == eFBPlan && serviceModel.FlightPlanType == "MCDU")
+            {
+                serviceModel.SetSetting("flightPlanType", "EFB");
+            }
+            else if (sender == mCDUPlan && serviceModel.FlightPlanType == "EFB")
+            {
+                serviceModel.SetSetting("flightPlanType", "MCDU");
+            }
         }
 
-        private void chkConnectPCA_Click(object sender, RoutedEventArgs e)
+        protected void OnTick(object sender, EventArgs e)
         {
-            serviceModel.SetSetting("connectPCA", chkConnectPCA.IsChecked.ToString().ToLower());
+            UpdateLogArea();
+            UpdateStatus();
+        }
+        
+        private void txtRefuelRate_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key != System.Windows.Input.Key.Enter || e.Key != System.Windows.Input.Key.Return)
+                return;
+
+            txtRefuelRate_Set();
         }
 
-        private void chkPcaOnlyJetway_Click(object sender, RoutedEventArgs e)
+        private void txtRefuelRate_LostFocus(object sender, RoutedEventArgs e)
         {
-            serviceModel.SetSetting("pcaOnlyJetway", chkPcaOnlyJetway.IsChecked.ToString().ToLower());
+            txtRefuelRate_Set();
         }
 
-        private void chkDisableCrewBoarding_Click(object sender, RoutedEventArgs e)
+        private void txtRefuelRate_Set()
         {
-            serviceModel.SetSetting("disableCrew", chkDisableCrewBoarding.IsChecked.ToString().ToLower());
-        }
-
-        private void chkAutoRefuel_Click(object sender, RoutedEventArgs e)
-        {
-            serviceModel.SetSetting("autoRefuel", chkAutoRefuel.IsChecked.ToString().ToLower());
-        }
-
-        private void chkCallCatering_Click(object sender, RoutedEventArgs e)
-        {
-            serviceModel.SetSetting("callCatering", chkCallCatering.IsChecked.ToString().ToLower());
-        }
-
-        private void chkAutoBoard_Click(object sender, RoutedEventArgs e)
-        {
-            serviceModel.SetSetting("autoBoarding", chkAutoBoard.IsChecked.ToString().ToLower());
-        }
-
-        private void chkAutoDeboard_Click(object sender, RoutedEventArgs e)
-        {
-            serviceModel.SetSetting("autoDeboarding", chkAutoDeboard.IsChecked.ToString().ToLower());
-        }
-
-        private void chkSynchBypass_Click(object sender, RoutedEventArgs e)
-        {
-            serviceModel.SetSetting("synchBypass", chkSynchBypass.IsChecked.ToString().ToLower());
-        }
-
-        private void txtRepositionDelay_LostFocus(object sender, RoutedEventArgs e)
-        {
-            txtRepositionDelay_Set();
+            if (float.TryParse(txtRefuelRate.Text, CultureInfo.InvariantCulture, out _))
+                serviceModel.SetSetting("refuelRate", Convert.ToString(txtRefuelRate.Text, CultureInfo.InvariantCulture));
         }
 
         private void txtRepositionDelay_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
@@ -232,34 +224,15 @@ namespace Prosim2GSX
             txtRepositionDelay_Set();
         }
 
+        private void txtRepositionDelay_LostFocus(object sender, RoutedEventArgs e)
+        {
+            txtRepositionDelay_Set();
+        }
+
         private void txtRepositionDelay_Set()
         {
             if (float.TryParse(txtRepositionDelay.Text, CultureInfo.InvariantCulture, out _))
                 serviceModel.SetSetting("repositionDelay", Convert.ToString(txtRepositionDelay.Text, CultureInfo.InvariantCulture));
-        }
-
-        private void txtRefuelRate_LostFocus(object sender, RoutedEventArgs e)
-        {
-            txtRefuelRate_Set();
-        }
-
-        private void txtRefuelRate_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
-        {
-            if (e.Key != System.Windows.Input.Key.Enter || e.Key != System.Windows.Input.Key.Return)
-                return;
-
-            txtRefuelRate_Set();
-        }
-
-        private void txtRefuelRate_Set()
-        {
-            if (float.TryParse(txtRefuelRate.Text, CultureInfo.InvariantCulture, out _))
-                serviceModel.SetSetting("refuelRate", Convert.ToString(txtRefuelRate.Text, CultureInfo.InvariantCulture));
-        }
-
-        private void txtVhf1VolumeApp_LostFocus(object sender, RoutedEventArgs e)
-        {
-            txtVhf1VolumeApp_Set();
         }
 
         private void txtVhf1VolumeApp_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
@@ -267,6 +240,11 @@ namespace Prosim2GSX
             if (e.Key != System.Windows.Input.Key.Enter || e.Key != System.Windows.Input.Key.Return)
                 return;
 
+            txtVhf1VolumeApp_Set();
+        }
+
+        private void txtVhf1VolumeApp_LostFocus(object sender, RoutedEventArgs e)
+        {
             txtVhf1VolumeApp_Set();
         }
 
@@ -295,6 +273,53 @@ namespace Prosim2GSX
                 serviceModel.SetSetting("refuelUnit", "LBS");
                 txtRefuelRate.Text = Convert.ToString(fuelRate, CultureInfo.InvariantCulture);
             }
-        }     
+        }
+
+        protected void UpdateStatus()
+        {
+            if (serviceModel.IsSimRunning)
+                lblConnStatMSFS.Foreground = new SolidColorBrush(Colors.DarkGreen);
+            else
+                lblConnStatMSFS.Foreground = new SolidColorBrush(Colors.Red);
+
+            if (IPCManager.SimConnect != null && IPCManager.SimConnect.IsReady)
+                lblConnStatSimConnect.Foreground = new SolidColorBrush(Colors.DarkGreen);
+            else
+                lblConnStatSimConnect.Foreground = new SolidColorBrush(Colors.Red);
+
+            if (serviceModel.IsProsimRunning)
+                lblConnStatProsim.Foreground = new SolidColorBrush(Colors.DarkGreen);
+            else
+                lblConnStatProsim.Foreground = new SolidColorBrush(Colors.Red);
+
+            if (serviceModel.IsSessionRunning)
+                lblConnStatSession.Foreground = new SolidColorBrush(Colors.DarkGreen);
+            else
+                lblConnStatSession.Foreground = new SolidColorBrush(Colors.Red);
+        }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            e.Cancel = true;
+            Hide();
+        }
+
+        protected void Window_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (!IsVisible)
+            {
+                notifyModel.CanExecuteHideWindow = false;
+                notifyModel.CanExecuteShowWindow = true;
+                timer.Stop();
+            }
+            else
+            {
+                LoadSettings();
+                timer.Start();
+            }
+        }
+
+
+
     }
 }

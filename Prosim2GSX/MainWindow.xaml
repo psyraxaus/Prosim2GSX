@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Prosim2GSX"
         mc:Ignorable="d"
-        Title="Prosim2GSX" Height="792" Width="792" ResizeMode="NoResize" IsVisibleChanged="Window_IsVisibleChanged" Closing="Window_Closing">
+        Title="Prosim2GSX" Height="905" Width="792" ResizeMode="NoResize" IsVisibleChanged="Window_IsVisibleChanged" Closing="Window_Closing">
     <Window.Resources>
         <Style TargetType="GroupBox">
             <Setter Property="HeaderTemplate">
@@ -17,8 +17,12 @@
             </Setter>
         </Style>
     </Window.Resources>
-    
+
     <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="17*"/>
+            <ColumnDefinition Width="82*"/>
+        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="64"/>
             <RowDefinition Height="256" />
@@ -27,7 +31,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <GroupBox Grid.Row="0" BorderBrush="DarkGray" BorderThickness="1" Margin="10,10,10,8">
+        <GroupBox Grid.Row="0" BorderBrush="DarkGray" BorderThickness="1" Margin="10,10,10,8" Grid.ColumnSpan="2">
             <GroupBox.Header>Connection Status</GroupBox.Header>
             <StackPanel Orientation="Horizontal">
                 <Label Name="lblConnStatMSFS" Height="40" VerticalContentAlignment="Center" VerticalAlignment="Center" TextBlock.Foreground="Red" Padding="8,0,16,0">MSFS</Label>
@@ -36,24 +40,23 @@
                 <Label Name="lblConnStatSession" Height="40" VerticalContentAlignment="Center" VerticalAlignment="Center" TextBlock.Foreground="Red" Padding="8,0,16,0">Session</Label>
             </StackPanel>
         </GroupBox>
-        <GroupBox Grid.Row="1" BorderBrush="DarkGray" BorderThickness="1" Margin="10,10,465,8">
-            <GroupBox.Header>Prosim Settings</GroupBox.Header>
+        <GroupBox Grid.Row="1" BorderBrush="DarkGray" BorderThickness="1" Margin="10,10,465,8" Grid.ColumnSpan="2">
+            <GroupBox.Header>Flight Plan Settings</GroupBox.Header>
             <StackPanel Orientation="Vertical" Margin="0,6,0,0">
                 <StackPanel Orientation="Vertical" Width="303">
-                    <StackPanel Orientation="Horizontal" Width="422">
-                        <Label Margin="4,5,7,0" ToolTip="Enter the Prosim hostname or IP">Prosim Hostname:</Label>
-                        <TextBox Name="txtProsimHostname" Margin="4,7,7,6" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Height="24" MaxHeight="24" MinHeight="24" Width="96" MinWidth="96" MaxWidth="96" LostFocus="txtProsimHostname_LostFocus" KeyUp="txtProsimHostname_KeyUp" ToolTip="Enter your Prosim Hostname here"></TextBox>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,8,8" VerticalAlignment="Center" ToolTip="Select how you would like to load the flight plans.">
+                        <TextBlock Margin="8,0,0,0" >Load Flight Plan From:</TextBlock>
+                        <RadioButton Name="eFBPlan" Margin="8,0,0,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Click="flightPlan_Click">EFB</RadioButton>
+                        <RadioButton Name="mCDUPlan" Margin="8,0,0,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Click="flightPlan_Click">MCDU</RadioButton>
                     </StackPanel>
-                    <CheckBox Name="chkUseProsimEFB" Margin="4,7,7,2" VerticalContentAlignment="Center" Click="chkUseProsimEFB_Click" ToolTip="You can now load the flight plan using the EFB instead of pulling from Simbrief.&#x0a;If you want to use the OFP from Simbrief uncheck this box.">
-                        <TextBlock>Use EFB to load Flightplan</TextBlock>
-                    </CheckBox>
+
                     <CheckBox Name="chkUseActualPaxValue" Margin="4,7,7,2" VerticalContentAlignment="Center" Click="chkUseActualPaxValue_Click" ToolTip="The SimBrief Flightplan includes a Field for actual Passenger Count which can be different from the planned Passenger Count.&#x0a;If you don't want that (light) Randomization disable this Setting.">
                         <TextBlock>Use actual Passenger Count from SimBrief OFP</TextBlock>
                     </CheckBox>
                 </StackPanel>
             </StackPanel>
         </GroupBox>
-        <GroupBox Grid.Row="1" BorderBrush="DarkGray" BorderThickness="1" Margin="332,10,10,8">
+        <GroupBox Grid.Row="1" BorderBrush="DarkGray" BorderThickness="1" Margin="196,10,10,79" Grid.Column="1" Grid.RowSpan="2">
             <GroupBox.Header>Service Calls</GroupBox.Header>
             <StackPanel Orientation="Vertical">
                 <CheckBox Name="chkAutoReposition" Margin="8,8,8,0" VerticalContentAlignment="Center" Click="chkAutoReposition_Click" ToolTip="Uses the 'Reposition here at current Gate' Option of GSX to position the Plane in accordance with the Airport Profile.&#x0a;The Repositioning is done when the Flight-Session becomes ready and after the configurable Delay below.">
@@ -64,11 +67,20 @@
                     <TextBox Name="txtRepositionDelay" Margin="2,0,0,0" Height="20" MaxHeight="20" MinHeight="20" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Width="64" LostFocus="txtRepositionDelay_LostFocus" KeyUp="txtRepositionDelay_KeyUp"></TextBox>
                     <Label VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Margin="0,0,0,1">s</Label>
                 </StackPanel>
-                <CheckBox Name="chkAutoRefuel" Margin="8,2,8,0" VerticalContentAlignment="Center" Click="chkAutoRefuel_Click" ToolTip="The Refuel Service will be directly called after you have imported your SimBrief Flightplan in the EFB (Fenix-App) - regardless on which Device/Browser you use it.&#x0a;Fuel-Synchronization (Loading, ECAM Message) stills work when this Option is disabled!">
-                    <TextBlock>Call <Underline>Refuel Service</Underline> on Flightplan Import on EFB</TextBlock>
+                <CheckBox Name="chkAutoRefuel" Margin="8,2,8,0" VerticalContentAlignment="Center" Click="chkAutoRefuel_Click" ToolTip="The Refuel Service will refuel from zero">
+                    <TextBlock>Call <Underline>Refuel Service</Underline> on Flightplan Import</TextBlock>
+                </CheckBox>
+                <CheckBox Name="chkZeroFuel" Margin="28,8,8,0" VerticalContentAlignment="Center" Click="chkZeroFuel_Click" ToolTip="The Refuel Service will be directly called after you have imported your SimBrief Flightplan in the EFB or MCDU - regardless on which Device/Browser you use it.">
+                    <TextBlock>Set Zero Fuel at start of refueling</TextBlock>
+                </CheckBox>
+                <CheckBox Name="chkSaveFuel" Margin="28,8,8,0" VerticalContentAlignment="Center"  Checked="chkSaveFuel_Checked" Unchecked="chkSaveFuel_unChecked" ToolTip="Save the fuel on board after landing.">
+                    <TextBlock>Save current FOB on engine shutdown</TextBlock>
                 </CheckBox>
                 <CheckBox Name="chkCallCatering" Margin="8,8,8,0" VerticalContentAlignment="Center" Click="chkCallCatering_Click" ToolTip="The Catering Service is directly called after the Refuel Service was called automatically.&#x0a;Manually calling the Refuel Service will not trigger that!">
                     <TextBlock>Call <Underline>Catering Service</Underline> together with Refuel Service</TextBlock>
+                </CheckBox>
+                <CheckBox Name="chkOpenDoorCatering" Margin="28,8,8,0" VerticalContentAlignment="Center" Click="chkOpenDoorCatering_Click" ToolTip="Open right aft door when catering is in position.">
+                    <TextBlock>Auto Open <Underline>Right Aft Door</Underline> when catering in position</TextBlock>
                 </CheckBox>
                 <CheckBox Name="chkAutoBoard" Margin="8,8,8,0" VerticalContentAlignment="Center" Click="chkAutoBoard_Click" ToolTip="Boarding will automatically start 90s after Refueling is finished (regardless if the Refuel Service was called automatically or manually).&#x0a;Boarding-Synchronization still works when this Option is disabled!&#x0a;The Final Loadsheet will always be send regardless who called Refueling and Boarding.">
                     <TextBlock>Automatically start <Underline>Boarding</Underline> when Refuel and Catering are finished</TextBlock>
@@ -88,7 +100,7 @@
             </StackPanel>
         </GroupBox>
 
-        <GroupBox Grid.Row="2" BorderBrush="DarkGray" BorderThickness="1" Margin="10,10,10,8">
+        <GroupBox Grid.Row="2" BorderBrush="DarkGray" BorderThickness="1" Margin="10,70,10,91" Grid.ColumnSpan="2" Grid.RowSpan="2">
             <GroupBox.Header>Ground Handling</GroupBox.Header>
             <StackPanel Orientation="Vertical">
                 <CheckBox Name="chkAutoConnect" Margin="8,8,8,0" VerticalContentAlignment="Center" Click="chkAutoConnect_Click" ToolTip="The Jetway or Stairs will automatically be called when the Session is started, the Plane is ready for Push-Back or has arrived at the Gate.&#x0a;Ready for Push-Back = External Power disconnected &amp; Parking Brake is set &amp; Beacon Light is On.&#x0a;Handling of other Ground-Equipment (Chocks, GPU) will always be performed!">
@@ -106,7 +118,7 @@
             </StackPanel>
         </GroupBox>
 
-        <GroupBox Grid.Row="3" BorderBrush="DarkGray" BorderThickness="1" Margin="10,10,10,8">
+        <GroupBox Grid.Row="3" BorderBrush="DarkGray" BorderThickness="1" Margin="10,56,10,196" Grid.ColumnSpan="2" Grid.RowSpan="2">
             <GroupBox.Header>Volume Control</GroupBox.Header>
             <StackPanel Orientation="Vertical">
                 <CheckBox Name="chkGsxVolumeControl" Margin="8,8,8,0" VerticalContentAlignment="Center" Click="chkGsxVolumeControl_Click" ToolTip="The Volume of the GSX (Couatl) Application will be controlled on the OS-Level.&#x0a;The Volume-Level is controlled with the INT Knob on ACP1. Pushing/Pulling the Knob will mute/unmute the whole Application.&#x0a;Volume Control will only start after the Plane is powered (that is FCU Displays are On).&#x0a;Be aware that the default Position in the Fenix is 50%!">
@@ -125,8 +137,8 @@
                 </StackPanel>
             </StackPanel>
         </GroupBox>
-       
-        <GroupBox Grid.Row="4" BorderBrush="DarkGray" BorderThickness="1" Margin="10,8,10,10">
+
+        <GroupBox Grid.Row="4" BorderBrush="DarkGray" BorderThickness="1" Margin="10,96,10,10" Grid.ColumnSpan="2">
             <GroupBox.Header>Log Messages</GroupBox.Header>
             <TextBlock Name="txtLogMessages" Margin="4"></TextBlock>
         </GroupBox>
