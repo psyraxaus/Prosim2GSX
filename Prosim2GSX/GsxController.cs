@@ -11,7 +11,7 @@ namespace Prosim2GSX
 {
     public enum FlightState
     {
-        PREP = 0,
+        PREFLIGHT = 0,
         DEPARTURE,
         TAXIOUT,
         FLIGHT,
@@ -28,10 +28,11 @@ namespace Prosim2GSX
         private readonly string gsxProcess = "Couatl64_MSFS";
         private string menuFile = "";
 
-        private FlightState state = FlightState.PREP;
+        private FlightState state = FlightState.PREFLIGHT;
         private bool planePositioned = false;
         private bool connectCalled = false;
         private bool pcaCalled = false;
+        private bool initialFuelSet = false;
         private bool refueling = false;
         private bool refuelPaused = false;
         private bool refuelFinished = false;
@@ -114,7 +115,6 @@ namespace Prosim2GSX
             SimConnect.SubscribeLvar("A_FC_THROTTLE_RIGHT_INPUT");
             SimConnect.SubscribeSimVar("GPS GROUND SPEED", "Meters per second");
 
-            ProsimController = new(Model);
 
             if (!string.IsNullOrEmpty(Model.Vhf1VolumeApp))
                 lastVhf1App = Model.Vhf1VolumeApp;
@@ -339,7 +339,7 @@ namespace Prosim2GSX
             }
 
             //PREPARATION (On-Ground and Engines not running)
-            if (state == FlightState.PREP && simOnGround && !ProsimController.enginesRunning && ProsimController.Interface.ReadDataRef("system.switches.S_OH_ELEC_BAT1") == 1)
+            if (state == FlightState.PREFLIGHT && simOnGround && !ProsimController.enginesRunning && ProsimController.Interface.ReadDataRef("system.switches.S_OH_ELEC_BAT1") == 1)
             {
                 if (Model.TestArrival)
                 {
@@ -415,7 +415,7 @@ namespace Prosim2GSX
                 }
             }
             //Special Case: loaded in Flight or with Engines Running
-            if (state == FlightState.PREP && (!simOnGround || ProsimController.enginesRunning))
+            if (state == FlightState.PREFLIGHT && (!simOnGround || ProsimController.enginesRunning))
             {
                 ProsimController.Update(true);
                 flightPlanID = ProsimController.flightPlanID;
@@ -430,7 +430,7 @@ namespace Prosim2GSX
                     ProsimController.SetServiceChocks(false);
                     ProsimController.SetServiceGPU(false);
                 }
-                    
+
                 return;
             }
 
@@ -511,6 +511,7 @@ namespace Prosim2GSX
                     planePositioned = true;
                     connectCalled = true;
                     pcaCalled = true;
+                    initialFuelSet = false;
                     refueling = false;
                     refuelPaused = false;
                     refuelFinished = false;
@@ -541,6 +542,11 @@ namespace Prosim2GSX
             Interval = 1000;
             if (Model.AutoRefuel)
             {
+                if (!initialFuelSet)
+                {
+                    ProsimController.SetInitialFuel();
+                    initialFuelSet = true;
+                }
                 if (!refuelRequested && refuelState != 6)
                 {
                     Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Calling Refuel Service");
@@ -598,11 +604,13 @@ namespace Prosim2GSX
             }
             else if (refueling)
             {
+
                 if (SimConnect.ReadLvar("FSDT_GSX_FUELHOSE_CONNECTED") == 1)
                 {
                     if (refuelPaused)
                     {
                         Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Fuel Hose connected - refueling");
+
                         refuelPaused = false;
                     }
 
@@ -762,7 +770,7 @@ namespace Prosim2GSX
                 Interval = 60000;
             }
         }
-        
+
         private void RunArrivalServices(int deboard_state)
         {
             if (SimConnect.ReadLvar("FSDT_GSX_COUATL_STARTED") != 1)
