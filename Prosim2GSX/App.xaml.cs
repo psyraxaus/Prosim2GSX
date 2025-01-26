@@ -1,6 +1,7 @@
 ﻿using CefSharp;
 using CefSharp.OffScreen;
 using H.NotifyIcon;
+using Prosim2GSX.Models;
 using Serilog;
 using System;
 using System.Diagnostics;

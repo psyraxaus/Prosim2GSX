@@ -1,8 +1,9 @@
-﻿using System;
+﻿using Prosim2GSX.Behaviours;
+using System;
 using System.Configuration;
 using System.Globalization;
 
-namespace Prosim2GSX
+namespace Prosim2GSX.Models
 {
     public class ServiceModel
     {

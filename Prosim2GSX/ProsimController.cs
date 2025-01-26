@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Xml.Linq;
+using Prosim2GSX.Models;
 
 namespace Prosim2GSX
 {

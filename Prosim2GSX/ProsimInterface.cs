@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows;
 using System.ComponentModel.DataAnnotations;
 using CefSharp.DevTools.CSS;
+using Prosim2GSX.Models;
 
 namespace Prosim2GSX
 {

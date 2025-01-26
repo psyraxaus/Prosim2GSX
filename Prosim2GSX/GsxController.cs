@@ -1,5 +1,6 @@
 ﻿using CoreAudio;
 using Microsoft.Win32;
+using Prosim2GSX.Models;
 using System;
 using System.Diagnostics;
 using System.IO;

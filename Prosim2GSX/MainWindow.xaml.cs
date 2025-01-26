@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
+using Prosim2GSX.Models;
 
 namespace Prosim2GSX
 {

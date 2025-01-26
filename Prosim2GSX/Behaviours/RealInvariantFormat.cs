@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Globalization;
 
-namespace Prosim2GSX
+namespace Prosim2GSX.Behaviours
 {
     public class RealInvariantFormat : IFormatProvider
     {
