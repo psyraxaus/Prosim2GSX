@@ -93,8 +93,8 @@ namespace Prosim2GSX
 
         protected void InitLog()
         {
-            string logFilePath = Model.GetSetting("logFilePath", "Prosim2GSX.log");
-            string logLevel = Model.GetSetting("logLevel", "Debug");
+            string logFilePath = @"..\log\" + Model.GetSetting("logFilePath");
+            string logLevel = Model.GetSetting("logLevel");
             LoggerConfiguration loggerConfiguration = new LoggerConfiguration().WriteTo.File(logFilePath, rollingInterval: RollingInterval.Day, retainedFileCountLimit: 3,
                                                     outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message} {NewLine}{Exception}");
             if (logLevel == "Warning")

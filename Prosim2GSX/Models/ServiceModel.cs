@@ -18,6 +18,8 @@ namespace Prosim2GSX.Models
         public bool IsProsimRunning { get; set; } = false;
         public bool IsSessionRunning { get; set; } = false;
         public bool IsSimRunning { get; set; } = false;
+        public string LogFilePath { get; set; }
+        public string LogLevel { get; set; }
         public float OperatorDelay { get; set; }
         public bool PcaOnlyJetways { get; set; }
         public string ProsimHostname { get; set; }
@@ -65,6 +67,8 @@ namespace Prosim2GSX.Models
             DisableCrew = Convert.ToBoolean(ConfigurationFile.GetSetting("disableCrew", "true"));
             FlightPlanType = Convert.ToString(ConfigurationFile.GetSetting("flightPlanType", "MCDU"));
             GsxVolumeControl = Convert.ToBoolean(ConfigurationFile.GetSetting("gsxVolumeControl", "true"));
+            LogFilePath = Convert.ToString(ConfigurationFile.GetSetting("logFilePath", "Prosim2GSX.log"));
+            LogLevel = Convert.ToString(ConfigurationFile.GetSetting("logFilePath", "Debug"));
             PcaOnlyJetways = Convert.ToBoolean(ConfigurationFile.GetSetting("pcaOnlyJetway", "true"));
             RefuelRate = Convert.ToSingle(ConfigurationFile.GetSetting("refuelRate", "28"), new RealInvariantFormat(ConfigurationFile.GetSetting("refuelRate", "28")));
             RefuelUnit = Convert.ToString(ConfigurationFile.GetSetting("refuelUnit", "KGS"));
