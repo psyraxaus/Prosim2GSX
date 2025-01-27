@@ -31,6 +31,7 @@ namespace Prosim2GSX
         private int[] paxSeats;
         private bool[] paxCurrent;
         private int paxLast;
+        private bool randomizePaxSeat = false;
 
         private int cargoPlanned;
         private const float cargoDistMain = 4000.0f / 9440.0f;
@@ -72,7 +73,14 @@ namespace Prosim2GSX
                     cargoPlanned = FlightPlan.CargoTotal;
                     fuelPlanned = FlightPlan.Fuel;
 
-                    paxPlanned = Interface.ReadDataRef("aircraft.passengers.seatOccupation");
+                    if (!randomizePaxSeat)
+                    {
+                        paxPlanned = RandomizePaxSeating(FlightPlan.Passenger);
+                        Logger.Log(LogLevel.Debug, "ProsimController:Update", $"seatOccupation bool: {string.Join(", ", paxPlanned)}");
+                        Interface.SetProsimVariable("aircraft.passengers.seatOccupation", string.Join(", ", paxPlanned));
+                        randomizePaxSeat = true;
+                    }
+
                     if (forceCurrent)
                         paxCurrent = paxPlanned;
 
@@ -262,6 +270,33 @@ namespace Prosim2GSX
 
         }
 
+        public bool[] RandomizePaxSeating(int trueCount)
+        {
+            if (trueCount < 0 || trueCount > 132)
+            {
+                throw new ArgumentException("The number of 'true' values must be between 0 and 132.");
+            }
+            bool[] result = new bool[132];
+            // Initialize all to false
+            for (int i = 0; i < result.Length; i++)
+            {
+                result[i] = false;
+            }
+            // Fill the array with 'true' values at random positions
+            Random rand = new Random();
+            int count = 0;
+            while (count < trueCount)
+            {
+                int index = rand.Next(132);
+                if (!result[index])
+                {
+                    result[index] = true;
+                    count++;
+                }
+            }
+            return result;
+        }
+
         public void BoardingStart()
         {
             paxLast = 0;
@@ -358,7 +393,11 @@ namespace Prosim2GSX
         public void BoardingStop()
         {
             paxSeats = null;
-            Interface.SetProsimVariable("efb.boardingStatus", "ended");
+            if (Model.FlightPlanType == "EFB")
+            {
+                Interface.SetProsimVariable("efb.efb.boardingStatus", "ended");
+            }
+
         }
 
         public void DeboardingStart()
