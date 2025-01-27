@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using System.Xml;
 
 namespace Prosim2GSX
 {
@@ -42,9 +43,21 @@ namespace Prosim2GSX
                 ConfigFile = Directory.GetCurrentDirectory() + @"\Prosim2GSX.config";
                 if (!File.Exists(ConfigFile))
                 {
-                    MessageBox.Show("No Configuration File found! Closing ...", "Critical Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    Application.Current.Shutdown();
-                    return;
+                    //MessageBox.Show("No Configuration File found! Closing ...", "Critical Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    // Create a new XmlDocument instance
+                    XmlDocument xmlDoc = new XmlDocument();
+
+                    // Create the XML declaration node (optional, but recommended)
+                    XmlDeclaration xmlDeclaration = xmlDoc.CreateXmlDeclaration("1.0", "UTF-8", null);
+                    xmlDoc.AppendChild(xmlDeclaration);
+
+                    // Create the root element and append it to the document
+                    XmlElement appSettings = xmlDoc.CreateElement("appSettings");
+                    xmlDoc.AppendChild(appSettings);
+
+                    // Save the XmlDocument to a file
+                    xmlDoc.Save(ConfigFile);
+                    //return;
                 }
             }
 
