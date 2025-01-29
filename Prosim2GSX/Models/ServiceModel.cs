@@ -5,6 +5,7 @@ namespace Prosim2GSX.Models
 {
     public class ServiceModel
     {
+        public string AcarsNetwork {  get; set; }
         public bool AutoBoarding { get; set; }
         public bool AutoConnect { get; set; }
         public bool AutoDeboarding { get; set; }
@@ -36,6 +37,8 @@ namespace Prosim2GSX.Models
         public string SimBriefURL { get; set; }
         public bool SynchBypass { get; set; }
         public bool TestArrival { get; set; }
+
+        public bool UseAcars { get; set; }
         public bool UseActualPaxValue { get; set; }
         public bool Vhf1LatchMute { get; set; }
         public string Vhf1VolumeApp { get; set; }
@@ -58,6 +61,7 @@ namespace Prosim2GSX.Models
         {
             ConfigurationFile.LoadConfiguration();
 
+            AcarsNetwork = Convert.ToString(ConfigurationFile.GetSetting("acarsNetwork", "Hoppie"));
             AutoBoarding = Convert.ToBoolean(ConfigurationFile.GetSetting("autoBoarding", "true"));
             AutoConnect = Convert.ToBoolean(ConfigurationFile.GetSetting("autoConnect", "true"));
             AutoDeboarding = Convert.ToBoolean(ConfigurationFile.GetSetting("autoDeboarding", "true"));
@@ -84,6 +88,7 @@ namespace Prosim2GSX.Models
             SimBriefURL = Convert.ToString(ConfigurationFile.GetSetting("simbriefURL", "https://www.simbrief.com/api/xml.fetcher.php?userid={0}"));
             SynchBypass = Convert.ToBoolean(ConfigurationFile.GetSetting("synchBypass", "true"));
             TestArrival = Convert.ToBoolean(ConfigurationFile.GetSetting("testArrival", "false"));
+            UseAcars = Convert.ToBoolean(ConfigurationFile.GetSetting("useAcars", "false"));
             UseActualPaxValue = Convert.ToBoolean(ConfigurationFile.GetSetting("useActualValue", "true"));
             Vhf1VolumeApp = Convert.ToString(ConfigurationFile.GetSetting("vhf1VolumeApp", "vPilot"));
             Vhf1VolumeControl = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf1VolumeControl", "false"));

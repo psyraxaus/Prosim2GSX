@@ -40,10 +40,10 @@
                 <Label Name="lblConnStatSession" Height="40" VerticalContentAlignment="Center" VerticalAlignment="Center" TextBlock.Foreground="Red" Padding="8,0,16,0">Session</Label>
             </StackPanel>
         </GroupBox>
-        <GroupBox Grid.Row="1" BorderBrush="DarkGray" BorderThickness="1" Margin="10,10,465,8" Grid.ColumnSpan="2">
+        <GroupBox Grid.Row="1" BorderBrush="DarkGray" BorderThickness="1" Margin="10,10,446,8" Grid.ColumnSpan="2">
             <GroupBox.Header>Flight Plan Settings</GroupBox.Header>
             <StackPanel Orientation="Vertical" Margin="0,6,0,0">
-                <StackPanel Orientation="Vertical" Width="303">
+                <StackPanel Orientation="Vertical" Width="316">
                     <StackPanel Orientation="Horizontal" Margin="0,0,8,8" VerticalAlignment="Center" ToolTip="Select how you would like to load the flight plans.">
                         <TextBlock Margin="8,0,0,0" >Load Flight Plan From:</TextBlock>
                         <RadioButton Name="eFBPlan" Margin="8,0,0,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Click="flightPlan_Click">EFB</RadioButton>
@@ -53,12 +53,20 @@
                     <CheckBox Name="chkUseActualPaxValue" Margin="4,7,7,2" VerticalContentAlignment="Center" Click="chkUseActualPaxValue_Click" ToolTip="The SimBrief Flightplan includes a Field for actual Passenger Count which can be different from the planned Passenger Count.&#x0a;If you don't want that (light) Randomization disable this Setting.">
                         <TextBlock>Use actual Passenger Count from SimBrief OFP</TextBlock>
                     </CheckBox>
+
+                    <CheckBox Name="chkUseAcars" Margin="4,7,7,2" VerticalContentAlignment="Center"  Checked="chkUseAcars_Checked" Unchecked="chkUseAcars_unChecked"  ToolTip="This will use the Hoppie/SayIntenions ACARS network for sending OPS messages.">
+                        <TextBlock>Use ACARS for OPS messages</TextBlock>
+                    </CheckBox>
+                    <StackPanel Orientation="Horizontal" Margin="28,0,8,8" VerticalAlignment="Center" ToolTip="Select which ACARS service you would like to use.">
+                        <RadioButton Name="acarsHoppie" Margin="8,0,0,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Click="acars_Click">Hoppie</RadioButton>
+                        <RadioButton Name="acarsSayIntentions" Margin="8,0,0,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Click="acars_Click">Say Intentions</RadioButton>
+                    </StackPanel>
                 </StackPanel>
             </StackPanel>
         </GroupBox>
-        <GroupBox Grid.Row="1" BorderBrush="DarkGray" BorderThickness="1" Margin="196,10,10,79" Grid.Column="1" Grid.RowSpan="2">
+        <GroupBox Grid.Row="1" BorderBrush="DarkGray" BorderThickness="1" Margin="215,10,10,79" Grid.Column="1" Grid.RowSpan="2">
             <GroupBox.Header>Service Calls</GroupBox.Header>
-            <StackPanel Orientation="Vertical">
+            <StackPanel Orientation="Vertical" Margin="0,0,-2,0">
                 <CheckBox Name="chkAutoReposition" Margin="8,8,8,0" VerticalContentAlignment="Center" Click="chkAutoReposition_Click" ToolTip="Uses the 'Reposition here at current Gate' Option of GSX to position the Plane in accordance with the Airport Profile.&#x0a;The Repositioning is done when the Flight-Session becomes ready and after the configurable Delay below.">
                     <TextBlock><Underline>Reposition</Underline> Plane on Startup (via GSX)</TextBlock>
                 </CheckBox>

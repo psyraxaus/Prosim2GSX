@@ -52,6 +52,7 @@ namespace Prosim2GSX
             chkPcaOnlyJetway.IsChecked = serviceModel.PcaOnlyJetways;
             chkSynchBypass.IsChecked = serviceModel.SynchBypass;
             chkSaveFuel.IsChecked = serviceModel.SetSaveFuel;
+            chkUseAcars.IsChecked = serviceModel.UseAcars;
             chkUseActualPaxValue.IsChecked = serviceModel.UseActualPaxValue;
             chkVhf1LatchMute.IsChecked = serviceModel.Vhf1LatchMute;
             chkVhf1VolumeControl.IsChecked = serviceModel.Vhf1VolumeControl;
@@ -72,6 +73,28 @@ namespace Prosim2GSX
                 unitKGS.IsChecked = false;
                 unitLBS.IsChecked = true;
             }
+
+            if (serviceModel.UseAcars)
+            {
+                acarsHoppie.IsEnabled = true;
+                acarsSayIntentions.IsEnabled = true;
+
+                if (serviceModel.AcarsNetwork == "Hoppie")
+                {
+                    acarsHoppie.IsChecked = true;
+                    acarsSayIntentions.IsChecked = false;
+                }
+                else
+                {
+                    acarsHoppie.IsChecked= false;
+                    acarsSayIntentions.IsChecked = true;
+                }
+            }
+            else
+            {
+                acarsHoppie.IsEnabled = false;
+                acarsSayIntentions.IsEnabled = false;
+            }
         }
 
         protected void UpdateLogArea()
@@ -83,6 +106,18 @@ namespace Prosim2GSX
                     txtLogMessages.Text = txtLogMessages.Text[(txtLogMessages.Text.IndexOf('\n') + 1)..];
                 txtLogMessages.Text += Logger.MessageQueue.Dequeue().ToString() + "\n";
                 lineCounter++;
+            }
+        }
+
+        private void acars_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender == acarsHoppie)
+            {
+                serviceModel.SetSetting("acarsNetwork", "Hoppie");
+            }
+            else if (sender == acarsSayIntentions)
+            {
+                serviceModel.SetSetting("acarsNetwork", "SayIntentions");
             }
         }
 
@@ -156,6 +191,34 @@ namespace Prosim2GSX
         private void chkSynchBypass_Click(object sender, RoutedEventArgs e)
         {
             serviceModel.SetSetting("synchBypass", chkSynchBypass.IsChecked.ToString().ToLower());
+        }
+        private void chkUseAcars_Click(object sender, RoutedEventArgs e)
+        {
+            serviceModel.SetSetting("useAcars", chkUseAcars.IsChecked.ToString().ToLower());
+        }
+
+        private void chkUseAcars_Checked(object sender, RoutedEventArgs e)
+        {
+            acarsHoppie.IsEnabled = true;
+            acarsSayIntentions.IsEnabled = true;
+            serviceModel.SetSetting("useAcars", chkUseAcars.IsChecked.ToString().ToLower());
+            if (serviceModel.AcarsNetwork == "Hoppie")
+            {
+                acarsHoppie.IsChecked = true;
+                acarsSayIntentions.IsChecked = false;
+            }
+            else
+            {
+                acarsHoppie.IsChecked = false;
+                acarsSayIntentions.IsChecked = true;
+            }
+        }
+
+        private void chkUseAcars_unChecked(object sender, RoutedEventArgs e)
+        {
+            acarsHoppie.IsEnabled = false;
+            acarsSayIntentions.IsEnabled = false;
+            serviceModel.SetSetting("useAcars", chkUseAcars.IsChecked.ToString().ToLower());
         }
 
         private void chkUseActualPaxValue_Click(object sender, RoutedEventArgs e)
