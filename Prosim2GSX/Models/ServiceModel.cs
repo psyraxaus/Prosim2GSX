@@ -6,6 +6,8 @@ namespace Prosim2GSX.Models
     public class ServiceModel
     {
         public string AcarsNetwork {  get; set; }
+        public string AcarsNetworkUrl { get; set; }
+        public string AcarsSecret { get; set; }
         public bool AutoBoarding { get; set; }
         public bool AutoConnect { get; set; }
         public bool AutoDeboarding { get; set; }
@@ -62,6 +64,8 @@ namespace Prosim2GSX.Models
             ConfigurationFile.LoadConfiguration();
 
             AcarsNetwork = Convert.ToString(ConfigurationFile.GetSetting("acarsNetwork", "Hoppie"));
+            AcarsNetworkUrl = Convert.ToString(ConfigurationFile.GetSetting("acarsNetworkUrl", "http://www.hoppie.nl/acars/system/connect.html"));
+            AcarsSecret = Convert.ToString(ConfigurationFile.GetSetting("acarsSecret", ""));
             AutoBoarding = Convert.ToBoolean(ConfigurationFile.GetSetting("autoBoarding", "true"));
             AutoConnect = Convert.ToBoolean(ConfigurationFile.GetSetting("autoConnect", "true"));
             AutoDeboarding = Convert.ToBoolean(ConfigurationFile.GetSetting("autoDeboarding", "true"));

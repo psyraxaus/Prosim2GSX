@@ -9,6 +9,7 @@ using System.Threading;
 using System.Xml.Linq;
 using Microsoft.FlightSimulator.SimConnect;
 using Prosim2GSX.Models;
+using System.Drawing.Text;
 
 namespace Prosim2GSX
 {
@@ -39,6 +40,7 @@ namespace Prosim2GSX
         private int cargoLast;
 
         public string flightPlanID = "0";
+        public string flightNumber = "0";
         public bool enginesRunning = false;
         public static readonly float weightConversion = 2.205f;
 
@@ -76,8 +78,8 @@ namespace Prosim2GSX
                     if (!randomizePaxSeat)
                     {
                         paxPlanned = RandomizePaxSeating(FlightPlan.Passenger);
-                        Logger.Log(LogLevel.Debug, "ProsimController:Update", $"seatOccupation bool: {string.Join(", ", paxPlanned)}");
-                        Interface.SetProsimVariable("aircraft.passengers.seatOccupation", string.Join(", ", paxPlanned));
+                        Logger.Log(LogLevel.Information, "ProsimController:Update", $"seatOccupation bool: {string.Join(", ", paxPlanned)}");
+                        Interface.SetProsimVariable("aircraft.passengers.seatOccupation", paxPlanned); // string.Join(", ", paxPlanned));
                         randomizePaxSeat = true;
                     }
 
@@ -88,6 +90,7 @@ namespace Prosim2GSX
                     {
                         Logger.Log(LogLevel.Information, "ProsimController:Update", $"New FlightPlan with ID {FlightPlan.FlightPlanID} detected!");
                         flightPlanID = FlightPlan.FlightPlanID;
+                        flightNumber = FlightPlan.Flight;
                     }
                 }
                 else
@@ -188,6 +191,28 @@ namespace Prosim2GSX
         public double GetFuelCurrent()
         {
             return fuelCurrent;
+        }
+
+        public double GetZfwCG()
+        {
+            var macZfwCG = 00.0d;
+            var act1TankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.ACT1.amount.kg");
+            var act2TankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.ACT2.amount.kg");
+            var centerTankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.center.amount.kg");
+            var leftTankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.left.amount.kg");
+            var rightTankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.right.amount.kg");
+            Interface.SetProsimVariable("aircraft.fuel.ACT1.amount.kg", 0);
+            Interface.SetProsimVariable("aircraft.fuel.ACT2.amount.kg", 0);
+            Interface.SetProsimVariable("aircraft.fuel.center.amount.kg", 0);
+            Interface.SetProsimVariable("aircraft.fuel.left.amount.kg", 0);
+            Interface.SetProsimVariable("aircraft.fuel.right.amount.kg", 0);
+            macZfwCG = Interface.ReadDataRef("aircraft.cg");
+            Interface.SetProsimVariable("aircraft.fuel.ACT1.amount.kg", act1TankFuelCurrent);
+            Interface.SetProsimVariable("aircraft.fuel.ACT2.amount.kg", act2TankFuelCurrent);
+            Interface.SetProsimVariable("aircraft.fuel.center.amount.kg", centerTankFuelCurrent);
+            Interface.SetProsimVariable("aircraft.fuel.left.amount.kg", leftTankFuelCurrent);
+            Interface.SetProsimVariable("aircraft.fuel.right.amount.kg", rightTankFuelCurrent);
+            return macZfwCG;
         }
 
         public void SetServicePCA(bool enable)

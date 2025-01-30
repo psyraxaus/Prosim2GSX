@@ -1,10 +1,12 @@
 ﻿using CoreAudio;
 using Microsoft.Win32;
 using Prosim2GSX.Models;
+using Prosim2GSX.Services;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 
 namespace Prosim2GSX
@@ -44,6 +46,7 @@ namespace Prosim2GSX
         private bool boardFinished = false;
         private bool finalLoadsheetSend = false;
         private bool equipmentRemoved = false;
+        private bool prelimFlightData = false;
         private bool pushRunning = false;
         private bool pushFinished = false;
         private bool pushNwsDisco = false;
@@ -53,10 +56,13 @@ namespace Prosim2GSX
         private int delay = 0;
         private bool operatorWasSelected = false;
         private string flightPlanID = "0";
+        private string opsCallsign = "";
+        private double macZfw = 0;
         private int paxPlanned = 0;
         private bool firstRun = true;
         private string lastVhf1App;
 
+        private AcarsClient AcarsClient;
         private MobiSimConnect SimConnect;
         private ProsimController ProsimController;
         private ServiceModel Model;
@@ -75,6 +81,8 @@ namespace Prosim2GSX
             Model = model;
             ProsimController = prosimController;
             FlightPlan = flightPlan;
+            opsCallsign = FlightCallsignToOpsCallsign(ProsimController.flightNumber);
+            this.AcarsClient = new AcarsClient(opsCallsign, Model.AcarsSecret, Model.AcarsNetworkUrl);
 
             SimConnect = IPCManager.SimConnect;
             SimConnect.SubscribeSimVar("SIM ON GROUND", "Bool");
@@ -174,6 +182,34 @@ namespace Prosim2GSX
                         break;
                 }
             }
+        }
+
+        private string FlightCallsignToOpsCallsign(string flightNumber)
+        {
+            var callSign = flightNumber;
+            var count = 0;
+
+            foreach (char c in callSign)
+            {
+                if (!char.IsLetter(c))
+                {
+                    break;
+                }
+
+                ++count;
+            }
+
+            StringBuilder sb = new StringBuilder(callSign, 8);
+            sb.Remove(0, count);
+
+            if (sb.Length >= 5)
+            {
+                sb.Remove(0, (sb.Length - 4));
+            }
+
+            sb.Insert(0, "OPS");
+
+            return sb.ToString();
         }
 
         public void ResetAudio()
@@ -411,8 +447,16 @@ namespace Prosim2GSX
                     state = FlightState.DEPARTURE;
                     flightPlanID = ProsimController.flightPlanID;
                     SetPassengers(ProsimController.GetPaxPlanned());
+                    if (!prelimFlightData)
+                    {
+                        macZfw = ProsimController.GetZfwCG();
+                        Logger.Log(LogLevel.Information, "GsxController:RunServices", $"MACZFW: {macZfw} %");
+
+                        prelimFlightData = true;
+                    }
                     Logger.Log(LogLevel.Information, "GsxController:RunServices", $"State Change: Preparation -> DEPARTURE (Waiting for Refueling and Boarding)");
                 }
+
             }
             //Special Case: loaded in Flight or with Engines Running
             if (state == FlightState.PREFLIGHT && (!simOnGround || ProsimController.enginesRunning))
@@ -507,6 +551,7 @@ namespace Prosim2GSX
                 if (ProsimController.IsFlightplanLoaded() && ProsimController.flightPlanID != flightPlanID)
                 {
                     flightPlanID = ProsimController.flightPlanID;
+                    AcarsClient.SetCallsign(FlightCallsignToOpsCallsign(ProsimController.flightNumber));
                     state = FlightState.DEPARTURE;
                     planePositioned = true;
                     connectCalled = true;
@@ -547,6 +592,7 @@ namespace Prosim2GSX
                     ProsimController.SetInitialFuel();
                     initialFuelSet = true;
                 }
+
                 if (!refuelRequested && refuelState != 6)
                 {
                     Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Calling Refuel Service");
