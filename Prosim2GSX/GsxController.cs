@@ -781,6 +781,7 @@ namespace Prosim2GSX
                     Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Final Loadsheet sent to ACARS");
                     var finalLoadedData = ProsimController.GetLoadedData("final");
                     string finalLoadsheet = FormatLoadSheet("final", finalLoadedData.Item1, finalLoadedData.Item2, finalLoadedData.Item3, finalLoadedData.Item4, finalLoadedData.Item5, finalLoadedData.Item6, finalLoadedData.Item7, finalLoadedData.Item8, finalLoadedData.Item9, finalLoadedData.Item10, finalLoadedData.Item11, finalLoadedData.Item12, finalLoadedData.Item13, finalLoadedData.Item14, finalLoadedData.Item15, finalLoadedData.Item16, finalLoadedData.Item17, finalLoadedData.Item18, finalLoadedData.Item19, finalLoadedData.Item20, finalLoadedData.Item21);
+                    System.Threading.Tasks.Task task = AcarsClient.SendMessageToAcars(ProsimController.GetFMSFlightNumber(), "telex", finalLoadsheet);
 
                 }
             }
