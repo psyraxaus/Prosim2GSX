@@ -10,6 +10,7 @@ using System.Xml.Linq;
 using Microsoft.FlightSimulator.SimConnect;
 using Prosim2GSX.Models;
 using System.Drawing.Text;
+using System.Globalization;
 
 namespace Prosim2GSX
 {
@@ -32,6 +33,10 @@ namespace Prosim2GSX
         private int[] paxSeats;
         private bool[] paxCurrent;
         private int paxLast;
+        public int paxZone1;
+        public int paxZone2;
+        public int paxZone3;
+        public int paxZone4;
         private bool randomizePaxSeat = false;
 
         private int cargoPlanned;
@@ -78,8 +83,17 @@ namespace Prosim2GSX
                     if (!randomizePaxSeat)
                     {
                         paxPlanned = RandomizePaxSeating(FlightPlan.Passenger);
-                        Logger.Log(LogLevel.Information, "ProsimController:Update", $"seatOccupation bool: {string.Join(", ", paxPlanned)}");
+                        Logger.Log(LogLevel.Debug, "ProsimController:Update", $"seatOccupation bool: {string.Join(", ", paxPlanned)}");
                         Interface.SetProsimVariable("aircraft.passengers.seatOccupation", paxPlanned); // string.Join(", ", paxPlanned));
+                        paxZone1 = Interface.ReadDataRef("aircraft.passengers.zone1.amount");
+                        paxZone2 = Interface.ReadDataRef("aircraft.passengers.zone2.amount");
+                        paxZone3 = Interface.ReadDataRef("aircraft.passengers.zone3.amount");
+                        paxZone4 = Interface.ReadDataRef("aircraft.passengers.zone4.amount");
+
+                        Interface.SetProsimVariable("aircraft.cargo.aft.amount", Convert.ToDouble(FlightPlan.CargoTotal / 2));
+                        Interface.SetProsimVariable("aircraft.cargo.forward.amount", Convert.ToDouble(FlightPlan.CargoTotal / 2));
+                        Logger.Log(LogLevel.Debug, "ProsimController:Update", $"Temp Cargo set: forward {Interface.GetProsimVariable("aircraft.cargo.forward.amount")} aft {Interface.GetProsimVariable("aircraft.cargo.aft.amount")}");
+
                         randomizePaxSeat = true;
                     }
 
@@ -213,6 +227,72 @@ namespace Prosim2GSX
             Interface.SetProsimVariable("aircraft.fuel.left.amount.kg", leftTankFuelCurrent);
             Interface.SetProsimVariable("aircraft.fuel.right.amount.kg", rightTankFuelCurrent);
             return macZfwCG;
+        }
+
+        public (string, string, string, string, string, string, string, double, double, double, double, double, double, int, int, double, double, int, int, int, double) GetLoadedData(string loadsheetType)
+        {
+            double estZfw;
+            double maxZfw;
+            double estTow;
+            double maxTow;
+            double estLaw;
+            double maxLaw;
+            int paxAdults;
+            int paxInfants;
+            double macZfw = GetZfwCG();
+            double macTow = Interface.ReadDataRef("aircraft.cg");
+            int paxZoneA = Interface.ReadDataRef("aircraft.passengers.zone1.amount");
+            int paxZoneB = Interface.ReadDataRef("aircraft.passengers.zone2.amount");
+            int paxZoneC = Interface.ReadDataRef("aircraft.passengers.zone3.amount") + Interface.ReadDataRef("aircraft.passengers.zone4.amount");
+            double fuelInTanks;
+            //DateTime simulatorDateTime = DateTime.Parse(Interface.ReadDataRef("aircraft.time"));
+            var simulatorDateTime = Interface.ReadDataRef("aircraft.time");
+            string timeIn24HourFormat = simulatorDateTime.ToString("HHmm");
+
+            if (loadsheetType == "prelim")
+            {
+                estZfw = FlightPlan.EstimatedZeroFuelWeight;
+                maxZfw = FlightPlan.MaximumZeroFuelWeight;
+                estTow = FlightPlan.EstimatedTakeOffWeight;
+                paxAdults = FlightPlan.Passenger;
+                fuelInTanks = FlightPlan.Fuel;
+            }
+            else
+            {
+                estZfw = Interface.ReadDataRef("aircraft.weight.zfw");
+                maxZfw = Interface.ReadDataRef("aircraft.weight.zfwMax");
+                estTow = Interface.ReadDataRef("aircraft.weight.gross");
+                paxAdults = Interface.ReadDataRef("aircraft.passengers.zone1.amount") + Interface.ReadDataRef("aircraft.passengers.zone2.amount") + Interface.ReadDataRef("aircraft.passengers.zone3.amount") + Interface.ReadDataRef("aircraft.passengers.zone4.amount");
+                fuelInTanks = Interface.ReadDataRef("aircraft.weight.fuel");
+            }
+
+            maxTow = FlightPlan.MaximumTakeOffWeight;
+            estLaw = FlightPlan.EstimatedLandingWeight;
+            maxLaw = FlightPlan.MaxmimumLandingWeight;
+            paxInfants = 0;
+
+            return (timeIn24HourFormat, FlightPlan.Flight, FlightPlan.TailNumber, FlightPlan.DayOfFlight, FlightPlan.DateOfFlight, FlightPlan.Origin, FlightPlan.Destination, estZfw, maxZfw, estTow, maxTow, estLaw, maxLaw, paxInfants, paxAdults, macZfw, macTow, paxZoneA, paxZoneB, paxZoneC, fuelInTanks);
+        }
+
+        public string GetFMSFlightNumber()
+        {
+            string flightNumber;
+            var fmsXmlstr = Interface.ReadDataRef("aircraft.fms.flightPlanXml");
+            XmlDocument xmlDoc = new XmlDocument();
+            xmlDoc.LoadXml(fmsXmlstr);
+            XmlNode flightNumberNode = xmlDoc.SelectSingleNode("/fms/routeData/flightNumber");
+
+            if (flightNumberNode != null && !string.IsNullOrEmpty(flightNumberNode.InnerText))
+            {
+                flightNumber = flightNumberNode.InnerText;
+                Logger.Log(LogLevel.Debug, "ProsimController:GetFMSFlightNumber", $"Flight Number: {flightNumberNode.InnerText}");
+            }
+            else
+            {
+                flightNumber = "";
+                Logger.Log(LogLevel.Debug, "ProsimController:GetFMSFlightNumber", $"No Flight number loaded in FMS");
+            }
+            return flightNumber;
         }
 
         public void SetServicePCA(bool enable)
