@@ -136,7 +136,7 @@ namespace Prosim2GSX
             SimConnect.SubscribeLvar("A_FC_THROTTLE_LEFT_INPUT");
             SimConnect.SubscribeLvar("A_FC_THROTTLE_RIGHT_INPUT");
             SimConnect.SubscribeSimVar("GPS GROUND SPEED", "Meters per second");
-            SimConnect.SubscribeSimVar("ZULU TIME", "Seconds");
+            SimConnect.SubscribeEnvVar("ZULU TIME", "Seconds");
 
 
             if (!string.IsNullOrEmpty(Model.Vhf1VolumeApp))
@@ -507,8 +507,9 @@ namespace Prosim2GSX
             if (state == FlightState.DEPARTURE && !prelimLoadsheet)
             {
 
-                //var simTime = SimConnect.ReadSimVar("ZULU TIME", "Seconds");
-                //TimeSpan time = TimeSpan.FromSeconds(simTime);
+                var simTime = SimConnect.ReadEnvVar("ZULU TIME", "Seconds");
+                TimeSpan time = TimeSpan.FromSeconds(simTime);
+                Logger.Log(LogLevel.Debug, "GsxController:RunServices", $"ZULU time - {simTime}");
 
                 string flightNumber  = ProsimController.GetFMSFlightNumber();
 

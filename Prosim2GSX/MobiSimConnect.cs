@@ -304,6 +304,11 @@ namespace Prosim2GSX
             SubscribeVariable($"(A:{name}, {unit})");
         }
 
+        public void SubscribeEnvVar(string name, string unit)
+        {
+            SubscribeVariable($"(E:{name}, {unit})");
+        }
+
         protected void SubscribeVariable(string address)
         {
             try
@@ -376,6 +381,15 @@ namespace Prosim2GSX
         public float ReadSimVar(string name, string unit)
         {
             string address = $"(A:{name}, {unit})";
+            if (addressToIndex.TryGetValue(address, out uint index) && simVars.TryGetValue(index, out float value))
+                return value;
+            else
+                return 0;
+        }
+
+        public float ReadEnvVar(string name, string unit)
+        {
+            string address = $"(E:{name}, {unit})";
             if (addressToIndex.TryGetValue(address, out uint index) && simVars.TryGetValue(index, out float value))
                 return value;
             else
