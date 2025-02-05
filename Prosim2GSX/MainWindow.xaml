@@ -47,7 +47,7 @@
                     <StackPanel Orientation="Horizontal" Margin="0,0,8,8" VerticalAlignment="Center" ToolTip="Select how you would like to load the flight plans.">
                         <TextBlock Margin="8,0,0,0" >Load Flight Plan From:</TextBlock>
                         <RadioButton Name="eFBPlan" Margin="8,0,0,0" IsEnabled="False" VerticalAlignment="Center" VerticalContentAlignment="Center" Click="flightPlan_Click">EFB</RadioButton>
-                        <RadioButton Name="mCDUPlan" Margin="8,0,0,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Click="flightPlan_Click">MCDU</RadioButton>
+                        <RadioButton Name="mCDUPlan" Margin="8,0,0,0" IsChecked="True" VerticalAlignment="Center" VerticalContentAlignment="Center" Click="flightPlan_Click">MCDU</RadioButton>
                     </StackPanel>
 
                     <CheckBox Name="chkUseActualPaxValue" Margin="4,7,7,2" VerticalContentAlignment="Center" Click="chkUseActualPaxValue_Click" ToolTip="The SimBrief Flightplan includes a Field for actual Passenger Count which can be different from the planned Passenger Count.&#x0a;If you don't want that (light) Randomization disable this Setting.">
