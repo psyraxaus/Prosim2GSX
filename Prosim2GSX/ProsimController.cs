@@ -295,6 +295,12 @@ namespace Prosim2GSX
             return flightNumber;
         }
 
+        public double SaveFuel()
+        {
+            double arrivalFuel = Interface.ReadDataRef("aircraft.fuel.total.amount.kg");
+            return arrivalFuel;
+        }
+
         public void SetServicePCA(bool enable)
         {
             Interface.SetProsimVariable("groundservice.preconditionedAir", enable);
@@ -331,6 +337,12 @@ namespace Prosim2GSX
                 Logger.Log(LogLevel.Information, "ProsimController:SetInitialFuel", $"Start at Zero Fuel amount - Resetting to 0kg (0lbs)");
                 Interface.SetProsimVariable("aircraft.fuel.total.amount.kg", 0.0D);
                 fuelCurrent = 0D;
+            }
+            else if (Model.SetSaveFuel)
+            {
+                Logger.Log(LogLevel.Information, "ProsimController:SetInitialFuel", $"Using saved fuel value - Resetting to {Model.SavedFuelAmount}");
+                Interface.SetProsimVariable("aircraft.fuel.total.amount.kg", Model.SavedFuelAmount);
+                fuelCurrent = Model.SavedFuelAmount;
             }
             else if (fuelCurrent > fuelPlanned)
             {

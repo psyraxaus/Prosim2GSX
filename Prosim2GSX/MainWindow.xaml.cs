@@ -178,7 +178,9 @@ namespace Prosim2GSX
 
         private void chkSaveFuel_Checked(object sender, RoutedEventArgs e)
         {
+            chkZeroFuel.IsChecked = false;
             chkZeroFuel.IsEnabled = false;
+            serviceModel.SetSetting("setZeroFuel", chkZeroFuel.IsChecked.ToString().ToLower());
             serviceModel.SetSetting("setSaveFuel", chkSaveFuel.IsChecked.ToString().ToLower());
         }
 

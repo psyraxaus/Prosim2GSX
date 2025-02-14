@@ -924,6 +924,12 @@ namespace Prosim2GSX
                 if (!Model.AutoConnect)
                     OperatorSelection();
             }
+
+            if (Model.SetSaveFuel)
+            {
+                double arrivalFuel = ProsimController.SaveFuel();
+                Model.SavedFuelAmount = arrivalFuel;
+            }
         }
 
         private void RunDeboardingService(int deboard_state)
