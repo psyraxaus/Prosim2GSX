@@ -190,6 +190,11 @@ namespace Prosim2GSX
             serviceModel.SetSetting("setSaveFuel", chkSaveFuel.IsChecked.ToString().ToLower());
         }
 
+        public void chkSaveProsimFluidsOnArrival_Click(object sender, RoutedEventArgs e)
+        {
+            serviceModel.SetSetting("saveHydraulicFluids", chkSaveProsimFluidsOnArrival.IsChecked.ToString().ToLower());
+        }
+
         private void chkSynchBypass_Click(object sender, RoutedEventArgs e)
         {
             serviceModel.SetSetting("synchBypass", chkSynchBypass.IsChecked.ToString().ToLower());

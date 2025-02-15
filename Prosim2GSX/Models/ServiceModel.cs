@@ -18,6 +18,9 @@ namespace Prosim2GSX.Models
         public bool DisableCrew { get; set; }
         public string FlightPlanType { get; set; }
         public bool GsxVolumeControl { get; set; }
+        public double HydaulicsBlueAmount { get; set; }
+        public double HydaulicsGreenAmount { get; set; }
+        public double HydaulicsYellowAmount { get; set; }
         public bool IsProsimRunning { get; set; } = false;
         public bool IsSessionRunning { get; set; } = false;
         public bool IsSimRunning { get; set; } = false;
@@ -33,13 +36,13 @@ namespace Prosim2GSX.Models
         public double SavedFuelAmount { get; set; }
         public bool ServiceExited { get; set; } = false;
         public bool SetOpenAftCateringDoor { get; set; }
+        public bool SetSaveHydraulicFluids { get; set; }
         public bool SetSaveFuel { get; set; }
         public bool SetZeroFuel { get; set; }
         public string SimBriefID { get; set; }
         public string SimBriefURL { get; set; }
         public bool SynchBypass { get; set; }
         public bool TestArrival { get; set; }
-
         public bool UseAcars { get; set; }
         public bool UseActualPaxValue { get; set; }
         public bool Vhf1LatchMute { get; set; }
@@ -75,6 +78,9 @@ namespace Prosim2GSX.Models
             DisableCrew = Convert.ToBoolean(ConfigurationFile.GetSetting("disableCrew", "true"));
             FlightPlanType = Convert.ToString(ConfigurationFile.GetSetting("flightPlanType", "MCDU"));
             GsxVolumeControl = Convert.ToBoolean(ConfigurationFile.GetSetting("gsxVolumeControl", "true"));
+            HydaulicsBlueAmount = Convert.ToSingle(ConfigurationFile.GetSetting("hydraulicBlueAmount", "0"), new RealInvariantFormat(ConfigurationFile.GetSetting("hydraulicBlueAmount", "0")));
+            HydaulicsGreenAmount = Convert.ToSingle(ConfigurationFile.GetSetting("hydraulicGreenAmount", "0"), new RealInvariantFormat(ConfigurationFile.GetSetting("hydraulicGreenAmount", "0")));
+            HydaulicsYellowAmount = Convert.ToSingle(ConfigurationFile.GetSetting("hydraulicYellowAmount", "0"), new RealInvariantFormat(ConfigurationFile.GetSetting("hydraulicYellowAmount", "0")));
             LogFilePath = Convert.ToString(ConfigurationFile.GetSetting("logFilePath", "Prosim2GSX.log"));
             LogLevel = Convert.ToString(ConfigurationFile.GetSetting("logLevel", "Debug"));
             PcaOnlyJetways = Convert.ToBoolean(ConfigurationFile.GetSetting("pcaOnlyJetway", "true"));
@@ -86,6 +92,7 @@ namespace Prosim2GSX.Models
             OperatorDelay = Convert.ToSingle(ConfigurationFile.GetSetting("operatorDelay", "10"), new RealInvariantFormat(ConfigurationFile.GetSetting("operatorDelay", "10")));
             SavedFuelAmount = Convert.ToSingle(ConfigurationFile.GetSetting("savedFuelAmount", "0"), new RealInvariantFormat(ConfigurationFile.GetSetting("savedFuelAmount", "0")));
             SetOpenAftCateringDoor = Convert.ToBoolean(ConfigurationFile.GetSetting("setOpenAftDoorCatering", "false"));
+            SetSaveHydraulicFluids = Convert.ToBoolean(ConfigurationFile.GetSetting("saveHydraulicFluids", "false"));
             SetSaveFuel = Convert.ToBoolean(ConfigurationFile.GetSetting("setSaveFuel", "false"));
             SetZeroFuel = Convert.ToBoolean(ConfigurationFile.GetSetting("setZeroFuel", "false"));
             SimBriefID = Convert.ToString(ConfigurationFile.GetSetting("pilotID", "0"));

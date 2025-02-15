@@ -295,7 +295,7 @@ namespace Prosim2GSX
             return flightNumber;
         }
 
-        public double SaveFuel()
+        public double GetFuelAmount()
         {
             double arrivalFuel = Interface.ReadDataRef("aircraft.fuel.total.amount.kg");
             return arrivalFuel;
@@ -351,6 +351,18 @@ namespace Prosim2GSX
                 fuelCurrent = 1500D;
             }
 
+        }
+
+        public void SetInitialFluids()
+        {
+            Interface.SetProsimVariable("aircraft.hydraulics.blue.quantity", Model.HydaulicsBlueAmount);
+            Interface.SetProsimVariable("aircraft.hydraulics.green.quantity", Model.HydaulicsGreenAmount);
+            Interface.SetProsimVariable("aircraft.hydraulics.yellow.quantity", Model.HydaulicsYellowAmount);
+        }
+
+        public (double, double, double) GetHydraulicFluidValues()
+        {
+            return (Model.HydaulicsBlueAmount = Interface.ReadDataRef("aircraft.hydraulics.blue.quantity"), Model.HydaulicsGreenAmount = Interface.ReadDataRef("aircraft.hydraulics.green.quantity"), Model.HydaulicsYellowAmount = Interface.ReadDataRef("aircraft.hydraulics.yellow.quantity"));
         }
         public void RefuelStart()
         {

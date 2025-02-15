@@ -53,6 +53,7 @@ namespace Prosim2GSX
         private bool firstRun = true;
         private string flightPlanID = "0";
         private bool initialFuelSet = false;
+        private bool initialFluidsSet = false;
         private string lastVhf1App;
         private double macZfw = 0.0d;
         private bool operatorWasSelected = false;
@@ -148,6 +149,7 @@ namespace Prosim2GSX
 
             if (Model.TestArrival)
                 ProsimController.Update(true);
+
         }
 
         private void GetAudioSessions()
@@ -391,14 +393,25 @@ namespace Prosim2GSX
                 operatorWasSelected = false;
             }
 
+
+
             //PREPARATION (On-Ground and Engines not running)
             if (state == FlightState.PREFLIGHT && simOnGround && !ProsimController.enginesRunning && ProsimController.Interface.ReadDataRef("system.switches.S_OH_ELEC_BAT1") == 1)
             {
                 if (Model.UseAcars && !opsCallsignSet)
                 {
-                    opsCallsign = FlightCallsignToOpsCallsign(ProsimController.flightNumber);
-                    this.AcarsClient = new AcarsClient(opsCallsign, Model.AcarsSecret, Model.AcarsNetworkUrl);
-                    opsCallsignSet = true;
+                    
+                    try
+                    {
+                        opsCallsign = FlightCallsignToOpsCallsign(ProsimController.flightNumber);
+                        this.AcarsClient = new AcarsClient(opsCallsign, Model.AcarsSecret, Model.AcarsNetworkUrl);
+                        opsCallsignSet = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log(LogLevel.Error, "GsxController:RunServices", $"Unable to set opsCallSign - Error: {ex.Message}");
+                    }
+
                 }
                 if (Model.TestArrival)
                 {
@@ -519,10 +532,16 @@ namespace Prosim2GSX
                     //System.Threading.Tasks.Task task = AcarsClient.SendMessageToAcars(flightNumber, "telex", $"This is a test.\n Newline with MACZFW {macZfw}");                  
                     var prelimLoadedData = ProsimController.GetLoadedData("prelim");
                     string prelimLoadsheetString = FormatLoadSheet("prelim", prelimLoadedData.Item1, prelimLoadedData.Item2, prelimLoadedData.Item3, prelimLoadedData.Item4, prelimLoadedData.Item5, prelimLoadedData.Item6, prelimLoadedData.Item7, prelimLoadedData.Item8, prelimLoadedData.Item9, prelimLoadedData.Item10, prelimLoadedData.Item11, prelimLoadedData.Item12, prelimLoadedData.Item13, prelimLoadedData.Item14, prelimLoadedData.Item15, prelimLoadedData.Item16, prelimLoadedData.Item17, prelimLoadedData.Item18, prelimLoadedData.Item19, prelimLoadedData.Item20, prelimLoadedData.Item21);
+                    try
+                    {
+                        System.Threading.Tasks.Task task = AcarsClient.SendMessageToAcars(ProsimController.GetFMSFlightNumber(), "telex", prelimLoadsheetString);
 
-                    System.Threading.Tasks.Task task = AcarsClient.SendMessageToAcars(ProsimController.GetFMSFlightNumber(), "telex", prelimLoadsheetString);
-
-                    prelimLoadsheet = true;
+                        prelimLoadsheet = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log(LogLevel.Debug, "GsxController:RunServices", $"Error Sending ACARS - {ex.Message}");
+                    }
                 }
                 
             }
@@ -643,6 +662,12 @@ namespace Prosim2GSX
                 {
                     ProsimController.SetInitialFuel();
                     initialFuelSet = true;
+                }
+
+                if (Model.SetSaveHydraulicFluids && !initialFluidsSet)
+                {
+                    ProsimController.SetInitialFluids();
+                    initialFluidsSet = true;
                 }
 
                 if (!refuelRequested && refuelState != 6)
@@ -927,8 +952,16 @@ namespace Prosim2GSX
 
             if (Model.SetSaveFuel)
             {
-                double arrivalFuel = ProsimController.SaveFuel();
+                double arrivalFuel = ProsimController.GetFuelAmount();
                 Model.SavedFuelAmount = arrivalFuel;
+            }
+
+            if (Model.SetSaveHydraulicFluids)
+            {
+                var hydraulicFluids = ProsimController.GetHydraulicFluidValues();
+                Model.HydaulicsBlueAmount = hydraulicFluids.Item1;
+                Model.HydaulicsGreenAmount = hydraulicFluids.Item2;
+                Model.HydaulicsYellowAmount = hydraulicFluids.Item3;
             }
         }
 
@@ -1106,7 +1139,7 @@ namespace Prosim2GSX
                 string zfwLimited = limitedBy.Item1;
                 string towLimited = limitedBy.Item2;
                 string lawLimited = limitedBy.Item3;
-                formattedLoadSheet = $"- LOADSHEET PRELIM {time}\nEDNO 1\n{flightNumber}/{day} {date}\n{orig} {dest} {tailNumber} 2/4\nZFW  {est_zfw}  MAX  {max_zfw}  {zfwLimited}\nTOF  {est_tow - est_zfw}\nTOW  {est_tow}  MAX  {max_tow}  {towLimited}\nTIF {est_tow - est_law}\nLAW  {est_law}  MAX  {max_law}  {lawLimited}\nUNDLO  {max_law - est_law}\nPAX/{paxInfants}/{paxAdults} TTL {paxInfants + paxAdults}\nMACZFW  {macZfw}\nMACTOW  {macTow}\nA{paxZoneA}  B{paxZoneB}  C{paxZoneC}\nCABIN SECTION TRIM\nSI SERVICE WEIGHT\nADJUSTMENT WEIGHT/INDEX\nADD\n{dest} POTABLE WATER xx/10\n100PCT\n441 -0.5\nDEDUCTIONS\nNIL PANTRY EFFECT 2590/0.0\n........................\nPREPARED BY\n{GetRandomName()} +1 800 555 0199\nLICENCE {GetRandomLicenceNumber()}\nFUEL IN TANKS {fuelInTanks}\nEND";
+                formattedLoadSheet = $"- LOADSHEET PRELIM {time}\nEDNO 1\n{flightNumber}/{day} {date}\n{orig} {dest} {tailNumber} 2/4\nZFW  {est_zfw}  MAX  {max_zfw}  {zfwLimited}\nTOF  {est_tow - est_zfw}\nTOW  {est_tow}  MAX  {max_tow}  {towLimited}\nTIF {est_tow - est_law}\nLAW  {est_law}  MAX  {max_law}  {lawLimited}\nUNDLO  {max_law - est_law}\nPAX/{paxInfants}/{paxAdults} TTL {paxInfants + paxAdults}\nMACZFW  {macZfw}\nMACTOW  {macTow}\nA{paxZoneA}  B{paxZoneB}  C{paxZoneC}\nCABIN SECTION TRIM\nSI SERVICE WEIGHT\nADJUSTMENT WEIGHT/INDEX\nADD\n{dest} POTABLE WATER xx/10\n100PCT\n441 -0.5\nDEDUCTIONS\nNIL PANTRY EFFECT 2590/0.0\n......................\nPREPARED BY\n{GetRandomName()} +1 800 555 0199\nLICENCE {GetRandomLicenceNumber()}\nFUEL IN TANKS {fuelInTanks}\nEND";
             }
             else if (loadsheetType == "final")
             {

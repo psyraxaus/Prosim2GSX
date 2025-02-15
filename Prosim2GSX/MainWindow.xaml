@@ -40,7 +40,7 @@
                 <Label Name="lblConnStatSession" Height="40" VerticalContentAlignment="Center" VerticalAlignment="Center" TextBlock.Foreground="Red" Padding="8,0,16,0">Session</Label>
             </StackPanel>
         </GroupBox>
-        <GroupBox Grid.Row="1" BorderBrush="DarkGray" BorderThickness="1" Margin="10,10,446,8" Grid.ColumnSpan="2">
+        <GroupBox Grid.Row="1" BorderBrush="DarkGray" BorderThickness="1" Margin="10,10,446,116" Grid.ColumnSpan="2">
             <GroupBox.Header>Flight Plan Settings</GroupBox.Header>
             <StackPanel Orientation="Vertical" Margin="0,6,0,0">
                 <StackPanel Orientation="Vertical" Width="316">
@@ -62,6 +62,14 @@
                         <RadioButton Name="acarsSayIntentions" Margin="8,0,0,0" VerticalAlignment="Center" VerticalContentAlignment="Center" Click="acars_Click">Say Intentions</RadioButton>
                     </StackPanel>
                 </StackPanel>
+            </StackPanel>
+        </GroupBox>
+        <GroupBox Grid.Row="1" BorderBrush="DarkGray" BorderThickness="1" Margin="10,145,446,79" Grid.ColumnSpan="2" Grid.RowSpan="2">
+            <GroupBox.Header>Prosim Settings</GroupBox.Header>
+            <StackPanel Orientation="Vertical"  Margin="0,6,0,0">
+                <CheckBox Name="chkSaveProsimFluidsOnArrival" Margin="4,0,7,0" VerticalContentAlignment="Center" Click="chkSaveProsimFluidsOnArrival_Click" ToolTip="Saves the Prosim Hydraulic fluid value on arrival for use in later flights after shutdown." Height="18">
+                    <TextBlock>Save hydraulic fluids on arrival</TextBlock>
+                </CheckBox>
             </StackPanel>
         </GroupBox>
         <GroupBox Grid.Row="1" BorderBrush="DarkGray" BorderThickness="1" Margin="215,10,10,79" Grid.Column="1" Grid.RowSpan="2">
