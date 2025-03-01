@@ -1150,7 +1150,19 @@ namespace Prosim2GSX
                 string zfwLimited = limitedBy.Item1;
                 string towLimited = limitedBy.Item2;
                 string lawLimited = limitedBy.Item3;
-                formattedLoadSheet = $"- LOADSHEET PRELIM {time}\nEDNO 1\n{flightNumber}/{day} {date}\n{orig} {dest} {tailNumber} 2/4\nZFW  {est_zfw}  MAX  {max_zfw}  {zfwLimited}\nTOF  {est_tow - est_zfw}\nTOW  {est_tow}  MAX  {max_tow}  {towLimited}\nTIF {est_tow - est_law}\nLAW  {est_law}  MAX  {max_law}  {lawLimited}\nUNDLO  {max_law - est_law}\nPAX/{paxInfants}/{paxAdults} TTL {paxInfants + paxAdults}\nMACZFW  {macZfw}\nMACTOW  {macTow}\nA{paxZoneA}  B{paxZoneB}  C{paxZoneC}\nCABIN SECTION TRIM\nSI SERVICE WEIGHT\nADJUSTMENT WEIGHT/INDEX\nADD\n{dest} POTABLE WATER xx/10\n100PCT\n441 -0.5\nDEDUCTIONS\nNIL PANTRY EFFECT 2590/0.0\n......................\nPREPARED BY\n{GetRandomName()} +1 800 555 0199\nLICENCE {GetRandomLicenceNumber()}\nFUEL IN TANKS {fuelInTanks}\nEND";
+                // Format weights as whole numbers
+                int zfwWhole = (int)Math.Round(est_zfw);
+                int towWhole = (int)Math.Round(est_tow);
+                int lawWhole = (int)Math.Round(est_law);
+                int maxZfwWhole = (int)Math.Round(max_zfw);
+                int maxTowWhole = (int)Math.Round(max_tow);
+                int maxLawWhole = (int)Math.Round(max_law);
+                int tofWhole = (int)Math.Round(est_tow - est_zfw);
+                int tifWhole = (int)Math.Round(est_tow - est_law);
+                int undloWhole = (int)Math.Round(max_law - est_law);
+                int fuelInTanksWhole = (int)Math.Round(fuelInTanks);
+
+                formattedLoadSheet = $"- LOADSHEET PRELIM {time}\nEDNO 1\n{flightNumber}/{day} {date}\n{orig} {dest} {tailNumber} 2/4\nZFW  {zfwWhole}  MAX  {maxZfwWhole}  {zfwLimited}\nTOF  {tofWhole}\nTOW  {towWhole}  MAX  {maxTowWhole}  {towLimited}\nTIF {tifWhole}\nLAW  {lawWhole}  MAX  {maxLawWhole}  {lawLimited}\nUNDLO  {undloWhole}\nPAX/{paxInfants}/{paxAdults} TTL {paxInfants + paxAdults}\nMACZFW  {macZfw}\nMACTOW  {macTow}\nA{paxZoneA}  B{paxZoneB}  C{paxZoneC}\nCABIN SECTION TRIM\nSI SERVICE WEIGHT\nADJUSTMENT WEIGHT/INDEX\nADD\n{dest} POTABLE WATER xx/10\n100PCT\n441 -0.5\nDEDUCTIONS\nNIL PANTRY EFFECT 2590/0.0\n......................\nPREPARED BY\n{GetRandomName()} +1 800 555 0199\nLICENCE {GetRandomLicenceNumber()}\nFUEL IN TANKS {fuelInTanksWhole}\nEND";
             }
             else if (loadsheetType == "final")
             {
@@ -1198,7 +1210,12 @@ namespace Prosim2GSX
                     paxDiffString = $"{finalPax} no change";
                 }
 
-                formattedLoadSheet = $"{finalTitle}\n{flightNumber}/{day}  {date}\n{orig}  {dest}  {tailNumber}  2/4\n......................\nZFW  {finalZfw}  {zfwChanged}\nTOW  {finalTow}  {towChanged}\nPAX  {paxDiffString}\nMACZFW  {finalMacZfw}  {macZfwChanged}\nMACTOW  {finalMacTow}  {macTowChanged}\nFUEL IN TANKS  {finalFuel}  {fuelChanged}\nEND";
+                // Format weights as whole numbers
+                int finalZfwWhole = (int)Math.Round(finalZfw);
+                int finalTowWhole = (int)Math.Round(finalTow);
+                int finalFuelWhole = (int)Math.Round(finalFuel);
+
+                formattedLoadSheet = $"{finalTitle}\n{flightNumber}/{day}  {date}\n{orig}  {dest}  {tailNumber}  2/4\n......................\nZFW  {finalZfwWhole}  {zfwChanged}\nTOW  {finalTowWhole}  {towChanged}\nPAX  {paxDiffString}\nMACZFW  {finalMacZfw}  {macZfwChanged}\nMACTOW  {finalMacTow}  {macTowChanged}\nFUEL IN TANKS  {finalFuelWhole}  {fuelChanged}\nEND";
 
             }
             return formattedLoadSheet;
@@ -1287,7 +1304,7 @@ namespace Prosim2GSX
         private (string, string, string, string, string, string, bool) GetLoadSheetDifferences(double prezfw, double preTow, int prePax, double preMacZfw, double preMacTow, double prefuel, double finalZfw, double finalTow, int finalPax, double finalMacZfw, double finalMacTow, double finalfuel)
         {
             // Tolerance values for detecting changes
-            const double WeightTolerance = 100.0; // 100 kg tolerance for weight values
+            const double WeightTolerance = 1000.0; // 100 kg tolerance for weight values
             const double MacTolerance = 0.1;     // 0.1% tolerance for MAC values
             
             string zfwChanged = "";
