@@ -100,6 +100,9 @@
                 <CheckBox Name="chkOpenDoorCatering" Margin="28,8,8,0" VerticalContentAlignment="Center" Click="chkOpenDoorCatering_Click" ToolTip="Open right aft door when catering is in position.">
                     <TextBlock>Auto Open <Underline>Right Aft Door</Underline> when catering in position</TextBlock>
                 </CheckBox>
+                <CheckBox Name="chkOpenCargoDoors" Margin="8,8,8,0" VerticalContentAlignment="Center" Click="chkOpenCargoDoors_Click" ToolTip="Automatically open and close cargo doors after catering is finished.">
+                    <TextBlock>Auto Open <Underline>Cargo Doors</Underline> after catering is finished</TextBlock>
+                </CheckBox>
                 <CheckBox Name="chkAutoBoard" Margin="8,8,8,0" VerticalContentAlignment="Center" Click="chkAutoBoard_Click" ToolTip="Boarding will automatically start 90s after Refueling is finished (regardless if the Refuel Service was called automatically or manually).&#x0a;Boarding-Synchronization still works when this Option is disabled!&#x0a;The Final Loadsheet will always be send regardless who called Refueling and Boarding.">
                     <TextBlock>Automatically start <Underline>Boarding</Underline> when Refuel and Catering are finished</TextBlock>
                 </CheckBox>

@@ -721,12 +721,15 @@ namespace Prosim2GSX
                     aftRightDoorOpened = false;
                     Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Closed aft right door after catering");
                     
-                    // Open cargo doors after catering is finished
-                    ProsimController.SetForwardCargoDoor(true);
-                    ProsimController.SetAftCargoDoor(true);
-                    forwardCargoDoorOpened = true;
-                    aftCargoDoorOpened = true;
-                    Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Opened cargo doors for loading");
+                    // Open cargo doors after catering is finished if enabled
+                    if (Model.SetOpenCargoDoors)
+                    {
+                        ProsimController.SetForwardCargoDoor(true);
+                        ProsimController.SetAftCargoDoor(true);
+                        forwardCargoDoorOpened = true;
+                        aftCargoDoorOpened = true;
+                        Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Opened cargo doors for loading");
+                    }
                 }
             }
 
