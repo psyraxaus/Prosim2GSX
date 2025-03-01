@@ -531,11 +531,17 @@ namespace Prosim2GSX
             Interface.SetProsimVariable("aircraft.refuel.refuelingRate", 0.0D);
             Interface.SetProsimVariable("aircraft.refuel.refuelingPower", true);
 
+            // Round up planned fuel to the nearest 100
+            double roundedFuelPlanned = Math.Ceiling(fuelPlanned / 100.0) * 100.0;
+            Logger.Log(LogLevel.Debug, "ProsimController:RefuelStart", $"Rounding fuel from {fuelPlanned} to {roundedFuelPlanned}");
+            
             if (fuelUnits == "KG")
-                Interface.SetProsimVariable("aircraft.refuel.fuelTarget", fuelPlanned);
+                Interface.SetProsimVariable("aircraft.refuel.fuelTarget", roundedFuelPlanned);
             else
-                Interface.SetProsimVariable("aircraft.refuel.fuelTarget", fuelPlanned * weightConversion);
+                Interface.SetProsimVariable("aircraft.refuel.fuelTarget", roundedFuelPlanned * weightConversion);
 
+            // Update the fuelPlanned value to the rounded value
+            fuelPlanned = roundedFuelPlanned;
         }
 
         public bool Refuel()
@@ -550,7 +556,7 @@ namespace Prosim2GSX
             Interface.SetProsimVariable("aircraft.fuel.total.amount.kg", fuelCurrent);
             //Interface.SetProsimVariable("aircraft.fuel.total.amount", fuelCurrent);
 
-            return fuelCurrent == fuelPlanned;
+            return Math.Abs(fuelCurrent - fuelPlanned) < 1.0; // Allow for small floating point differences
         }
 
         public void RefuelStop()
