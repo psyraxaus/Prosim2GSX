@@ -111,9 +111,6 @@ namespace Prosim2GSX
                         elapsedMS = 0;
                     }
 
-                    if (Model.GsxVolumeControl || Model.IsVhf1Controllable())
-                        gsxController.ControlAudio();
-
                     Thread.Sleep(delay);
                     elapsedMS += delay;
                 }
@@ -124,11 +121,6 @@ namespace Prosim2GSX
             }
 
             Logger.Log(LogLevel.Information, "ServiceController:ServiceLoop", "ServiceLoop ended");
-            if (Model.GsxVolumeControl || Model.IsVhf1Controllable())
-            {
-                Logger.Log(LogLevel.Information, "ServiceController:ServiceLoop", "Resetting GSX/VHF1 Audio");
-                gsxController.ResetAudio();
-            }
             
             // Clear the GsxController reference when the service loop ends
             IPCManager.GsxController = null;
