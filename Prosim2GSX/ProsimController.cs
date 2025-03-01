@@ -239,8 +239,8 @@ namespace Prosim2GSX
             double maxLaw;
             int paxAdults;
             int paxInfants;
-            double macZfw = GetZfwCG();
             double macTow = Interface.ReadDataRef("aircraft.cg");
+            double macZfw = GetZfwCG();
             int paxZoneA = Interface.ReadDataRef("aircraft.passengers.zone1.amount");
             int paxZoneB = Interface.ReadDataRef("aircraft.passengers.zone2.amount");
             int paxZoneC = Interface.ReadDataRef("aircraft.passengers.zone3.amount") + Interface.ReadDataRef("aircraft.passengers.zone4.amount");
@@ -252,7 +252,6 @@ namespace Prosim2GSX
             if (loadsheetType == "prelim")
             {
                 estZfw = FlightPlan.EstimatedZeroFuelWeight;
-                maxZfw = FlightPlan.MaximumZeroFuelWeight;
                 estTow = FlightPlan.EstimatedTakeOffWeight;
                 paxAdults = FlightPlan.Passenger;
                 fuelInTanks = FlightPlan.Fuel;
@@ -260,12 +259,12 @@ namespace Prosim2GSX
             else
             {
                 estZfw = Interface.ReadDataRef("aircraft.weight.zfw");
-                maxZfw = Interface.ReadDataRef("aircraft.weight.zfwMax");
                 estTow = Interface.ReadDataRef("aircraft.weight.gross");
                 paxAdults = Interface.ReadDataRef("aircraft.passengers.zone1.amount") + Interface.ReadDataRef("aircraft.passengers.zone2.amount") + Interface.ReadDataRef("aircraft.passengers.zone3.amount") + Interface.ReadDataRef("aircraft.passengers.zone4.amount");
                 fuelInTanks = Interface.ReadDataRef("aircraft.weight.fuel");
             }
 
+            maxZfw = Interface.ReadDataRef("aircraft.weight.zfwMax");
             maxTow = FlightPlan.MaximumTakeOffWeight;
             estLaw = FlightPlan.EstimatedLandingWeight;
             maxLaw = FlightPlan.MaxmimumLandingWeight;
@@ -588,6 +587,12 @@ namespace Prosim2GSX
             SendSeatString(true);
             paxCurrent = new bool[162];
             paxSeats = null;
+        }
+
+        public dynamic GetStatusFunction(string dataRef)
+        {
+            var value = Interface.ReadDataRef(dataRef);
+            return value;
         }
     }
 }

@@ -149,7 +149,6 @@ namespace Prosim2GSX
 
             if (Model.TestArrival)
                 ProsimController.Update(true);
-
         }
 
         private void GetAudioSessions()
@@ -778,7 +777,8 @@ namespace Prosim2GSX
         {
             if (Model.ConnectPCA && !pcaRemoved)
             {
-                if (IPCManager.SimConnect.ReadLvar("I_OH_ELEC_APU_START_U") != 0 && IPCManager.SimConnect.ReadLvar("S_OH_PNEUMATIC_APU_BLEED") != 0)
+                //if (IPCManager.SimConnect.ReadLvar("I_OH_ELEC_APU_START_U") != 0 && IPCManager.SimConnect.ReadLvar("S_OH_PNEUMATIC_APU_BLEED") != 0)
+                if (ProsimController.GetStatusFunction("system.indicators.I_OH_ELEC_APU_START_U") && ProsimController.GetStatusFunction("S_OH_PNEUMATIC_APU_BLEED") != 0)
                 {
                     ProsimController.SetServicePCA(false);
                     pcaRemoved = true;
@@ -821,7 +821,8 @@ namespace Prosim2GSX
             //EQUIPMENT
             else if (!equipmentRemoved)
             {
-                equipmentRemoved = SimConnect.ReadLvar("S_MIP_PARKING_BRAKE") == 1 && SimConnect.ReadLvar("S_OH_EXT_LT_BEACON") == 1 && SimConnect.ReadLvar("I_OH_ELEC_EXT_PWR_L") == 0;
+                //equipmentRemoved = SimConnect.ReadLvar("S_MIP_PARKING_BRAKE") == 1 && SimConnect.ReadLvar("S_OH_EXT_LT_BEACON") == 1 && SimConnect.ReadLvar("I_OH_ELEC_EXT_PWR_L") == 0;
+                if (ProsimController.GetStatusFunction("system.switches.S_MIP_PARKING_BRAKE") == 1 && ProsimController.GetStatusFunction("system.switches.S_OH_EXT_LT_BEACON") == 1 && ProsimController.GetStatusFunction("system.indicators.I_OH_ELEC_EXT_PWR_L") == 0) { equipmentRemoved = true;};
                 if (equipmentRemoved)
                 {
                     Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Preparing for Pushback - removing Equipment");
@@ -1135,7 +1136,7 @@ namespace Prosim2GSX
                 prelimMacZfw = macZfw;
                 prelimMacTow = macTow;
                 prelimPax = paxAdults;
-                prelimFuel = fuelInTanks;
+                prelimFuel = Math.Round(fuelInTanks);
                 string zfwLimited = limitedBy.Item1;
                 string towLimited = limitedBy.Item2;
                 string lawLimited = limitedBy.Item3;
@@ -1148,7 +1149,7 @@ namespace Prosim2GSX
                 finalMacZfw = macZfw;
                 finalMacTow = macTow;
                 finalPax = paxAdults;
-                finalFuel = fuelInTanks;
+                finalFuel = Math.Round(fuelInTanks);
 
                 var differentValues = GetLoadSheetDifferences(prelimZfw, prelimTow, prelimPax, prelimMacZfw, prelimMacTow, prelimFuel, finalZfw, finalTow, finalPax, finalMacZfw, finalMacTow, finalFuel);
 
@@ -1187,7 +1188,7 @@ namespace Prosim2GSX
                     paxDiffString = $"{finalPax} no change";
                 }
 
-                formattedLoadSheet = $"{finalTitle}\n{flightNumber}/{day}  {date}\n{orig}  {dest}  {tailNumber}  2/4\n........................\nZFW  {finalMacZfw}  {zfwChanged}\nTOW  {finalMacTow}  {towChanged}\nPAX  {paxDiffString}\nMACZFW  {finalMacZfw}  {macZfwChanged}\nMACTOW  {finalMacTow}  {macTowChanged}\nFUEL IN TANKS  {finalFuel}  {fuelChanged}\nEND";
+                formattedLoadSheet = $"{finalTitle}\n{flightNumber}/{day}  {date}\n{orig}  {dest}  {tailNumber}  2/4\n......................\nZFW  {finalZfw}  {zfwChanged}\nTOW  {finalTow}  {towChanged}\nPAX  {paxDiffString}\nMACZFW  {finalMacZfw}  {macZfwChanged}\nMACTOW  {finalMacTow}  {macTowChanged}\nFUEL IN TANKS  {finalFuel}  {fuelChanged}\nEND";
 
             }
             return formattedLoadSheet;
