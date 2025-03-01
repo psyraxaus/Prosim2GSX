@@ -1106,19 +1106,28 @@ namespace Prosim2GSX
                 MenuItem(6);
                 OperatorSelection();
 
-                if (SimConnect.ReadLvar("FSDT_GSX_STAIRS") != 2 && SimConnect.ReadLvar("FSDT_GSX_STAIRS") != 5 && SimConnect.ReadLvar("FSDT_GSX_OPERATESTAIRS_STATE") < 3)
+                // Only call stairs if JetwayOnly is false
+                if (!Model.JetwayOnly && SimConnect.ReadLvar("FSDT_GSX_STAIRS") != 2 && SimConnect.ReadLvar("FSDT_GSX_STAIRS") != 5 && SimConnect.ReadLvar("FSDT_GSX_OPERATESTAIRS_STATE") < 3)
                 {
                     Thread.Sleep(1500);
                     MenuOpen();
                     Logger.Log(LogLevel.Information, "GsxController:CallJetwayStairs", $"Calling Stairs");
                     MenuItem(7);
                 }
+                else if (Model.JetwayOnly)
+                {
+                    Logger.Log(LogLevel.Information, "GsxController:CallJetwayStairs", $"Jetway Only mode - skipping stairs");
+                }
             }
-            else if (SimConnect.ReadLvar("FSDT_GSX_STAIRS") != 5 && SimConnect.ReadLvar("FSDT_GSX_OPERATESTAIRS_STATE") < 3)
+            else if (!Model.JetwayOnly && SimConnect.ReadLvar("FSDT_GSX_STAIRS") != 5 && SimConnect.ReadLvar("FSDT_GSX_OPERATESTAIRS_STATE") < 3)
             {
                 Logger.Log(LogLevel.Information, "GsxController:CallJetwayStairs", $"Calling Stairs");
                 MenuItem(7);
                 OperatorSelection();
+            }
+            else if (Model.JetwayOnly)
+            {
+                Logger.Log(LogLevel.Information, "GsxController:CallJetwayStairs", $"Jetway Only mode - skipping stairs");
             }
         }
 

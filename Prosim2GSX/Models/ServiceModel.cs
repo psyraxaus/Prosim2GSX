@@ -10,6 +10,7 @@ namespace Prosim2GSX.Models
         public string AcarsSecret { get; set; }
         public bool AutoBoarding { get; set; }
         public bool AutoConnect { get; set; }
+        public bool JetwayOnly { get; set; }
         public bool AutoDeboarding { get; set; }
         public bool AutoRefuel { get; set; }
         public bool CallCatering { get; set; }
@@ -72,6 +73,7 @@ namespace Prosim2GSX.Models
             AcarsSecret = Convert.ToString(ConfigurationFile.GetSetting("acarsSecret", ""));
             AutoBoarding = Convert.ToBoolean(ConfigurationFile.GetSetting("autoBoarding", "true"));
             AutoConnect = Convert.ToBoolean(ConfigurationFile.GetSetting("autoConnect", "true"));
+            JetwayOnly = Convert.ToBoolean(ConfigurationFile.GetSetting("jetwayOnly", "false"));
             AutoDeboarding = Convert.ToBoolean(ConfigurationFile.GetSetting("autoDeboarding", "true"));
             AutoRefuel = Convert.ToBoolean(ConfigurationFile.GetSetting("autoRefuel", "true"));
             CallCatering = Convert.ToBoolean(ConfigurationFile.GetSetting("callCatering", "true"));

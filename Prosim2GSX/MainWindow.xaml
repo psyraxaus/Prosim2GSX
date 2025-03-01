@@ -125,8 +125,11 @@
         <GroupBox Grid.Row="2" BorderBrush="DarkGray" BorderThickness="1" Margin="10,113,10,0" Grid.ColumnSpan="2" Grid.RowSpan="2">
             <GroupBox.Header>Ground Handling</GroupBox.Header>
             <StackPanel Orientation="Vertical">
-                <CheckBox Name="chkAutoConnect" Margin="8,8,8,0" VerticalContentAlignment="Center" Click="chkAutoConnect_Click" ToolTip="The Jetway or Stairs will automatically be called when the Session is started, the Plane is ready for Push-Back or has arrived at the Gate.&#x0a;Ready for Push-Back = External Power disconnected &amp; Parking Brake is set &amp; Beacon Light is On.&#x0a;Handling of other Ground-Equipment (Chocks, GPU) will always be performed!">
-                    <TextBlock>Automatic <Underline>Jetway/Stair</Underline> Operation (on Startup, Departure and Arrival)</TextBlock>
+                <CheckBox Name="chkAutoConnect" Margin="8,8,8,0" VerticalContentAlignment="Center" Click="chkAutoConnect_Click" ToolTip="The Jetway and Stairs will automatically be called when the Session is started, the Plane is ready for Push-Back or has arrived at the Gate.&#x0a;Ready for Push-Back = External Power disconnected &amp; Parking Brake is set &amp; Beacon Light is On.&#x0a;Handling of other Ground-Equipment (Chocks, GPU) will always be performed!">
+                    <TextBlock>Automatic <Underline>Jetway and Stairs</Underline> Operation (on Startup, Departure and Arrival)</TextBlock>
+                </CheckBox>
+                <CheckBox Name="chkJetwayOnly" Margin="27,8,8,0" VerticalContentAlignment="Center" Click="chkJetwayOnly_Click" ToolTip="When checked, only the Jetway will be called (no Stairs).&#x0a;When unchecked, both Jetway and Stairs will be called.">
+                    <TextBlock><Underline>Jetway Only</Underline> (no Stairs)</TextBlock>
                 </CheckBox>
                 <CheckBox Name="chkConnectPCA" Margin="8,8,8,0" VerticalContentAlignment="Center" Click="chkConnectPCA_Click" ToolTip="The Pre-Conditioned Air (PCA) will be automatically connected/disconnected to air-condition the Cabin without APU.&#x0a;The Disconnect will already happen when the APU is 'Avail' and APU Bleed is On. Else it will connect or disconnect with the Jetway.">
                     <TextBlock>Connect/Disconnect <Underline>PCA</Underline> (on Startup, Departure and Arrival)</TextBlock>

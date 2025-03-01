@@ -42,6 +42,7 @@ namespace Prosim2GSX
 
             chkAutoBoard.IsChecked = serviceModel.AutoBoarding;
             chkAutoConnect.IsChecked = serviceModel.AutoConnect;
+            chkJetwayOnly.IsChecked = serviceModel.JetwayOnly;
             chkAutoDeboard.IsChecked = serviceModel.AutoDeboarding;
             chkAutoRefuel.IsChecked = serviceModel.AutoRefuel;
             chkAutoReposition.IsChecked = serviceModel.RepositionPlane;
@@ -127,6 +128,11 @@ namespace Prosim2GSX
         private void chkAutoConnect_Click(object sender, RoutedEventArgs e)
         {
             serviceModel.SetSetting("autoConnect", chkAutoConnect.IsChecked.ToString().ToLower());
+        }
+        
+        private void chkJetwayOnly_Click(object sender, RoutedEventArgs e)
+        {
+            serviceModel.SetSetting("jetwayOnly", chkJetwayOnly.IsChecked.ToString().ToLower());
         }
 
         private void chkAutoDeboard_Click(object sender, RoutedEventArgs e)
