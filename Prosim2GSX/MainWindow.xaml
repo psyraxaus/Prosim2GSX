@@ -39,7 +39,7 @@
                 <Label Name="lblConnStatProsim" Height="40" VerticalContentAlignment="Center" VerticalAlignment="Center" TextBlock.Foreground="Red" Padding="8,0,16,0">Prosim</Label>
                 <Label Name="lblConnStatSession" Height="40" VerticalContentAlignment="Center" VerticalAlignment="Center" TextBlock.Foreground="Red" Padding="8,0,16,0">Session</Label>
                 <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="5,0" Width="2" Height="30" VerticalAlignment="Center" Background="DarkGray"/>
-                <Label Name="lblFlightPhase" Height="40" VerticalContentAlignment="Center" VerticalAlignment="Center" TextBlock.Foreground="Gray" Padding="8,0,16,0" FontWeight="Bold">FLIGHT PHASE</Label>
+                <Label Padding="8,0,0,0" VerticalContentAlignment="Center" VerticalAlignment="Center">State:</Label><Label Name="lblFlightPhase" Height="40" VerticalContentAlignment="Center" VerticalAlignment="Center" TextBlock.Foreground="Gray" Padding="8,0,16,0" FontWeight="Bold">FLIGHT PHASE</Label>
             </StackPanel>
         </GroupBox>
         <GroupBox Grid.Row="1" BorderBrush="DarkGray" BorderThickness="1" Margin="10,10,446,116" Grid.ColumnSpan="2">
