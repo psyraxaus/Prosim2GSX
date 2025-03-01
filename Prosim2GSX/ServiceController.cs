@@ -94,6 +94,9 @@ namespace Prosim2GSX
         protected void ServiceLoop()
         {
             var gsxController = new GsxController(Model, ProsimController, FlightPlan);
+            // Store the GsxController in IPCManager so it can be accessed by the MainWindow
+            IPCManager.GsxController = gsxController;
+            
             int elapsedMS = gsxController.Interval;
             int delay = 100;
             Thread.Sleep(1000);
@@ -126,6 +129,9 @@ namespace Prosim2GSX
                 Logger.Log(LogLevel.Information, "ServiceController:ServiceLoop", "Resetting GSX/VHF1 Audio");
                 gsxController.ResetAudio();
             }
+            
+            // Clear the GsxController reference when the service loop ends
+            IPCManager.GsxController = null;
         }
     }
 }

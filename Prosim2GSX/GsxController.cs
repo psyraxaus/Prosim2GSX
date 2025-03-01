@@ -1,4 +1,4 @@
-﻿using CoreAudio;
+﻿﻿using CoreAudio;
 using Microsoft.Win32;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
@@ -32,6 +32,11 @@ namespace Prosim2GSX
         private string menuFile = "";
 
         private FlightState state = FlightState.PREFLIGHT;
+        
+        /// <summary>
+        /// Gets the current flight state
+        /// </summary>
+        public FlightState CurrentFlightState => state;
 
         private bool boarding = false;
         private bool boardFinished = false;
@@ -777,12 +782,17 @@ namespace Prosim2GSX
         {
             if (Model.ConnectPCA && !pcaRemoved)
             {
-                //if (IPCManager.SimConnect.ReadLvar("I_OH_ELEC_APU_START_U") != 0 && IPCManager.SimConnect.ReadLvar("S_OH_PNEUMATIC_APU_BLEED") != 0)
-                if (ProsimController.GetStatusFunction("system.indicators.I_OH_ELEC_APU_START_U") && ProsimController.GetStatusFunction("S_OH_PNEUMATIC_APU_BLEED") != 0)
+                // Check for APU started with APU bleed on, beacon on, and external power changed from on to Avail
+                bool apuStarted = ProsimController.GetStatusFunction("system.indicators.I_OH_ELEC_APU_START_U") != 0;
+                bool apuBleedOn = ProsimController.GetStatusFunction("system.switches.S_OH_PNEUMATIC_APU_BLEED") != 0;
+                bool beaconOn = ProsimController.GetStatusFunction("system.switches.S_OH_EXT_LT_BEACON") != 0;
+                bool extPowerAvail = ProsimController.GetStatusFunction("system.indicators.I_OH_ELEC_EXT_PWR_L") == 0;
+                
+                if (apuStarted && apuBleedOn && beaconOn && extPowerAvail)
                 {
                     ProsimController.SetServicePCA(false);
                     pcaRemoved = true;
-                    Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"APU Bleed enabled - removing PCA");
+                    Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"APU Started with Bleed on, Beacon on, and External Power Avail - removing PCA");
                 }
             }
 
@@ -1271,9 +1281,15 @@ namespace Prosim2GSX
             return (zfwLimited, towLimited, lawLimited);
         }
         
+        /// <summary>
+        /// Compares preliminary and final loadsheet values and marks changes with "//"
+        /// </summary>
         private (string, string, string, string, string, string, bool) GetLoadSheetDifferences(double prezfw, double preTow, int prePax, double preMacZfw, double preMacTow, double prefuel, double finalZfw, double finalTow, int finalPax, double finalMacZfw, double finalMacTow, double finalfuel)
         {
-            const int WeightThreshold = 1000;
+            // Tolerance values for detecting changes
+            const double WeightTolerance = 100.0; // 100 kg tolerance for weight values
+            const double MacTolerance = 0.1;     // 0.1% tolerance for MAC values
+            
             string zfwChanged = "";
             string towChanged = "";
             string paxChanged = "";
@@ -1281,49 +1297,53 @@ namespace Prosim2GSX
             string macTowChanged = "";
             string fuelChanged = "";
 
-            bool hasZfwChanged = prezfw != finalZfw;
-            bool hasTowChanged = preTow != finalTow;
+            // Check if values have changed beyond tolerance
+            bool hasZfwChanged = Math.Abs(prezfw - finalZfw) > WeightTolerance;
+            bool hasTowChanged = Math.Abs(preTow - finalTow) > WeightTolerance;
             bool hasPaxChanged = prePax != finalPax;
-            bool hasMacZfwChanged = preMacZfw != finalMacZfw;
-            bool hasMacTowChanged = preMacTow != finalMacTow;
-            bool hasFuelChanged = prefuel != finalfuel;
+            bool hasMacZfwChanged = Math.Abs(preMacZfw - finalMacZfw) > MacTolerance;
+            bool hasMacTowChanged = Math.Abs(preMacTow - finalMacTow) > MacTolerance;
+            bool hasFuelChanged = Math.Abs(prefuel - finalfuel) > WeightTolerance;
 
-            bool hasChanged = false;
-
+            // Mark changes with "//"
             if (hasZfwChanged)
             {
                 zfwChanged = "//";
+                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"ZFW changed: {prezfw} -> {finalZfw}");
             }
 
             if (hasTowChanged)
             {
                 towChanged = "//";
+                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"TOW changed: {preTow} -> {finalTow}");
             }
 
             if (hasPaxChanged)
             {
                 paxChanged = "//";
+                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"PAX changed: {prePax} -> {finalPax}");
             }
 
             if (hasMacZfwChanged)
             {
                 macZfwChanged = "//";
+                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"MACZFW changed: {preMacZfw} -> {finalMacZfw}");
             }
 
             if (hasMacTowChanged)
             {
                 macTowChanged = "//";
+                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"MACTOW changed: {preMacTow} -> {finalMacTow}");
             }
 
             if (hasFuelChanged)
             {
                 fuelChanged = "//";
+                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"Fuel changed: {prefuel} -> {finalfuel}");
             }
 
-            if (hasZfwChanged || hasTowChanged || hasPaxChanged || hasMacZfwChanged || hasMacTowChanged || hasFuelChanged)
-            {
-                hasChanged = true;
-            }
+            // Determine if any values have changed
+            bool hasChanged = hasZfwChanged || hasTowChanged || hasPaxChanged || hasMacZfwChanged || hasMacTowChanged || hasFuelChanged;
 
             return (zfwChanged, towChanged, paxChanged, macZfwChanged, macTowChanged, fuelChanged, hasChanged);
         }

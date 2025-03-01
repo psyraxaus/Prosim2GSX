@@ -366,6 +366,62 @@ namespace Prosim2GSX
                 lblConnStatSession.Foreground = new SolidColorBrush(Colors.DarkGreen);
             else
                 lblConnStatSession.Foreground = new SolidColorBrush(Colors.Red);
+                
+            // Update flight phase display
+            UpdateFlightPhaseDisplay();
+        }
+        
+        /// <summary>
+        /// Updates the flight phase display with the current phase and appropriate color
+        /// </summary>
+        protected void UpdateFlightPhaseDisplay()
+        {
+            if (IPCManager.GsxController == null)
+            {
+                lblFlightPhase.Content = "NO PHASE";
+                lblFlightPhase.Foreground = new SolidColorBrush(Colors.Gray);
+                return;
+            }
+            
+            // Get the current flight state from GsxController
+            FlightState currentState = IPCManager.GsxController.CurrentFlightState;
+            
+            // Set the label text and color based on the current flight state
+            switch (currentState)
+            {
+                case FlightState.PREFLIGHT:
+                    lblFlightPhase.Content = "PREFLIGHT";
+                    lblFlightPhase.Foreground = new SolidColorBrush(Colors.RoyalBlue);
+                    break;
+                case FlightState.DEPARTURE:
+                    lblFlightPhase.Content = "DEPARTURE";
+                    lblFlightPhase.Foreground = new SolidColorBrush(Colors.DarkOrange);
+                    break;
+                case FlightState.TAXIOUT:
+                    lblFlightPhase.Content = "TAXI OUT";
+                    lblFlightPhase.Foreground = new SolidColorBrush(Colors.Gold);
+                    break;
+                case FlightState.FLIGHT:
+                    lblFlightPhase.Content = "IN FLIGHT";
+                    lblFlightPhase.Foreground = new SolidColorBrush(Colors.Green);
+                    break;
+                case FlightState.TAXIIN:
+                    lblFlightPhase.Content = "TAXI IN";
+                    lblFlightPhase.Foreground = new SolidColorBrush(Colors.Gold);
+                    break;
+                case FlightState.ARRIVAL:
+                    lblFlightPhase.Content = "ARRIVAL";
+                    lblFlightPhase.Foreground = new SolidColorBrush(Colors.Purple);
+                    break;
+                case FlightState.TURNAROUND:
+                    lblFlightPhase.Content = "TURNAROUND";
+                    lblFlightPhase.Foreground = new SolidColorBrush(Colors.Teal);
+                    break;
+                default:
+                    lblFlightPhase.Content = "UNKNOWN";
+                    lblFlightPhase.Foreground = new SolidColorBrush(Colors.Gray);
+                    break;
+            }
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)

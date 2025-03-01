@@ -207,26 +207,116 @@ namespace Prosim2GSX
             return fuelCurrent;
         }
 
+        /// <summary>
+        /// Gets the Zero Fuel Weight Center of Gravity (MACZFW)
+        /// This is the aircraft center of gravity with passengers and cargo but without fuel
+        /// </summary>
+        /// <returns>The MACZFW value as a percentage</returns>
         public double GetZfwCG()
         {
             var macZfwCG = 00.0d;
+            
+            // Store current fuel values
             var act1TankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.ACT1.amount.kg");
             var act2TankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.ACT2.amount.kg");
             var centerTankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.center.amount.kg");
             var leftTankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.left.amount.kg");
             var rightTankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.right.amount.kg");
-            Interface.SetProsimVariable("aircraft.fuel.ACT1.amount.kg", 0);
-            Interface.SetProsimVariable("aircraft.fuel.ACT2.amount.kg", 0);
-            Interface.SetProsimVariable("aircraft.fuel.center.amount.kg", 0);
-            Interface.SetProsimVariable("aircraft.fuel.left.amount.kg", 0);
-            Interface.SetProsimVariable("aircraft.fuel.right.amount.kg", 0);
-            macZfwCG = Interface.ReadDataRef("aircraft.cg");
-            Interface.SetProsimVariable("aircraft.fuel.ACT1.amount.kg", act1TankFuelCurrent);
-            Interface.SetProsimVariable("aircraft.fuel.ACT2.amount.kg", act2TankFuelCurrent);
-            Interface.SetProsimVariable("aircraft.fuel.center.amount.kg", centerTankFuelCurrent);
-            Interface.SetProsimVariable("aircraft.fuel.left.amount.kg", leftTankFuelCurrent);
-            Interface.SetProsimVariable("aircraft.fuel.right.amount.kg", rightTankFuelCurrent);
+            
+            try
+            {
+                // Set all fuel tanks to zero
+                Interface.SetProsimVariable("aircraft.fuel.ACT1.amount.kg", 0);
+                Interface.SetProsimVariable("aircraft.fuel.ACT2.amount.kg", 0);
+                Interface.SetProsimVariable("aircraft.fuel.center.amount.kg", 0);
+                Interface.SetProsimVariable("aircraft.fuel.left.amount.kg", 0);
+                Interface.SetProsimVariable("aircraft.fuel.right.amount.kg", 0);
+                
+                // Get the CG with zero fuel
+                macZfwCG = Interface.ReadDataRef("aircraft.cg");
+                
+                // Log the calculated value
+                Logger.Log(LogLevel.Debug, "ProsimController:GetZfwCG", $"Calculated MACZFW: {macZfwCG}%");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "ProsimController:GetZfwCG", $"Error calculating MACZFW: {ex.Message}");
+            }
+            finally
+            {
+                // Restore original fuel values
+                Interface.SetProsimVariable("aircraft.fuel.ACT1.amount.kg", act1TankFuelCurrent);
+                Interface.SetProsimVariable("aircraft.fuel.ACT2.amount.kg", act2TankFuelCurrent);
+                Interface.SetProsimVariable("aircraft.fuel.center.amount.kg", centerTankFuelCurrent);
+                Interface.SetProsimVariable("aircraft.fuel.left.amount.kg", leftTankFuelCurrent);
+                Interface.SetProsimVariable("aircraft.fuel.right.amount.kg", rightTankFuelCurrent);
+            }
+            
             return macZfwCG;
+        }
+        
+        /// <summary>
+        /// Gets the Take Off Weight Center of Gravity (MACTOW)
+        /// This is the aircraft center of gravity with fuel, passengers, and cargo
+        /// </summary>
+        /// <returns>The MACTOW value as a percentage</returns>
+        public double GetTowCG()
+        {
+            double macTowCG = 00.0d;
+            
+            try
+            {
+                // Get the current CG with the current fuel load
+                macTowCG = Interface.ReadDataRef("aircraft.cg");
+                
+                // If there's no fuel or very little fuel, we need to calculate what the MACTOW would be with planned fuel
+                double totalFuel = Interface.ReadDataRef("aircraft.fuel.total.amount.kg");
+                if (totalFuel < 100) // If less than 100kg of fuel
+                {
+                    // Store current fuel values
+                    var act1TankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.ACT1.amount.kg");
+                    var act2TankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.ACT2.amount.kg");
+                    var centerTankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.center.amount.kg");
+                    var leftTankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.left.amount.kg");
+                    var rightTankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.right.amount.kg");
+                    
+                    try
+                    {
+                        // Set fuel tanks to planned values (distribute evenly for simplicity)
+                        double plannedFuel = GetFuelPlanned();
+                        double mainTankFuel = plannedFuel * 0.4; // 40% in main tanks
+                        double centerTankFuel = plannedFuel * 0.2; // 20% in center tank
+                        
+                        Interface.SetProsimVariable("aircraft.fuel.left.amount.kg", mainTankFuel);
+                        Interface.SetProsimVariable("aircraft.fuel.right.amount.kg", mainTankFuel);
+                        Interface.SetProsimVariable("aircraft.fuel.center.amount.kg", centerTankFuel);
+                        
+                        // Get the CG with planned fuel
+                        macTowCG = Interface.ReadDataRef("aircraft.cg");
+                        
+                        Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Calculated MACTOW with planned fuel: {macTowCG}%");
+                    }
+                    finally
+                    {
+                        // Restore original fuel values
+                        Interface.SetProsimVariable("aircraft.fuel.ACT1.amount.kg", act1TankFuelCurrent);
+                        Interface.SetProsimVariable("aircraft.fuel.ACT2.amount.kg", act2TankFuelCurrent);
+                        Interface.SetProsimVariable("aircraft.fuel.center.amount.kg", centerTankFuelCurrent);
+                        Interface.SetProsimVariable("aircraft.fuel.left.amount.kg", leftTankFuelCurrent);
+                        Interface.SetProsimVariable("aircraft.fuel.right.amount.kg", rightTankFuelCurrent);
+                    }
+                }
+                else
+                {
+                    Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Using current CG for MACTOW: {macTowCG}%");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "ProsimController:GetTowCG", $"Error calculating MACTOW: {ex.Message}");
+            }
+            
+            return macTowCG;
         }
 
         public (string, string, string, string, string, string, string, double, double, double, double, double, double, int, int, double, double, int, int, int, double) GetLoadedData(string loadsheetType)
@@ -239,7 +329,7 @@ namespace Prosim2GSX
             double maxLaw;
             int paxAdults;
             int paxInfants;
-            double macTow = Interface.ReadDataRef("aircraft.cg");
+            double macTow = GetTowCG();
             double macZfw = GetZfwCG();
             int paxZoneA = Interface.ReadDataRef("aircraft.passengers.zone1.amount");
             int paxZoneB = Interface.ReadDataRef("aircraft.passengers.zone2.amount");

@@ -10,6 +10,7 @@ namespace Prosim2GSX
         public static readonly int waitDuration = 30000;
 
         public static MobiSimConnect SimConnect { get; set; } = null;
+        public static GsxController GsxController { get; set; } = null;
 
         public static bool WaitForSimulator(ServiceModel model)
         {
