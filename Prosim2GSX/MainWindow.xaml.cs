@@ -48,7 +48,6 @@ namespace Prosim2GSX
             chkCallCatering.IsChecked = serviceModel.CallCatering;
             chkConnectPCA.IsChecked = serviceModel.ConnectPCA;
             chkDisableCrewBoarding.IsChecked = serviceModel.DisableCrew;
-            chkGsxVolumeControl.IsChecked = serviceModel.GsxVolumeControl;
             chkOpenDoorCatering.IsChecked = serviceModel.SetOpenAftCateringDoor;
             chkOpenCargoDoors.IsChecked = serviceModel.SetOpenCargoDoors;
             chkPcaOnlyJetway.IsChecked = serviceModel.PcaOnlyJetways;
@@ -56,14 +55,11 @@ namespace Prosim2GSX
             chkSaveFuel.IsChecked = serviceModel.SetSaveFuel;
             chkUseAcars.IsChecked = serviceModel.UseAcars;
             chkUseActualPaxValue.IsChecked = serviceModel.UseActualPaxValue;
-            chkVhf1LatchMute.IsChecked = serviceModel.Vhf1LatchMute;
-            chkVhf1VolumeControl.IsChecked = serviceModel.Vhf1VolumeControl;
             chkZeroFuel.IsChecked = serviceModel.SetZeroFuel;
 
             txtRefuelRate.Text = serviceModel.RefuelRate.ToString(CultureInfo.InvariantCulture);
             txtRepositionDelay.Text = serviceModel.RepositionDelay.ToString(CultureInfo.InvariantCulture);
-            txtVhf1VolumeApp.IsEnabled = serviceModel.Vhf1VolumeControl;
-            txtVhf1VolumeApp.Text = serviceModel.Vhf1VolumeApp;
+
 
             if (serviceModel.RefuelUnit == "KGS")
             {
@@ -163,11 +159,6 @@ namespace Prosim2GSX
             serviceModel.SetSetting("disableCrew", chkDisableCrewBoarding.IsChecked.ToString().ToLower());
         }
 
-        private void chkGsxVolumeControl_Click(object sender, RoutedEventArgs e)
-        {
-            serviceModel.SetSetting("gsxVolumeControl", chkGsxVolumeControl.IsChecked.ToString().ToLower());
-        }
-
         private void chkOpenDoorCatering_Click(object sender, RoutedEventArgs e)
         {
             serviceModel.SetSetting("setOpenAftDoorCatering", chkOpenDoorCatering.IsChecked.ToString().ToLower());
@@ -240,17 +231,6 @@ namespace Prosim2GSX
             serviceModel.SetSetting("useActualValue", chkUseActualPaxValue.IsChecked.ToString().ToLower());
         }
 
-        private void chkVhf1VolumeControl_Click(object sender, RoutedEventArgs e)
-        {
-            serviceModel.SetSetting("vhf1VolumeControl", chkVhf1VolumeControl.IsChecked.ToString().ToLower());
-            txtVhf1VolumeApp.IsEnabled = (bool)chkVhf1VolumeControl.IsChecked;
-        }
-
-        private void chkVhf1LatchMute_Click(object sender, RoutedEventArgs e)
-        {
-            serviceModel.SetSetting("vhf1LatchMute", chkVhf1LatchMute.IsChecked.ToString().ToLower());
-        }
-
         private void chkZeroFuel_Click(object sender, RoutedEventArgs e)
         {
             serviceModel.SetSetting("setZeroFuel", chkZeroFuel.IsChecked.ToString().ToLower());
@@ -310,25 +290,6 @@ namespace Prosim2GSX
         {
             if (float.TryParse(txtRepositionDelay.Text, CultureInfo.InvariantCulture, out _))
                 serviceModel.SetSetting("repositionDelay", Convert.ToString(txtRepositionDelay.Text, CultureInfo.InvariantCulture));
-        }
-
-        private void txtVhf1VolumeApp_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
-        {
-            if (e.Key != System.Windows.Input.Key.Enter || e.Key != System.Windows.Input.Key.Return)
-                return;
-
-            txtVhf1VolumeApp_Set();
-        }
-
-        private void txtVhf1VolumeApp_LostFocus(object sender, RoutedEventArgs e)
-        {
-            txtVhf1VolumeApp_Set();
-        }
-
-        private void txtVhf1VolumeApp_Set()
-        {
-            if (txtVhf1VolumeApp?.Text != null)
-                serviceModel.SetSetting("vhf1VolumeApp", txtVhf1VolumeApp.Text);
         }
 
         private void units_Click(object sender, RoutedEventArgs e)
