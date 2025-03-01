@@ -758,6 +758,24 @@ namespace Prosim2GSX
             paxSeats = null;
         }
 
+        public void SetAftRightDoor(bool open)
+        {
+            Interface.SetProsimVariable("doors.entry.right.aft", open);
+            Logger.Log(LogLevel.Information, "ProsimController:SetAftRightDoor", $"Aft right door {(open ? "opened" : "closed")}");
+        }
+
+        public void SetForwardCargoDoor(bool open)
+        {
+            Interface.SetProsimVariable("doors.cargo.forward", open);
+            Logger.Log(LogLevel.Information, "ProsimController:SetForwardCargoDoor", $"Forward cargo door {(open ? "opened" : "closed")}");
+        }
+
+        public void SetAftCargoDoor(bool open)
+        {
+            Interface.SetProsimVariable("doors.cargo.aft", open);
+            Logger.Log(LogLevel.Information, "ProsimController:SetAftCargoDoor", $"Aft cargo door {(open ? "opened" : "closed")}");
+        }
+
         public dynamic GetStatusFunction(string dataRef)
         {
             var value = Interface.ReadDataRef(dataRef);
