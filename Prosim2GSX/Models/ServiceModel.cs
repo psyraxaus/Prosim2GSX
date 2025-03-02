@@ -18,6 +18,7 @@ namespace Prosim2GSX.Models
         public bool ConnectPCA { get; set; }
         public bool DisableCrew { get; set; }
         public string FlightPlanType { get; set; }
+        public bool GsxVolumeControl { get; set; }
         public double HydaulicsBlueAmount { get; set; }
         public double HydaulicsGreenAmount { get; set; }
         public double HydaulicsYellowAmount { get; set; }
@@ -47,6 +48,9 @@ namespace Prosim2GSX.Models
         public bool UseAcars { get; set; }
         public bool UseActualPaxValue { get; set; }
         public bool WaitForConnect { get; set; }
+        public bool Vhf1LatchMute { get; set; }
+        public string Vhf1VolumeApp { get; set; }
+        public bool Vhf1VolumeControl { get; set; }
 
         protected ConfigurationFile ConfigurationFile = new();
 
@@ -55,6 +59,10 @@ namespace Prosim2GSX.Models
             LoadConfiguration();
         }
 
+        public bool IsVhf1Controllable()
+        {
+            return Vhf1VolumeControl && !string.IsNullOrEmpty(Vhf1VolumeApp);
+        }
         protected void LoadConfiguration()
         {
             ConfigurationFile.LoadConfiguration();
@@ -71,6 +79,7 @@ namespace Prosim2GSX.Models
             ConnectPCA = Convert.ToBoolean(ConfigurationFile.GetSetting("connectPCA", "true"));
             DisableCrew = Convert.ToBoolean(ConfigurationFile.GetSetting("disableCrew", "true"));
             FlightPlanType = Convert.ToString(ConfigurationFile.GetSetting("flightPlanType", "MCDU"));
+            GsxVolumeControl = Convert.ToBoolean(ConfigurationFile.GetSetting("gsxVolumeControl", "true"));
             HydaulicsBlueAmount = Convert.ToSingle(ConfigurationFile.GetSetting("hydraulicBlueAmount", "0"), new RealInvariantFormat(ConfigurationFile.GetSetting("hydraulicBlueAmount", "0")));
             HydaulicsGreenAmount = Convert.ToSingle(ConfigurationFile.GetSetting("hydraulicGreenAmount", "0"), new RealInvariantFormat(ConfigurationFile.GetSetting("hydraulicGreenAmount", "0")));
             HydaulicsYellowAmount = Convert.ToSingle(ConfigurationFile.GetSetting("hydraulicYellowAmount", "0"), new RealInvariantFormat(ConfigurationFile.GetSetting("hydraulicYellowAmount", "0")));
@@ -95,6 +104,9 @@ namespace Prosim2GSX.Models
             TestArrival = Convert.ToBoolean(ConfigurationFile.GetSetting("testArrival", "false"));
             UseAcars = Convert.ToBoolean(ConfigurationFile.GetSetting("useAcars", "false"));
             UseActualPaxValue = Convert.ToBoolean(ConfigurationFile.GetSetting("useActualValue", "true"));
+            Vhf1VolumeApp = Convert.ToString(ConfigurationFile.GetSetting("vhf1VolumeApp", "vPilot"));
+            Vhf1VolumeControl = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf1VolumeControl", "false"));
+            Vhf1LatchMute = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf1LatchMute", "true"));
             WaitForConnect = Convert.ToBoolean(ConfigurationFile.GetSetting("waitForConnect", "true"));
 
         }
