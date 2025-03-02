@@ -1,4 +1,4 @@
-﻿﻿using CoreAudio;
+﻿﻿﻿﻿using CoreAudio;
 using Microsoft.Win32;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
@@ -613,7 +613,7 @@ namespace Prosim2GSX
 
             //TAXIIN -> ARRIVAL - Ground Equipment
             int deboard_state = (int)SimConnect.ReadLvar("FSDT_GSX_DEBOARDING_STATE");
-            if (state == FlightState.TAXIIN && SimConnect.ReadLvar("FSDT_VAR_EnginesStopped") == 1 && SimConnect.ReadLvar("S_MIP_PARKING_BRAKE") == 1)
+            if (state == FlightState.TAXIIN && SimConnect.ReadLvar("FSDT_VAR_EnginesStopped") == 1 && SimConnect.ReadLvar("S_MIP_PARKING_BRAKE") == 1 && SimConnect.ReadLvar("S_OH_EXT_LT_BEACON") == 0)
             {
                 RunArrivalServices(deboard_state);
 
