@@ -125,6 +125,7 @@ namespace Prosim2GSX
             SimConnect.SubscribeLvar("FSDT_GSX_OPERATESTAIRS_STATE");
             SimConnect.SubscribeLvar("FSDT_GSX_BYPASS_PIN");
             SimConnect.SubscribeLvar("FSDT_VAR_Frozen");
+            SimConnect.SubscribeLvar("FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE");
             SimConnect.SubscribeLvar("S_MIP_PARKING_BRAKE");
             SimConnect.SubscribeLvar("S_OH_EXT_LT_BEACON");
             SimConnect.SubscribeLvar("I_OH_ELEC_EXT_PWR_L");
@@ -495,27 +496,35 @@ namespace Prosim2GSX
                 }
             }
 
+            // Check if catering service is waiting for door to be closed
+            if (SimConnect.ReadLvar("FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE") == 1 && Model.SetOpenAftCateringDoor && aftRightDoorOpened)
+            {
+                ProsimController.SetAftRightDoor(false);
+                aftRightDoorOpened = false;
+                Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Closed aft right door to complete catering service");
+            }
+
             if (!cateringFinished && cateringState == 6)
             {
                 cateringFinished = true;
                 Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Catering finished");
                 
-                // Close aft right door when catering is finished
+                // Close aft right door when catering is finished (if not already closed)
                 if (Model.SetOpenAftCateringDoor && aftRightDoorOpened)
                 {
                     ProsimController.SetAftRightDoor(false);
                     aftRightDoorOpened = false;
                     Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Closed aft right door after catering");
-                    
-                    // Open cargo doors after catering is finished if enabled
-                    if (Model.SetOpenCargoDoors)
-                    {
-                        ProsimController.SetForwardCargoDoor(true);
-                        ProsimController.SetAftCargoDoor(true);
-                        forwardCargoDoorOpened = true;
-                        aftCargoDoorOpened = true;
-                        Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Opened cargo doors for loading");
-                    }
+                }
+                
+                // Open cargo doors after catering is finished if enabled
+                if (Model.SetOpenCargoDoors)
+                {
+                    ProsimController.SetForwardCargoDoor(true);
+                    ProsimController.SetAftCargoDoor(true);
+                    forwardCargoDoorOpened = true;
+                    aftCargoDoorOpened = true;
+                    Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Opened cargo doors for loading");
                 }
             }
 
