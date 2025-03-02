@@ -35,7 +35,7 @@ namespace Prosim2GSX.Models
         public bool RepositionPlane { get; set; }
         public double SavedFuelAmount { get; set; }
         public bool ServiceExited { get; set; } = false;
-        public bool SetOpenAftCateringDoor { get; set; }
+        public bool SetOpenCateringDoor { get; set; }
         public bool SetOpenCargoDoors { get; set; }
         public bool SetSaveHydraulicFluids { get; set; }
         public bool SetSaveFuel { get; set; }
@@ -84,7 +84,7 @@ namespace Prosim2GSX.Models
             RepositionPlane = Convert.ToBoolean(ConfigurationFile.GetSetting("repositionPlane", "true"));
             OperatorDelay = Convert.ToSingle(ConfigurationFile.GetSetting("operatorDelay", "10"), new RealInvariantFormat(ConfigurationFile.GetSetting("operatorDelay", "10")));
             SavedFuelAmount = Convert.ToSingle(ConfigurationFile.GetSetting("savedFuelAmount", "0"), new RealInvariantFormat(ConfigurationFile.GetSetting("savedFuelAmount", "0")));
-            SetOpenAftCateringDoor = Convert.ToBoolean(ConfigurationFile.GetSetting("setOpenAftDoorCatering", "false"));
+            SetOpenCateringDoor = Convert.ToBoolean(ConfigurationFile.GetSetting("setOpenAftDoorCatering", "false"));
             SetOpenCargoDoors = Convert.ToBoolean(ConfigurationFile.GetSetting("setOpenCargoDoors", "true"));
             SetSaveHydraulicFluids = Convert.ToBoolean(ConfigurationFile.GetSetting("saveHydraulicFluids", "false"));
             SetSaveFuel = Convert.ToBoolean(ConfigurationFile.GetSetting("setSaveFuel", "false"));

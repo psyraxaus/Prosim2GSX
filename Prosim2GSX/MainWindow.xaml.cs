@@ -49,7 +49,7 @@ namespace Prosim2GSX
             chkCallCatering.IsChecked = serviceModel.CallCatering;
             chkConnectPCA.IsChecked = serviceModel.ConnectPCA;
             chkDisableCrewBoarding.IsChecked = serviceModel.DisableCrew;
-            chkOpenDoorCatering.IsChecked = serviceModel.SetOpenAftCateringDoor;
+            chkOpenDoorCatering.IsChecked = serviceModel.SetOpenCateringDoor;
             chkOpenCargoDoors.IsChecked = serviceModel.SetOpenCargoDoors;
             chkPcaOnlyJetway.IsChecked = serviceModel.PcaOnlyJetways;
             chkSynchBypass.IsChecked = serviceModel.SynchBypass;

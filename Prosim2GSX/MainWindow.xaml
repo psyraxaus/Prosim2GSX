@@ -99,7 +99,7 @@
                     <TextBlock>Call <Underline>Catering Service</Underline> together with Refuel Service</TextBlock>
                 </CheckBox>
                 <CheckBox Name="chkOpenDoorCatering" Margin="28,8,8,0" VerticalContentAlignment="Center" Click="chkOpenDoorCatering_Click" ToolTip="Open right aft door when catering is in position.">
-                    <TextBlock>Auto Open <Underline>Right Aft Door</Underline> when catering in position</TextBlock>
+                    <TextBlock TextWrapping="Wrap">Auto Open/Close <Underline>Right Doors</Underline> when catering in position and requesting door action</TextBlock>
                 </CheckBox>
                 <CheckBox Name="chkOpenCargoDoors" Margin="8,8,8,0" VerticalContentAlignment="Center" Click="chkOpenCargoDoors_Click" ToolTip="Automatically open and close cargo doors after catering is finished.">
                     <TextBlock>Auto Open/Close <Underline>Cargo Doors</Underline> after catering has finished</TextBlock>
