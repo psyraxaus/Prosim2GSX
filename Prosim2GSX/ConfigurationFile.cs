@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿﻿using System.Collections.Generic;
 using System.IO;
 using System.Xml;
 
@@ -18,7 +18,19 @@ namespace Prosim2GSX
         public void LoadConfiguration()
         {
             xmlDoc = new();
-            xmlDoc.LoadXml(File.ReadAllText(App.ConfigFile));
+            
+            // Use XmlReaderSettings for better security and performance in .NET 8.0
+            var settings = new XmlReaderSettings
+            {
+                DtdProcessing = DtdProcessing.Prohibit, // Prevent DTD processing for security
+                MaxCharactersFromEntities = 1024 * 1024, // Limit entity expansion
+                XmlResolver = null // Prevent external entity resolution
+            };
+            
+            using (var reader = XmlReader.Create(App.ConfigFile, settings))
+            {
+                xmlDoc.Load(reader);
+            }
 
             XmlNode xmlSettings = xmlDoc.ChildNodes[1];
             appSettings.Clear();
@@ -31,7 +43,19 @@ namespace Prosim2GSX
             foreach (XmlNode child in xmlDoc.ChildNodes[1])
                 child.Attributes["value"].Value = appSettings[child.Attributes["key"].Value];
 
-            xmlDoc.Save(App.ConfigFile);
+            // Use XmlWriterSettings for better control in .NET 8.0
+            var settings = new XmlWriterSettings
+            {
+                Indent = true,
+                IndentChars = "  ",
+                NewLineChars = "\n",
+                NewLineHandling = NewLineHandling.Replace
+            };
+            
+            using (var writer = XmlWriter.Create(App.ConfigFile, settings))
+            {
+                xmlDoc.Save(writer);
+            }
         }
 
         public string GetSetting(string key, string defaultValue = "")

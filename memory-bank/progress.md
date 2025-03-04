@@ -175,11 +175,16 @@ Prosim2GSX is currently in a functional state with core features implemented. Th
 
 Based on the current state and known issues, the following priorities are recommended for future development:
 
-1. **.NET 8.0 Migration**
-   - Update target framework to .NET 8.0
-   - Ensure compatibility of all dependencies
-   - Test thoroughly to identify and resolve any issues
-   - Detailed implementation plan available in to-do/dotnet8-migration-strategy.md
+1. **.NET 8.0 Migration** ✅
+   - ✅ Update target framework to .NET 8.0
+   - ✅ Ensure compatibility of all dependencies
+   - ✅ Update code for .NET 8.0 compatibility
+   - ✅ Build successfully with .NET 8.0
+   - 🔄 Test thoroughly to identify and resolve any issues
+   - ✅ Implementation details available in:
+     - to-do/dotnet8-migration-strategy.md (planning)
+     - to-do/dotnet8-migration-implementation.md (implementation details)
+     - to-do/dotnet8-migration-summary.md (summary and next steps)
 
 2. **Controller Modularisation**
    - Refactor GSXController and ProsimController into more modular components

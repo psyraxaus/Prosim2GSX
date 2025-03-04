@@ -1,0 +1,119 @@
+# Prosim2GSX Project Rules
+
+## Framework and Dependencies
+
+1. **Target Framework**
+   - The project targets .NET 8.0 for Windows (net8.0-windows10.0.17763.0)
+   - All code should be compatible with C# 11.0+ features
+   - Windows 10 compatibility is required (minimum version 10.0.17763.0)
+
+2. **NuGet Packages**
+   - Keep NuGet packages updated to versions compatible with .NET 8.0
+   - Key packages:
+     - CefSharp.OffScreen.NETCore: 120.1.110+
+     - CommunityToolkit.Mvvm: 8.2.2+
+     - CoreAudio: 1.37.0+
+     - H.NotifyIcon.Wpf: 2.0.124+
+     - Serilog: 3.1.1+
+     - Microsoft.Windows.Compatibility: 8.0.8+
+
+3. **External Dependencies**
+   - SimConnect.dll and ProSimSDK.dll are included in the project
+   - These DLLs must be handled carefully as they are external dependencies
+   - Always test thoroughly when updating these dependencies
+
+## Code Patterns
+
+1. **Error Handling**
+   - Use try-catch blocks for operations that might fail
+   - Log exceptions with appropriate context
+   - Provide fallback behavior when possible
+   - Handle null references explicitly
+
+2. **XML Processing**
+   - Use XmlReader and XmlWriter with explicit settings
+   - Always set DtdProcessing.Prohibit for security
+   - Set XmlResolver to null to prevent external entity resolution
+   - Use proper indentation and formatting for XML output
+
+3. **Logging**
+   - Use Serilog for all logging
+   - Configure appropriate log levels based on context
+   - Include relevant context in log messages
+   - Use structured logging where appropriate
+
+4. **Configuration**
+   - Store configuration in XML format
+   - Use ConfigurationFile class for reading/writing settings
+   - Provide default values for all settings
+   - Validate configuration values when loading
+
+5. **UI Patterns**
+   - Follow MVVM pattern for UI development
+   - Use data binding for UI updates
+   - Separate UI logic from business logic
+   - Use CommunityToolkit.Mvvm for MVVM implementation
+
+## File Organization
+
+1. **Project Structure**
+   - Models/ - Data models and business logic
+   - Services/ - External service integrations
+   - Behaviours/ - Custom behaviors and formatters
+   - lib/ - External libraries and dependencies
+
+2. **Naming Conventions**
+   - PascalCase for class names, properties, and methods
+   - camelCase for local variables and parameters
+   - Use descriptive names that reflect purpose
+   - Avoid abbreviations unless widely understood
+
+## Build and Deployment
+
+1. **Build Configuration**
+   - Debug builds include debugging information
+   - Release builds have debugging information embedded
+   - Target x64 platform only
+   - Build outputs to bin/ directory
+
+2. **Deployment**
+   - Simple xcopy deployment
+   - Configuration file stored in AppData
+   - Log files stored in AppData/log
+   - No installer required
+
+## Testing
+
+1. **Manual Testing**
+   - Test with actual MSFS2020 and ProsimA320
+   - Verify all features work as expected
+   - Test different flight scenarios
+   - Test error handling and recovery
+
+2. **Integration Testing**
+   - Test integration with SimConnect
+   - Test integration with ProSim SDK
+   - Test GSX service automation
+   - Test audio control features
+
+## Documentation
+
+1. **Memory Bank**
+   - Keep memory bank files up to date
+   - Document significant changes in activeContext.md
+   - Update progress.md with implementation status
+   - Update techContext.md with technical details
+
+2. **Code Comments**
+   - Use comments to explain complex logic
+   - Document public APIs
+   - Explain non-obvious behavior
+   - Include references to external resources when relevant
+
+## Version Control
+
+1. **Git Practices**
+   - Use descriptive commit messages
+   - Group related changes in a single commit
+   - Keep commits focused on a single task
+   - Use branches for major features or changes

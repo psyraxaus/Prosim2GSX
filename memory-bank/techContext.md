@@ -6,8 +6,8 @@
 
 1. **C#**
    - Primary programming language
-   - .NET Framework for Windows desktop application
-   - Language version: C# 7.0+
+   - .NET 8.0 for Windows desktop application
+   - Language version: C# 11.0+
 
 2. **WPF (Windows Presentation Foundation)**
    - UI framework for Windows desktop applications
@@ -17,6 +17,11 @@
 3. **Newtonsoft.Json**
    - JSON parsing and serialization
    - Used for handling flight plan data and configuration
+
+4. **CommunityToolkit.Mvvm**
+   - MVVM implementation for WPF
+   - Provides source generators for boilerplate code
+   - Simplifies property change notification
 
 ### External SDKs and APIs
 
@@ -140,9 +145,10 @@
 
 ### Runtime Dependencies
 
-1. **Microsoft .NET Framework 4.7.2+**
+1. **Microsoft .NET 8.0 Runtime**
    - Required for application execution
-   - Windows component, typically pre-installed
+   - Must be installed on the target system
+   - Provides improved performance and security over previous versions
 
 2. **SimConnect.dll**
    - Microsoft Flight Simulator client library

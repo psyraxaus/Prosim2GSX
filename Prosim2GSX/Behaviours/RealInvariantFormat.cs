@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Globalization;
 
 namespace Prosim2GSX.Behaviours
@@ -11,7 +11,8 @@ namespace Prosim2GSX.Behaviours
         {
             if (value == null)
             {
-                formatInfo = new CultureInfo("en-US").NumberFormat;
+                // Use CultureInfo.GetCultureInfo for better performance in .NET 8.0
+                formatInfo = CultureInfo.GetCultureInfo("en-US").NumberFormat;
                 return;
             }
 
@@ -19,11 +20,13 @@ namespace Prosim2GSX.Behaviours
             int lastComma = value.LastIndexOf(',');
             if (lastComma > lastPoint)
             {
-                formatInfo = new CultureInfo("de-DE").NumberFormat;
+                // Use CultureInfo.GetCultureInfo for better performance in .NET 8.0
+                formatInfo = CultureInfo.GetCultureInfo("de-DE").NumberFormat;
             }
             else
             {
-                formatInfo = new CultureInfo("en-US").NumberFormat;
+                // Use CultureInfo.GetCultureInfo for better performance in .NET 8.0
+                formatInfo = CultureInfo.GetCultureInfo("en-US").NumberFormat;
             }
         }
 
