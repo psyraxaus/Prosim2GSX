@@ -16,6 +16,7 @@ Build.ps1
 desktop.ini
 modularisation/
 memory-bank/
+to-do/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

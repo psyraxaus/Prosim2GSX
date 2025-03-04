@@ -116,6 +116,13 @@ Prosim2GSX is currently in a functional state with core features implemented. Th
    - 🔜 Configuration validation
    - 🔜 Connection testing utilities
 
+### Technical Improvements
+
+1. **.NET Framework Migration**
+   - 🔜 Migration from .NET 7.0 to .NET 8.0
+   - 🔜 Update of dependencies to .NET 8.0 compatible versions
+   - 🔜 Implementation of .NET 8.0 performance improvements
+
 ## Known Issues
 
 ### Integration Issues
@@ -168,22 +175,41 @@ Prosim2GSX is currently in a functional state with core features implemented. Th
 
 Based on the current state and known issues, the following priorities are recommended for future development:
 
-1. **Stability Improvements**
+1. **.NET 8.0 Migration**
+   - Update target framework to .NET 8.0
+   - Ensure compatibility of all dependencies
+   - Test thoroughly to identify and resolve any issues
+   - Detailed implementation plan available in to-do/dotnet8-migration-strategy.md
+
+2. **Controller Modularisation**
+   - Refactor GSXController and ProsimController into more modular components
+   - Improve separation of concerns and code organization
+   - Enhance testability and maintainability
+   - Reduce complexity of individual components
+
+3. **EFB-Style UI Development**
+   - Create a new Electronic Flight Bag (EFB) style user interface
+   - Implement airline customization options
+   - Optimize for secondary monitor use
+   - Provide realistic visualization of aircraft and services
+   - Detailed implementation plan available in to-do/efb-ui-implementation-strategy.md
+
+4. **Stability Improvements**
    - Enhance error handling and recovery
    - Improve connection stability
    - Address known issues with service timing
 
-2. **User Experience Enhancements**
+5. **User Experience Enhancements**
    - Improve configuration clarity
    - Enhance status feedback
    - Provide more detailed logging
 
-3. **Documentation Completion**
+6. **Documentation Completion**
    - Finalize memory bank documentation
    - Create user documentation
    - Document troubleshooting procedures
 
-4. **Testing and Validation**
+7. **Testing and Validation**
    - Comprehensive testing across different scenarios
    - Validation with different versions of dependencies
    - Performance testing under various conditions
