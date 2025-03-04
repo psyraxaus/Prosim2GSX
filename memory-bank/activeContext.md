@@ -50,6 +50,14 @@ The current focus for Prosim2GSX is migrating the application from .NET 7.0 to .
    - Enhanced error handling and logging throughout the application
    - Improved application startup and configuration
 
+### Development Environment Updates (March 2025)
+
+1. **Shell Preferences**
+   - Added PowerShell as the preferred shell for all terminal commands
+   - Updated .clinerules to include Development Environment section
+   - Standardized on PowerShell conventions for command execution
+   - Commands will be prefixed with "powershell -Command" when executing
+
 ## Current State Assessment
 
 Based on the initial code review, Prosim2GSX appears to be a functional application with the following key components implemented:

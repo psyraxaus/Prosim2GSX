@@ -53,6 +53,11 @@
    - Version control system
    - Used for source code management
 
+3. **PowerShell**
+   - Preferred shell for terminal commands
+   - Used for build scripts and automation
+   - Commands prefixed with "powershell -Command" when executing
+
 ## Development Environment
 
 ### Required Software

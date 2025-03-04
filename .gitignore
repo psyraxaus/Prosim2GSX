@@ -17,6 +17,8 @@ desktop.ini
 modularisation/
 memory-bank/
 to-do/
+.clinerules
+.vscode
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
