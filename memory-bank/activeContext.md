@@ -57,6 +57,8 @@ The current focus for Prosim2GSX is migrating the application from .NET 7.0 to .
    - Updated .clinerules to include Development Environment section
    - Standardized on PowerShell conventions for command execution
    - Commands will be prefixed with "powershell -Command" when executing
+   - All terminal commands will use Windows/PowerShell syntax (not Linux/Mac)
+   - File paths will use Windows conventions (backslashes or properly escaped)
 
 ## Current State Assessment
 

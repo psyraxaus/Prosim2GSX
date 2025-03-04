@@ -57,6 +57,9 @@
    - Preferred shell for terminal commands
    - Used for build scripts and automation
    - Commands prefixed with "powershell -Command" when executing
+   - All commands use Windows/PowerShell syntax (not Linux/Mac)
+   - File paths use Windows conventions with backslashes (C:\path\to\file)
+   - PowerShell cmdlets preferred over legacy cmd.exe commands
 
 ## Development Environment
 

@@ -1,7 +1,8 @@
-﻿using System.Diagnostics;
+﻿﻿﻿﻿﻿﻿using Prosim2GSX.Models;
+using Prosim2GSX.Services;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using Prosim2GSX.Models;
 
 namespace Prosim2GSX
 {
@@ -9,6 +10,7 @@ namespace Prosim2GSX
     {
         public static readonly int waitDuration = 30000;
 
+        public static ISimConnectService SimConnectService { get; set; } = null;
         public static MobiSimConnect SimConnect { get; set; } = null;
         public static GsxController GsxController { get; set; } = null;
 
@@ -55,8 +57,9 @@ namespace Prosim2GSX
             if (!IsSimRunning())
                 return false;
 
-            SimConnect = new MobiSimConnect();
-            bool mobiRequested = SimConnect.Connect();
+            SimConnectService = new SimConnectService();
+            SimConnect = new MobiSimConnect(SimConnectService);
+            bool mobiRequested = SimConnectService.Connect();
 
             if (!SimConnect.IsConnected)
             {
@@ -65,7 +68,7 @@ namespace Prosim2GSX
                     Logger.Log(LogLevel.Information, "IPCManager:WaitForConnection", $"Connection not established - waiting {waitDuration / 1000}s for Retry");
                     Thread.Sleep(waitDuration / 2);
                     if (!mobiRequested)
-                        mobiRequested = SimConnect.Connect();
+                        mobiRequested = SimConnectService.Connect();
                 }
                 while (!SimConnect.IsConnected && IsSimRunning() && !model.CancellationRequested);
 
@@ -115,6 +118,12 @@ namespace Prosim2GSX
                 {
                     SimConnect.Disconnect();
                     SimConnect = null;
+                }
+                
+                if (SimConnectService != null && SimConnectService != SimConnect)
+                {
+                    SimConnectService.Disconnect();
+                    SimConnectService = null;
                 }
             }
             catch { }
