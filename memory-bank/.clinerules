@@ -1,0 +1,162 @@
+# Prosim2GSX Project Rules and Patterns
+
+## Project Structure
+
+- The project follows a modular architecture with clear separation of concerns
+- Controllers handle specific integration points (GsxController, ProsimController)
+- Models store configuration and state (ServiceModel)
+- UI is minimal and primarily system-tray based
+
+## Coding Patterns
+
+### State Management
+
+- The application uses a state machine pattern for flight phases
+- States are defined in the `FlightState` enum in GsxController.cs
+- State transitions trigger specific actions and behavior changes
+- Current state is tracked in the `state` variable in GsxController
+
+### Integration Patterns
+
+- SimConnect is used for MSFS2020 integration
+  - Variables are subscribed to using `SubscribeSimVar` and `SubscribeLvar`
+  - Variables are read using `ReadSimVar` and `ReadLvar`
+  - Variables are written using `WriteLvar`
+
+- ProSim SDK is used for ProsimA320 integration
+  - Variables are read using `ReadDataRef`
+  - Variables are set using `SetProsimVariable`
+  - Connection is managed through ProSimConnect
+
+### Configuration Management
+
+- Settings are stored in XML via ConfigurationFile
+- ServiceModel provides access to all configuration options
+- Settings are loaded at startup and updated when changed
+- Each setting has a default value defined in ServiceModel.LoadConfiguration()
+
+### Audio Control
+
+- CoreAudio API is used to control external application volume
+- Audio sessions are identified by process name
+- Volume and mute state are controlled via SimpleAudioVolume
+
+## Critical Implementation Paths
+
+### Service Flow
+
+1. **Preflight Phase**
+   - Connect to ProsimA320 and MSFS
+   - Position aircraft at gate (if configured)
+   - Connect jetway/stairs (if configured)
+   - Place ground equipment
+
+2. **Departure Phase**
+   - Call refueling service
+   - Call catering service
+   - Call boarding service
+   - Send final loadsheet
+   - Remove ground equipment
+
+3. **Flight Phase**
+   - Monitor aircraft state
+   - Minimal interaction
+
+4. **Arrival Phase**
+   - Connect jetway/stairs
+   - Place ground equipment
+   - Call deboarding service
+
+### GSX Menu Interaction
+
+- Menu is opened using `MenuOpen()`
+- Menu items are selected using `MenuItem(index)`
+- Operator selection is handled by `OperatorSelection()`
+- Menu state is detected by reading the menu file
+
+### Passenger and Cargo Synchronization
+
+- Passenger counts are synchronized between ProsimA320 and GSX
+- Boarding/deboarding is tracked by percentage completion
+- Cargo loading/unloading is tracked by percentage completion
+- Seat assignments are randomized for realistic distribution
+
+### Refueling Process
+
+1. Start refueling with `RefuelStart()`
+2. Monitor fuel level and increment in steps with `Refuel()`
+3. Stop refueling with `RefuelStop()`
+4. Fuel rate is controlled by the `RefuelRate` setting
+
+## Known Challenges
+
+### GSX Integration Limitations
+
+- No direct API for GSX Pro
+- Relies on LVars and menu interaction
+- Menu state detection can be unreliable
+- Operator selection sometimes requires manual intervention
+
+### SimConnect Stability
+
+- Connection can be lost during simulator updates
+- Some variables may not update reliably
+- Reconnection logic needs improvement
+
+### ProSim Data Synchronization
+
+- Occasional mismatches in passenger counts
+- Flight plan changes not always detected immediately
+- CG calculation can be inaccurate in certain scenarios
+
+## User Preferences
+
+- Most users prefer automatic service calls
+- Audio control is a highly valued feature
+- Configuration flexibility is important for different workflows
+- Stability and reliability are prioritized over new features
+
+## Tool Usage Patterns
+
+### Logging
+
+- Use `Logger.Log()` for all significant events
+- Include method name in log messages
+- Use appropriate log levels (Debug, Information, Warning, Error)
+- Log all exceptions with details
+
+### Error Handling
+
+- Catch and log all exceptions in public methods
+- Use try/catch blocks around external API calls
+- Provide meaningful error messages
+- Attempt to recover from errors when possible
+
+### UI Updates
+
+- Use dispatcher for UI updates from background threads
+- Keep UI responsive during long operations
+- Provide visual feedback for connection status
+- Use tooltips to explain configuration options
+
+## Evolution of Project Decisions
+
+### Initial Design
+
+- Focus on basic integration between ProsimA320 and GSX
+- Simple state machine for flight phases
+- Minimal UI with essential configuration
+
+### Current Direction
+
+- Enhanced synchronization accuracy
+- More configuration options
+- Improved error handling and recovery
+- Better user feedback and logging
+
+### Future Considerations
+
+- Support for additional aircraft types
+- Enhanced ACARS functionality
+- More detailed status information
+- Improved configuration organization
