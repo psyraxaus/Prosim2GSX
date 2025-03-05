@@ -25,6 +25,7 @@ public class ProsimController
     private readonly IProsimDoorService _doorService;
     private readonly IProsimEquipmentService _equipmentService;
     private readonly IProsimPassengerService _passengerService;
+    private readonly IProsimCargoService _cargoService;
 
         public static readonly int waitDuration = 30000;
 
@@ -42,10 +43,6 @@ public class ProsimController
         public int paxZone4;
         private bool randomizePaxSeat = false;
 
-        private int cargoPlanned;
-        private const float cargoDistMain = 4000.0f / 9440.0f;
-        private const float cargoDistBulk = 1440.0f / 9440.0f;
-        private int cargoLast;
 
         public string flightPlanID = "0";
         public string flightNumber = "0";
@@ -90,6 +87,16 @@ public class ProsimController
             Logger.Log(LogLevel.Debug, "ProsimController:PassengerStateChanged", 
                 $"{args.OperationType}: Current: {args.CurrentCount}, Planned: {args.PlannedCount}");
         };
+        
+        // Initialize cargo service with the ProsimService from Interface
+        _cargoService = new ProsimCargoService(Interface.ProsimService);
+        
+        // Optionally subscribe to cargo state change events
+        _cargoService.CargoStateChanged += (sender, args) => {
+            // Handle cargo state changes if needed
+            Logger.Log(LogLevel.Debug, "ProsimController:CargoStateChanged", 
+                $"{args.OperationType}: Current: {args.CurrentPercentage}%, Planned: {args.PlannedAmount}");
+        };
     }
 
         public void Update(bool forceCurrent)
@@ -110,7 +117,6 @@ public class ProsimController
 
                 if (Model.FlightPlanType == "MCDU")
                 {
-                    cargoPlanned = FlightPlan.CargoTotal;
                     fuelPlanned = FlightPlan.Fuel;
 
                     if (!_passengerService.HasRandomizedSeating())
@@ -127,9 +133,7 @@ public class ProsimController
                         // Update local paxPlanned variable for backward compatibility
                         paxPlanned = _passengerService.RandomizePaxSeating(FlightPlan.Passenger);
 
-                        Interface.SetProsimVariable("aircraft.cargo.aft.amount", Convert.ToDouble(FlightPlan.CargoTotal / 2));
-                        Interface.SetProsimVariable("aircraft.cargo.forward.amount", Convert.ToDouble(FlightPlan.CargoTotal / 2));
-                        Logger.Log(LogLevel.Debug, "ProsimController:Update", $"Temp Cargo set: forward {Interface.GetProsimVariable("aircraft.cargo.forward.amount")} aft {Interface.GetProsimVariable("aircraft.cargo.aft.amount")}");
+                        _cargoService.UpdateFromFlightPlan(FlightPlan.CargoTotal, forceCurrent);
 
                         randomizePaxSeat = true;
                     }
@@ -150,7 +154,13 @@ public class ProsimController
 
                     string str = (string)Interface.ReadDataRef("efb.loading");
                     if (!string.IsNullOrWhiteSpace(str))
-                        int.TryParse(str[1..], out cargoPlanned);
+                    {
+                        int cargoAmount;
+                        if (int.TryParse(str[1..], out cargoAmount))
+                        {
+                            _cargoService.UpdateFromFlightPlan(cargoAmount, forceCurrent);
+                        }
+                    }
 
                     paxPlanned = Interface.ReadDataRef("efb.passengers.booked");
                     if (forceCurrent)
@@ -611,9 +621,6 @@ public class ProsimController
 
         public void BoardingStart()
         {
-            // Initialize cargo tracking
-            cargoLast = 0;
-            
             // Delegate to passenger service
             _passengerService.BoardingStart();
         }
@@ -621,19 +628,8 @@ public class ProsimController
         public bool Boarding(int paxCurrent, int cargoCurrent)
         {
             return _passengerService.Boarding(paxCurrent, cargoCurrent, (cargoValue) => {
-                ChangeCargo(cargoValue);
-                cargoLast = cargoValue;
+                _cargoService.ChangeCargo(cargoValue);
             });
-        }
-
-        private void ChangeCargo(int cargoCurrent)
-        {
-            if (cargoCurrent == cargoLast)
-                return;
-
-            float cargo = (float)cargoPlanned * (float)(cargoCurrent / 100.0f);
-            Interface.SetProsimVariable("aircraft.cargo.forward.amount", (float)cargo * cargoDistMain);
-            Interface.SetProsimVariable("aircraft.cargo.aft.amount", (float)cargo * cargoDistMain);
         }
 
         public void BoardingStop()
@@ -643,9 +639,6 @@ public class ProsimController
 
         public void DeboardingStart()
         {
-            // Initialize cargo tracking
-            cargoLast = 100;
-            
             // Delegate to passenger service
             _passengerService.DeboardingStart();
         }
@@ -653,15 +646,14 @@ public class ProsimController
         public bool Deboarding(int paxCurrent, int cargoCurrent)
         {
             return _passengerService.Deboarding(paxCurrent, cargoCurrent, (cargoValue) => {
-                ChangeCargo(cargoValue);
-                cargoLast = cargoValue;
+                _cargoService.ChangeCargo(cargoValue);
             });
         }
 
         public void DeboardingStop()
         {
             // Reset cargo
-            ChangeCargo(0);
+            _cargoService.ChangeCargo(0);
             
             // Delegate to passenger service
             _passengerService.DeboardingStop();

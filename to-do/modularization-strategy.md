@@ -120,13 +120,13 @@ flowchart TD
 
 #### 2.6 ProsimCargoService
 
-- [ ] Create `IProsimCargoService.cs` interface file
-- [ ] Create `ProsimCargoService.cs` implementation file
-- [ ] Move cargo-related methods from ProsimController to ProsimCargoService
-  - [ ] Move `ChangeCargo` method
-- [ ] Update ProsimController to use ProsimCargoService
-- [ ] Add unit tests for ProsimCargoService
-- [ ] Test the implementation to ensure it works correctly
+- [x] Create `IProsimCargoService.cs` interface file
+- [x] Create `ProsimCargoService.cs` implementation file
+- [x] Move cargo-related methods from ProsimController to ProsimCargoService
+  - [x] Move `ChangeCargo` method
+- [x] Update ProsimController to use ProsimCargoService
+- [ ] Add unit tests for ProsimCargoService (see unit-testing-strategy.md)
+- [x] Test the implementation to ensure it works correctly
 
 #### 2.7 ProsimFuelService
 

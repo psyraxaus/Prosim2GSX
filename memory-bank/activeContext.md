@@ -77,6 +77,13 @@ The current focus for Prosim2GSX is migrating the application from .NET 7.0 to .
      - Added event-based notification for passenger state changes
      - Added callback mechanism for cargo operations (transitional until ProsimCargoService)
      - Documentation available in to-do/modularization-implementation-phase2.5.md
+   
+   - Completed Phase 2.6: ProsimCargoService implementation
+     - Created IProsimCargoService interface and implementation
+     - Moved cargo-related methods from ProsimController
+     - Updated ProsimController to use ProsimCargoService
+     - Added event-based notification for cargo state changes
+     - Documentation available in to-do/modularization-implementation-phase2.6.md
 
 3. **Architecture Improvements**
    - Enhanced separation of concerns
