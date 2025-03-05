@@ -29,6 +29,7 @@ namespace Prosim2GSX
         private readonly IProsimCargoService _cargoService;
         private readonly IProsimFuelService _fuelService;
         private readonly IProsimFluidService _fluidService;
+        private readonly IFlightPlanService _flightPlanService;
         private IProsimFlightDataService _flightDataService;
 
         public static readonly int waitDuration = 30000;
@@ -116,6 +117,9 @@ namespace Prosim2GSX
                 Logger.Log(LogLevel.Debug, "ProsimController:FluidStateChanged", 
                     $"{args.OperationType}: Blue: {args.BlueAmount}, Green: {args.GreenAmount}, Yellow: {args.YellowAmount}");
             };
+            
+            // Initialize flight plan service
+            _flightPlanService = new FlightPlanService(Model);
         }
 
         public void Update(bool forceCurrent)
@@ -228,7 +232,7 @@ namespace Prosim2GSX
                 return false;
             }
             SetSimBriefID(model);
-            FlightPlan = new(Model);
+            FlightPlan = new(Model, _flightPlanService);
 
             if (!FlightPlan.Load())
             {

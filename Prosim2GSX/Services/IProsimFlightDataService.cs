@@ -42,32 +42,4 @@ namespace Prosim2GSX.Services
         /// <returns>The MACTOW value as a percentage</returns>
         double GetTowCG();
     }
-    
-    /// <summary>
-    /// Event arguments for flight data changes
-    /// </summary>
-    public class FlightDataChangedEventArgs : EventArgs
-    {
-        /// <summary>
-        /// Type of flight data that changed
-        /// </summary>
-        public string DataType { get; }
-        
-        /// <summary>
-        /// Previous value (if applicable)
-        /// </summary>
-        public object PreviousValue { get; }
-        
-        /// <summary>
-        /// Current value
-        /// </summary>
-        public object CurrentValue { get; }
-        
-        public FlightDataChangedEventArgs(string dataType, object currentValue, object previousValue = null)
-        {
-            DataType = dataType;
-            CurrentValue = currentValue;
-            PreviousValue = previousValue;
-        }
-    }
 }

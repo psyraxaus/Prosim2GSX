@@ -162,11 +162,11 @@ namespace Prosim2GSX.Services
             try
             {
                 // Set all fuel tanks to zero
-                _prosimService.SetProsimVariable("aircraft.fuel.ACT1.amount.kg", 0);
-                _prosimService.SetProsimVariable("aircraft.fuel.ACT2.amount.kg", 0);
-                _prosimService.SetProsimVariable("aircraft.fuel.center.amount.kg", 0);
-                _prosimService.SetProsimVariable("aircraft.fuel.left.amount.kg", 0);
-                _prosimService.SetProsimVariable("aircraft.fuel.right.amount.kg", 0);
+                _prosimService.SetVariable("aircraft.fuel.ACT1.amount.kg", 0);
+                _prosimService.SetVariable("aircraft.fuel.ACT2.amount.kg", 0);
+                _prosimService.SetVariable("aircraft.fuel.center.amount.kg", 0);
+                _prosimService.SetVariable("aircraft.fuel.left.amount.kg", 0);
+                _prosimService.SetVariable("aircraft.fuel.right.amount.kg", 0);
                 
                 // Add a small delay to allow the simulator to recalculate the CG properly
                 Thread.Sleep(100);
@@ -195,11 +195,11 @@ namespace Prosim2GSX.Services
             finally
             {
                 // Restore original fuel values
-                _prosimService.SetProsimVariable("aircraft.fuel.ACT1.amount.kg", act1TankFuelCurrent);
-                _prosimService.SetProsimVariable("aircraft.fuel.ACT2.amount.kg", act2TankFuelCurrent);
-                _prosimService.SetProsimVariable("aircraft.fuel.center.amount.kg", centerTankFuelCurrent);
-                _prosimService.SetProsimVariable("aircraft.fuel.left.amount.kg", leftTankFuelCurrent);
-                _prosimService.SetProsimVariable("aircraft.fuel.right.amount.kg", rightTankFuelCurrent);
+                _prosimService.SetVariable("aircraft.fuel.ACT1.amount.kg", act1TankFuelCurrent);
+                _prosimService.SetVariable("aircraft.fuel.ACT2.amount.kg", act2TankFuelCurrent);
+                _prosimService.SetVariable("aircraft.fuel.center.amount.kg", centerTankFuelCurrent);
+                _prosimService.SetVariable("aircraft.fuel.left.amount.kg", leftTankFuelCurrent);
+                _prosimService.SetVariable("aircraft.fuel.right.amount.kg", rightTankFuelCurrent);
             }
             
             return macZfwCG;
@@ -284,11 +284,11 @@ namespace Prosim2GSX.Services
                         double centerTankFuel = remainingFuel;
                         
                         // Set the fuel values
-                        _prosimService.SetProsimVariable("aircraft.fuel.left.amount.kg", leftWingFuel);
-                        _prosimService.SetProsimVariable("aircraft.fuel.right.amount.kg", rightWingFuel);
-                        _prosimService.SetProsimVariable("aircraft.fuel.center.amount.kg", centerTankFuel);
-                        _prosimService.SetProsimVariable("aircraft.fuel.ACT1.amount.kg", 0);
-                        _prosimService.SetProsimVariable("aircraft.fuel.ACT2.amount.kg", 0);
+                        _prosimService.SetVariable("aircraft.fuel.left.amount.kg", leftWingFuel);
+                        _prosimService.SetVariable("aircraft.fuel.right.amount.kg", rightWingFuel);
+                        _prosimService.SetVariable("aircraft.fuel.center.amount.kg", centerTankFuel);
+                        _prosimService.SetVariable("aircraft.fuel.ACT1.amount.kg", 0);
+                        _prosimService.SetVariable("aircraft.fuel.ACT2.amount.kg", 0);
                         
                         // Add a small delay to allow the simulator to recalculate the CG properly
                         Thread.Sleep(100);
@@ -301,11 +301,11 @@ namespace Prosim2GSX.Services
                     finally
                     {
                         // Restore original fuel values
-                        _prosimService.SetProsimVariable("aircraft.fuel.ACT1.amount.kg", act1TankFuelCurrent);
-                        _prosimService.SetProsimVariable("aircraft.fuel.ACT2.amount.kg", act2TankFuelCurrent);
-                        _prosimService.SetProsimVariable("aircraft.fuel.center.amount.kg", centerTankFuelCurrent);
-                        _prosimService.SetProsimVariable("aircraft.fuel.left.amount.kg", leftTankFuelCurrent);
-                        _prosimService.SetProsimVariable("aircraft.fuel.right.amount.kg", rightTankFuelCurrent);
+                        _prosimService.SetVariable("aircraft.fuel.ACT1.amount.kg", act1TankFuelCurrent);
+                        _prosimService.SetVariable("aircraft.fuel.ACT2.amount.kg", act2TankFuelCurrent);
+                        _prosimService.SetVariable("aircraft.fuel.center.amount.kg", centerTankFuelCurrent);
+                        _prosimService.SetVariable("aircraft.fuel.left.amount.kg", leftTankFuelCurrent);
+                        _prosimService.SetVariable("aircraft.fuel.right.amount.kg", rightTankFuelCurrent);
                     }
                 }
                 else

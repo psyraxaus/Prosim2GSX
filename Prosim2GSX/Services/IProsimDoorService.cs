@@ -36,26 +36,4 @@ namespace Prosim2GSX.Services
         /// </summary>
         event EventHandler<DoorStateChangedEventArgs> DoorStateChanged;
     }
-    
-    /// <summary>
-    /// Event arguments for door state change events
-    /// </summary>
-    public class DoorStateChangedEventArgs : EventArgs
-    {
-        /// <summary>
-        /// Gets the name of the door that changed state
-        /// </summary>
-        public string DoorName { get; }
-        
-        /// <summary>
-        /// Gets the new state of the door
-        /// </summary>
-        public bool IsOpen { get; }
-        
-        public DoorStateChangedEventArgs(string doorName, bool isOpen)
-        {
-            DoorName = doorName;
-            IsOpen = isOpen;
-        }
-    }
 }

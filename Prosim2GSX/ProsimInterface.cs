@@ -8,7 +8,7 @@ namespace Prosim2GSX
     public class ProsimInterface
     {
         protected ServiceModel Model;
-        protected IProsimService ProsimService;
+        public IProsimService ProsimService;
         protected ProSimConnect Connection;
 
         public ProsimInterface(ServiceModel model, ProSimConnect connection)
