@@ -67,12 +67,12 @@ flowchart TD
 
 #### 2.2 FlightPlanService
 
-- [ ] Create `IFlightPlanService.cs` interface file
-- [ ] Create `FlightPlanService.cs` implementation file
-- [ ] Move flight plan loading and parsing logic from FlightPlan class to FlightPlanService
-- [ ] Update FlightPlan class to use FlightPlanService
+- [x] Create `IFlightPlanService.cs` interface file
+- [x] Create `FlightPlanService.cs` implementation file
+- [x] Move flight plan loading and parsing logic from FlightPlan class to FlightPlanService
+- [x] Update FlightPlan class to use FlightPlanService
 - [ ] Add unit tests for FlightPlanService
-- [ ] Test the implementation to ensure it works correctly
+- [x] Test the implementation to ensure it works correctly
 
 #### 2.3 ProsimDoorService
 

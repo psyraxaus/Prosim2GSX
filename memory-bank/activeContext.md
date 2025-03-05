@@ -41,11 +41,28 @@ The current focus for Prosim2GSX is migrating the application from .NET 7.0 to .
      - Improved error handling and centralized ProSim SDK interaction
      - Documentation available in to-do/modularization-implementation-phase1.2.md
 
-2. **Architecture Improvements**
+2. **Shared and ProSim Services Extraction**
+   - Completed Phase 2.1: AcarsService implementation
+     - Created IAcarsService interface and implementation
+     - Moved ACARS-related methods from GsxController
+     - Updated GsxController to use AcarsService
+     - Documentation available in to-do/modularization-implementation-phase2.1.md
+   
+   - Completed Phase 2.2: FlightPlanService implementation
+     - Created IFlightPlanService interface and implementation
+     - Moved flight plan loading and parsing logic from FlightPlan class
+     - Updated FlightPlan class to use FlightPlanService
+     - Implemented secure XML processing with proper settings
+     - Added event-based notification for new flight plans
+     - Documentation available in to-do/modularization-implementation-phase2.2.md
+
+3. **Architecture Improvements**
    - Enhanced separation of concerns
    - Improved testability through interface-based design
    - Centralized error handling and logging
-   - Prepared foundation for further modularization
+   - Implemented event-based communication
+   - Added secure XML processing
+   - Continued modularization of the codebase
 
 ### .NET 8.0 Migration (March 2025)
 

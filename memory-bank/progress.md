@@ -197,8 +197,16 @@ Based on the current state and known issues, the following priorities are recomm
      - ✅ Improve error handling and centralize ProSim SDK interaction
      - ✅ Implementation details available in to-do/modularization-implementation-phase1.2.md
    - 🔄 Phase 2: Extract Shared and ProSim Services
-     - 🔜 Implement AcarsService
-     - 🔜 Implement FlightPlanService
+     - ✅ Phase 2.1: Implement AcarsService
+       - ✅ Create IAcarsService interface and implementation
+       - ✅ Move ACARS-related methods from GsxController
+       - ✅ Update GsxController to use AcarsService
+       - ✅ Implementation details available in to-do/modularization-implementation-phase2.1.md
+     - ✅ Phase 2.2: Implement FlightPlanService
+       - ✅ Create IFlightPlanService interface and implementation
+       - ✅ Move flight plan loading and parsing logic from FlightPlan class
+       - ✅ Update FlightPlan class to use FlightPlanService
+       - ✅ Implementation details available in to-do/modularization-implementation-phase2.2.md
      - 🔜 Implement domain-specific ProSim services
    - 🔜 Phase 3: Extract GSX Services
    - 🔜 Phase 4: Refine State Management
