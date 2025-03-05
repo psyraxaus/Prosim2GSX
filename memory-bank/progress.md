@@ -227,6 +227,13 @@ Based on the current state and known issues, the following priorities are recomm
        - ✅ Move cargo-related methods from ProsimController
        - ✅ Update ProsimController to use ProsimCargoService
        - ✅ Implementation details available in to-do/modularization-implementation-phase2.6.md
+     - ✅ Phase 2.7: Implement ProsimFuelService
+       - ✅ Create IProsimFuelService interface and implementation
+       - ✅ Create WeightConversionUtility for kg/lbs conversions
+       - ✅ Move fuel-related methods from ProsimController
+       - ✅ Move GetFuelRateKGS method from ServiceModel
+       - ✅ Update ProsimController to use ProsimFuelService
+       - ✅ Implementation details available in to-do/modularization-implementation-phase2.7.md
      - 🔄 Implement remaining domain-specific ProSim services
    - 🔜 Phase 3: Extract GSX Services
    - 🔜 Phase 4: Refine State Management

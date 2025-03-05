@@ -11,27 +11,25 @@ using Microsoft.FlightSimulator.SimConnect;
 using Prosim2GSX.Models;
 using System.Drawing.Text;
 using System.Globalization;
+using Prosim2GSX.Services;
 
 namespace Prosim2GSX
 {
-public class ProsimController
-{
-    public ProsimInterface Interface;
-    protected ServiceModel Model;
-    protected FlightPlan FlightPlan;
-    private MobiSimConnect SimConnect;
-    // Our main ProSim connection
-    private readonly ProSimConnect _connection = new ProSimConnect();
-    private readonly IProsimDoorService _doorService;
-    private readonly IProsimEquipmentService _equipmentService;
-    private readonly IProsimPassengerService _passengerService;
-    private readonly IProsimCargoService _cargoService;
+    public class ProsimController
+    {
+        public ProsimInterface Interface;
+        protected ServiceModel Model;
+        protected FlightPlan FlightPlan;
+        private MobiSimConnect SimConnect;
+        // Our main ProSim connection
+        private readonly ProSimConnect _connection = new ProSimConnect();
+        private readonly IProsimDoorService _doorService;
+        private readonly IProsimEquipmentService _equipmentService;
+        private readonly IProsimPassengerService _passengerService;
+        private readonly IProsimCargoService _cargoService;
+        private readonly IProsimFuelService _fuelService;
 
         public static readonly int waitDuration = 30000;
-
-        private double fuelCurrent = 0;
-        private double fuelPlanned = 0;
-        private string fuelUnits = "KG";
 
         private bool[] paxPlanned;
         private int[] paxSeats;
@@ -43,7 +41,6 @@ public class ProsimController
         public int paxZone4;
         private bool randomizePaxSeat = false;
 
-
         public string flightPlanID = "0";
         public string flightNumber = "0";
         public bool enginesRunning = false;
@@ -51,53 +48,63 @@ public class ProsimController
 
         public bool useZeroFuel;
 
-    public ProsimController(ServiceModel model)
-    {
-        Interface = new(model, _connection);
-        paxCurrent = new bool[132];
-        paxSeats = null;
-        Model = model;
-        
-        // Initialize door service with the ProsimService from Interface
-        _doorService = new ProsimDoorService(Interface.ProsimService);
-        
-        // Optionally subscribe to door state change events
-        _doorService.DoorStateChanged += (sender, args) => {
-            // Handle door state changes if needed
-            Logger.Log(LogLevel.Debug, "ProsimController:DoorStateChanged", 
-                $"{args.DoorName} is now {(args.IsOpen ? "open" : "closed")}");
-        };
-        
-        // Initialize equipment service with the ProsimService from Interface
-        _equipmentService = new ProsimEquipmentService(Interface.ProsimService);
-        
-        // Optionally subscribe to equipment state change events
-        _equipmentService.EquipmentStateChanged += (sender, args) => {
-            // Handle equipment state changes if needed
-            Logger.Log(LogLevel.Debug, "ProsimController:EquipmentStateChanged", 
-                $"{args.EquipmentName} is now {(args.IsEnabled ? "enabled" : "disabled")}");
-        };
-        
-        // Initialize passenger service with the ProsimService from Interface
-        _passengerService = new ProsimPassengerService(Interface.ProsimService);
-        
-        // Optionally subscribe to passenger state change events
-        _passengerService.PassengerStateChanged += (sender, args) => {
-            // Handle passenger state changes if needed
-            Logger.Log(LogLevel.Debug, "ProsimController:PassengerStateChanged", 
-                $"{args.OperationType}: Current: {args.CurrentCount}, Planned: {args.PlannedCount}");
-        };
-        
-        // Initialize cargo service with the ProsimService from Interface
-        _cargoService = new ProsimCargoService(Interface.ProsimService);
-        
-        // Optionally subscribe to cargo state change events
-        _cargoService.CargoStateChanged += (sender, args) => {
-            // Handle cargo state changes if needed
-            Logger.Log(LogLevel.Debug, "ProsimController:CargoStateChanged", 
-                $"{args.OperationType}: Current: {args.CurrentPercentage}%, Planned: {args.PlannedAmount}");
-        };
-    }
+        public ProsimController(ServiceModel model)
+        {
+            Interface = new(model, _connection);
+            paxCurrent = new bool[132];
+            paxSeats = null;
+            Model = model;
+            
+            // Initialize door service with the ProsimService from Interface
+            _doorService = new ProsimDoorService(Interface.ProsimService);
+            
+            // Optionally subscribe to door state change events
+            _doorService.DoorStateChanged += (sender, args) => {
+                // Handle door state changes if needed
+                Logger.Log(LogLevel.Debug, "ProsimController:DoorStateChanged", 
+                    $"{args.DoorName} is now {(args.IsOpen ? "open" : "closed")}");
+            };
+            
+            // Initialize equipment service with the ProsimService from Interface
+            _equipmentService = new ProsimEquipmentService(Interface.ProsimService);
+            
+            // Optionally subscribe to equipment state change events
+            _equipmentService.EquipmentStateChanged += (sender, args) => {
+                // Handle equipment state changes if needed
+                Logger.Log(LogLevel.Debug, "ProsimController:EquipmentStateChanged", 
+                    $"{args.EquipmentName} is now {(args.IsEnabled ? "enabled" : "disabled")}");
+            };
+            
+            // Initialize passenger service with the ProsimService from Interface
+            _passengerService = new ProsimPassengerService(Interface.ProsimService);
+            
+            // Optionally subscribe to passenger state change events
+            _passengerService.PassengerStateChanged += (sender, args) => {
+                // Handle passenger state changes if needed
+                Logger.Log(LogLevel.Debug, "ProsimController:PassengerStateChanged", 
+                    $"{args.OperationType}: Current: {args.CurrentCount}, Planned: {args.PlannedCount}");
+            };
+            
+            // Initialize cargo service with the ProsimService from Interface
+            _cargoService = new ProsimCargoService(Interface.ProsimService);
+            
+            // Optionally subscribe to cargo state change events
+            _cargoService.CargoStateChanged += (sender, args) => {
+                // Handle cargo state changes if needed
+                Logger.Log(LogLevel.Debug, "ProsimController:CargoStateChanged", 
+                    $"{args.OperationType}: Current: {args.CurrentPercentage}%, Planned: {args.PlannedAmount}");
+            };
+            
+            // Initialize fuel service with the ProsimService from Interface and the model
+            _fuelService = new ProsimFuelService(Interface.ProsimService, Model);
+            
+            // Optionally subscribe to fuel state change events
+            _fuelService.FuelStateChanged += (sender, args) => {
+                // Handle fuel state changes if needed
+                Logger.Log(LogLevel.Debug, "ProsimController:FuelStateChanged", 
+                    $"{args.OperationType}: Current: {args.CurrentAmount} {args.FuelUnits}, Planned: {args.PlannedAmount} {args.FuelUnits}");
+            };
+        }
 
         public void Update(bool forceCurrent)
         {
@@ -107,17 +114,12 @@ public class ProsimController
                 double engine2 = Interface.ReadDataRef("aircraft.engine2.raw");
                 enginesRunning = engine1 > 18.0D || engine2 > 18.0D;
 
-                fuelCurrent = Interface.ReadDataRef("aircraft.fuel.total.amount.kg");
-
                 useZeroFuel = Model.SetZeroFuel;
-
-                fuelUnits = Interface.ReadDataRef("system.config.Units.Weight");
-                if (fuelUnits == "LBS")
-                    fuelPlanned /= weightConversion;
 
                 if (Model.FlightPlanType == "MCDU")
                 {
-                    fuelPlanned = FlightPlan.Fuel;
+                    // Update fuel data from flight plan
+                    _fuelService.UpdateFromFlightPlan(FlightPlan.Fuel, forceCurrent);
 
                     if (!_passengerService.HasRandomizedSeating())
                     {
@@ -150,7 +152,8 @@ public class ProsimController
                 }
                 else
                 {
-                    fuelPlanned = Interface.ReadDataRef("aircraft.refuel.fuelTarget");
+                    // Update fuel data from EFB
+                    _fuelService.UpdateFromFlightPlan(Interface.ReadDataRef("aircraft.refuel.fuelTarget"), forceCurrent);
 
                     string str = (string)Interface.ReadDataRef("efb.loading");
                     if (!string.IsNullOrWhiteSpace(str))
@@ -189,6 +192,7 @@ public class ProsimController
         {
             model.SimBriefID = (string)Interface.ReadDataRef("efb.simbrief.id");
         }
+        
         public bool IsProsimConnectionAvailable(ServiceModel model)
         {
             Thread.Sleep(250);
@@ -246,12 +250,12 @@ public class ProsimController
 
         public double GetFuelPlanned()
         {
-            return fuelPlanned;
+            return _fuelService.GetFuelPlanned();
         }
 
         public double GetFuelCurrent()
         {
-            return fuelCurrent;
+            return _fuelService.GetFuelCurrent();
         }
 
         /// <summary>
@@ -506,8 +510,7 @@ public class ProsimController
 
         public double GetFuelAmount()
         {
-            double arrivalFuel = Interface.ReadDataRef("aircraft.fuel.total.amount.kg");
-            return arrivalFuel;
+            return _fuelService.GetFuelAmount();
         }
 
         public void SetServicePCA(bool enable)
@@ -529,37 +532,18 @@ public class ProsimController
         {
             if (Model.FlightPlanType == "MCDU")
             {
-
+                // No implementation for MCDU
             }
             else
             {
                 //Interface.TriggerFinalOnEFB();
                 //Interface.ProsimPost(ProsimInterface.MsgMutation("bool", "doors.entry.left.fwd", false));
-
             }
         }
 
         public void SetInitialFuel()
         {
-            if (useZeroFuel)
-            {
-                Logger.Log(LogLevel.Information, "ProsimController:SetInitialFuel", $"Start at Zero Fuel amount - Resetting to 0kg (0lbs)");
-                Interface.SetProsimVariable("aircraft.fuel.total.amount.kg", 0.0D);
-                fuelCurrent = 0D;
-            }
-            else if (Model.SetSaveFuel)
-            {
-                Logger.Log(LogLevel.Information, "ProsimController:SetInitialFuel", $"Using saved fuel value - Resetting to {Model.SavedFuelAmount}");
-                Interface.SetProsimVariable("aircraft.fuel.total.amount.kg", Model.SavedFuelAmount);
-                fuelCurrent = Model.SavedFuelAmount;
-            }
-            else if (fuelCurrent > fuelPlanned)
-            {
-                Logger.Log(LogLevel.Information, "ProsimController:SetInitialFuel", $"Current Fuel higher than planned - Resetting to 1500kg (3307lbs)");
-                Interface.SetProsimVariable("aircraft.fuel.total.amount.kg", 1500.0D);
-                fuelCurrent = 1500D;
-            }
-
+            _fuelService.SetInitialFuel();
         }
 
         public void SetInitialFluids()
@@ -571,47 +555,24 @@ public class ProsimController
 
         public (double, double, double) GetHydraulicFluidValues()
         {
-            return (Model.HydaulicsBlueAmount = Interface.ReadDataRef("aircraft.hydraulics.blue.quantity"), Model.HydaulicsGreenAmount = Interface.ReadDataRef("aircraft.hydraulics.green.quantity"), Model.HydaulicsYellowAmount = Interface.ReadDataRef("aircraft.hydraulics.yellow.quantity"));
+            return (Model.HydaulicsBlueAmount = Interface.ReadDataRef("aircraft.hydraulics.blue.quantity"), 
+                    Model.HydaulicsGreenAmount = Interface.ReadDataRef("aircraft.hydraulics.green.quantity"), 
+                    Model.HydaulicsYellowAmount = Interface.ReadDataRef("aircraft.hydraulics.yellow.quantity"));
         }
+        
         public void RefuelStart()
         {
-            Interface.SetProsimVariable("aircraft.refuel.refuelingRate", 0.0D);
-            Interface.SetProsimVariable("aircraft.refuel.refuelingPower", true);
-
-            // Round up planned fuel to the nearest 100
-            double roundedFuelPlanned = Math.Ceiling(fuelPlanned / 100.0) * 100.0;
-            Logger.Log(LogLevel.Debug, "ProsimController:RefuelStart", $"Rounding fuel from {fuelPlanned} to {roundedFuelPlanned}");
-            
-            if (fuelUnits == "KG")
-                Interface.SetProsimVariable("aircraft.refuel.fuelTarget", roundedFuelPlanned);
-            else
-                Interface.SetProsimVariable("aircraft.refuel.fuelTarget", roundedFuelPlanned * weightConversion);
-
-            // Update the fuelPlanned value to the rounded value
-            fuelPlanned = roundedFuelPlanned;
+            _fuelService.RefuelStart();
         }
 
         public bool Refuel()
         {
-            float step = Model.GetFuelRateKGS();
-
-            if (fuelCurrent + step < fuelPlanned)
-                fuelCurrent += step;
-            else
-                fuelCurrent = fuelPlanned;
-
-            Interface.SetProsimVariable("aircraft.fuel.total.amount.kg", fuelCurrent);
-            //Interface.SetProsimVariable("aircraft.fuel.total.amount", fuelCurrent);
-
-            return Math.Abs(fuelCurrent - fuelPlanned) < 1.0; // Allow for small floating point differences
+            return _fuelService.Refuel();
         }
 
         public void RefuelStop()
         {
-            Logger.Log(LogLevel.Information, "ProsimController:RefuelStop", $"RefuelStop Requested");
-
-            Interface.SetProsimVariable("aircraft.refuel.refuelingPower", false);
-
+            _fuelService.RefuelStop();
         }
 
         public bool[] RandomizePaxSeating(int trueCount)
@@ -659,25 +620,25 @@ public class ProsimController
             _passengerService.DeboardingStop();
         }
 
-    public void SetAftRightDoor(bool open)
-    {
-        _doorService.SetAftRightDoor(open);
-    }
-    
-    public void SetForwardRightDoor(bool open)
-    {
-        _doorService.SetForwardRightDoor(open);
-    }
+        public void SetAftRightDoor(bool open)
+        {
+            _doorService.SetAftRightDoor(open);
+        }
+        
+        public void SetForwardRightDoor(bool open)
+        {
+            _doorService.SetForwardRightDoor(open);
+        }
 
-    public void SetForwardCargoDoor(bool open)
-    {
-        _doorService.SetForwardCargoDoor(open);
-    }
+        public void SetForwardCargoDoor(bool open)
+        {
+            _doorService.SetForwardCargoDoor(open);
+        }
 
-    public void SetAftCargoDoor(bool open)
-    {
-        _doorService.SetAftCargoDoor(open);
-    }
+        public void SetAftCargoDoor(bool open)
+        {
+            _doorService.SetAftCargoDoor(open);
+        }
 
         public dynamic GetStatusFunction(string dataRef)
         {

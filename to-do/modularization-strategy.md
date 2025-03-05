@@ -130,18 +130,19 @@ flowchart TD
 
 #### 2.7 ProsimFuelService
 
-- [ ] Create `IProsimFuelService.cs` interface file
-- [ ] Create `ProsimFuelService.cs` implementation file
-- [ ] Move fuel-related methods from ProsimController to ProsimFuelService
-  - [ ] Move `SetInitialFuel` method
-  - [ ] Move `RefuelStart` method
-  - [ ] Move `Refuel` method
-  - [ ] Move `RefuelStop` method
-  - [ ] Move `GetFuelAmount` method
-  - [ ] Move `GetFuelRateKGS` method from ServiceModel
-- [ ] Update ProsimController to use ProsimFuelService
+- [x] Create `IProsimFuelService.cs` interface file
+- [x] Create `ProsimFuelService.cs` implementation file
+- [x] Create `WeightConversionUtility.cs` utility class
+- [x] Move fuel-related methods from ProsimController to ProsimFuelService
+  - [x] Move `SetInitialFuel` method
+  - [x] Move `RefuelStart` method
+  - [x] Move `Refuel` method
+  - [x] Move `RefuelStop` method
+  - [x] Move `GetFuelAmount` method
+  - [x] Move `GetFuelRateKGS` method from ServiceModel
+- [x] Update ProsimController to use ProsimFuelService
 - [ ] Add unit tests for ProsimFuelService
-- [ ] Test the implementation to ensure it works correctly
+- [x] Test the implementation to ensure it works correctly
 
 #### 2.8 ProsimFlightDataService
 

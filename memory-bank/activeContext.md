@@ -84,6 +84,15 @@ The current focus for Prosim2GSX is migrating the application from .NET 7.0 to .
      - Updated ProsimController to use ProsimCargoService
      - Added event-based notification for cargo state changes
      - Documentation available in to-do/modularization-implementation-phase2.6.md
+   
+   - Completed Phase 2.7: ProsimFuelService implementation
+     - Created IProsimFuelService interface and implementation
+     - Created WeightConversionUtility for kg/lbs conversions
+     - Moved fuel-related methods from ProsimController
+     - Moved GetFuelRateKGS method from ServiceModel
+     - Updated ProsimController to use ProsimFuelService
+     - Added event-based notification for fuel state changes
+     - Documentation available in to-do/modularization-implementation-phase2.7.md
 
 3. **Architecture Improvements**
    - Enhanced separation of concerns

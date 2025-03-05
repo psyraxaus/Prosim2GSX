@@ -123,12 +123,6 @@ namespace Prosim2GSX.Models
                 LoadConfiguration();
         }
 
-        public float GetFuelRateKGS()
-        {
-            if (RefuelUnit == "KGS")
-                return RefuelRate;
-            else
-                return RefuelRate / ProsimController.weightConversion;
-        }
+        // GetFuelRateKGS method moved to ProsimFuelService
     }
 }
