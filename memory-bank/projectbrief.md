@@ -12,7 +12,7 @@ Prosim2GSX is a bridge application that connects ProsimA320 with GSX in Microsof
    - Handle connection failures gracefully
 
 2. **GSX Service Integration**
-   - Control all GSX services from ProsimA320 interface
+   - Autonomous control of all GSX services from Prosim2GSX
    - Support for boarding, deboarding, refueling, catering, and other ground services
    - Automatic synchronization of passenger, cargo, and fuel data
 
