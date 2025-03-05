@@ -16,11 +16,9 @@ The modularization will be implemented in phases, with each phase focusing on a 
 
 ```mermaid
 flowchart TD
-    A[Phase 1: Extract Core Services] --> B[Phase 2: Extract Shared Services]
+    A[Phase 1: Extract Core Services] --> B[Phase 2: Extract Shared and ProSim Services]
     B --> C[Phase 3: Extract GSX Services]
-    C --> D[Phase 4: Extract ProSim Services]
-    D --> E[Phase 5: Implement Shared Services]
-    E --> F[Phase 6: Refine State Management]
+    C --> D[Phase 4: Refine State Management]
 ```
 
 ## Phased Implementation Plan
@@ -47,7 +45,7 @@ flowchart TD
 - [ ] Add unit tests for ProsimService
 - [ ] Test the implementation to ensure it works correctly
 
-### Phase 2: Extract Shared Services
+### Phase 2: Extract Shared and ProSim Services
 
 #### 2.1 AcarsService
 
@@ -76,7 +74,100 @@ flowchart TD
 - [ ] Add unit tests for FlightPlanService
 - [ ] Test the implementation to ensure it works correctly
 
-#### 2.3 Create Shared Service Interfaces
+#### 2.3 ProsimDoorService
+
+- [ ] Create `IProsimDoorService.cs` interface file
+- [ ] Create `ProsimDoorService.cs` implementation file
+- [ ] Move door-related methods from ProsimController to ProsimDoorService
+  - [ ] Move `SetAftRightDoor` method
+  - [ ] Move `SetForwardRightDoor` method
+  - [ ] Move `SetForwardCargoDoor` method
+  - [ ] Move `SetAftCargoDoor` method
+- [ ] Update ProsimController to use ProsimDoorService
+- [ ] Add unit tests for ProsimDoorService
+- [ ] Test the implementation to ensure it works correctly
+
+#### 2.4 ProsimEquipmentService
+
+- [ ] Create `IProsimEquipmentService.cs` interface file
+- [ ] Create `ProsimEquipmentService.cs` implementation file
+- [ ] Move equipment-related methods from ProsimController to ProsimEquipmentService
+  - [ ] Move `SetServicePCA` method
+  - [ ] Move `SetServiceChocks` method
+  - [ ] Move `SetServiceGPU` method
+- [ ] Update ProsimController to use ProsimEquipmentService
+- [ ] Add unit tests for ProsimEquipmentService
+- [ ] Test the implementation to ensure it works correctly
+
+#### 2.5 ProsimPassengerService
+
+- [ ] Create `IProsimPassengerService.cs` interface file
+- [ ] Create `ProsimPassengerService.cs` implementation file
+- [ ] Move passenger-related methods from ProsimController to ProsimPassengerService
+  - [ ] Move `RandomizePaxSeating` method
+  - [ ] Move `BoardingStart` method
+  - [ ] Move `Boarding` method
+  - [ ] Move `BoardPassengers` method
+  - [ ] Move `SendSeatString` method
+  - [ ] Move `BoardingStop` method
+  - [ ] Move `DeboardingStart` method
+  - [ ] Move `DeboardPassengers` method
+  - [ ] Move `Deboarding` method
+  - [ ] Move `DeboardingStop` method
+- [ ] Update ProsimController to use ProsimPassengerService
+- [ ] Add unit tests for ProsimPassengerService
+- [ ] Test the implementation to ensure it works correctly
+
+#### 2.6 ProsimCargoService
+
+- [ ] Create `IProsimCargoService.cs` interface file
+- [ ] Create `ProsimCargoService.cs` implementation file
+- [ ] Move cargo-related methods from ProsimController to ProsimCargoService
+  - [ ] Move `ChangeCargo` method
+- [ ] Update ProsimController to use ProsimCargoService
+- [ ] Add unit tests for ProsimCargoService
+- [ ] Test the implementation to ensure it works correctly
+
+#### 2.7 ProsimFuelService
+
+- [ ] Create `IProsimFuelService.cs` interface file
+- [ ] Create `ProsimFuelService.cs` implementation file
+- [ ] Move fuel-related methods from ProsimController to ProsimFuelService
+  - [ ] Move `SetInitialFuel` method
+  - [ ] Move `RefuelStart` method
+  - [ ] Move `Refuel` method
+  - [ ] Move `RefuelStop` method
+  - [ ] Move `GetFuelAmount` method
+  - [ ] Move `GetFuelRateKGS` method from ServiceModel
+- [ ] Update ProsimController to use ProsimFuelService
+- [ ] Add unit tests for ProsimFuelService
+- [ ] Test the implementation to ensure it works correctly
+
+#### 2.8 ProsimFlightDataService
+
+- [ ] Create `IProsimFlightDataService.cs` interface file
+- [ ] Create `ProsimFlightDataService.cs` implementation file
+- [ ] Move flight data-related methods from ProsimController to ProsimFlightDataService
+  - [ ] Move `GetLoadedData` method
+  - [ ] Move `GetFMSFlightNumber` method
+  - [ ] Move `GetZfwCG` method
+  - [ ] Move `GetTowCG` method
+- [ ] Update ProsimController to use ProsimFlightDataService
+- [ ] Add unit tests for ProsimFlightDataService
+- [ ] Test the implementation to ensure it works correctly
+
+#### 2.9 ProsimFluidService
+
+- [ ] Create `IProsimFluidService.cs` interface file
+- [ ] Create `ProsimFluidService.cs` implementation file
+- [ ] Move fluid-related methods from ProsimController to ProsimFluidService
+  - [ ] Move `SetInitialFluids` method
+  - [ ] Move `GetHydraulicFluidValues` method
+- [ ] Update ProsimController to use ProsimFluidService
+- [ ] Add unit tests for ProsimFluidService
+- [ ] Test the implementation to ensure it works correctly
+
+#### 2.10 Create Shared Service Interfaces
 
 - [ ] Create `IPassengerService.cs` interface file
   - [ ] Define methods for passenger management
@@ -116,83 +207,9 @@ flowchart TD
 - [ ] Add unit tests for GSXAudioService
 - [ ] Test the implementation to ensure it works correctly
 
-### Phase 4: Extract ProSim Services
+### Phase 4: Refine State Management
 
-#### 4.1 ProsimDoorService
-
-- [ ] Create `IProsimDoorService.cs` interface file
-- [ ] Create `ProsimDoorService.cs` implementation file
-- [ ] Move door-related methods from ProsimController to ProsimDoorService
-  - [ ] Move `SetAftRightDoor` method
-  - [ ] Move `SetForwardRightDoor` method
-  - [ ] Move `SetForwardCargoDoor` method
-  - [ ] Move `SetAftCargoDoor` method
-- [ ] Update ProsimController to use ProsimDoorService
-- [ ] Add unit tests for ProsimDoorService
-- [ ] Test the implementation to ensure it works correctly
-
-#### 4.2 ProsimEquipmentService
-
-- [ ] Create `IProsimEquipmentService.cs` interface file
-- [ ] Create `ProsimEquipmentService.cs` implementation file
-- [ ] Move equipment-related methods from ProsimController to ProsimEquipmentService
-  - [ ] Move `SetServicePCA` method
-  - [ ] Move `SetServiceChocks` method
-  - [ ] Move `SetServiceGPU` method
-- [ ] Update ProsimController to use ProsimEquipmentService
-- [ ] Add unit tests for ProsimEquipmentService
-- [ ] Test the implementation to ensure it works correctly
-
-### Phase 5: Implement Shared Services
-
-#### 5.1 PassengerService
-
-- [ ] Create `PassengerService.cs` implementation file
-- [ ] Move passenger-related methods from both controllers to PassengerService
-  - [ ] Move `RandomizePaxSeating` method from ProsimController
-  - [ ] Move `BoardingStart` method from ProsimController
-  - [ ] Move `Boarding` method from ProsimController
-  - [ ] Move `BoardPassengers` method from ProsimController
-  - [ ] Move `SendSeatString` method from ProsimController
-  - [ ] Move `BoardingStop` method from ProsimController
-  - [ ] Move `DeboardingStart` method from ProsimController
-  - [ ] Move `DeboardPassengers` method from ProsimController
-  - [ ] Move `Deboarding` method from ProsimController
-  - [ ] Move `DeboardingStop` method from ProsimController
-  - [ ] Move `SetPassengers` method from GsxController
-- [ ] Update GsxController to use PassengerService
-- [ ] Update ProsimController to use PassengerService
-- [ ] Add unit tests for PassengerService
-- [ ] Test the implementation to ensure it works correctly
-
-#### 5.2 CargoService
-
-- [ ] Create `CargoService.cs` implementation file
-- [ ] Move cargo-related methods from both controllers to CargoService
-  - [ ] Move `ChangeCargo` method from ProsimController
-- [ ] Update GsxController to use CargoService
-- [ ] Update ProsimController to use CargoService
-- [ ] Add unit tests for CargoService
-- [ ] Test the implementation to ensure it works correctly
-
-#### 5.3 FuelService
-
-- [ ] Create `FuelService.cs` implementation file
-- [ ] Move fuel-related methods from both controllers to FuelService
-  - [ ] Move `SetInitialFuel` method from ProsimController
-  - [ ] Move `RefuelStart` method from ProsimController
-  - [ ] Move `Refuel` method from ProsimController
-  - [ ] Move `RefuelStop` method from ProsimController
-  - [ ] Move `GetFuelAmount` method from ProsimController
-  - [ ] Move `GetFuelRateKGS` method from ServiceModel
-- [ ] Update GsxController to use FuelService
-- [ ] Update ProsimController to use FuelService
-- [ ] Add unit tests for FuelService
-- [ ] Test the implementation to ensure it works correctly
-
-### Phase 6: Refine State Management
-
-#### 6.1 GSXStateManager
+#### 4.1 GSXStateManager
 
 - [ ] Create `IGSXStateManager.cs` interface file
 - [ ] Create `GSXStateManager.cs` implementation file
@@ -207,7 +224,7 @@ flowchart TD
 - [ ] Add unit tests for GSXStateManager
 - [ ] Test the implementation to ensure it works correctly
 
-#### 6.2 Refine Service Coordination
+#### 4.2 Refine Service Coordination
 
 - [ ] Review and refine service interactions
   - [ ] Identify and resolve circular dependencies
@@ -219,7 +236,7 @@ flowchart TD
   - [ ] Handle service failures
   - [ ] Implement retry mechanisms
 
-#### 6.3 Update Controllers
+#### 4.3 Update Controllers
 
 - [ ] Refactor GsxController to be a thin facade
   - [ ] Delegate to appropriate services
