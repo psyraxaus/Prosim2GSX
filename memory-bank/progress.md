@@ -212,6 +212,11 @@ Based on the current state and known issues, the following priorities are recomm
        - ✅ Move door-related methods from ProsimController
        - ✅ Update ProsimController to use ProsimDoorService
        - ✅ Implementation details available in to-do/modularization-implementation-phase2.3.md
+     - ✅ Phase 2.4: Implement ProsimEquipmentService
+       - ✅ Create IProsimEquipmentService interface and implementation
+       - ✅ Move equipment-related methods from ProsimController
+       - ✅ Update ProsimController to use ProsimEquipmentService
+       - ✅ Implementation details available in to-do/modularization-implementation-phase2.4.md
      - 🔄 Implement remaining domain-specific ProSim services
    - 🔜 Phase 3: Extract GSX Services
    - 🔜 Phase 4: Refine State Management

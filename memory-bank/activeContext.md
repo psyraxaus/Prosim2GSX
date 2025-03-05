@@ -62,6 +62,13 @@ The current focus for Prosim2GSX is migrating the application from .NET 7.0 to .
      - Updated ProsimController to use ProsimDoorService
      - Added event-based notification for door state changes
      - Documentation available in to-do/modularization-implementation-phase2.3.md
+   
+   - Completed Phase 2.4: ProsimEquipmentService implementation
+     - Created IProsimEquipmentService interface and implementation
+     - Moved equipment-related methods from ProsimController
+     - Updated ProsimController to use ProsimEquipmentService
+     - Added event-based notification for equipment state changes
+     - Documentation available in to-do/modularization-implementation-phase2.4.md
 
 3. **Architecture Improvements**
    - Enhanced separation of concerns

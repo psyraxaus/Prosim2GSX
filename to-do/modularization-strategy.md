@@ -89,15 +89,15 @@ flowchart TD
 
 #### 2.4 ProsimEquipmentService
 
-- [ ] Create `IProsimEquipmentService.cs` interface file
-- [ ] Create `ProsimEquipmentService.cs` implementation file
-- [ ] Move equipment-related methods from ProsimController to ProsimEquipmentService
-  - [ ] Move `SetServicePCA` method
-  - [ ] Move `SetServiceChocks` method
-  - [ ] Move `SetServiceGPU` method
-- [ ] Update ProsimController to use ProsimEquipmentService
-- [ ] Add unit tests for ProsimEquipmentService
-- [ ] Test the implementation to ensure it works correctly
+- [x] Create `IProsimEquipmentService.cs` interface file
+- [x] Create `ProsimEquipmentService.cs` implementation file
+- [x] Move equipment-related methods from ProsimController to ProsimEquipmentService
+  - [x] Move `SetServicePCA` method
+  - [x] Move `SetServiceChocks` method
+  - [x] Move `SetServiceGPU` method
+- [x] Update ProsimController to use ProsimEquipmentService
+- [ ] Add unit tests for ProsimEquipmentService (see unit-testing-strategy.md)
+- [x] Test the implementation to ensure it works correctly
 
 #### 2.5 ProsimPassengerService
 

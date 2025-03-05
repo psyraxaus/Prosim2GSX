@@ -23,6 +23,7 @@ public class ProsimController
     // Our main ProSim connection
     private readonly ProSimConnect _connection = new ProSimConnect();
     private readonly IProsimDoorService _doorService;
+    private readonly IProsimEquipmentService _equipmentService;
 
         public static readonly int waitDuration = 30000;
 
@@ -67,6 +68,16 @@ public class ProsimController
             // Handle door state changes if needed
             Logger.Log(LogLevel.Debug, "ProsimController:DoorStateChanged", 
                 $"{args.DoorName} is now {(args.IsOpen ? "open" : "closed")}");
+        };
+        
+        // Initialize equipment service with the ProsimService from Interface
+        _equipmentService = new ProsimEquipmentService(Interface.ProsimService);
+        
+        // Optionally subscribe to equipment state change events
+        _equipmentService.EquipmentStateChanged += (sender, args) => {
+            // Handle equipment state changes if needed
+            Logger.Log(LogLevel.Debug, "ProsimController:EquipmentStateChanged", 
+                $"{args.EquipmentName} is now {(args.IsEnabled ? "enabled" : "disabled")}");
         };
     }
 
@@ -476,17 +487,17 @@ public class ProsimController
 
         public void SetServicePCA(bool enable)
         {
-            Interface.SetProsimVariable("groundservice.preconditionedAir", enable);
+            _equipmentService.SetServicePCA(enable);
         }
 
         public void SetServiceChocks(bool enable)
         {
-            Interface.SetProsimVariable("efb.chocks", enable);
+            _equipmentService.SetServiceChocks(enable);
         }
 
         public void SetServiceGPU(bool enable)
         {
-            Interface.SetProsimVariable("groundservice.groundpower", enable);
+            _equipmentService.SetServiceGPU(enable);
         }
 
         public void TriggerFinal()
