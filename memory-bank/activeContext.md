@@ -55,6 +55,13 @@ The current focus for Prosim2GSX is migrating the application from .NET 7.0 to .
      - Implemented secure XML processing with proper settings
      - Added event-based notification for new flight plans
      - Documentation available in to-do/modularization-implementation-phase2.2.md
+   
+   - Completed Phase 2.3: ProsimDoorService implementation
+     - Created IProsimDoorService interface and implementation
+     - Moved door-related methods from ProsimController
+     - Updated ProsimController to use ProsimDoorService
+     - Added event-based notification for door state changes
+     - Documentation available in to-do/modularization-implementation-phase2.3.md
 
 3. **Architecture Improvements**
    - Enhanced separation of concerns

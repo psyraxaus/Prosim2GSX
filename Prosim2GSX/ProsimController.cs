@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
+﻿﻿using Newtonsoft.Json.Linq;
 using ProSimSDK;
 using System;
 using System.Xml;
@@ -14,14 +14,15 @@ using System.Globalization;
 
 namespace Prosim2GSX
 {
-    public class ProsimController
-    {
-        public ProsimInterface Interface;
-        protected ServiceModel Model;
-        protected FlightPlan FlightPlan;
-        private MobiSimConnect SimConnect;
-        // Our main ProSim connection
-        private readonly ProSimConnect _connection = new ProSimConnect();
+public class ProsimController
+{
+    public ProsimInterface Interface;
+    protected ServiceModel Model;
+    protected FlightPlan FlightPlan;
+    private MobiSimConnect SimConnect;
+    // Our main ProSim connection
+    private readonly ProSimConnect _connection = new ProSimConnect();
+    private readonly IProsimDoorService _doorService;
 
         public static readonly int waitDuration = 30000;
 
@@ -51,13 +52,23 @@ namespace Prosim2GSX
 
         public bool useZeroFuel;
 
-        public ProsimController(ServiceModel model)
-        {
-            Interface = new(model, _connection);
-            paxCurrent = new bool[132];
-            paxSeats = null;
-            Model = model;
-        }
+    public ProsimController(ServiceModel model)
+    {
+        Interface = new(model, _connection);
+        paxCurrent = new bool[132];
+        paxSeats = null;
+        Model = model;
+        
+        // Initialize door service with the ProsimService from Interface
+        _doorService = new ProsimDoorService(Interface.ProsimService);
+        
+        // Optionally subscribe to door state change events
+        _doorService.DoorStateChanged += (sender, args) => {
+            // Handle door state changes if needed
+            Logger.Log(LogLevel.Debug, "ProsimController:DoorStateChanged", 
+                $"{args.DoorName} is now {(args.IsOpen ? "open" : "closed")}");
+        };
+    }
 
         public void Update(bool forceCurrent)
         {
@@ -758,29 +769,25 @@ namespace Prosim2GSX
             paxSeats = null;
         }
 
-        public void SetAftRightDoor(bool open)
-        {
-            Interface.SetProsimVariable("doors.entry.right.aft", open);
-            Logger.Log(LogLevel.Information, "ProsimController:SetAftRightDoor", $"Aft right door {(open ? "opened" : "closed")}");
-        }
-        
-        public void SetForwardRightDoor(bool open)
-        {
-            Interface.SetProsimVariable("doors.entry.right.fwd", open);
-            Logger.Log(LogLevel.Information, "ProsimController:SetForwardRightDoor", $"Forward right door {(open ? "opened" : "closed")}");
-        }
+    public void SetAftRightDoor(bool open)
+    {
+        _doorService.SetAftRightDoor(open);
+    }
+    
+    public void SetForwardRightDoor(bool open)
+    {
+        _doorService.SetForwardRightDoor(open);
+    }
 
-        public void SetForwardCargoDoor(bool open)
-        {
-            Interface.SetProsimVariable("doors.cargo.forward", open);
-            Logger.Log(LogLevel.Information, "ProsimController:SetForwardCargoDoor", $"Forward cargo door {(open ? "opened" : "closed")}");
-        }
+    public void SetForwardCargoDoor(bool open)
+    {
+        _doorService.SetForwardCargoDoor(open);
+    }
 
-        public void SetAftCargoDoor(bool open)
-        {
-            Interface.SetProsimVariable("doors.cargo.aft", open);
-            Logger.Log(LogLevel.Information, "ProsimController:SetAftCargoDoor", $"Aft cargo door {(open ? "opened" : "closed")}");
-        }
+    public void SetAftCargoDoor(bool open)
+    {
+        _doorService.SetAftCargoDoor(open);
+    }
 
         public dynamic GetStatusFunction(string dataRef)
         {

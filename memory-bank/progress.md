@@ -196,7 +196,7 @@ Based on the current state and known issues, the following priorities are recomm
      - ✅ Update ProsimInterface to use ProsimService
      - ✅ Improve error handling and centralize ProSim SDK interaction
      - ✅ Implementation details available in to-do/modularization-implementation-phase1.2.md
-   - 🔄 Phase 2: Extract Shared and ProSim Services
+     - 🔄 Phase 2: Extract Shared and ProSim Services
      - ✅ Phase 2.1: Implement AcarsService
        - ✅ Create IAcarsService interface and implementation
        - ✅ Move ACARS-related methods from GsxController
@@ -207,7 +207,12 @@ Based on the current state and known issues, the following priorities are recomm
        - ✅ Move flight plan loading and parsing logic from FlightPlan class
        - ✅ Update FlightPlan class to use FlightPlanService
        - ✅ Implementation details available in to-do/modularization-implementation-phase2.2.md
-     - 🔜 Implement domain-specific ProSim services
+     - ✅ Phase 2.3: Implement ProsimDoorService
+       - ✅ Create IProsimDoorService interface and implementation
+       - ✅ Move door-related methods from ProsimController
+       - ✅ Update ProsimController to use ProsimDoorService
+       - ✅ Implementation details available in to-do/modularization-implementation-phase2.3.md
+     - 🔄 Implement remaining domain-specific ProSim services
    - 🔜 Phase 3: Extract GSX Services
    - 🔜 Phase 4: Refine State Management
 

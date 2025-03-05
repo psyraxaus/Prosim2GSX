@@ -76,16 +76,16 @@ flowchart TD
 
 #### 2.3 ProsimDoorService
 
-- [ ] Create `IProsimDoorService.cs` interface file
-- [ ] Create `ProsimDoorService.cs` implementation file
-- [ ] Move door-related methods from ProsimController to ProsimDoorService
-  - [ ] Move `SetAftRightDoor` method
-  - [ ] Move `SetForwardRightDoor` method
-  - [ ] Move `SetForwardCargoDoor` method
-  - [ ] Move `SetAftCargoDoor` method
-- [ ] Update ProsimController to use ProsimDoorService
+- [x] Create `IProsimDoorService.cs` interface file
+- [x] Create `ProsimDoorService.cs` implementation file
+- [x] Move door-related methods from ProsimController to ProsimDoorService
+  - [x] Move `SetAftRightDoor` method
+  - [x] Move `SetForwardRightDoor` method
+  - [x] Move `SetForwardCargoDoor` method
+  - [x] Move `SetAftCargoDoor` method
+- [x] Update ProsimController to use ProsimDoorService
 - [ ] Add unit tests for ProsimDoorService
-- [ ] Test the implementation to ensure it works correctly
+- [x] Test the implementation to ensure it works correctly
 
 #### 2.4 ProsimEquipmentService
 
