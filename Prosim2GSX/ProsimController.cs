@@ -28,6 +28,7 @@ namespace Prosim2GSX
         private readonly IProsimPassengerService _passengerService;
         private readonly IProsimCargoService _cargoService;
         private readonly IProsimFuelService _fuelService;
+        private readonly IProsimFluidService _fluidService;
         private IProsimFlightDataService _flightDataService;
 
         public static readonly int waitDuration = 30000;
@@ -104,6 +105,16 @@ namespace Prosim2GSX
                 // Handle fuel state changes if needed
                 Logger.Log(LogLevel.Debug, "ProsimController:FuelStateChanged", 
                     $"{args.OperationType}: Current: {args.CurrentAmount} {args.FuelUnits}, Planned: {args.PlannedAmount} {args.FuelUnits}");
+            };
+            
+            // Initialize fluid service with the ProsimService from Interface and the model
+            _fluidService = new ProsimFluidService(Interface.ProsimService, Model);
+            
+            // Optionally subscribe to fluid state change events
+            _fluidService.FluidStateChanged += (sender, args) => {
+                // Handle fluid state changes if needed
+                Logger.Log(LogLevel.Debug, "ProsimController:FluidStateChanged", 
+                    $"{args.OperationType}: Blue: {args.BlueAmount}, Green: {args.GreenAmount}, Yellow: {args.YellowAmount}");
             };
         }
 
@@ -340,16 +351,12 @@ namespace Prosim2GSX
 
         public void SetInitialFluids()
         {
-            Interface.SetProsimVariable("aircraft.hydraulics.blue.quantity", Model.HydaulicsBlueAmount);
-            Interface.SetProsimVariable("aircraft.hydraulics.green.quantity", Model.HydaulicsGreenAmount);
-            Interface.SetProsimVariable("aircraft.hydraulics.yellow.quantity", Model.HydaulicsYellowAmount);
+            _fluidService.SetInitialFluids();
         }
 
         public (double, double, double) GetHydraulicFluidValues()
         {
-            return (Model.HydaulicsBlueAmount = Interface.ReadDataRef("aircraft.hydraulics.blue.quantity"), 
-                    Model.HydaulicsGreenAmount = Interface.ReadDataRef("aircraft.hydraulics.green.quantity"), 
-                    Model.HydaulicsYellowAmount = Interface.ReadDataRef("aircraft.hydraulics.yellow.quantity"));
+            return _fluidService.GetHydraulicFluidValues();
         }
         
         public void RefuelStart()

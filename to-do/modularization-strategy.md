@@ -159,14 +159,15 @@ flowchart TD
 
 #### 2.9 ProsimFluidService
 
-- [ ] Create `IProsimFluidService.cs` interface file
-- [ ] Create `ProsimFluidService.cs` implementation file
-- [ ] Move fluid-related methods from ProsimController to ProsimFluidService
-  - [ ] Move `SetInitialFluids` method
-  - [ ] Move `GetHydraulicFluidValues` method
-- [ ] Update ProsimController to use ProsimFluidService
+- [x] Create `IProsimFluidService.cs` interface file
+- [x] Create `ProsimFluidService.cs` implementation file
+- [x] Move fluid-related methods from ProsimController to ProsimFluidService
+  - [x] Move `SetInitialFluids` method
+  - [x] Move `GetHydraulicFluidValues` method
+- [x] Update ProsimController to use ProsimFluidService
 - [ ] Add unit tests for ProsimFluidService
 - [ ] Test the implementation to ensure it works correctly
+- [x] Create implementation plan (available in to-do/modularization-implementation-phase2.9.md)
 
 #### 2.10 Create Shared Service Interfaces
 

@@ -101,6 +101,13 @@ The current focus for Prosim2GSX is migrating the application from .NET 7.0 to .
      - Added event-based notification for flight data changes
      - Implemented secure XML processing in GetFMSFlightNumber method
      - Documentation available in to-do/modularization-implementation-phase2.8.md
+   
+   - Completed Phase 2.9: ProsimFluidService implementation
+     - Created IProsimFluidService interface and implementation
+     - Moved hydraulic fluid-related methods from ProsimController
+     - Updated ProsimController to use ProsimFluidService
+     - Added event-based notification for fluid state changes
+     - Documentation available in to-do/modularization-implementation-phase2.9.md
 
 3. **Architecture Improvements**
    - Enhanced separation of concerns
