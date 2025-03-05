@@ -101,22 +101,22 @@ flowchart TD
 
 #### 2.5 ProsimPassengerService
 
-- [ ] Create `IProsimPassengerService.cs` interface file
-- [ ] Create `ProsimPassengerService.cs` implementation file
-- [ ] Move passenger-related methods from ProsimController to ProsimPassengerService
-  - [ ] Move `RandomizePaxSeating` method
-  - [ ] Move `BoardingStart` method
-  - [ ] Move `Boarding` method
-  - [ ] Move `BoardPassengers` method
-  - [ ] Move `SendSeatString` method
-  - [ ] Move `BoardingStop` method
-  - [ ] Move `DeboardingStart` method
-  - [ ] Move `DeboardPassengers` method
-  - [ ] Move `Deboarding` method
-  - [ ] Move `DeboardingStop` method
-- [ ] Update ProsimController to use ProsimPassengerService
-- [ ] Add unit tests for ProsimPassengerService
-- [ ] Test the implementation to ensure it works correctly
+- [x] Create `IProsimPassengerService.cs` interface file
+- [x] Create `ProsimPassengerService.cs` implementation file
+- [x] Move passenger-related methods from ProsimController to ProsimPassengerService
+  - [x] Move `RandomizePaxSeating` method
+  - [x] Move `BoardingStart` method
+  - [x] Move `Boarding` method
+  - [x] Move `BoardPassengers` method
+  - [x] Move `SendSeatString` method
+  - [x] Move `BoardingStop` method
+  - [x] Move `DeboardingStart` method
+  - [x] Move `DeboardPassengers` method
+  - [x] Move `Deboarding` method
+  - [x] Move `DeboardingStop` method
+- [x] Update ProsimController to use ProsimPassengerService
+- [ ] Add unit tests for ProsimPassengerService (see unit-testing-strategy.md)
+- [x] Test the implementation to ensure it works correctly
 
 #### 2.6 ProsimCargoService
 

@@ -217,6 +217,11 @@ Based on the current state and known issues, the following priorities are recomm
        - ✅ Move equipment-related methods from ProsimController
        - ✅ Update ProsimController to use ProsimEquipmentService
        - ✅ Implementation details available in to-do/modularization-implementation-phase2.4.md
+     - ✅ Phase 2.5: Implement ProsimPassengerService
+       - ✅ Create IProsimPassengerService interface and implementation
+       - ✅ Move passenger-related methods from ProsimController
+       - ✅ Update ProsimController to use ProsimPassengerService
+       - ✅ Implementation details available in to-do/modularization-implementation-phase2.5.md
      - 🔄 Implement remaining domain-specific ProSim services
    - 🔜 Phase 3: Extract GSX Services
    - 🔜 Phase 4: Refine State Management

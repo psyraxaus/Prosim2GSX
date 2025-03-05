@@ -24,6 +24,7 @@ public class ProsimController
     private readonly ProSimConnect _connection = new ProSimConnect();
     private readonly IProsimDoorService _doorService;
     private readonly IProsimEquipmentService _equipmentService;
+    private readonly IProsimPassengerService _passengerService;
 
         public static readonly int waitDuration = 30000;
 
@@ -79,6 +80,16 @@ public class ProsimController
             Logger.Log(LogLevel.Debug, "ProsimController:EquipmentStateChanged", 
                 $"{args.EquipmentName} is now {(args.IsEnabled ? "enabled" : "disabled")}");
         };
+        
+        // Initialize passenger service with the ProsimService from Interface
+        _passengerService = new ProsimPassengerService(Interface.ProsimService);
+        
+        // Optionally subscribe to passenger state change events
+        _passengerService.PassengerStateChanged += (sender, args) => {
+            // Handle passenger state changes if needed
+            Logger.Log(LogLevel.Debug, "ProsimController:PassengerStateChanged", 
+                $"{args.OperationType}: Current: {args.CurrentCount}, Planned: {args.PlannedCount}");
+        };
     }
 
         public void Update(bool forceCurrent)
@@ -102,15 +113,19 @@ public class ProsimController
                     cargoPlanned = FlightPlan.CargoTotal;
                     fuelPlanned = FlightPlan.Fuel;
 
-                    if (!randomizePaxSeat)
+                    if (!_passengerService.HasRandomizedSeating())
                     {
-                        paxPlanned = RandomizePaxSeating(FlightPlan.Passenger);
-                        Logger.Log(LogLevel.Debug, "ProsimController:Update", $"seatOccupation bool: {string.Join(", ", paxPlanned)}");
-                        Interface.SetProsimVariable("aircraft.passengers.seatOccupation", paxPlanned); // string.Join(", ", paxPlanned));
-                        paxZone1 = Interface.ReadDataRef("aircraft.passengers.zone1.amount");
-                        paxZone2 = Interface.ReadDataRef("aircraft.passengers.zone2.amount");
-                        paxZone3 = Interface.ReadDataRef("aircraft.passengers.zone3.amount");
-                        paxZone4 = Interface.ReadDataRef("aircraft.passengers.zone4.amount");
+                        // Update passenger data from flight plan
+                        _passengerService.UpdateFromFlightPlan(FlightPlan.Passenger, forceCurrent);
+                        
+                        // Update local variables for zone counts
+                        paxZone1 = _passengerService.PaxZone1;
+                        paxZone2 = _passengerService.PaxZone2;
+                        paxZone3 = _passengerService.PaxZone3;
+                        paxZone4 = _passengerService.PaxZone4;
+                        
+                        // Update local paxPlanned variable for backward compatibility
+                        paxPlanned = _passengerService.RandomizePaxSeating(FlightPlan.Passenger);
 
                         Interface.SetProsimVariable("aircraft.cargo.aft.amount", Convert.ToDouble(FlightPlan.CargoTotal / 2));
                         Interface.SetProsimVariable("aircraft.cargo.forward.amount", Convert.ToDouble(FlightPlan.CargoTotal / 2));
@@ -211,12 +226,12 @@ public class ProsimController
 
         public int GetPaxPlanned()
         {
-            return paxPlanned.Count(i => i);
+            return _passengerService.GetPaxPlanned();
         }
 
         public int GetPaxCurrent()
         {
-            return paxCurrent.Count(i => i);
+            return _passengerService.GetPaxCurrent();
         }
 
         public double GetFuelPlanned()
@@ -591,112 +606,24 @@ public class ProsimController
 
         public bool[] RandomizePaxSeating(int trueCount)
         {
-            if (trueCount < 0 || trueCount > 132)
-            {
-                throw new ArgumentException("The number of 'true' values must be between 0 and 132.");
-            }
-            bool[] result = new bool[132];
-            // Initialize all to false
-            for (int i = 0; i < result.Length; i++)
-            {
-                result[i] = false;
-            }
-            // Fill the array with 'true' values at random positions
-            Random rand = new Random();
-            int count = 0;
-            while (count < trueCount)
-            {
-                int index = rand.Next(132);
-                if (!result[index])
-                {
-                    result[index] = true;
-                    count++;
-                }
-            }
-            return result;
+            return _passengerService.RandomizePaxSeating(trueCount);
         }
 
         public void BoardingStart()
         {
-            paxLast = 0;
+            // Initialize cargo tracking
             cargoLast = 0;
-            paxSeats = new int[GetPaxPlanned()];
-            int n = 0;
-            for (int i = 0; i < paxPlanned.Length; i++)
-            {
-                if (paxPlanned[i])
-                {
-                    paxSeats[n] = i;
-                    n++;
-                }
-            }
+            
+            // Delegate to passenger service
+            _passengerService.BoardingStart();
         }
 
         public bool Boarding(int paxCurrent, int cargoCurrent)
         {
-            BoardPassengers(paxCurrent - paxLast);
-            paxLast = paxCurrent;
-
-            ChangeCargo(cargoCurrent);
-            cargoLast = cargoCurrent;
-
-            return paxCurrent == GetPaxPlanned() && cargoCurrent == 100;
-        }
-
-        private void BoardPassengers(int num)
-        {
-            if (num < 0)
-            {
-                Logger.Log(LogLevel.Debug, "ProsimController:BoardPassengers", $"Passenger Num was below 0!");
-                return;
-            }
-            else if (num > 15)
-            {
-                Logger.Log(LogLevel.Debug, "ProsimController:BoardPassengers", $"Passenger Num was above 15!");
-                return;
-            }
-            else
-                Logger.Log(LogLevel.Debug, "ProsimController:BoardPassengers", $"(num {num}) (current {GetPaxCurrent()}) (planned ({GetPaxPlanned()}))");
-
-            int n = 0;
-            for (int i = paxLast; i < paxLast + num && i < GetPaxPlanned(); i++)
-            {
-                paxCurrent[paxSeats[i]] = true;
-                n++;
-            }
-
-            if (n > 0)
-                SendSeatString();
-        }
-
-        private void SendSeatString(bool force = false)
-        {
-            string seatString = "";
-            bool first = true;
-
-            if (GetPaxCurrent() == 0 && !force)
-                return;
-
-            foreach (var pax in paxCurrent)
-            {
-                if (first)
-                {
-                    if (pax)
-                        seatString = "true";
-                    else
-                        seatString = "false";
-                    first = false;
-                }
-                else
-                {
-                    if (pax)
-                        seatString += ",true";
-                    else
-                        seatString += ",false";
-                }
-            }
-            Logger.Log(LogLevel.Debug, "ProsimController:SendSeatString", seatString);
-            Interface.SetProsimVariable("aircraft.passengers.seatOccupation.string", seatString);
+            return _passengerService.Boarding(paxCurrent, cargoCurrent, (cargoValue) => {
+                ChangeCargo(cargoValue);
+                cargoLast = cargoValue;
+            });
         }
 
         private void ChangeCargo(int cargoCurrent)
@@ -711,73 +638,33 @@ public class ProsimController
 
         public void BoardingStop()
         {
-            paxSeats = null;
-            if (Model.FlightPlanType == "EFB")
-            {
-                Interface.SetProsimVariable("efb.efb.boardingStatus", "ended");
-            }
-
+            _passengerService.BoardingStop();
         }
 
         public void DeboardingStart()
         {
-            Logger.Log(LogLevel.Debug, "ProsimController:DeboardingStart", $"(planned {GetPaxPlanned()}) (current {GetPaxCurrent()})");
-            paxLast = GetPaxPlanned();
-            if (GetPaxCurrent() != GetPaxPlanned())
-                paxCurrent = paxPlanned;
+            // Initialize cargo tracking
             cargoLast = 100;
-        }
-
-        private void DeboardPassengers(int num)
-        {
-            if (num < 0)
-            {
-                Logger.Log(LogLevel.Debug, "ProsimController:DeboardPassengers", $"Passenger Num was below 0!");
-                return;
-            }
-            else if (num > 15)
-            {
-                Logger.Log(LogLevel.Debug, "ProsimController:DeboardPassengers", $"Passenger Num was above 15!");
-                return;
-            }
-            else
-                Logger.Log(LogLevel.Debug, "ProsimController:DeboardPassengers", $"(num {num}) (current {GetPaxCurrent()}) (planned ({GetPaxPlanned()}))");
-
-            int n = 0;
-            for (int i = 0; i < paxCurrent.Length && n < num; i++)
-            {
-                if (paxCurrent[i])
-                {
-                    paxCurrent[i] = false;
-                    n++;
-                }
-            }
-
-            if (n > 0)
-                SendSeatString();
+            
+            // Delegate to passenger service
+            _passengerService.DeboardingStart();
         }
 
         public bool Deboarding(int paxCurrent, int cargoCurrent)
         {
-            DeboardPassengers(paxLast - paxCurrent);
-            paxLast = paxCurrent;
-
-            cargoCurrent = 100 - cargoCurrent;
-            ChangeCargo(cargoCurrent);
-            cargoLast = cargoCurrent;
-
-            return paxCurrent == 0 && cargoCurrent == 0;
+            return _passengerService.Deboarding(paxCurrent, cargoCurrent, (cargoValue) => {
+                ChangeCargo(cargoValue);
+                cargoLast = cargoValue;
+            });
         }
 
         public void DeboardingStop()
         {
+            // Reset cargo
             ChangeCargo(0);
-            for (int i = 0; i < paxCurrent.Length; i++)
-                paxCurrent[i] = false;
-            Logger.Log(LogLevel.Debug, "ProsimController:DeboardingStop", "Sending SeatString");
-            SendSeatString(true);
-            paxCurrent = new bool[162];
-            paxSeats = null;
+            
+            // Delegate to passenger service
+            _passengerService.DeboardingStop();
         }
 
     public void SetAftRightDoor(bool open)
