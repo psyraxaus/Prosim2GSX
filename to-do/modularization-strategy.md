@@ -49,21 +49,21 @@ flowchart TD
 
 #### 2.1 AcarsService
 
-- [ ] Create `IAcarsService.cs` interface file
-- [ ] Create `AcarsService.cs` implementation file
-- [ ] Move ACARS-related methods from GsxController to AcarsService
-  - [ ] Move `FlightCallsignToOpsCallsign` method
-  - [ ] Move `FormatLoadSheet` method
-  - [ ] Move `GetWeightLimitation` method
-  - [ ] Move `GetLoadSheetDifferences` method
-  - [ ] Move `GetRandomName` method
-  - [ ] Move `GetRandomLicenceNumber` method
-- [ ] Update GsxController to use AcarsService
-  - [ ] Add AcarsService field
-  - [ ] Initialize AcarsService in constructor
-  - [ ] Update ACARS-related code to use AcarsService
-- [ ] Add unit tests for AcarsService
-- [ ] Test the implementation to ensure it works correctly
+- [x] Create `IAcarsService.cs` interface file
+- [x] Create `AcarsService.cs` implementation file
+- [x] Move ACARS-related methods from GsxController to AcarsService
+  - [x] Move `FlightCallsignToOpsCallsign` method
+  - [x] Move `FormatLoadSheet` method
+  - [x] Move `GetWeightLimitation` method
+  - [x] Move `GetLoadSheetDifferences` method
+  - [x] Move `GetRandomName` method
+  - [x] Move `GetRandomLicenceNumber` method
+- [x] Update GsxController to use AcarsService
+  - [x] Add AcarsService field
+  - [x] Initialize AcarsService in constructor
+  - [x] Update ACARS-related code to use AcarsService
+- [x] Add unit tests for AcarsService
+- [x] Test the implementation to ensure it works correctly
 
 #### 2.2 FlightPlanService
 

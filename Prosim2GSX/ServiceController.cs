@@ -1,6 +1,7 @@
-﻿using System;
+﻿﻿using System;
 using System.Threading;
 using Prosim2GSX.Models;
+using Prosim2GSX.Services;
 
 namespace Prosim2GSX
 {
@@ -93,7 +94,8 @@ namespace Prosim2GSX
 
         protected void ServiceLoop()
         {
-            var gsxController = new GsxController(Model, ProsimController, FlightPlan);
+            var acarsService = new AcarsService(Model.AcarsSecret, Model.AcarsNetworkUrl);
+            var gsxController = new GsxController(Model, ProsimController, FlightPlan, acarsService);
             // Store the GsxController in IPCManager so it can be accessed by the MainWindow
             IPCManager.GsxController = gsxController;
             
