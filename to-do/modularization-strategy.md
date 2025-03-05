@@ -38,12 +38,12 @@ flowchart TD
 
 #### 1.2 ProsimService
 
-- [ ] Create `IProsimService.cs` interface file
-- [ ] Create `ProsimService.cs` implementation file
-- [ ] Update `ProsimInterface.cs` to use ProsimService
-- [ ] Update `ProsimController.cs` to work with the updated ProsimInterface
-- [ ] Add unit tests for ProsimService
-- [ ] Test the implementation to ensure it works correctly
+- [x] Create `IProsimService.cs` interface file
+- [x] Create `ProsimService.cs` implementation file
+- [x] Update `ProsimInterface.cs` to use ProsimService
+- [x] Update `ProsimController.cs` to work with the updated ProsimInterface
+- [x] Add unit tests for ProsimService
+- [x] Test the implementation to ensure it works correctly
 
 ### Phase 2: Extract Shared and ProSim Services
 

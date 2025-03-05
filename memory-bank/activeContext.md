@@ -26,6 +26,27 @@ The current focus for Prosim2GSX is migrating the application from .NET 7.0 to .
 
 ## Recent Changes
 
+### Modularization Implementation (March 2025)
+
+1. **Core Services Extraction**
+   - Completed Phase 1.1: SimConnectService implementation
+     - Created ISimConnectService interface and implementation
+     - Updated MobiSimConnect to use SimConnectService
+     - Improved error handling and logging
+   
+   - Completed Phase 1.2: ProsimService implementation
+     - Created IProsimService interface and implementation
+     - Updated ProsimInterface to use ProsimService
+     - Added event-based connection state notification
+     - Improved error handling and centralized ProSim SDK interaction
+     - Documentation available in to-do/modularization-implementation-phase1.2.md
+
+2. **Architecture Improvements**
+   - Enhanced separation of concerns
+   - Improved testability through interface-based design
+   - Centralized error handling and logging
+   - Prepared foundation for further modularization
+
 ### .NET 8.0 Migration (March 2025)
 
 1. **Framework Update**

@@ -186,11 +186,22 @@ Based on the current state and known issues, the following priorities are recomm
      - to-do/dotnet8-migration-implementation.md (implementation details)
      - to-do/dotnet8-migration-summary.md (summary and next steps)
 
-2. **Controller Modularisation**
-   - Refactor GSXController and ProsimController into more modular components
-   - Improve separation of concerns and code organization
-   - Enhance testability and maintainability
-   - Reduce complexity of individual components
+2. **Controller Modularisation** 🔄
+   - ✅ Phase 1.1: Extract SimConnectService
+     - ✅ Create ISimConnectService interface and implementation
+     - ✅ Update MobiSimConnect to use SimConnectService
+     - ✅ Improve error handling and logging
+   - ✅ Phase 1.2: Extract ProsimService
+     - ✅ Create IProsimService interface and implementation
+     - ✅ Update ProsimInterface to use ProsimService
+     - ✅ Improve error handling and centralize ProSim SDK interaction
+     - ✅ Implementation details available in to-do/modularization-implementation-phase1.2.md
+   - 🔄 Phase 2: Extract Shared and ProSim Services
+     - 🔜 Implement AcarsService
+     - 🔜 Implement FlightPlanService
+     - 🔜 Implement domain-specific ProSim services
+   - 🔜 Phase 3: Extract GSX Services
+   - 🔜 Phase 4: Refine State Management
 
 3. **EFB-Style UI Development**
    - Create a new Electronic Flight Bag (EFB) style user interface

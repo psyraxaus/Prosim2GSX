@@ -1,42 +1,51 @@
-﻿using ProSimSDK;
+﻿﻿using ProSimSDK;
 using System;
-
 using Prosim2GSX.Models;
+using Prosim2GSX.Services;
 
 namespace Prosim2GSX
 {
     public class ProsimInterface
     {
         protected ServiceModel Model;
+        protected IProsimService ProsimService;
         protected ProSimConnect Connection;
 
-        public ProsimInterface(ServiceModel model, ProSimConnect _connection)
+        public ProsimInterface(ServiceModel model, ProSimConnect connection)
         {
             Model = model;
-            Connection = _connection;
+            Connection = connection;
+            ProsimService = new ProsimService(model);
+            
+            ProsimService.ConnectionChanged += (sender, args) => {
+                if (args.IsConnected)
+                {
+                    Logger.Log(LogLevel.Debug, "ProsimInterface", $"Connection to Prosim server established: {args.Message}");
+                }
+                else
+                {
+                    Logger.Log(LogLevel.Error, "ProsimInterface", $"Prosim connection issue: {args.Message}");
+                }
+            };
         }
 
         public void ConnectProsimSDK()
         {
             try
             {
-                Logger.Log(LogLevel.Debug, "ProsimInterface:ConnectProsimSDK", $"Attempting to connect to Prosim Server: {Model.ProsimHostname}");
-                Connection.Connect(Model.ProsimHostname);
-
+                ProsimService.Connect(Model.ProsimHostname);
             }
             catch (Exception ex)
             {
                 Logger.Log(LogLevel.Error, "ProsimInterface:ConnectProsimSDK", $"Error connecting to ProSim System: {ex.Message}");
-
             }
         }
 
         public bool IsProsimReady()
         {
-            if (Connection.isConnected)
+            if (ProsimService.IsConnected)
             {
-                Logger.Log(LogLevel.Debug, "ProsimInterface:IsProsimReady", $"Connection to Prosim server established populating dataref table");
-                //ParseSupportedDatarefs();
+                Logger.Log(LogLevel.Debug, "ProsimInterface:IsProsimReady", $"Connection to Prosim server established");
                 return true;
             }
             else
@@ -45,43 +54,45 @@ namespace Prosim2GSX
             }
         }
 
-        public dynamic ReadDataRef(string _dataRef)
+        public dynamic ReadDataRef(string dataRef)
         {
-            //Logger.Log(LogLevel.Debug, "ProsimInterface:ReadDataRef", $"Dataref {_dataRef} - typeof {Connection.ReadDataRef(_dataRef).GetType()}");
             try
             {
-                return Connection.ReadDataRef(_dataRef);
+                return ProsimService.ReadDataRef(dataRef);
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, "ProsimInterface:ReadDataRef", $"There was an error setting {_dataRef} - exception {ex.ToString()}");
+                Logger.Log(LogLevel.Error, "ProsimInterface:ReadDataRef", $"There was an error reading {dataRef} - exception {ex.Message}");
                 return null;
             }
-
-            //            return Connection.ReadDataRef(_dataRef);
         }
 
-        public void SetProsimVariable(string _dataRef, object value)
+        public void SetProsimVariable(string dataRef, object value)
         {
-            DataRef dataRef = new DataRef(_dataRef, 100, Connection);
             try
             {
-                dataRef.value = value;
+                ProsimService.SetVariable(dataRef, value);
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, "ProsimInterface:SetProsimSetVariable", $"There was an error setting {_dataRef} value {value} - exception {ex.ToString()}");
+                Logger.Log(LogLevel.Error, "ProsimInterface:SetProsimVariable", $"There was an error setting {dataRef} value {value} - exception {ex.Message}");
             }
         }
 
-        public object GetProsimVariable(string _dataRef)
+        public object GetProsimVariable(string dataRef)
         {
-            Logger.Log(LogLevel.Debug, "ProsimInterface:GetProsimVariable", $"Attempting to get {_dataRef}");
-            //Connection.ReadDataRef( _dataRef );
-            DataRef dataRef = new DataRef(_dataRef, 100, Connection);
-            Logger.Log(LogLevel.Debug, "ProsimInterface:GetProsimVariable", $"Dataref {(string)dataRef.value}");
-            return dataRef.value;
-
+            Logger.Log(LogLevel.Debug, "ProsimInterface:GetProsimVariable", $"Attempting to get {dataRef}");
+            try
+            {
+                dynamic value = ProsimService.ReadDataRef(dataRef);
+                Logger.Log(LogLevel.Debug, "ProsimInterface:GetProsimVariable", $"Dataref {value}");
+                return value;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "ProsimInterface:GetProsimVariable", $"Error getting {dataRef} - exception {ex.Message}");
+                return null;
+            }
         }
     }
 }

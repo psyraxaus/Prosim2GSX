@@ -18,6 +18,8 @@ graph TD
     C --> K[ServiceModel]
     F --> K
     G --> K
+    E --> L[SimConnectService]
+    I --> M[ProsimService]
 ```
 
 ## Component Relationships

@@ -162,11 +162,13 @@
    - Microsoft Flight Simulator client library
    - Included with application
    - Version must match MSFS2020 installation
+   - Accessed through SimConnectService abstraction
 
 3. **ProSimSDK.dll**
    - ProsimA320 SDK library
    - Included with application
    - Version compatibility with ProsimA320 installation
+   - Accessed through ProsimService abstraction
 
 4. **CoreAudio Libraries**
    - Windows component for audio control
