@@ -171,15 +171,15 @@ flowchart TD
 
 #### 2.10 Create Shared Service Interfaces
 
-- [ ] Create `IPassengerService.cs` interface file
-  - [ ] Define methods for passenger management
-  - [ ] Define boarding/deboarding operations
-- [ ] Create `ICargoService.cs` interface file
-  - [ ] Define methods for cargo management
-  - [ ] Define loading/unloading operations
-- [ ] Create `IFuelService.cs` interface file
-  - [ ] Define methods for fuel management
-  - [ ] Define refueling operations
+- [x] Create `IPassengerService.cs` interface file
+  - [x] Define methods for passenger management
+  - [x] Define boarding/deboarding operations
+- [x] Create `ICargoService.cs` interface file
+  - [x] Define methods for cargo management
+  - [x] Define loading/unloading operations
+- [x] Create `IFuelService.cs` interface file
+  - [x] Define methods for fuel management
+  - [x] Define refueling operations
 
 ### Phase 3: Extract GSX Services
 

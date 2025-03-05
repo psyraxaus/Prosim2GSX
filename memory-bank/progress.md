@@ -244,6 +244,11 @@ Based on the current state and known issues, the following priorities are recomm
        - ✅ Move fluid-related methods from ProsimController
        - ✅ Update ProsimController to use ProsimFluidService
        - ✅ Implementation details available in to-do/modularization-implementation-phase2.9.md
+     - ✅ Phase 2.10: Create Shared Service Interfaces
+       - ✅ Create IPassengerService interface
+       - ✅ Create ICargoService interface
+       - ✅ Create IFuelService interface
+       - ✅ Implementation details available in to-do/modularization-implementation-phase2.10.md
      - 🔄 Implement remaining domain-specific ProSim services
    - 🔜 Phase 3: Extract GSX Services
    - 🔜 Phase 4: Refine State Management
