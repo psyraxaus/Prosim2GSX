@@ -93,6 +93,14 @@ The current focus for Prosim2GSX is migrating the application from .NET 7.0 to .
      - Updated ProsimController to use ProsimFuelService
      - Added event-based notification for fuel state changes
      - Documentation available in to-do/modularization-implementation-phase2.7.md
+   
+   - Completed Phase 2.8: ProsimFlightDataService implementation
+     - Created IProsimFlightDataService interface and implementation
+     - Moved flight data-related methods from ProsimController
+     - Updated ProsimController to use ProsimFlightDataService
+     - Added event-based notification for flight data changes
+     - Implemented secure XML processing in GetFMSFlightNumber method
+     - Documentation available in to-do/modularization-implementation-phase2.8.md
 
 3. **Architecture Improvements**
    - Enhanced separation of concerns

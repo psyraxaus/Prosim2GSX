@@ -146,16 +146,16 @@ flowchart TD
 
 #### 2.8 ProsimFlightDataService
 
-- [ ] Create `IProsimFlightDataService.cs` interface file
-- [ ] Create `ProsimFlightDataService.cs` implementation file
-- [ ] Move flight data-related methods from ProsimController to ProsimFlightDataService
-  - [ ] Move `GetLoadedData` method
-  - [ ] Move `GetFMSFlightNumber` method
-  - [ ] Move `GetZfwCG` method
-  - [ ] Move `GetTowCG` method
-- [ ] Update ProsimController to use ProsimFlightDataService
+- [x] Create `IProsimFlightDataService.cs` interface file
+- [x] Create `ProsimFlightDataService.cs` implementation file
+- [x] Move flight data-related methods from ProsimController to ProsimFlightDataService
+  - [x] Move `GetLoadedData` method
+  - [x] Move `GetFMSFlightNumber` method
+  - [x] Move `GetZfwCG` method
+  - [x] Move `GetTowCG` method
+- [x] Update ProsimController to use ProsimFlightDataService
 - [ ] Add unit tests for ProsimFlightDataService
-- [ ] Test the implementation to ensure it works correctly
+- [x] Test the implementation to ensure it works correctly
 
 #### 2.9 ProsimFluidService
 

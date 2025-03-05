@@ -28,6 +28,7 @@ namespace Prosim2GSX
         private readonly IProsimPassengerService _passengerService;
         private readonly IProsimCargoService _cargoService;
         private readonly IProsimFuelService _fuelService;
+        private IProsimFlightDataService _flightDataService;
 
         public static readonly int waitDuration = 30000;
 
@@ -223,6 +224,17 @@ namespace Prosim2GSX
                 Logger.Log(LogLevel.Error, "ProsimController:IsProsimConnectionAvailable", "Could not load Flightplan");
                 Thread.Sleep(5000);
             }
+            
+            // Initialize flight data service with the ProsimService from Interface and the FlightPlan
+            _flightDataService = new ProsimFlightDataService(Interface.ProsimService, FlightPlan);
+            
+            // Optionally subscribe to flight data change events
+            _flightDataService.FlightDataChanged += (sender, args) => {
+                // Handle flight data changes if needed
+                Logger.Log(LogLevel.Debug, "ProsimController:FlightDataChanged", 
+                    $"{args.DataType} changed to {args.CurrentValue}");
+            };
+            
             return true;
         }
 
@@ -265,56 +277,7 @@ namespace Prosim2GSX
         /// <returns>The MACZFW value as a percentage</returns>
         public double GetZfwCG()
         {
-            var macZfwCG = 00.0d;
-            
-            // Store current fuel values
-            var act1TankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.ACT1.amount.kg");
-            var act2TankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.ACT2.amount.kg");
-            var centerTankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.center.amount.kg");
-            var leftTankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.left.amount.kg");
-            var rightTankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.right.amount.kg");
-            
-            try
-            {
-                // Set all fuel tanks to zero
-                Interface.SetProsimVariable("aircraft.fuel.ACT1.amount.kg", 0);
-                Interface.SetProsimVariable("aircraft.fuel.ACT2.amount.kg", 0);
-                Interface.SetProsimVariable("aircraft.fuel.center.amount.kg", 0);
-                Interface.SetProsimVariable("aircraft.fuel.left.amount.kg", 0);
-                Interface.SetProsimVariable("aircraft.fuel.right.amount.kg", 0);
-                
-                // Add a small delay to allow the simulator to recalculate the CG properly
-                Thread.Sleep(100);
-                
-                // Get the CG with zero fuel
-                macZfwCG = Interface.ReadDataRef("aircraft.cg");
-                
-                // For the specific case of ZFW around 57863 kg, apply a correction factor
-                // to match the expected MACZFW of 28.4% instead of 25.9%
-                if (macZfwCG > 25.5 && macZfwCG < 26.5)
-                {
-                    macZfwCG = 28.4;
-                    Logger.Log(LogLevel.Debug, "ProsimController:GetZfwCG", $"Applied correction to MACZFW: {macZfwCG}%");
-                }
-                
-                // Log the calculated value
-                Logger.Log(LogLevel.Debug, "ProsimController:GetZfwCG", $"Calculated MACZFW: {macZfwCG}%");
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Error, "ProsimController:GetZfwCG", $"Error calculating MACZFW: {ex.Message}");
-            }
-            finally
-            {
-                // Restore original fuel values
-                Interface.SetProsimVariable("aircraft.fuel.ACT1.amount.kg", act1TankFuelCurrent);
-                Interface.SetProsimVariable("aircraft.fuel.ACT2.amount.kg", act2TankFuelCurrent);
-                Interface.SetProsimVariable("aircraft.fuel.center.amount.kg", centerTankFuelCurrent);
-                Interface.SetProsimVariable("aircraft.fuel.left.amount.kg", leftTankFuelCurrent);
-                Interface.SetProsimVariable("aircraft.fuel.right.amount.kg", rightTankFuelCurrent);
-            }
-            
-            return macZfwCG;
+            return _flightDataService.GetZfwCG();
         }
         
         /// <summary>
@@ -324,188 +287,17 @@ namespace Prosim2GSX
         /// <returns>The MACTOW value as a percentage</returns>
         public double GetTowCG()
         {
-            double macTowCG = 00.0d;
-            
-            try
-            {
-                // Get the current CG with the current fuel load
-                macTowCG = Interface.ReadDataRef("aircraft.cg");
-                
-                // Get current fuel amount and planned fuel amount
-                double totalFuel = Interface.ReadDataRef("aircraft.fuel.total.amount.kg");
-                double plannedFuel = GetFuelPlanned();
-                
-                // Store current fuel values
-                var act1TankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.ACT1.amount.kg");
-                var act2TankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.ACT2.amount.kg");
-                var centerTankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.center.amount.kg");
-                var leftTankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.left.amount.kg");
-                var rightTankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.right.amount.kg");
-                
-                // Check if we need to recalculate the CG
-                bool needsRecalculation = false;
-                
-                // Case 1: Empty or near-empty tanks (less than 100kg)
-                if (totalFuel < 100)
-                {
-                    Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Fuel tanks nearly empty ({totalFuel}kg), recalculating with planned fuel");
-                    needsRecalculation = true;
-                }
-                // Case 2: Fuel significantly different from planned fuel (±10%)
-                else if (Math.Abs(totalFuel - plannedFuel) > plannedFuel * 0.1)
-                {
-                    Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Current fuel ({totalFuel}kg) differs significantly from planned fuel ({plannedFuel}kg), recalculating");
-                    needsRecalculation = true;
-                }
-                // Case 3: Using saved fuel from previous flight (check if distribution is uneven)
-                else if (Model.SetSaveFuel && (
-                    Math.Abs(leftTankFuelCurrent - rightTankFuelCurrent) > 500 || // Uneven wing tanks
-                    (centerTankFuelCurrent > 0 && (leftTankFuelCurrent < 6000 || rightTankFuelCurrent < 6000)))) // Center tank used before wing tanks full
-                {
-                    Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Using saved fuel with non-standard distribution, recalculating");
-                    needsRecalculation = true;
-                }
-                
-                if (needsRecalculation)
-                {
-                    try
-                    {
-                        // A320 wing tanks capacity (approximate)
-                        const double wingTankCapacity = 6264.0; // per side
-                        
-                        // Calculate how much fuel goes in each tank based on A320 fuel loading pattern
-                        // A320 fills wing tanks first before using center tank
-                        double fuelToUse = plannedFuel;
-                        
-                        // If current fuel is above planned and not too different, use current fuel amount
-                        if (totalFuel > plannedFuel && totalFuel < plannedFuel * 1.2)
-                        {
-                            fuelToUse = totalFuel;
-                            Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Using current fuel amount ({fuelToUse}kg) for calculation");
-                        }
-                        else
-                        {
-                            Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Using planned fuel amount ({fuelToUse}kg) for calculation");
-                        }
-                        
-                        // Calculate how much fuel goes in each tank
-                        double leftWingFuel = Math.Min(fuelToUse / 2, wingTankCapacity);
-                        double rightWingFuel = Math.Min(fuelToUse / 2, wingTankCapacity);
-                        
-                        // If there's fuel left after filling wing tanks, put it in center tank
-                        double remainingFuel = Math.Max(0, fuelToUse - leftWingFuel - rightWingFuel);
-                        double centerTankFuel = remainingFuel;
-                        
-                        // Set the fuel values
-                        Interface.SetProsimVariable("aircraft.fuel.left.amount.kg", leftWingFuel);
-                        Interface.SetProsimVariable("aircraft.fuel.right.amount.kg", rightWingFuel);
-                        Interface.SetProsimVariable("aircraft.fuel.center.amount.kg", centerTankFuel);
-                        Interface.SetProsimVariable("aircraft.fuel.ACT1.amount.kg", 0);
-                        Interface.SetProsimVariable("aircraft.fuel.ACT2.amount.kg", 0);
-                        
-                        // Add a small delay to allow the simulator to recalculate the CG properly
-                        Thread.Sleep(100);
-                        
-                        // Get the CG with properly distributed fuel
-                        macTowCG = Interface.ReadDataRef("aircraft.cg");
-                        
-                        // For the specific case of TOW around 67272 kg, apply a correction factor
-                        // to match the expected MACTOW of 26.0% instead of 27.5%
-                        /*
-                        if (macTowCG > 27.0 && macTowCG < 28.0)
-                        {
-                            macTowCG = 26.0;
-                            Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Applied correction to MACTOW: {macTowCG}%");
-                        }
-                        */
-                        Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Calculated MACTOW with adjusted fuel: {macTowCG}%");
-                    }
-                    finally
-                    {
-                        // Restore original fuel values
-                        Interface.SetProsimVariable("aircraft.fuel.ACT1.amount.kg", act1TankFuelCurrent);
-                        Interface.SetProsimVariable("aircraft.fuel.ACT2.amount.kg", act2TankFuelCurrent);
-                        Interface.SetProsimVariable("aircraft.fuel.center.amount.kg", centerTankFuelCurrent);
-                        Interface.SetProsimVariable("aircraft.fuel.left.amount.kg", leftTankFuelCurrent);
-                        Interface.SetProsimVariable("aircraft.fuel.right.amount.kg", rightTankFuelCurrent);
-                    }
-                }
-                else
-                {
-                    Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Using current CG for MACTOW: {macTowCG}%");
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Error, "ProsimController:GetTowCG", $"Error calculating MACTOW: {ex.Message}");
-            }
-            
-            return macTowCG;
+            return _flightDataService.GetTowCG();
         }
 
         public (string, string, string, string, string, string, string, double, double, double, double, double, double, int, int, double, double, int, int, int, double) GetLoadedData(string loadsheetType)
         {
-            double estZfw;
-            double maxZfw;
-            double estTow;
-            double maxTow;
-            double estLaw;
-            double maxLaw;
-            int paxAdults;
-            int paxInfants;
-            double macTow = GetTowCG();
-            double macZfw = GetZfwCG();
-            int paxZoneA = Interface.ReadDataRef("aircraft.passengers.zone1.amount");
-            int paxZoneB = Interface.ReadDataRef("aircraft.passengers.zone2.amount");
-            int paxZoneC = Interface.ReadDataRef("aircraft.passengers.zone3.amount") + Interface.ReadDataRef("aircraft.passengers.zone4.amount");
-            double fuelInTanks;
-            //DateTime simulatorDateTime = DateTime.Parse(Interface.ReadDataRef("aircraft.time"));
-            var simulatorDateTime = Interface.ReadDataRef("aircraft.time");
-            string timeIn24HourFormat = simulatorDateTime.ToString("HHmm");
-
-            if (loadsheetType == "prelim")
-            {
-                estZfw = FlightPlan.EstimatedZeroFuelWeight;
-                estTow = FlightPlan.EstimatedTakeOffWeight;
-                paxAdults = FlightPlan.Passenger;
-                fuelInTanks = FlightPlan.Fuel;
-            }
-            else
-            {
-                estZfw = Interface.ReadDataRef("aircraft.weight.zfw");
-                estTow = Interface.ReadDataRef("aircraft.weight.gross");
-                paxAdults = Interface.ReadDataRef("aircraft.passengers.zone1.amount") + Interface.ReadDataRef("aircraft.passengers.zone2.amount") + Interface.ReadDataRef("aircraft.passengers.zone3.amount") + Interface.ReadDataRef("aircraft.passengers.zone4.amount");
-                fuelInTanks = Interface.ReadDataRef("aircraft.weight.fuel");
-            }
-
-            maxZfw = Interface.ReadDataRef("aircraft.weight.zfwMax");
-            maxTow = FlightPlan.MaximumTakeOffWeight;
-            estLaw = FlightPlan.EstimatedLandingWeight;
-            maxLaw = FlightPlan.MaxmimumLandingWeight;
-            paxInfants = 0;
-
-            return (timeIn24HourFormat, FlightPlan.Flight, FlightPlan.TailNumber, FlightPlan.DayOfFlight, FlightPlan.DateOfFlight, FlightPlan.Origin, FlightPlan.Destination, estZfw, maxZfw, estTow, maxTow, estLaw, maxLaw, paxInfants, paxAdults, macZfw, macTow, paxZoneA, paxZoneB, paxZoneC, fuelInTanks);
+            return _flightDataService.GetLoadedData(loadsheetType);
         }
 
         public string GetFMSFlightNumber()
         {
-            string flightNumber;
-            var fmsXmlstr = Interface.ReadDataRef("aircraft.fms.flightPlanXml");
-            XmlDocument xmlDoc = new XmlDocument();
-            xmlDoc.LoadXml(fmsXmlstr);
-            XmlNode flightNumberNode = xmlDoc.SelectSingleNode("/fms/routeData/flightNumber");
-
-            if (flightNumberNode != null && !string.IsNullOrEmpty(flightNumberNode.InnerText))
-            {
-                flightNumber = flightNumberNode.InnerText;
-                Logger.Log(LogLevel.Debug, "ProsimController:GetFMSFlightNumber", $"Flight Number: {flightNumberNode.InnerText}");
-            }
-            else
-            {
-                flightNumber = "";
-                Logger.Log(LogLevel.Debug, "ProsimController:GetFMSFlightNumber", $"No Flight number loaded in FMS");
-            }
-            return flightNumber;
+            return _flightDataService.GetFMSFlightNumber();
         }
 
         public double GetFuelAmount()

@@ -234,6 +234,11 @@ Based on the current state and known issues, the following priorities are recomm
        - ✅ Move GetFuelRateKGS method from ServiceModel
        - ✅ Update ProsimController to use ProsimFuelService
        - ✅ Implementation details available in to-do/modularization-implementation-phase2.7.md
+     - ✅ Phase 2.8: Implement ProsimFlightDataService
+       - ✅ Create IProsimFlightDataService interface and implementation
+       - ✅ Move flight data-related methods from ProsimController
+       - ✅ Update ProsimController to use ProsimFlightDataService
+       - ✅ Implementation details available in to-do/modularization-implementation-phase2.8.md
      - 🔄 Implement remaining domain-specific ProSim services
    - 🔜 Phase 3: Extract GSX Services
    - 🔜 Phase 4: Refine State Management
