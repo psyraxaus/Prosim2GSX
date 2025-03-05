@@ -71,7 +71,7 @@ flowchart TD
 - [x] Create `FlightPlanService.cs` implementation file
 - [x] Move flight plan loading and parsing logic from FlightPlan class to FlightPlanService
 - [x] Update FlightPlan class to use FlightPlanService
-- [ ] Add unit tests for FlightPlanService
+- [ ] Add unit tests for FlightPlanService (see unit-testing-strategy.md)
 - [x] Test the implementation to ensure it works correctly
 
 #### 2.3 ProsimDoorService
@@ -84,7 +84,7 @@ flowchart TD
   - [x] Move `SetForwardCargoDoor` method
   - [x] Move `SetAftCargoDoor` method
 - [x] Update ProsimController to use ProsimDoorService
-- [ ] Add unit tests for ProsimDoorService
+- [ ] Add unit tests for ProsimDoorService (see unit-testing-strategy.md)
 - [x] Test the implementation to ensure it works correctly
 
 #### 2.4 ProsimEquipmentService
@@ -248,6 +248,35 @@ flowchart TD
   - [ ] Ensure proper service initialization
   - [ ] Manage service lifecycle
 
+## Unit Testing Strategy
+
+A comprehensive unit testing strategy has been developed to ensure the quality and reliability of the modularized codebase. The strategy is documented in `unit-testing-strategy.md` and includes:
+
+1. **Testing Framework and Tools**
+   - MSTest as the primary testing framework
+   - Moq for mocking dependencies
+   - Optional FluentAssertions for more readable assertions
+
+2. **Testing Approach**
+   - Constructor tests to verify proper initialization
+   - Method tests to verify behavior with various inputs
+   - Event tests to verify events are raised correctly
+   - Integration tests to verify interaction with dependencies
+
+3. **Implementation Timeline**
+   - Phase 1: Complete tests for existing services
+   - Phase 2: Add tests for future services as they're implemented
+   - Phase 3: Add tests for GSX services
+   - Phase 4: Add tests for controllers
+
+4. **Test Coverage Goals**
+   - Services: 80%+ code coverage
+   - Controllers: 70%+ code coverage
+   - Core Logic: 90%+ code coverage
+   - Edge Cases: Test all error handling paths
+
+For detailed implementation examples and guidelines, refer to the `unit-testing-strategy.md` document.
+
 ## Benefits of Modularization
 
 1. **Improved Maintainability**
@@ -259,6 +288,7 @@ flowchart TD
    - Services with clear interfaces are easier to test in isolation
    - Dependency injection enables better mocking for tests
    - Reduced coupling makes unit testing more effective
+   - Comprehensive test strategy ensures quality and reliability
 
 3. **Better Extensibility**
    - New features can be added with minimal changes to existing code
