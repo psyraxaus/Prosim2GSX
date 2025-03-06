@@ -18,7 +18,8 @@ The modularization will be implemented in phases, with each phase focusing on a 
 flowchart TD
     A[Phase 1: Extract Core Services] --> B[Phase 2: Extract Shared and ProSim Services]
     B --> C[Phase 3: Extract GSX Services]
-    C --> D[Phase 4: Refine State Management]
+    C --> D[Phase 4: Further GSX Controller Modularization]
+    D --> E[Phase 5: Refine Architecture and Improve Integration]
 ```
 
 ## Phased Implementation Plan
@@ -183,72 +184,319 @@ flowchart TD
 
 ### Phase 3: Extract GSX Services
 
-#### 3.1 GSXMenuService
+The GSXController has grown too large and complex, handling multiple responsibilities. In Phase 3, we'll break it down into smaller, more focused services following the Single Responsibility Principle.
+
+#### 3.1 GSXMenuService and GSXAudioService
 
 - [ ] Create `IGSXMenuService.cs` interface file
+  - [ ] Define methods for menu interaction
+  - [ ] Define operator selection methods
 - [ ] Create `GSXMenuService.cs` implementation file
-- [ ] Move menu-related methods from GsxController to GSXMenuService
-  - [ ] Move `MenuOpen` method
-  - [ ] Move `MenuItem` method
-  - [ ] Move `MenuWaitReady` method
-  - [ ] Move `IsOperatorSelectionActive` method
-  - [ ] Move `OperatorSelection` method
-- [ ] Update GsxController to use GSXMenuService
-- [ ] Add unit tests for GSXMenuService
-- [ ] Test the implementation to ensure it works correctly
-
-#### 3.2 GSXAudioService
-
+  - [ ] Move menu-related methods from GsxController
+    - [ ] Move `MenuOpen` method
+    - [ ] Move `MenuItem` method
+    - [ ] Move `MenuWaitReady` method
+    - [ ] Move `IsOperatorSelectionActive` method
+    - [ ] Move `OperatorSelection` method
+  - [ ] Implement interface methods
 - [ ] Create `IGSXAudioService.cs` interface file
+  - [ ] Define methods for audio control
+  - [ ] Define audio session management methods
 - [ ] Create `GSXAudioService.cs` implementation file
-- [ ] Move audio-related methods from GsxController to GSXAudioService
-  - [ ] Move `GetAudioSessions` method
-  - [ ] Move `ResetAudio` method
-  - [ ] Move `ControlAudio` method
-- [ ] Update GsxController to use GSXAudioService
-- [ ] Add unit tests for GSXAudioService
+  - [ ] Move audio-related methods from GsxController
+    - [ ] Move `GetAudioSessions` method
+    - [ ] Move `ResetAudio` method
+    - [ ] Move `ControlAudio` method
+  - [ ] Implement interface methods
+- [ ] Update GsxController to use these services
+  - [ ] Add service fields and constructor parameters
+  - [ ] Replace direct method calls with service calls
+- [ ] Add unit tests for both services
 - [ ] Test the implementation to ensure it works correctly
+- [ ] Create implementation plan (available in to-do/modularization-implementation-phase3.1.md)
 
-### Phase 4: Refine State Management
-
-#### 4.1 GSXStateManager
+#### 3.2 GSXStateManager
 
 - [ ] Create `IGSXStateManager.cs` interface file
+  - [ ] Define methods for state management
+  - [ ] Define state transition methods
+  - [ ] Define events for state changes
 - [ ] Create `GSXStateManager.cs` implementation file
-- [ ] Move state-related methods from GsxController to GSXStateManager
-  - [ ] Move state transition logic
-  - [ ] Move state-specific behavior
-  - [ ] Extract `RunLoadingServices` method
-  - [ ] Extract `RunDEPARTUREServices` method
-  - [ ] Extract `RunArrivalServices` method
-  - [ ] Extract `RunDeboardingService` method
-- [ ] Update GsxController to use GSXStateManager
+  - [ ] Move state-related fields and methods from GsxController
+    - [ ] Move `state` field and related properties
+    - [ ] Extract state transition logic from `RunServices`
+  - [ ] Implement state transition logic
+  - [ ] Add event-based notification for state changes
+- [ ] Update GsxController to use this service
+  - [ ] Add service field and constructor parameter
+  - [ ] Replace direct state management with service calls
 - [ ] Add unit tests for GSXStateManager
 - [ ] Test the implementation to ensure it works correctly
+- [ ] Create implementation plan (available in to-do/modularization-implementation-phase3.2.md)
 
-#### 4.2 Refine Service Coordination
+#### 3.3 GSXServiceCoordinator
+
+- [ ] Create `IGSXServiceCoordinator.cs` interface file
+  - [ ] Define methods for service coordination
+  - [ ] Define service operation methods
+- [ ] Create `GSXServiceCoordinator.cs` implementation file
+  - [ ] Move service-related methods from GsxController
+    - [ ] Extract `RunLoadingServices` method
+    - [ ] Extract `RunDEPARTUREServices` method
+    - [ ] Extract `RunArrivalServices` method
+    - [ ] Extract `RunDeboardingService` method
+  - [ ] Implement service coordination logic
+- [ ] Update GsxController to use this service
+  - [ ] Add service field and constructor parameter
+  - [ ] Replace direct service coordination with service calls
+- [ ] Add unit tests for GSXServiceCoordinator
+- [ ] Test the implementation to ensure it works correctly
+- [ ] Create implementation plan (available in to-do/modularization-implementation-phase3.3.md)
+
+#### 3.4 GSXDoorManager and GSXEquipmentManager
+
+- [ ] Create `IGSXDoorManager.cs` interface file
+  - [ ] Define methods for door management
+  - [ ] Define door state tracking methods
+- [ ] Create `GSXDoorManager.cs` implementation file
+  - [ ] Move door-related methods and fields from GsxController
+    - [ ] Extract door state fields (aftCargoDoorOpened, aftRightDoorOpened, etc.)
+    - [ ] Extract door control logic
+  - [ ] Implement door management logic
+- [ ] Create `IGSXEquipmentManager.cs` interface file
+  - [ ] Define methods for equipment management
+  - [ ] Define equipment state tracking methods
+- [ ] Create `GSXEquipmentManager.cs` implementation file
+  - [ ] Move equipment-related methods and fields from GsxController
+    - [ ] Extract equipment state fields
+    - [ ] Extract equipment control logic
+    - [ ] Move `CallJetwayStairs` method
+  - [ ] Implement equipment management logic
+- [ ] Update GsxController to use these services
+  - [ ] Add service fields and constructor parameters
+  - [ ] Replace direct door and equipment management with service calls
+- [ ] Add unit tests for both services
+- [ ] Test the implementation to ensure it works correctly
+- [ ] Create implementation plan (available in to-do/modularization-implementation-phase3.4.md)
+
+#### 3.5 GSXLoadsheetManager
+
+- [ ] Create `IGSXLoadsheetManager.cs` interface file
+  - [ ] Define methods for loadsheet management
+  - [ ] Define loadsheet formatting methods
+- [ ] Create `GSXLoadsheetManager.cs` implementation file
+  - [ ] Move loadsheet-related methods from GsxController
+    - [ ] Move `FormatLoadSheet` method
+    - [ ] Move `GetWeightLimitation` method
+    - [ ] Move `GetLoadSheetDifferences` method
+    - [ ] Move `GetRandomName` method
+    - [ ] Move `GetRandomLicenceNumber` method
+  - [ ] Implement loadsheet management logic
+- [ ] Update GsxController to use this service
+  - [ ] Add service field and constructor parameter
+  - [ ] Replace direct loadsheet management with service calls
+- [ ] Add unit tests for GSXLoadsheetManager
+- [ ] Test the implementation to ensure it works correctly
+- [ ] Create implementation plan (available in to-do/modularization-implementation-phase3.5.md)
+
+#### 3.6 Refine GsxController
+
+- [ ] Refactor GsxController to be a thin facade
+  - [ ] Remove all extracted functionality
+  - [ ] Delegate to appropriate services
+  - [ ] Maintain public interface
+  - [ ] Simplify RunServices method
+- [ ] Update ServiceController to use the new architecture
+  - [ ] Ensure proper service initialization
+  - [ ] Manage service lifecycle
+- [ ] Add comprehensive integration tests
+- [ ] Test the implementation to ensure it works correctly
+- [ ] Create implementation plan (available in to-do/modularization-implementation-phase3.6.md)
+
+### Phase 4: Further GSX Controller Modularization
+
+The GSXController has been partially modularized in Phase 3, but it's still quite large and complex. Phase 4 will further break it down into smaller, more focused components following the Single Responsibility Principle.
+
+#### 4.1 Create GSXControllerFacade
+
+- [ ] Create `IGSXControllerFacade.cs` interface file
+  - [ ] Define methods for initializing and managing GSX services
+  - [ ] Define methods for handling high-level operations
+  - [ ] Define events for major state changes
+- [ ] Create `GSXControllerFacade.cs` implementation file
+  - [ ] Implement interface methods
+  - [ ] Initialize and manage all GSX services
+  - [ ] Delegate operations to the appropriate services
+  - [ ] Handle high-level error recovery
+- [ ] Update ServiceController to use GSXControllerFacade
+  - [ ] Replace direct GsxController usage with GSXControllerFacade
+  - [ ] Update initialization and lifecycle management
+- [ ] Create implementation plan (available in to-do/modularization-implementation-phase4.md)
+
+#### 4.2 Enhance GSXStateMachine
+
+- [ ] Enhance `IGSXStateManager.cs` interface
+  - [ ] Add methods for state validation
+  - [ ] Add methods for state-specific behavior
+  - [ ] Add events for state transitions
+- [ ] Enhance `GSXStateManager.cs` implementation
+  - [ ] Implement enhanced interface methods
+  - [ ] Improve state transition logic
+  - [ ] Add validation for state transitions
+  - [ ] Implement state-specific behavior
+- [ ] Update GSXControllerFacade to use enhanced GSXStateManager
+  - [ ] Delegate state management to GSXStateManager
+  - [ ] React to state transition events
+
+#### 4.3 Create GSXServiceOrchestrator
+
+- [ ] Create `IGSXServiceOrchestrator.cs` interface file
+  - [ ] Define methods for coordinating service execution
+  - [ ] Define methods for managing service timing
+  - [ ] Define events for service execution status
+- [ ] Create `GSXServiceOrchestrator.cs` implementation file
+  - [ ] Implement interface methods
+  - [ ] Coordinate service execution based on state
+  - [ ] Manage service timing and sequencing
+  - [ ] Handle service dependencies
+- [ ] Update GSXControllerFacade to use GSXServiceOrchestrator
+  - [ ] Delegate service coordination to GSXServiceOrchestrator
+  - [ ] React to service execution events
+
+#### 4.4 Create GSXDoorCoordinator
+
+- [ ] Create `IGSXDoorCoordinator.cs` interface file
+  - [ ] Define methods for door operations
+  - [ ] Define methods for door state tracking
+  - [ ] Define events for door state changes
+- [ ] Create `GSXDoorCoordinator.cs` implementation file
+  - [ ] Implement interface methods
+  - [ ] Manage door operations
+  - [ ] Track door states
+  - [ ] Coordinate door operations with services
+- [ ] Update GSXControllerFacade to use GSXDoorCoordinator
+  - [ ] Delegate door operations to GSXDoorCoordinator
+  - [ ] React to door state change events
+
+#### 4.5 Create GSXEquipmentCoordinator
+
+- [ ] Create `IGSXEquipmentCoordinator.cs` interface file
+  - [ ] Define methods for equipment operations
+  - [ ] Define methods for equipment state tracking
+  - [ ] Define events for equipment state changes
+- [ ] Create `GSXEquipmentCoordinator.cs` implementation file
+  - [ ] Implement interface methods
+  - [ ] Manage equipment operations
+  - [ ] Track equipment states
+  - [ ] Coordinate equipment operations with services
+- [ ] Update GSXControllerFacade to use GSXEquipmentCoordinator
+  - [ ] Delegate equipment operations to GSXEquipmentCoordinator
+  - [ ] React to equipment state change events
+
+#### 4.6 Create GSXPassengerCoordinator
+
+- [ ] Create `IGSXPassengerCoordinator.cs` interface file
+  - [ ] Define methods for passenger operations
+  - [ ] Define methods for passenger count tracking
+  - [ ] Define events for passenger state changes
+- [ ] Create `GSXPassengerCoordinator.cs` implementation file
+  - [ ] Implement interface methods
+  - [ ] Manage passenger boarding and deboarding
+  - [ ] Track passenger counts
+  - [ ] Coordinate passenger operations with services
+- [ ] Update GSXControllerFacade to use GSXPassengerCoordinator
+  - [ ] Delegate passenger operations to GSXPassengerCoordinator
+  - [ ] React to passenger state change events
+
+#### 4.7 Create GSXCargoCoordinator
+
+- [ ] Create `IGSXCargoCoordinator.cs` interface file
+  - [ ] Define methods for cargo operations
+  - [ ] Define methods for cargo state tracking
+  - [ ] Define events for cargo state changes
+- [ ] Create `GSXCargoCoordinator.cs` implementation file
+  - [ ] Implement interface methods
+  - [ ] Manage cargo loading and unloading
+  - [ ] Track cargo states
+  - [ ] Coordinate cargo operations with services
+- [ ] Update GSXControllerFacade to use GSXCargoCoordinator
+  - [ ] Delegate cargo operations to GSXCargoCoordinator
+  - [ ] React to cargo state change events
+
+#### 4.8 Create GSXFuelCoordinator
+
+- [ ] Create `IGSXFuelCoordinator.cs` interface file
+  - [ ] Define methods for fuel operations
+  - [ ] Define methods for fuel state tracking
+  - [ ] Define events for fuel state changes
+- [ ] Create `GSXFuelCoordinator.cs` implementation file
+  - [ ] Implement interface methods
+  - [ ] Manage refueling operations
+  - [ ] Track fuel states
+  - [ ] Coordinate fuel operations with services
+- [ ] Update GSXControllerFacade to use GSXFuelCoordinator
+  - [ ] Delegate fuel operations to GSXFuelCoordinator
+  - [ ] React to fuel state change events
+
+#### 4.9 Comprehensive Testing
+
+- [ ] Create unit tests for all new components
+  - [ ] Test component initialization
+  - [ ] Test component methods
+  - [ ] Test component events
+  - [ ] Test component interactions
+- [ ] Create integration tests for component interactions
+  - [ ] Test state transitions
+  - [ ] Test service coordination
+  - [ ] Test error handling
+  - [ ] Test end-to-end workflows
+- [ ] Create performance tests
+  - [ ] Test resource usage
+  - [ ] Test response times
+  - [ ] Test scalability
+
+### Phase 5: Refine Architecture and Improve Integration
+
+#### 5.1 Refine Service Interactions
 
 - [ ] Review and refine service interactions
   - [ ] Identify and resolve circular dependencies
   - [ ] Optimize service dependencies
+  - [ ] Ensure proper separation of concerns
 - [ ] Implement event-based communication where appropriate
   - [ ] Define events for state changes
   - [ ] Define events for service operations
+  - [ ] Reduce tight coupling between services
 - [ ] Ensure proper error handling and recovery
   - [ ] Handle service failures
   - [ ] Implement retry mechanisms
+  - [ ] Add comprehensive logging
 
-#### 4.3 Update Controllers
+#### 5.2 Improve Controller Architecture
 
-- [ ] Refactor GsxController to be a thin facade
-  - [ ] Delegate to appropriate services
-  - [ ] Maintain public interface
 - [ ] Refactor ProsimController to be a thin facade
   - [ ] Delegate to appropriate services
   - [ ] Maintain public interface
+  - [ ] Remove any remaining business logic
 - [ ] Update ServiceController to use the new architecture
   - [ ] Ensure proper service initialization
   - [ ] Manage service lifecycle
+  - [ ] Implement proper dependency injection
+
+#### 5.3 Comprehensive Testing
+
+- [ ] Implement integration tests
+  - [ ] Test interactions between services
+  - [ ] Verify end-to-end workflows
+  - [ ] Test with real external dependencies
+- [ ] Implement performance tests
+  - [ ] Measure resource usage
+  - [ ] Identify bottlenecks
+  - [ ] Optimize critical paths
+- [ ] Implement regression tests
+  - [ ] Ensure existing functionality continues to work
+  - [ ] Verify that performance remains acceptable
+  - [ ] Check for any unexpected side effects
 
 ## Unit Testing Strategy
 

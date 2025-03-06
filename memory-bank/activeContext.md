@@ -116,13 +116,56 @@ The current focus for Prosim2GSX is migrating the application from .NET 7.0 to .
      - Designed interfaces to be platform-agnostic for future GSX integration
      - Documentation available in to-do/modularization-implementation-phase2.10.md
 
-3. **Architecture Improvements**
+3. **GSX Services Extraction**
+   - Completed Phase 3.1: GSX State Manager
+     - Created IGSXStateManager interface and GSXStateManager implementation
+     - Extracted state management logic from GsxController
+     - Added state transition methods and state query methods
+     - Added event-based notification for state changes
+     - Documentation available in to-do/modularization-implementation-phase3.1.md
+   
+   - Completed Phase 3.2: GSX Audio Service
+     - Created IGSXAudioService interface and GSXAudioService implementation
+     - Extracted audio control logic from GsxController
+     - Added methods for controlling audio and resetting audio settings
+     - Documentation available in to-do/modularization-implementation-phase3.2.md
+   
+   - Completed Phase 3.3: GSX Service Coordinator
+     - Created IGSXServiceCoordinator interface and GSXServiceCoordinator implementation
+     - Extracted service coordination logic from GsxController
+     - Added methods for running various GSX services (boarding, refueling, etc.)
+     - Added event-based communication for service status changes
+     - Documentation available in to-do/modularization-implementation-phase3.3.md
+   
+   - Completed Phase 3.4: GSX Door Manager
+     - Created IGSXDoorManager interface and GSXDoorManager implementation
+     - Extracted door management logic from GsxController
+     - Added methods for controlling aircraft doors
+     - Added event-based communication for door state changes
+     - Documentation available in to-do/modularization-implementation-phase3.4.md
+   
+   - Completed Phase 3.5: GSX Loadsheet Manager
+     - Created IGSXLoadsheetManager interface and GSXLoadsheetManager implementation
+     - Extracted loadsheet management logic from GsxController
+     - Added methods for generating and sending loadsheets
+     - Added event-based communication for loadsheet generation
+     - Documentation available in to-do/modularization-implementation-phase3.5.md
+   
+   - Completed Phase 3.6: Refine GsxController
+     - Refactored GsxController to be a thin facade
+     - Delegated responsibilities to specialized services
+     - Improved event handling and state management
+     - Enhanced error handling and logging
+     - Documentation available in to-do/modularization-implementation-phase3.6.md
+
+4. **Architecture Improvements**
    - Enhanced separation of concerns
    - Improved testability through interface-based design
    - Centralized error handling and logging
    - Implemented event-based communication
    - Added secure XML processing
-   - Continued modularization of the codebase
+   - Completed modularization of the codebase
+   - Comprehensive implementation summary available in to-do/modularization-implementation-summary.md
 
 ### .NET 8.0 Migration (March 2025)
 
