@@ -188,10 +188,15 @@ The GSXController has grown too large and complex, handling multiple responsibil
 
 #### 3.1 GSXMenuService and GSXAudioService
 
-- [ ] Create `IGSXMenuService.cs` interface file
+This phase extracts menu interaction and audio control functionality from the GsxController into separate services following the Single Responsibility Principle.
+
+**Timeline: 5-7 days**
+
+- [ ] Create `IGSXMenuService.cs` interface file (0.5 day)
   - [ ] Define methods for menu interaction
   - [ ] Define operator selection methods
-- [ ] Create `GSXMenuService.cs` implementation file
+  - [ ] Add `OperatorWasSelected` property
+- [ ] Create `GSXMenuService.cs` implementation file (1 day)
   - [ ] Move menu-related methods from GsxController
     - [ ] Move `MenuOpen` method
     - [ ] Move `MenuItem` method
@@ -199,21 +204,40 @@ The GSXController has grown too large and complex, handling multiple responsibil
     - [ ] Move `IsOperatorSelectionActive` method
     - [ ] Move `OperatorSelection` method
   - [ ] Implement interface methods
-- [ ] Create `IGSXAudioService.cs` interface file
+  - [ ] Add proper error handling and logging
+- [ ] Create `IGSXAudioService.cs` interface file (0.5 day)
   - [ ] Define methods for audio control
   - [ ] Define audio session management methods
-- [ ] Create `GSXAudioService.cs` implementation file
+- [ ] Create `GSXAudioService.cs` implementation file (1.5 days)
   - [ ] Move audio-related methods from GsxController
     - [ ] Move `GetAudioSessions` method
     - [ ] Move `ResetAudio` method
     - [ ] Move `ControlAudio` method
   - [ ] Implement interface methods
-- [ ] Update GsxController to use these services
+  - [ ] Break down large methods into smaller, focused methods:
+    - [ ] `ControlGsxAudio` method
+    - [ ] `ControlVhf1Audio` method
+    - [ ] `HandleAppChange` method
+    - [ ] `HandleProcessExits` method
+  - [ ] Add proper error handling and logging
+- [ ] Update GsxController to use these services (1 day)
   - [ ] Add service fields and constructor parameters
   - [ ] Replace direct method calls with service calls
-- [ ] Add unit tests for both services
+  - [ ] Update `RunServices` method to use `menuService.OperatorWasSelected`
+- [ ] Update ServiceController to initialize the new services (0.5 day)
+  - [ ] Create instances of GSXMenuService and GSXAudioService
+  - [ ] Pass them to GsxController constructor
+- [ ] Add unit tests for both services (1-2 days)
+  - [ ] Test normal operation paths
+  - [ ] Test error handling paths
+  - [ ] Test edge cases
 - [ ] Test the implementation to ensure it works correctly
-- [ ] Create implementation plan (available in to-do/modularization-implementation-phase3.1.md)
+- [ ] Detailed implementation plan available in to-do/modularization-implementation-phase3.1.md
+
+**Key Dependencies:**
+- CoreAudio library for GSXAudioService
+- Windows Registry access for GSXMenuService
+- SimConnect for reading/writing L-vars
 
 #### 3.2 GSXStateManager
 

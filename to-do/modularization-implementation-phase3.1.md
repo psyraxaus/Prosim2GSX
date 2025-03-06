@@ -2,7 +2,20 @@
 
 ## Overview
 
-This document outlines the implementation plan for Phase 3.1 of the Prosim2GSX modularization strategy. In this phase, we'll extract menu interaction and audio control functionality from the GsxController into separate services.
+This document outlines the implementation plan for Phase 3.1 of the Prosim2GSX modularization strategy. In this phase, we'll extract menu interaction and audio control functionality from the GsxController into separate services following the Single Responsibility Principle.
+
+## Implementation Timeline
+
+| Task | Estimated Duration | Dependencies |
+|------|-------------------|--------------|
+| Create IGSXMenuService interface | 0.5 day | None |
+| Implement GSXMenuService | 1 day | IGSXMenuService |
+| Create IGSXAudioService interface | 0.5 day | None |
+| Implement GSXAudioService | 1.5 days | IGSXAudioService |
+| Update GsxController | 1 day | All services |
+| Update ServiceController | 0.5 day | All services |
+| Testing | 1-2 days | All implementation |
+| **Total** | **5-7 days** | |
 
 ## Implementation Steps
 
@@ -634,17 +647,45 @@ Test the implementation to ensure it works correctly.
    - Menu interaction and audio control are now handled by dedicated services
    - Each service has a single responsibility
    - GsxController is simplified and more focused
+   - Clear boundaries between different functionalities
 
 2. **Enhanced Testability**
    - Services can be tested in isolation
    - Dependencies are explicit and can be mocked
    - Unit tests can be written for each service
+   - Easier to simulate different scenarios
 
 3. **Better Maintainability**
    - Changes to menu interaction or audio control can be made without affecting other parts of the system
    - Code is more organized and easier to understand
    - New features can be added to specific services without modifying GsxController
+   - Reduced complexity in GsxController
+
+4. **Improved Error Handling**
+   - More focused error handling in each service
+   - Better isolation of failures
+   - Clearer logging and diagnostics
+   - Easier to recover from specific failures
+
+## Implementation Considerations
+
+### Dependencies
+- **CoreAudio**: The GSXAudioService will depend on the CoreAudio library for audio control
+- **Registry Access**: The GSXMenuService will need to access the Windows Registry to find the GSX menu file
+- **SimConnect**: Both services will need access to SimConnect for reading/writing L-vars
+
+### Error Handling
+- Implement robust error handling in both services
+- Use try-catch blocks for operations that might fail
+- Log exceptions with appropriate context
+- Provide fallback behavior when possible
+
+### Testing Strategy
+- Create unit tests for each service
+- Test normal operation paths
+- Test error handling paths
+- Test edge cases (e.g., missing registry keys, audio sessions not available)
 
 ## Next Steps
 
-After implementing Phase 3.1, we'll proceed with Phase 3.2 to extract state management functionality into a dedicated GSXStateManager service.
+After implementing Phase 3.1, we'll proceed with Phase 3.2 to extract state management functionality into a dedicated GSXStateManager service. This will further reduce the complexity of the GsxController and improve the overall architecture of the application.

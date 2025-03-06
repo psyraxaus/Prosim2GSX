@@ -250,43 +250,41 @@ Based on the current state and known issues, the following priorities are recomm
        - ✅ Create IFuelService interface
        - ✅ Implementation details available in to-do/modularization-implementation-phase2.10.md
      - 🔄 Implement remaining domain-specific ProSim services
-   - ✅ Phase 3: Extract GSX Services
-     - ✅ Phase 3.1: Implement GSX State Manager
-       - ✅ Create IGSXStateManager interface and implementation
-       - ✅ Extract state management logic from GsxController
-       - ✅ Add state transition methods and state query methods
-       - ✅ Add event-based notification for state changes
-       - ✅ Implementation details available in to-do/modularization-implementation-phase3.1.md
-     - ✅ Phase 3.2: Implement GSX Audio Service
-       - ✅ Create IGSXAudioService interface and implementation
-       - ✅ Extract audio control logic from GsxController
-       - ✅ Add methods for controlling audio and resetting audio settings
-       - ✅ Implementation details available in to-do/modularization-implementation-phase3.2.md
-     - ✅ Phase 3.3: Implement GSX Service Coordinator
-       - ✅ Create IGSXServiceCoordinator interface and implementation
-       - ✅ Extract service coordination logic from GsxController
-       - ✅ Add methods for running various GSX services (boarding, refueling, etc.)
-       - ✅ Add event-based communication for service status changes
-       - ✅ Implementation details available in to-do/modularization-implementation-phase3.3.md
-     - ✅ Phase 3.4: Implement GSX Door Manager
-       - ✅ Create IGSXDoorManager interface and implementation
-       - ✅ Extract door management logic from GsxController
-       - ✅ Add methods for controlling aircraft doors
-       - ✅ Add event-based communication for door state changes
-       - ✅ Implementation details available in to-do/modularization-implementation-phase3.4.md
-     - ✅ Phase 3.5: Implement GSX Loadsheet Manager
-       - ✅ Create IGSXLoadsheetManager interface and implementation
-       - ✅ Extract loadsheet management logic from GsxController
-       - ✅ Add methods for generating and sending loadsheets
-       - ✅ Add event-based communication for loadsheet generation
-       - ✅ Implementation details available in to-do/modularization-implementation-phase3.5.md
-     - ✅ Phase 3.6: Refine GsxController
-       - ✅ Refactor GsxController to be a thin facade
-       - ✅ Delegate responsibilities to specialized services
-       - ✅ Improve event handling and state management
-       - ✅ Enhance error handling and logging
-       - ✅ Implementation details available in to-do/modularization-implementation-phase3.6.md
-     - ✅ Comprehensive implementation summary available in to-do/modularization-implementation-summary.md
+   - 🔜 Phase 3: Extract GSX Services
+     - 🔄 Phase 3.1: Implement GSXMenuService and GSXAudioService
+       - ✅ Created detailed implementation plan
+       - ✅ Defined interfaces and implementation details
+       - ✅ Established timeline and dependencies (5-7 days)
+       - ✅ Identified key dependencies and error handling strategies
+       - 🔜 Create interfaces and implementations
+       - 🔜 Update GsxController to use these services
+       - 🔜 Add unit tests for both services
+       - ✅ Implementation plan available in to-do/modularization-implementation-phase3.1.md
+     - 🔜 Phase 3.2: Implement GSXStateManager
+       - 🔜 Create IGSXStateManager interface and implementation
+       - 🔜 Extract state management logic from GsxController
+       - 🔜 Add state transition methods and state query methods
+       - 🔜 Add event-based notification for state changes
+     - 🔜 Phase 3.3: Implement GSX Service Coordinator
+       - 🔜 Create IGSXServiceCoordinator interface and implementation
+       - 🔜 Extract service coordination logic from GsxController
+       - 🔜 Add methods for running various GSX services (boarding, refueling, etc.)
+       - 🔜 Add event-based communication for service status changes
+     - 🔜 Phase 3.4: Implement GSX Door Manager
+       - 🔜 Create IGSXDoorManager interface and implementation
+       - 🔜 Extract door management logic from GsxController
+       - 🔜 Add methods for controlling aircraft doors
+       - 🔜 Add event-based communication for door state changes
+     - 🔜 Phase 3.5: Implement GSX Loadsheet Manager
+       - 🔜 Create IGSXLoadsheetManager interface and implementation
+       - 🔜 Extract loadsheet management logic from GsxController
+       - 🔜 Add methods for generating and sending loadsheets
+       - 🔜 Add event-based communication for loadsheet generation
+     - 🔜 Phase 3.6: Refine GsxController
+       - 🔜 Refactor GsxController to be a thin facade
+       - 🔜 Delegate responsibilities to specialized services
+       - 🔜 Improve event handling and state management
+       - 🔜 Enhance error handling and logging
    - 🔜 Phase 4: Further GSX Controller Modularization
      - 🔜 Phase 4.1: Create GSXControllerFacade
        - 🔜 Create IGSXControllerFacade interface
