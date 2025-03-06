@@ -4,6 +4,8 @@
 
 Prosim2GSX follows a modular architecture with clear separation of concerns. The application is structured around several key components that work together to provide seamless integration between ProsimA320 and GSX in Microsoft Flight Simulator 2020.
 
+The architecture is currently undergoing significant modularization to improve maintainability, testability, and extensibility. This modularization is being implemented in phases, with each phase focusing on extracting specific functionality into well-defined services with clear interfaces.
+
 ```mermaid
 graph TD
     A[Main Application] --> B[IPCManager]
@@ -20,12 +22,17 @@ graph TD
     G --> K
     E --> L[SimConnectService]
     I --> M[ProsimService]
-    F --> N[GSXStateManager]
+    
+    %% Implemented services
+    F --> S[GSXMenuService]
     F --> O[GSXAudioService]
+    
+    %% Planned services
+    F --> N[GSXStateManager]
     F --> P[GSXServiceCoordinator]
     F --> Q[GSXDoorManager]
     F --> R[GSXLoadsheetManager]
-    F --> S[GSXMenuService]
+    
     G --> T[ProsimDoorService]
     G --> U[ProsimEquipmentService]
     G --> V[ProsimPassengerService]
@@ -34,7 +41,58 @@ graph TD
     G --> Y[ProsimFlightDataService]
     G --> Z[ProsimFluidService]
     J --> AA[FlightPlanService]
+    
+    %% Phase 4 planned services (dotted lines for planned)
+    N -.-> P1[GSXControllerFacade]
+    P1 -.-> P2[GSXServiceOrchestrator]
+    P1 -.-> P3[GSXDoorCoordinator]
+    P1 -.-> P4[GSXEquipmentCoordinator]
+    P1 -.-> P5[GSXPassengerCoordinator]
+    P1 -.-> P6[GSXCargoCoordinator]
+    P1 -.-> P7[GSXFuelCoordinator]
 ```
+
+## Modularization Approach
+
+The modularization is being implemented in phases, with each phase focusing on a specific area of functionality:
+
+```mermaid
+flowchart TD
+    A[Phase 1: Extract Core Services] --> B[Phase 2: Extract Shared and ProSim Services]
+    B --> C[Phase 3: Extract GSX Services]
+    C --> D[Phase 4: Further GSX Controller Modularization]
+    D --> E[Phase 5: Refine Architecture and Improve Integration]
+```
+
+### Phase 1: Core Services (Completed)
+- Extracted SimConnectService and ProsimService
+- Created interfaces for better testability
+- Improved error handling and logging
+
+### Phase 2: Shared and ProSim Services (Completed)
+- Extracted AcarsService, FlightPlanService
+- Extracted ProsimDoorService, ProsimEquipmentService
+- Extracted ProsimPassengerService, ProsimCargoService
+- Extracted ProsimFuelService, ProsimFlightDataService, ProsimFluidService
+- Created shared service interfaces (IPassengerService, ICargoService, IFuelService)
+
+### Phase 3: GSX Services (In Progress)
+- Completed GSXMenuService implementation
+- Completed GSXAudioService implementation
+- Planned GSXStateManager, GSXServiceCoordinator
+- Planned GSXDoorManager, GSXLoadsheetManager
+- Planned refinement of GsxController
+
+### Phase 4: Further GSX Controller Modularization (Planned)
+- Create GSXControllerFacade
+- Enhance GSXStateMachine
+- Create GSXServiceOrchestrator
+- Create coordinators for doors, equipment, passengers, cargo, and fuel
+
+### Phase 5: Refine Architecture and Improve Integration (Planned)
+- Refine service interactions
+- Improve controller architecture
+- Implement comprehensive testing
 
 ## Component Relationships
 
@@ -94,89 +152,148 @@ graph TD
    - Sends and receives messages via ACARS networks
    - Formats loadsheets and other flight information
 
-7. **GSXStateManager**
-   - Manages flight state transitions
-   - Provides state query methods
-   - Raises events when state changes
-   - Centralizes state management logic
+### Implemented Modularized Services
 
-8. **GSXAudioService**
-   - Controls audio for GSX and other applications
-   - Adjusts volume based on cockpit controls
-   - Provides audio reset functionality
-   - Manages audio device detection and control
+1. **SimConnectService**
+   - Provides abstraction over SimConnect API
+   - Handles connection to MSFS2020
+   - Manages simulator variables and events
+   - Implements error handling and reconnection logic
 
-9. **GSXServiceCoordinator**
-   - Coordinates GSX services (boarding, refueling, etc.)
-   - Manages service timing and sequencing
-   - Raises events for service status changes
-   - Centralizes service operation logic
+2. **ProsimService**
+   - Provides abstraction over ProSim SDK
+   - Handles connection to ProsimA320
+   - Manages ProSim variables and events
+   - Implements error handling and reconnection logic
 
-10. **GSXDoorManager**
-    - Manages aircraft door operations
-    - Controls door opening/closing based on service needs
-    - Raises events for door state changes
-    - Handles door toggle requests from GSX
+3. **FlightPlanService**
+   - Loads and parses flight plans
+   - Provides structured access to flight plan data
+   - Handles flight plan file operations
+   - Raises events when flight plans change
 
-11. **GSXLoadsheetManager**
-    - Generates and sends loadsheets
-    - Formats loadsheet data for ACARS transmission
-    - Calculates weight and balance information
-    - Raises events when loadsheets are generated
+4. **ProsimDoorService**
+   - Controls aircraft doors in ProSim
+   - Provides door state information
+   - Raises events for door state changes
+   - Centralizes door management logic
 
-12. **GSXMenuService**
-    - Interacts with GSX menu system
-    - Selects menu items and operators
-    - Manages menu navigation
-    - Provides abstraction for GSX menu interaction
+5. **ProsimEquipmentService**
+   - Manages ground equipment in ProSim
+   - Controls GPU, PCA, and chocks
+   - Provides equipment state information
+   - Raises events for equipment state changes
 
-13. **ProsimDoorService**
-    - Controls aircraft doors in ProSim
-    - Provides door state information
-    - Raises events for door state changes
-    - Centralizes door management logic
+6. **ProsimPassengerService**
+   - Manages passenger data in ProSim
+   - Controls boarding and deboarding
+   - Provides passenger count information
+   - Raises events for passenger state changes
 
-14. **ProsimEquipmentService**
-    - Manages ground equipment in ProSim
-    - Controls GPU, PCA, and chocks
-    - Provides equipment state information
-    - Raises events for equipment state changes
+7. **ProsimCargoService**
+   - Manages cargo data in ProSim
+   - Controls cargo loading and unloading
+   - Provides cargo weight information
+   - Raises events for cargo state changes
 
-15. **ProsimPassengerService**
-    - Manages passenger data in ProSim
-    - Controls boarding and deboarding
-    - Provides passenger count information
-    - Raises events for passenger state changes
+8. **ProsimFuelService**
+   - Manages fuel data in ProSim
+   - Controls refueling operations
+   - Provides fuel quantity information
+   - Raises events for fuel state changes
 
-16. **ProsimCargoService**
-    - Manages cargo data in ProSim
-    - Controls cargo loading and unloading
-    - Provides cargo weight information
-    - Raises events for cargo state changes
+9. **ProsimFlightDataService**
+   - Manages flight data in ProSim
+   - Provides access to flight parameters
+   - Formats flight data for other components
+   - Raises events for flight data changes
 
-17. **ProsimFuelService**
-    - Manages fuel data in ProSim
-    - Controls refueling operations
-    - Provides fuel quantity information
-    - Raises events for fuel state changes
-
-18. **ProsimFlightDataService**
-    - Manages flight data in ProSim
-    - Provides access to flight parameters
-    - Formats flight data for other components
-    - Raises events for flight data changes
-
-19. **ProsimFluidService**
+10. **ProsimFluidService**
     - Manages hydraulic fluid data in ProSim
     - Controls fluid levels and servicing
     - Provides fluid quantity information
     - Raises events for fluid state changes
 
-20. **FlightPlanService**
-    - Loads and parses flight plans
-    - Provides structured access to flight plan data
-    - Handles flight plan file operations
-    - Raises events when flight plans change
+11. **GSXMenuService**
+    - Interacts with GSX menu system
+    - Selects menu items and operators
+    - Manages menu navigation
+    - Provides abstraction for GSX menu interaction
+
+12. **GSXAudioService**
+    - Controls audio for GSX and other applications
+    - Adjusts volume based on cockpit controls
+    - Provides audio reset functionality
+    - Manages audio device detection and control
+    - Implements thread safety with locks
+    - Provides event-based communication for audio state changes
+    - Offers both synchronous and asynchronous methods with cancellation support
+
+### Planned Modularized Services
+
+1. **GSXStateManager**
+   - Manages flight state transitions
+   - Provides state query methods
+   - Raises events when state changes
+   - Centralizes state management logic
+   - Implements state validation and state-specific behavior
+
+2. **GSXServiceCoordinator**
+   - Coordinates GSX services (boarding, refueling, etc.)
+   - Manages service timing and sequencing
+   - Raises events for service status changes
+   - Centralizes service operation logic
+
+3. **GSXDoorManager**
+   - Manages aircraft door operations
+   - Controls door opening/closing based on service needs
+   - Raises events for door state changes
+   - Handles door toggle requests from GSX
+
+4. **GSXLoadsheetManager**
+   - Generates and sends loadsheets
+   - Formats loadsheet data for ACARS transmission
+   - Calculates weight and balance information
+   - Raises events when loadsheets are generated
+
+5. **GSXControllerFacade**
+   - Provides a simplified interface to the GSX subsystem
+   - Initializes and manages GSX services
+   - Delegates to specialized services
+   - Handles high-level error recovery
+
+6. **GSXServiceOrchestrator**
+   - Coordinates service execution based on state
+   - Manages service timing and dependencies
+   - Provides event-based communication for service execution status
+
+7. **GSXDoorCoordinator**
+   - Manages door operations and state tracking
+   - Coordinates door operations with services
+   - Provides event-based communication for door state changes
+
+8. **GSXEquipmentCoordinator**
+   - Manages equipment operations and state tracking
+   - Coordinates equipment operations with services
+   - Provides event-based communication for equipment state changes
+
+9. **GSXPassengerCoordinator**
+   - Manages passenger boarding and deboarding
+   - Tracks passenger counts
+   - Coordinates passenger operations with services
+   - Provides event-based communication for passenger state changes
+
+10. **GSXCargoCoordinator**
+    - Manages cargo loading and unloading
+    - Tracks cargo states
+    - Coordinates cargo operations with services
+    - Provides event-based communication for cargo state changes
+
+11. **GSXFuelCoordinator**
+    - Manages refueling operations
+    - Tracks fuel states
+    - Coordinates fuel operations with services
+    - Provides event-based communication for fuel state changes
 
 ### UI Components
 
@@ -307,6 +424,27 @@ The IPCManager acts as a service locator:
 - Centralizes service registration and retrieval
 - Decouples service consumers from service providers
 - Simplifies service discovery
+
+### 11. Interface Segregation Pattern
+The modularization effort applies the Interface Segregation Principle by:
+- Splitting large interfaces into more focused ones
+- Creating specific interfaces for different aspects of functionality
+- Ensuring clients only depend on methods they actually use
+- Improving maintainability and reducing coupling
+
+### 12. Composable Services Pattern
+The new architecture uses composable services:
+- Each service focuses on a single responsibility
+- Services can be composed to create more complex behavior
+- Dependencies are explicit through constructor injection
+- Services can be tested in isolation
+
+### 13. Event-Based Communication
+The modularized services use event-based communication:
+- Services raise events for significant state changes
+- Other services can subscribe to these events
+- Reduces direct dependencies between services
+- Improves flexibility and extensibility
 
 ## Data Flow
 
@@ -458,3 +596,33 @@ flowchart LR
 - Appropriate log levels based on context
 - Relevant context included in log messages
 - Centralized logging configuration
+
+### 11. Enhanced Service Design
+- Interface Segregation for more focused interfaces
+- Composable services with single responsibilities
+- Helper classes for complex logic
+- Factory patterns for creating complex objects
+
+### 12. Improved Dependency Management
+- Explicit dependencies through constructor injection
+- Optional dependencies handled gracefully
+- Lazy initialization for services not always needed
+- Service locator for complex dependency scenarios
+
+### 13. Robust Error Handling
+- Service-specific exceptions
+- Retry mechanisms for transient failures
+- Circuit breaker pattern for external dependencies
+- Graceful degradation when dependencies fail
+
+### 14. Comprehensive Testing Strategy
+- Unit tests for all services
+- Integration tests for service interactions
+- Mock external dependencies
+- Performance testing for critical paths
+
+### 15. Thread Safety Considerations
+- Thread safety documentation
+- Appropriate synchronization mechanisms
+- Async patterns for I/O-bound operations
+- Thread isolation for sensitive operations
