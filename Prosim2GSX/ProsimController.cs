@@ -23,13 +23,13 @@ namespace Prosim2GSX
         private MobiSimConnect SimConnect;
         // Our main ProSim connection
         private readonly ProSimConnect _connection = new ProSimConnect();
-        private readonly IProsimDoorService _doorService;
-        private readonly IProsimEquipmentService _equipmentService;
-        private readonly IProsimPassengerService _passengerService;
-        private readonly IProsimCargoService _cargoService;
-        private readonly IProsimFuelService _fuelService;
-        private readonly IProsimFluidService _fluidService;
-        private readonly IFlightPlanService _flightPlanService;
+        private IProsimDoorService _doorService;
+        private IProsimEquipmentService _equipmentService;
+        private IProsimPassengerService _passengerService;
+        private IProsimCargoService _cargoService;
+        private IProsimFuelService _fuelService;
+        private IProsimFluidService _fluidService;
+        private IFlightPlanService _flightPlanService;
         private IProsimFlightDataService _flightDataService;
 
         public static readonly int waitDuration = 30000;
@@ -57,6 +57,16 @@ namespace Prosim2GSX
             paxCurrent = new bool[132];
             paxSeats = null;
             Model = model;
+            
+            // Services will be initialized after connection is established
+        }
+        
+        /// <summary>
+        /// Initializes all ProSim services after connection is established
+        /// </summary>
+        private void InitializeServices()
+        {
+            Logger.Log(LogLevel.Information, "ProsimController:InitializeServices", "Initializing ProSim services");
             
             // Initialize door service with the ProsimService from Interface
             _doorService = new ProsimDoorService(Interface.ProsimService);
@@ -120,6 +130,8 @@ namespace Prosim2GSX
             
             // Initialize flight plan service
             _flightPlanService = new FlightPlanService(Model);
+            
+            Logger.Log(LogLevel.Information, "ProsimController:InitializeServices", "ProSim services initialized successfully");
         }
 
         public void Update(bool forceCurrent)
@@ -231,14 +243,25 @@ namespace Prosim2GSX
                 Logger.Log(LogLevel.Error, "ProsimController:IsProsimConnectionAvailable", $"Prosim not available - aborting");
                 return false;
             }
+            
+            // Initialize services after connection is established
+            InitializeServices();
+            
             SetSimBriefID(model);
-            FlightPlan = new(Model, _flightPlanService);
-
-            if (!FlightPlan.Load())
-            {
-                Logger.Log(LogLevel.Error, "ProsimController:IsProsimConnectionAvailable", "Could not load Flightplan");
-                Thread.Sleep(5000);
-            }
+            
+            // We'll let the ServiceController create and initialize the FlightPlan
+            // This is to ensure proper initialization order
+            
+            return true;
+        }
+        
+        /// <summary>
+        /// Initializes the FlightPlan and FlightDataService
+        /// This should be called by ServiceController after FlightPlan is created
+        /// </summary>
+        public void InitializeFlightPlan(FlightPlan flightPlan)
+        {
+            FlightPlan = flightPlan;
             
             // Initialize flight data service with the ProsimService from Interface and the FlightPlan
             _flightDataService = new ProsimFlightDataService(Interface.ProsimService, FlightPlan);
@@ -250,7 +273,7 @@ namespace Prosim2GSX
                     $"{args.DataType} changed to {args.CurrentValue}");
             };
             
-            return true;
+            Logger.Log(LogLevel.Information, "ProsimController:InitializeFlightPlan", "FlightPlan and FlightDataService initialized");
         }
 
         public bool IsFlightplanLoaded()

@@ -394,8 +394,32 @@ namespace Prosim2GSX
                 Logger.Log(LogLevel.Debug, "GsxController:ControlAudio", $"Exception {ex.GetType()} during Audio Control: {ex.Message}");
             }
         }
+        // Flag to track if the controller is fully initialized
+        private bool _isInitialized = false;
+
         public void RunServices()
         {
+            // Check if SimConnect is available
+            if (SimConnect == null)
+            {
+                Logger.Log(LogLevel.Warning, "GsxController:RunServices", "SimConnect not available");
+                return;
+            }
+            
+            // Check if FlightPlan is available when needed
+            if (FlightPlan == null)
+            {
+                Logger.Log(LogLevel.Warning, "GsxController:RunServices", "FlightPlan not available");
+                return;
+            }
+            
+            // Mark as initialized on first successful run
+            if (!_isInitialized)
+            {
+                _isInitialized = true;
+                Logger.Log(LogLevel.Information, "GsxController:RunServices", "GSX Controller initialized and ready");
+            }
+            
             bool simOnGround = SimConnect.ReadSimVar("SIM ON GROUND", "Bool") != 0.0f;
             ProsimController.Update(false);
 

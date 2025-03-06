@@ -94,18 +94,20 @@ namespace Prosim2GSX
 
         protected void ServiceLoop()
         {
-            var flightPlanService = new FlightPlanService(Model);
-            FlightPlan = new FlightPlan(Model, flightPlanService);
-            var acarsService = new AcarsService(Model.AcarsSecret, Model.AcarsNetworkUrl);
-            var gsxController = new GsxController(Model, ProsimController, FlightPlan, acarsService);
-            // Store the GsxController in IPCManager so it can be accessed by the MainWindow
-            IPCManager.GsxController = gsxController;
+            // Initialize services in the correct order
+            InitializeServices();
             
-            int elapsedMS = gsxController.Interval;
+            // Get references to the initialized services
+            var gsxController = IPCManager.GsxController;
+            
+            // Initialize timing variables
+            int elapsedMS = gsxController?.Interval ?? 1000;
             int delay = 100;
             Thread.Sleep(1000);
             Logger.Log(LogLevel.Information, "ServiceController:ServiceLoop", "Starting Service Loop");
-            while (!Model.CancellationRequested && Model.IsProsimRunning && IPCManager.IsSimRunning() && IPCManager.IsCamReady())
+            
+            // Main service loop
+            while (!Model.CancellationRequested && Model.IsProsimRunning && IPCManager.IsSimRunning() && IPCManager.IsCamReady() && gsxController != null)
             {
                 try
                 {
@@ -132,10 +134,60 @@ namespace Prosim2GSX
             if (Model.GsxVolumeControl || Model.IsVhf1Controllable())
             {
                 Logger.Log(LogLevel.Information, "ServiceController:ServiceLoop", "Resetting GSX/VHF1 Audio");
-                gsxController.ResetAudio();
+                gsxController?.ResetAudio();
             }
+            
+            // Clean up services
+            CleanupServices();
+        }
+        
+        /// <summary>
+        /// Initializes all services in the correct order after connections are established
+        /// </summary>
+        protected void InitializeServices()
+        {
+            Logger.Log(LogLevel.Information, "ServiceController:InitializeServices", "Initializing services...");
+            
+            // Step 1: Create FlightPlanService
+            var flightPlanService = new FlightPlanService(Model);
+            
+            // Step 2: Create FlightPlan
+            FlightPlan = new FlightPlan(Model, flightPlanService);
+            
+            // Step 3: Load flight plan
+            if (!FlightPlan.Load())
+            {
+                Logger.Log(LogLevel.Warning, "ServiceController:InitializeServices", "Could not load flight plan, will retry in service loop");
+                // We'll continue even if flight plan isn't loaded yet, as it might be loaded later
+            }
+            
+            // Step 4: Initialize FlightPlan in ProsimController
+            ProsimController.InitializeFlightPlan(FlightPlan);
+            
+            // Step 5: Create AcarsService
+            var acarsService = new AcarsService(Model.AcarsSecret, Model.AcarsNetworkUrl);
+            
+            // Step 6: Create GsxController
+            var gsxController = new GsxController(Model, ProsimController, FlightPlan, acarsService);
+            
+            // Store the GsxController in IPCManager so it can be accessed by the MainWindow
+            IPCManager.GsxController = gsxController;
+            
+            Logger.Log(LogLevel.Information, "ServiceController:InitializeServices", "Services initialized successfully");
+        }
+        
+        /// <summary>
+        /// Cleans up services when the service loop ends
+        /// </summary>
+        protected void CleanupServices()
+        {
             // Clear the GsxController reference when the service loop ends
             IPCManager.GsxController = null;
+            
+            // Clear other service references as needed
+            FlightPlan = null;
+            
+            Logger.Log(LogLevel.Information, "ServiceController:CleanupServices", "Services cleaned up");
         }
     }
 }
