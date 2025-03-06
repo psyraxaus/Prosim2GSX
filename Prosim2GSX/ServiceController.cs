@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿﻿using System;
 using System.Threading;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
@@ -167,8 +167,11 @@ namespace Prosim2GSX
             // Step 5: Create AcarsService
             var acarsService = new AcarsService(Model.AcarsSecret, Model.AcarsNetworkUrl);
             
-            // Step 6: Create GsxController
-            var gsxController = new GsxController(Model, ProsimController, FlightPlan, acarsService);
+            // Step 6: Create GSXMenuService
+            var menuService = new GSXMenuService(Model, IPCManager.SimConnect);
+            
+            // Step 7: Create GsxController
+            var gsxController = new GsxController(Model, ProsimController, FlightPlan, acarsService, menuService);
             
             // Store the GsxController in IPCManager so it can be accessed by the MainWindow
             IPCManager.GsxController = gsxController;

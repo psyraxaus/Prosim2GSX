@@ -1,4 +1,4 @@
-﻿﻿using CoreAudio;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using CoreAudio;
 using Microsoft.Win32;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
@@ -97,6 +97,7 @@ namespace Prosim2GSX
         private int vhf1AudioMute = -1;
 
         private IAcarsService acarsService;
+        private IGSXMenuService menuService;
         private MobiSimConnect SimConnect;
         private ProsimController ProsimController;
         private ServiceModel Model;
@@ -104,12 +105,13 @@ namespace Prosim2GSX
 
         public int Interval { get; set; } = 1000;
 
-        public GsxController(ServiceModel model, ProsimController prosimController, FlightPlan flightPlan, IAcarsService acarsService)
+        public GsxController(ServiceModel model, ProsimController prosimController, FlightPlan flightPlan, IAcarsService acarsService, IGSXMenuService menuService)
         {
             Model = model;
             ProsimController = prosimController;
             FlightPlan = flightPlan;
             this.acarsService = acarsService;
+            this.menuService = menuService;
 
             SimConnect = IPCManager.SimConnect;
             SimConnect.SubscribeSimVar("SIM ON GROUND", "Bool");
@@ -1184,83 +1186,28 @@ namespace Prosim2GSX
 
         private void OperatorSelection()
         {
-            Thread.Sleep(2000);
-
-            int result = IsOperatorSelectionActive();
-            if (result == -1)
-            {
-                Logger.Log(LogLevel.Information, "GsxController:OperatorSelection", $"Waiting {Model.OperatorDelay}s for Operator Selection");
-                Thread.Sleep((int)(Model.OperatorDelay * 1000));
-            }
-            else if (result == 1)
-            {
-                Logger.Log(LogLevel.Information, "GsxController:OperatorSelection", $"Operator Selection active, choosing Option 1");
-                MenuItem(1);
-                operatorWasSelected = true;
-            }
-            else
-                Logger.Log(LogLevel.Information, "GsxController:OperatorSelection", $"No Operator Selection needed");
+            menuService.OperatorSelection();
+            operatorWasSelected = menuService.OperatorWasSelected;
         }
 
         private int IsOperatorSelectionActive()
         {
-            int result = -1;
-
-            if (!string.IsNullOrEmpty(menuFile))
-            {
-                string[] lines = File.ReadLines(menuFile).ToArray();
-                if (lines.Length > 1)
-                {
-                    if (!string.IsNullOrEmpty(lines[0]) && (lines[0] == "Select handling operator" || lines[0] == "Select catering operator"))
-                    {
-                        Logger.Log(LogLevel.Debug, "GsxController:IsOperatorSelectionActive", $"Match found for operator Selection: '{lines[0]}'");
-                        result = 1;
-                    }
-                    else if (string.IsNullOrEmpty(lines[0]))
-                    {
-                        Logger.Log(LogLevel.Debug, "GsxController:IsOperatorSelectionActive", $"Line is empty! Lines total: {lines.Length}");
-                        result = -1;
-                    }
-                    else
-                    {
-                        Logger.Log(LogLevel.Debug, "GsxController:IsOperatorSelectionActive", $"No Match found for operator Selection: '{lines[0]}'");
-                        result = 0;
-                    }
-                }
-                else
-                {
-                    Logger.Log(LogLevel.Debug, "GsxController:IsOperatorSelectionActive", $"Menu Lines not above 1 ({lines.Length})");
-                }
-            }
-            else
-            {
-                Logger.Log(LogLevel.Debug, "GsxController:IsOperatorSelectionActive", $"Menu File was empty");
-            }
-
-            return result;
+            return menuService.IsOperatorSelectionActive();
         }
 
         private void MenuOpen()
         {
-            SimConnect.IsGsxMenuReady = false;
-            Logger.Log(LogLevel.Debug, "GsxController:MenuOpen", $"Opening GSX Menu");
-            SimConnect.WriteLvar("FSDT_GSX_MENU_OPEN", 1);
+            menuService.MenuOpen();
         }
 
         private void MenuItem(int index, bool waitForMenu = true)
         {
-            if (waitForMenu)
-                MenuWaitReady();
-            SimConnect.IsGsxMenuReady = false;
-            Logger.Log(LogLevel.Debug, "GsxController:MenuItem", $"Selecting Menu Option {index} (L-Var Value {index - 1})");
-            SimConnect.WriteLvar("FSDT_GSX_MENU_CHOICE", index - 1);
+            menuService.MenuItem(index, waitForMenu);
         }
 
         private void MenuWaitReady()
         {
-            int counter = 0;
-            while (!SimConnect.IsGsxMenuReady && counter < 1000) { Thread.Sleep(100); counter++; }
-            Logger.Log(LogLevel.Debug, "GsxController:MenuWaitReady", $"Wait ended after {counter * 100}ms");
+            menuService.MenuWaitReady();
         }
 
         private string FormatLoadSheet(string loadsheetType, string time, string flightNumber, string tailNumber, string day, string date, string orig, string dest, double est_zfw, double max_zfw, double est_tow, double max_tow, double est_law, double max_law, int paxInfants, int paxAdults, double macZfw, double macTow, int paxZoneA, int paxZoneB, int paxZoneC, double fuelInTanks)

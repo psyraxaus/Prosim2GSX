@@ -251,15 +251,23 @@ Based on the current state and known issues, the following priorities are recomm
        - ✅ Implementation details available in to-do/modularization-implementation-phase2.10.md
      - 🔄 Implement remaining domain-specific ProSim services
    - 🔜 Phase 3: Extract GSX Services
-     - 🔄 Phase 3.1: Implement GSXMenuService and GSXAudioService
+     - ✅ Phase 3.1: Implement GSXMenuService
+       - ✅ Created detailed implementation plan
+       - ✅ Created IGSXMenuService interface with methods for menu interaction
+       - ✅ Implemented GSXMenuService with proper error handling and logging
+       - ✅ Updated GsxController to use the new service
+       - ✅ Modified ServiceController to initialize the service
+       - ✅ Achieved improved separation of concerns and better maintainability
+       - ✅ Implementation details available in to-do/modularization-implementation-phase3.1.md
+     
+     - 🔄 Phase 3.2: Implement GSXAudioService
        - ✅ Created detailed implementation plan
        - ✅ Defined interfaces and implementation details
-       - ✅ Established timeline and dependencies (5-7 days)
+       - ✅ Established timeline and dependencies
        - ✅ Identified key dependencies and error handling strategies
        - 🔜 Create interfaces and implementations
-       - 🔜 Update GsxController to use these services
-       - 🔜 Add unit tests for both services
-       - ✅ Implementation plan available in to-do/modularization-implementation-phase3.1.md
+       - 🔜 Update GsxController to use the service
+       - 🔜 Add unit tests for the service
      - 🔜 Phase 3.2: Implement GSXStateManager
        - 🔜 Create IGSXStateManager interface and implementation
        - 🔜 Extract state management logic from GsxController

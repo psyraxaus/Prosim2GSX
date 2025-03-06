@@ -116,13 +116,20 @@ The current focus for Prosim2GSX is migrating the application from .NET 7.0 to .
      - Designed interfaces to be platform-agnostic for future GSX integration
      - Documentation available in to-do/modularization-implementation-phase2.10.md
 
-3. **GSX Services Extraction (Planned)**
-   - Phase 3.1: GSXMenuService and GSXAudioService (Planned)
-     - Created detailed implementation plan for extracting menu interaction and audio control functionality
-     - Defined interfaces and implementation details for both services
-     - Established timeline and dependencies for implementation (5-7 days)
+3. **GSX Services Extraction (In Progress)**
+   - Completed Phase 3.1: GSXMenuService implementation
+     - Created IGSXMenuService interface with methods for menu interaction
+     - Implemented GSXMenuService with proper error handling and logging
+     - Updated GsxController to use the new service
+     - Modified ServiceController to initialize the service
+     - Achieved improved separation of concerns and better maintainability
+     - Implementation details available in to-do/modularization-implementation-phase3.1.md
+   
+   - Phase 3.2: GSXAudioService (Planned)
+     - Created detailed implementation plan for extracting audio control functionality
+     - Defined interfaces and implementation details
+     - Established timeline and dependencies for implementation
      - Identified key dependencies and error handling strategies
-     - Detailed implementation plan available in to-do/modularization-implementation-phase3.1.md
    
    - Phase 3.2: GSXStateManager (Planned)
      - Will create IGSXStateManager interface and implementation
