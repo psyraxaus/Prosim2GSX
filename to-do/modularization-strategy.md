@@ -186,11 +186,11 @@ flowchart TD
 
 The GSXController has grown too large and complex, handling multiple responsibilities. In Phase 3, we'll break it down into smaller, more focused services following the Single Responsibility Principle.
 
-#### 3.1 GSXMenuService and GSXAudioService
+#### 3.1 GSXMenuService
 
-This phase extracts menu interaction and audio control functionality from the GsxController into separate services following the Single Responsibility Principle.
+This phase extracts menu interaction functionality from the GsxController into a separate service following the Single Responsibility Principle.
 
-**Timeline: 5-7 days**
+**Timeline: 2-3 days**
 
 - [ ] Create `IGSXMenuService.cs` interface file (0.5 day)
   - [ ] Define methods for menu interaction
@@ -205,6 +205,27 @@ This phase extracts menu interaction and audio control functionality from the Gs
     - [ ] Move `OperatorSelection` method
   - [ ] Implement interface methods
   - [ ] Add proper error handling and logging
+- [ ] Update GsxController to use this service (0.5 day)
+  - [ ] Add service field and constructor parameter
+  - [ ] Replace direct method calls with service calls
+  - [ ] Update `RunServices` method to use `menuService.OperatorWasSelected`
+- [ ] Update ServiceController to initialize the new service
+- [ ] Add unit tests for GSXMenuService
+  - [ ] Test normal operation paths
+  - [ ] Test error handling paths
+  - [ ] Test edge cases
+- [ ] Test the implementation to ensure it works correctly
+
+**Key Dependencies:**
+- Windows Registry access for GSXMenuService
+- SimConnect for reading/writing L-vars
+
+#### 3.2 GSXAudioService
+
+This phase extracts audio control functionality from the GsxController into a separate service following the Single Responsibility Principle.
+
+**Timeline: 3-4 days**
+
 - [ ] Create `IGSXAudioService.cs` interface file (0.5 day)
   - [ ] Define methods for audio control
   - [ ] Define audio session management methods
@@ -220,26 +241,21 @@ This phase extracts menu interaction and audio control functionality from the Gs
     - [ ] `HandleAppChange` method
     - [ ] `HandleProcessExits` method
   - [ ] Add proper error handling and logging
-- [ ] Update GsxController to use these services (1 day)
-  - [ ] Add service fields and constructor parameters
+- [ ] Update GsxController to use this service (0.5 day)
+  - [ ] Add service field and constructor parameter
   - [ ] Replace direct method calls with service calls
-  - [ ] Update `RunServices` method to use `menuService.OperatorWasSelected`
-- [ ] Update ServiceController to initialize the new services (0.5 day)
-  - [ ] Create instances of GSXMenuService and GSXAudioService
-  - [ ] Pass them to GsxController constructor
-- [ ] Add unit tests for both services (1-2 days)
+- [ ] Update ServiceController to initialize the new service
+- [ ] Add unit tests for GSXAudioService
   - [ ] Test normal operation paths
   - [ ] Test error handling paths
   - [ ] Test edge cases
 - [ ] Test the implementation to ensure it works correctly
-- [ ] Detailed implementation plan available in to-do/modularization-implementation-phase3.1.md
 
 **Key Dependencies:**
 - CoreAudio library for GSXAudioService
-- Windows Registry access for GSXMenuService
 - SimConnect for reading/writing L-vars
 
-#### 3.2 GSXStateManager
+#### 3.3 GSXStateManager
 
 - [ ] Create `IGSXStateManager.cs` interface file
   - [ ] Define methods for state management
@@ -258,7 +274,7 @@ This phase extracts menu interaction and audio control functionality from the Gs
 - [ ] Test the implementation to ensure it works correctly
 - [ ] Create implementation plan (available in to-do/modularization-implementation-phase3.2.md)
 
-#### 3.3 GSXServiceCoordinator
+#### 3.4 GSXServiceCoordinator
 
 - [ ] Create `IGSXServiceCoordinator.cs` interface file
   - [ ] Define methods for service coordination
@@ -277,7 +293,7 @@ This phase extracts menu interaction and audio control functionality from the Gs
 - [ ] Test the implementation to ensure it works correctly
 - [ ] Create implementation plan (available in to-do/modularization-implementation-phase3.3.md)
 
-#### 3.4 GSXDoorManager and GSXEquipmentManager
+#### 3.5 GSXDoorManager and GSXEquipmentManager
 
 - [ ] Create `IGSXDoorManager.cs` interface file
   - [ ] Define methods for door management
@@ -303,7 +319,7 @@ This phase extracts menu interaction and audio control functionality from the Gs
 - [ ] Test the implementation to ensure it works correctly
 - [ ] Create implementation plan (available in to-do/modularization-implementation-phase3.4.md)
 
-#### 3.5 GSXLoadsheetManager
+#### 3.6 GSXLoadsheetManager
 
 - [ ] Create `IGSXLoadsheetManager.cs` interface file
   - [ ] Define methods for loadsheet management
@@ -323,7 +339,7 @@ This phase extracts menu interaction and audio control functionality from the Gs
 - [ ] Test the implementation to ensure it works correctly
 - [ ] Create implementation plan (available in to-do/modularization-implementation-phase3.5.md)
 
-#### 3.6 Refine GsxController
+#### 3.7 Refine GsxController
 
 - [ ] Refactor GsxController to be a thin facade
   - [ ] Remove all extracted functionality
@@ -600,6 +616,78 @@ For detailed implementation examples and guidelines, refer to the `unit-testing-
    - Verify that performance remains acceptable
    - Check for any unexpected side effects
 
+## Additional Modularization Improvements
+
+To further enhance the modularization effort, the following improvements will be applied across all phases:
+
+### 1. Enhanced Service Design
+
+- **Interface Segregation**: Split large interfaces into more focused ones following the Interface Segregation Principle
+- **Composable Services**: Design services to be composable, with each focusing on a single responsibility
+- **Helper Classes**: Extract complex logic into dedicated helper classes
+- **Factory Patterns**: Use factory patterns for creating complex objects
+
+### 2. Improved Dependency Management
+
+- **Explicit Dependencies**: Make all dependencies explicit through constructor injection
+- **Optional Dependencies**: Handle optional dependencies gracefully
+- **Lazy Initialization**: Use lazy initialization for services that aren't always needed
+- **Service Locator**: Consider a lightweight service locator for complex dependency scenarios
+
+### 3. Robust Error Handling
+
+- **Service-Specific Exceptions**: Create custom exceptions for each service
+- **Retry Mechanisms**: Implement retry policies for transient failures
+- **Circuit Breaker Pattern**: Add circuit breakers for external dependencies
+- **Graceful Degradation**: Ensure services can operate in degraded mode when dependencies fail
+
+### 4. Comprehensive Testing Strategy
+
+- **Test Fixtures**: Develop reusable test fixtures for common scenarios
+- **Integration Tests**: Test interactions between services
+- **Mock External Dependencies**: Create mocks for Windows Registry, CoreAudio, etc.
+- **Test Configuration Variations**: Test with different service configurations
+- **Performance Testing**: Add tests for performance-critical paths
+
+### 5. Event-Based Communication
+
+- **Service Events**: Add events for significant state changes
+- **Observer Pattern**: Allow services to subscribe to events from other services
+- **Loose Coupling**: Use events to reduce direct dependencies between services
+- **State Change Notifications**: Notify interested parties of state changes
+
+### 6. Threading Considerations
+
+- **Thread Safety Documentation**: Clearly document thread safety guarantees
+- **Synchronization Mechanisms**: Add appropriate locks or other synchronization mechanisms
+- **Async Patterns**: Use async/await for I/O-bound operations
+- **Thread Isolation**: Isolate thread-sensitive operations
+
+### 7. Enhanced Documentation
+
+- **XML Documentation**: Ensure comprehensive XML comments for all public members
+- **Architecture Diagrams**: Add diagrams showing service interactions
+- **Dependency Documentation**: Clearly document external dependencies
+- **Usage Examples**: Include usage examples in documentation
+
+### 8. Incremental Implementation
+
+- **Core Functionality First**: Implement essential features before advanced ones
+- **Phased Testing**: Test each increment before moving to the next
+- **Continuous Integration**: Ensure each phase integrates with the existing system
+
+### 9. Extension Points
+
+- **Plugin Architecture**: Design for extensibility with clear extension points
+- **Configuration-Driven Behavior**: Make behavior configurable where appropriate
+- **Strategy Pattern**: Use strategy pattern for interchangeable algorithms
+
+### 10. Progress Tracking
+
+- **Clear Acceptance Criteria**: Define acceptance criteria for each phase
+- **Milestone Checkpoints**: Add checkpoints within each implementation phase
+- **Validation Tests**: Create tests that verify a phase is complete
+
 ## Conclusion
 
-The modularization of Prosim2GSX will significantly improve the codebase's maintainability, testability, and extensibility. By following this phased approach, we can implement the changes incrementally while maintaining a working application throughout the process.
+The modularization of Prosim2GSX will significantly improve the codebase's maintainability, testability, and extensibility. By following this phased approach and implementing the additional improvements, we can create a robust, flexible architecture while maintaining a working application throughout the process.

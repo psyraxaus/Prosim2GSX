@@ -1,440 +1,332 @@
-# Phase 3.2: GSXStateManager Implementation
+# Phase 3.2: GSXAudioService Implementation
 
 ## Overview
 
-This document outlines the implementation plan for Phase 3.2 of the Prosim2GSX modularization strategy. In this phase, we'll extract state management functionality from the GsxController into a dedicated service.
+This document outlines the implementation plan for Phase 3.2 of the Prosim2GSX modularization strategy. In this phase, we'll extract audio control functionality from the GsxController into a separate service following the Single Responsibility Principle.
+
+## Implementation Timeline
+
+| Task | Estimated Duration | Dependencies |
+|------|-------------------|--------------|
+| Create IGSXAudioService interface | 0.5 day | None |
+| Implement GSXAudioService | 1.5 days | IGSXAudioService |
+| Update GsxController | 0.5 day | GSXAudioService |
+| Update ServiceController | 0.5 day | GSXAudioService |
+| Testing | 1 day | All implementation |
+| **Total** | **3-4 days** | |
 
 ## Implementation Steps
 
-### 1. Create FlightStateChangedEventArgs.cs
-
-Create a new event args class in the Services folder:
-
-```csharp
-using System;
-
-namespace Prosim2GSX.Services
-{
-    /// <summary>
-    /// Event arguments for flight state changes
-    /// </summary>
-    public class FlightStateChangedEventArgs : EventArgs
-    {
-        /// <summary>
-        /// Gets the previous flight state
-        /// </summary>
-        public FlightState PreviousState { get; }
-        
-        /// <summary>
-        /// Gets the new flight state
-        /// </summary>
-        public FlightState NewState { get; }
-        
-        /// <summary>
-        /// Gets the timestamp of the state change
-        /// </summary>
-        public DateTime Timestamp { get; }
-        
-        /// <summary>
-        /// Initializes a new instance of the FlightStateChangedEventArgs class
-        /// </summary>
-        /// <param name="previousState">The previous flight state</param>
-        /// <param name="newState">The new flight state</param>
-        public FlightStateChangedEventArgs(FlightState previousState, FlightState newState)
-        {
-            PreviousState = previousState;
-            NewState = newState;
-            Timestamp = DateTime.Now;
-        }
-    }
-}
-```
-
-### 2. Create IGSXStateManager.cs
+### 1. Create IGSXAudioService.cs
 
 Create a new interface file in the Services folder:
 
 ```csharp
-using System;
-
 namespace Prosim2GSX.Services
 {
     /// <summary>
-    /// Interface for GSX state management service
+    /// Interface for GSX audio control service
     /// </summary>
-    public interface IGSXStateManager
+    public interface IGSXAudioService
     {
         /// <summary>
-        /// Gets the current flight state
+        /// Gets audio sessions for GSX and VHF1
         /// </summary>
-        FlightState CurrentState { get; }
+        void GetAudioSessions();
         
         /// <summary>
-        /// Event raised when the flight state changes
+        /// Resets audio settings to default
         /// </summary>
-        event EventHandler<FlightStateChangedEventArgs> StateChanged;
+        void ResetAudio();
         
         /// <summary>
-        /// Initializes the state manager
+        /// Controls audio based on cockpit controls
         /// </summary>
-        void Initialize();
-        
-        /// <summary>
-        /// Updates the flight state based on current conditions
-        /// </summary>
-        /// <param name="simOnGround">Whether the aircraft is on the ground</param>
-        /// <param name="enginesRunning">Whether the engines are running</param>
-        /// <param name="batteryOn">Whether the battery is on</param>
-        /// <param name="flightPlanLoaded">Whether a flight plan is loaded</param>
-        /// <param name="flightPlanId">The ID of the loaded flight plan</param>
-        /// <param name="isTestArrival">Whether this is a test arrival</param>
-        /// <returns>True if the state was updated, false otherwise</returns>
-        bool UpdateState(bool simOnGround, bool enginesRunning, bool batteryOn, bool flightPlanLoaded, string flightPlanId, bool isTestArrival);
-        
-        /// <summary>
-        /// Checks if the current state is PREFLIGHT
-        /// </summary>
-        bool IsPreflight();
-        
-        /// <summary>
-        /// Checks if the current state is DEPARTURE
-        /// </summary>
-        bool IsDeparture();
-        
-        /// <summary>
-        /// Checks if the current state is TAXIOUT
-        /// </summary>
-        bool IsTaxiout();
-        
-        /// <summary>
-        /// Checks if the current state is FLIGHT
-        /// </summary>
-        bool IsFlight();
-        
-        /// <summary>
-        /// Checks if the current state is TAXIIN
-        /// </summary>
-        bool IsTaxiin();
-        
-        /// <summary>
-        /// Checks if the current state is ARRIVAL
-        /// </summary>
-        bool IsArrival();
-        
-        /// <summary>
-        /// Checks if the current state is TURNAROUND
-        /// </summary>
-        bool IsTurnaround();
-        
-        /// <summary>
-        /// Transitions to the DEPARTURE state
-        /// </summary>
-        /// <param name="flightPlanId">The ID of the loaded flight plan</param>
-        void TransitionToDeparture(string flightPlanId);
-        
-        /// <summary>
-        /// Transitions to the TAXIOUT state
-        /// </summary>
-        void TransitionToTaxiout();
-        
-        /// <summary>
-        /// Transitions to the FLIGHT state
-        /// </summary>
-        void TransitionToFlight();
-        
-        /// <summary>
-        /// Transitions to the TAXIIN state
-        /// </summary>
-        void TransitionToTaxiin();
-        
-        /// <summary>
-        /// Transitions to the ARRIVAL state
-        /// </summary>
-        void TransitionToArrival();
-        
-        /// <summary>
-        /// Transitions to the TURNAROUND state
-        /// </summary>
-        void TransitionToTurnaround();
+        void ControlAudio();
     }
 }
 ```
 
-### 3. Create GSXStateManager.cs
+### 2. Create GSXAudioService.cs
 
 Create a new implementation file in the Services folder:
 
 ```csharp
+using CoreAudio;
 using System;
+using System.Diagnostics;
 
 namespace Prosim2GSX.Services
 {
     /// <summary>
-    /// Service for GSX state management
+    /// Service for GSX audio control
     /// </summary>
-    public class GSXStateManager : IGSXStateManager
+    public class GSXAudioService : IGSXAudioService
     {
-        private FlightState state = FlightState.PREFLIGHT;
-        private string currentFlightPlanId = "0";
+        private readonly string gsxProcess = "Couatl64_MSFS";
+        private AudioSessionControl2 gsxAudioSession = null;
+        private float gsxAudioVolume = -1;
+        private int gsxAudioMute = -1;
+        private AudioSessionControl2 vhf1AudioSession = null;
+        private float vhf1AudioVolume = -1;
+        private int vhf1AudioMute = -1;
+        private string lastVhf1App;
         
-        /// <summary>
-        /// Gets the current flight state
-        /// </summary>
-        public FlightState CurrentState => state;
+        private readonly ServiceModel model;
+        private readonly MobiSimConnect simConnect;
         
-        /// <summary>
-        /// Event raised when the flight state changes
-        /// </summary>
-        public event EventHandler<FlightStateChangedEventArgs> StateChanged;
-        
-        /// <summary>
-        /// Initializes a new instance of the GSXStateManager class
-        /// </summary>
-        public GSXStateManager()
+        public GSXAudioService(ServiceModel model, MobiSimConnect simConnect)
         {
+            this.model = model;
+            this.simConnect = simConnect;
+            
+            if (!string.IsNullOrEmpty(model.Vhf1VolumeApp))
+                lastVhf1App = model.Vhf1VolumeApp;
         }
         
         /// <summary>
-        /// Initializes the state manager
+        /// Gets audio sessions for GSX and VHF1
         /// </summary>
-        public void Initialize()
+        public void GetAudioSessions()
         {
-            state = FlightState.PREFLIGHT;
-            currentFlightPlanId = "0";
-            Logger.Log(LogLevel.Information, "GSXStateManager:Initialize", $"State initialized to {state}");
-        }
-        
-        /// <summary>
-        /// Updates the flight state based on current conditions
-        /// </summary>
-        public bool UpdateState(bool simOnGround, bool enginesRunning, bool batteryOn, bool flightPlanLoaded, string flightPlanId, bool isTestArrival)
-        {
-            FlightState previousState = state;
-            bool stateChanged = false;
-            
-            // Special case: Test arrival
-            if (state == FlightState.PREFLIGHT && isTestArrival)
+            if (model.GsxVolumeControl && gsxAudioSession == null)
             {
-                state = FlightState.FLIGHT;
-                currentFlightPlanId = flightPlanId;
-                Logger.Log(LogLevel.Information, "GSXStateManager:UpdateState", $"Test Arrival - Plane is in 'Flight'");
-                OnStateChanged(previousState, state);
-                return true;
-            }
-            
-            // Special case: Loaded in flight or with engines running
-            if (state == FlightState.PREFLIGHT && (!simOnGround || enginesRunning))
-            {
-                state = FlightState.FLIGHT;
-                currentFlightPlanId = flightPlanId;
-                Logger.Log(LogLevel.Information, "GSXStateManager:UpdateState", $"Starting in flight or with engines running - State set to Flight");
-                OnStateChanged(previousState, state);
-                return true;
-            }
-            
-            // Normal state transitions
-            switch (state)
-            {
-                case FlightState.PREFLIGHT:
-                    if (simOnGround && !enginesRunning && batteryOn && flightPlanLoaded)
+                MMDeviceEnumerator deviceEnumerator = new(Guid.NewGuid());
+                var devices = deviceEnumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
+
+                foreach (var device in devices)
+                {
+                    foreach (var session in device.AudioSessionManager2.Sessions)
                     {
-                        state = FlightState.DEPARTURE;
-                        currentFlightPlanId = flightPlanId;
-                        Logger.Log(LogLevel.Information, "GSXStateManager:UpdateState", $"State Change: Preparation -> DEPARTURE (Waiting for Refueling and Boarding)");
-                        stateChanged = true;
+                        Process p = Process.GetProcessById((int)session.ProcessID);
+                        if (p.ProcessName == gsxProcess)
+                        {
+                            gsxAudioSession = session;
+                            Logger.Log(LogLevel.Information, "GSXAudioService:GetAudioSessions", $"Found Audio Session for GSX");
+                            break;
+                        }
                     }
-                    break;
-                    
-                case FlightState.DEPARTURE:
-                    // Transition to TAXIOUT happens in GsxController when equipment is removed
-                    break;
-                    
-                case FlightState.TAXIOUT:
-                    if (!simOnGround)
+
+                    if (gsxAudioSession != null)
+                        break;
+                }
+            }
+
+            if (model.IsVhf1Controllable() && vhf1AudioSession == null)
+            {
+                MMDeviceEnumerator deviceEnumerator = new(Guid.NewGuid());
+                var devices = deviceEnumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
+
+                foreach (var device in devices)
+                {
+                    foreach (var session in device.AudioSessionManager2.Sessions)
                     {
-                        state = FlightState.FLIGHT;
-                        Logger.Log(LogLevel.Information, "GSXStateManager:UpdateState", $"State Change: Taxi-Out -> Flight");
-                        stateChanged = true;
+                        Process p = Process.GetProcessById((int)session.ProcessID);
+                        if (p.ProcessName == model.Vhf1VolumeApp)
+                        {
+                            vhf1AudioSession = session;
+                            Logger.Log(LogLevel.Information, "GSXAudioService:GetAudioSessions", $"Found Audio Session for {model.Vhf1VolumeApp}");
+                            break;
+                        }
                     }
-                    break;
-                    
-                case FlightState.FLIGHT:
-                    if (simOnGround)
-                    {
-                        state = FlightState.TAXIIN;
-                        Logger.Log(LogLevel.Information, "GSXStateManager:UpdateState", $"State Change: Flight -> Taxi-In (Waiting for Engines stopped and Beacon off)");
-                        stateChanged = true;
-                    }
-                    break;
-                    
-                case FlightState.TAXIIN:
-                    // Transition to ARRIVAL happens in GsxController when engines are stopped and parking brake is set
-                    break;
-                    
-                case FlightState.ARRIVAL:
-                    // Transition to TURNAROUND happens in GsxController when deboarding is complete
-                    break;
-                    
-                case FlightState.TURNAROUND:
-                    if (flightPlanLoaded && flightPlanId != currentFlightPlanId)
-                    {
-                        state = FlightState.DEPARTURE;
-                        currentFlightPlanId = flightPlanId;
-                        Logger.Log(LogLevel.Information, "GSXStateManager:UpdateState", $"State Change: Turn-Around -> DEPARTURE (Waiting for Refueling and Boarding)");
-                        stateChanged = true;
-                    }
-                    break;
-            }
-            
-            if (stateChanged)
-            {
-                OnStateChanged(previousState, state);
-            }
-            
-            return stateChanged;
-        }
-        
-        /// <summary>
-        /// Checks if the current state is PREFLIGHT
-        /// </summary>
-        public bool IsPreflight() => state == FlightState.PREFLIGHT;
-        
-        /// <summary>
-        /// Checks if the current state is DEPARTURE
-        /// </summary>
-        public bool IsDeparture() => state == FlightState.DEPARTURE;
-        
-        /// <summary>
-        /// Checks if the current state is TAXIOUT
-        /// </summary>
-        public bool IsTaxiout() => state == FlightState.TAXIOUT;
-        
-        /// <summary>
-        /// Checks if the current state is FLIGHT
-        /// </summary>
-        public bool IsFlight() => state == FlightState.FLIGHT;
-        
-        /// <summary>
-        /// Checks if the current state is TAXIIN
-        /// </summary>
-        public bool IsTaxiin() => state == FlightState.TAXIIN;
-        
-        /// <summary>
-        /// Checks if the current state is ARRIVAL
-        /// </summary>
-        public bool IsArrival() => state == FlightState.ARRIVAL;
-        
-        /// <summary>
-        /// Checks if the current state is TURNAROUND
-        /// </summary>
-        public bool IsTurnaround() => state == FlightState.TURNAROUND;
-        
-        /// <summary>
-        /// Transitions to the DEPARTURE state
-        /// </summary>
-        public void TransitionToDeparture(string flightPlanId)
-        {
-            if (state != FlightState.DEPARTURE)
-            {
-                FlightState previousState = state;
-                state = FlightState.DEPARTURE;
-                currentFlightPlanId = flightPlanId;
-                Logger.Log(LogLevel.Information, "GSXStateManager:TransitionToDeparture", $"State Change: {previousState} -> DEPARTURE");
-                OnStateChanged(previousState, state);
+
+                    if (vhf1AudioSession != null)
+                        break;
+                }
             }
         }
         
         /// <summary>
-        /// Transitions to the TAXIOUT state
+        /// Resets audio settings to default
         /// </summary>
-        public void TransitionToTaxiout()
+        public void ResetAudio()
         {
-            if (state != FlightState.TAXIOUT)
+            if (gsxAudioSession != null && (gsxAudioSession.SimpleAudioVolume.MasterVolume != 1.0f || gsxAudioSession.SimpleAudioVolume.Mute))
             {
-                FlightState previousState = state;
-                state = FlightState.TAXIOUT;
-                Logger.Log(LogLevel.Information, "GSXStateManager:TransitionToTaxiout", $"State Change: {previousState} -> TAXIOUT");
-                OnStateChanged(previousState, state);
+                gsxAudioSession.SimpleAudioVolume.MasterVolume = 1.0f;
+                gsxAudioSession.SimpleAudioVolume.Mute = false;
+                Logger.Log(LogLevel.Information, "GSXAudioService:ResetAudio", $"Audio resetted for GSX");
+            }
+
+            if (vhf1AudioSession != null && (vhf1AudioSession.SimpleAudioVolume.MasterVolume != 1.0f || vhf1AudioSession.SimpleAudioVolume.Mute))
+            {
+                vhf1AudioSession.SimpleAudioVolume.MasterVolume = 1.0f;
+                vhf1AudioSession.SimpleAudioVolume.Mute = false;
+                Logger.Log(LogLevel.Information, "GSXAudioService:ResetAudio", $"Audio resetted for {model.Vhf1VolumeApp}");
             }
         }
         
         /// <summary>
-        /// Transitions to the FLIGHT state
+        /// Controls audio based on cockpit controls
         /// </summary>
-        public void TransitionToFlight()
+        public void ControlAudio()
         {
-            if (state != FlightState.FLIGHT)
+            try
             {
-                FlightState previousState = state;
-                state = FlightState.FLIGHT;
-                Logger.Log(LogLevel.Information, "GSXStateManager:TransitionToFlight", $"State Change: {previousState} -> FLIGHT");
-                OnStateChanged(previousState, state);
+                if (simConnect.ReadLvar("I_FCU_TRACK_FPA_MODE") == 0 && simConnect.ReadLvar("I_FCU_HEADING_VS_MODE") == 0)
+                {
+                    if (model.GsxVolumeControl || model.IsVhf1Controllable())
+                        ResetAudio();
+                    return;
+                }
+
+                // GSX Audio Control
+                ControlGsxAudio();
+                
+                // VHF1 Audio Control
+                ControlVhf1Audio();
+                
+                // App Change Handling
+                HandleAppChange();
+                
+                // Process Exit Handling
+                HandleProcessExits();
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Debug, "GSXAudioService:ControlAudio", $"Exception {ex.GetType()} during Audio Control: {ex.Message}");
             }
         }
         
-        /// <summary>
-        /// Transitions to the TAXIIN state
-        /// </summary>
-        public void TransitionToTaxiin()
+        private void ControlGsxAudio()
         {
-            if (state != FlightState.TAXIIN)
+            if (model.GsxVolumeControl && gsxAudioSession != null)
             {
-                FlightState previousState = state;
-                state = FlightState.TAXIIN;
-                Logger.Log(LogLevel.Information, "GSXStateManager:TransitionToTaxiin", $"State Change: {previousState} -> TAXIIN");
-                OnStateChanged(previousState, state);
+                float volume = simConnect.ReadLvar("A_ASP_INT_VOLUME");
+                int muted = (int)simConnect.ReadLvar("I_ASP_INT_REC");
+                if (volume >= 0 && volume != gsxAudioVolume)
+                {
+                    gsxAudioSession.SimpleAudioVolume.MasterVolume = volume;
+                    gsxAudioVolume = volume;
+                }
+
+                if (muted >= 0 && muted != gsxAudioMute)
+                {
+                    gsxAudioSession.SimpleAudioVolume.Mute = muted == 0;
+                    gsxAudioMute = muted;
+                }
+            }
+            else if (model.GsxVolumeControl && gsxAudioSession == null)
+            {
+                GetAudioSessions();
+                gsxAudioVolume = -1;
+                gsxAudioMute = -1;
+            }
+            else if (!model.GsxVolumeControl && gsxAudioSession != null)
+            {
+                gsxAudioSession.SimpleAudioVolume.MasterVolume = 1.0f;
+                gsxAudioSession.SimpleAudioVolume.Mute = false;
+                gsxAudioSession = null;
+                gsxAudioVolume = -1;
+                gsxAudioMute = -1;
+                Logger.Log(LogLevel.Information, "GSXAudioService:ControlAudio", $"Disabled Audio Session for GSX (Setting disabled)");
             }
         }
         
-        /// <summary>
-        /// Transitions to the ARRIVAL state
-        /// </summary>
-        public void TransitionToArrival()
+        private void ControlVhf1Audio()
         {
-            if (state != FlightState.ARRIVAL)
+            if (model.IsVhf1Controllable() && vhf1AudioSession != null)
             {
-                FlightState previousState = state;
-                state = FlightState.ARRIVAL;
-                Logger.Log(LogLevel.Information, "GSXStateManager:TransitionToArrival", $"State Change: {previousState} -> ARRIVAL");
-                OnStateChanged(previousState, state);
+                float volume = simConnect.ReadLvar("A_ASP_VHF_1_VOLUME");
+                int muted = (int)simConnect.ReadLvar("I_ASP_VHF_1_REC");
+                if (volume >= 0 && volume != vhf1AudioVolume)
+                {
+                    vhf1AudioSession.SimpleAudioVolume.MasterVolume = volume;
+                    vhf1AudioVolume = volume;
+                }
+
+                if (model.Vhf1LatchMute && muted >= 0 && muted != vhf1AudioMute)
+                {
+                    vhf1AudioSession.SimpleAudioVolume.Mute = muted == 0;
+                    vhf1AudioMute = muted;
+                }
+                else if (!model.Vhf1LatchMute && vhf1AudioSession.SimpleAudioVolume.Mute)
+                {
+                    Logger.Log(LogLevel.Information, "GSXAudioService:ControlAudio", $"Unmuting {lastVhf1App} (App muted and Mute-Option disabled)");
+                    vhf1AudioSession.SimpleAudioVolume.Mute = false;
+                    vhf1AudioMute = -1;
+                }
+            }
+            else if (model.IsVhf1Controllable() && vhf1AudioSession == null)
+            {
+                GetAudioSessions();
+                vhf1AudioVolume = -1;
+                vhf1AudioMute = -1;
+            }
+            else if (!model.Vhf1VolumeControl && !string.IsNullOrEmpty(lastVhf1App) && vhf1AudioSession != null)
+            {
+                vhf1AudioSession.SimpleAudioVolume.MasterVolume = 1.0f;
+                vhf1AudioSession.SimpleAudioVolume.Mute = false;
+                vhf1AudioSession = null;
+                vhf1AudioVolume = -1;
+                vhf1AudioMute = -1;
+                Logger.Log(LogLevel.Information, "GSXAudioService:ControlAudio", $"Disabled Audio Session for {lastVhf1App} (Setting disabled)");
             }
         }
         
-        /// <summary>
-        /// Transitions to the TURNAROUND state
-        /// </summary>
-        public void TransitionToTurnaround()
+        private void HandleAppChange()
         {
-            if (state != FlightState.TURNAROUND)
+            if (lastVhf1App != model.Vhf1VolumeApp)
             {
-                FlightState previousState = state;
-                state = FlightState.TURNAROUND;
-                Logger.Log(LogLevel.Information, "GSXStateManager:TransitionToTurnaround", $"State Change: {previousState} -> TURNAROUND");
-                OnStateChanged(previousState, state);
+                if (vhf1AudioSession != null)
+                {
+                    vhf1AudioSession.SimpleAudioVolume.MasterVolume = 1.0f;
+                    vhf1AudioSession.SimpleAudioVolume.Mute = false;
+                    vhf1AudioSession = null;
+                    vhf1AudioVolume = -1;
+                    vhf1AudioMute = -1;
+                    Logger.Log(LogLevel.Information, "GSXAudioService:ControlAudio", $"Disabled Audio Session for {lastVhf1App} (App changed)");
+                }
+                GetAudioSessions();
             }
+            lastVhf1App = model.Vhf1VolumeApp;
         }
         
-        /// <summary>
-        /// Raises the StateChanged event
-        /// </summary>
-        protected virtual void OnStateChanged(FlightState previousState, FlightState newState)
+        private void HandleProcessExits()
         {
-            StateChanged?.Invoke(this, new FlightStateChangedEventArgs(previousState, newState));
+            // GSX exited
+            if (model.GsxVolumeControl && gsxAudioSession != null && !IPCManager.IsProcessRunning(gsxProcess))
+            {
+                gsxAudioSession = null;
+                gsxAudioVolume = -1;
+                gsxAudioMute = -1;
+                Logger.Log(LogLevel.Information, "GSXAudioService:ControlAudio", $"Disabled Audio Session for GSX (App not running)");
+            }
+
+            // COUATL
+            if (model.GsxVolumeControl && gsxAudioSession != null && simConnect.ReadLvar("FSDT_GSX_COUATL_STARTED") != 1)
+            {
+                gsxAudioSession.SimpleAudioVolume.MasterVolume = 1.0f;
+                gsxAudioSession.SimpleAudioVolume.Mute = false;
+                gsxAudioSession = null;
+                gsxAudioVolume = -1;
+                gsxAudioMute = -1;
+                Logger.Log(LogLevel.Information, "GSXAudioService:ControlAudio", $"Disabled Audio Session for GSX (Couatl Engine not started)");
+            }
+
+            // VHF1 exited
+            if (model.IsVhf1Controllable() && vhf1AudioSession != null && !IPCManager.IsProcessRunning(model.Vhf1VolumeApp))
+            {
+                vhf1AudioSession = null;
+                vhf1AudioVolume = -1;
+                vhf1AudioMute = -1;
+                Logger.Log(LogLevel.Information, "GSXAudioService:ControlAudio", $"Disabled Audio Session for {model.Vhf1VolumeApp} (App not running)");
+            }
         }
     }
 }
 ```
 
-### 4. Update GsxController.cs
+### 3. Update GsxController.cs
 
 Update the GsxController class to use the new service:
 
 ```csharp
 // Add new field
-private readonly IGSXStateManager stateManager;
+private readonly IGSXAudioService audioService;
 
-// Update constructor
-public GsxController(ServiceModel model, ProsimController prosimController, FlightPlan flightPlan, IAcarsService acarsService, IGSXMenuService menuService, IGSXAudioService audioService, IGSXStateManager stateManager)
+// Update constructor (assuming GSXMenuService was already added in Phase 3.1)
+public GsxController(ServiceModel model, ProsimController prosimController, FlightPlan flightPlan, IAcarsService acarsService, IGSXMenuService menuService, IGSXAudioService audioService)
 {
     Model = model;
     ProsimController = prosimController;
@@ -442,314 +334,31 @@ public GsxController(ServiceModel model, ProsimController prosimController, Flig
     this.acarsService = acarsService;
     this.menuService = menuService;
     this.audioService = audioService;
-    this.stateManager = stateManager;
 
     SimConnect = IPCManager.SimConnect;
     // Subscribe to SimConnect variables...
-    
-    // Initialize state manager
-    stateManager.Initialize();
-    
-    // Subscribe to state change events
-    stateManager.StateChanged += OnStateChanged;
-    
-    if (Model.TestArrival)
-        ProsimController.Update(true);
 }
 
-// Add event handler for state changes
-private void OnStateChanged(object sender, FlightStateChangedEventArgs e)
+// Replace GetAudioSessions method with call to service
+private void GetAudioSessions()
 {
-    // Handle state changes
-    switch (e.NewState)
-    {
-        case FlightState.FLIGHT:
-            Interval = 180000; // Longer interval during flight
-            break;
-        case FlightState.TAXIIN:
-            Interval = 2500; // Shorter interval during taxi
-            if (Model.TestArrival)
-                flightPlanID = ProsimController.flightPlanID;
-            pcaCalled = false;
-            connectCalled = false;
-            break;
-        default:
-            Interval = 1000; // Default interval
-            break;
-    }
+    audioService.GetAudioSessions();
 }
 
-// Replace CurrentFlightState property with call to service
-public FlightState CurrentFlightState => stateManager.CurrentState;
-
-// Update RunServices method to use stateManager
-public void RunServices()
+// Replace ResetAudio method with call to service
+public void ResetAudio()
 {
-    // Check if SimConnect is available
-    if (SimConnect == null)
-    {
-        Logger.Log(LogLevel.Warning, "GsxController:RunServices", "SimConnect not available");
-        return;
-    }
-    
-    // Check if FlightPlan is available when needed
-    if (FlightPlan == null)
-    {
-        Logger.Log(LogLevel.Warning, "GsxController:RunServices", "FlightPlan not available");
-        return;
-    }
-    
-    // Mark as initialized on first successful run
-    if (!_isInitialized)
-    {
-        _isInitialized = true;
-        Logger.Log(LogLevel.Information, "GsxController:RunServices", "GSX Controller initialized and ready");
-    }
-    
-    bool simOnGround = SimConnect.ReadSimVar("SIM ON GROUND", "Bool") != 0.0f;
-    ProsimController.Update(false);
-
-    if (menuService.OperatorWasSelected)
-    {
-        MenuOpen();
-        menuService.OperatorWasSelected = false;
-    }
-
-    // Update state based on current conditions
-    bool batteryOn = ProsimController.Interface.ReadDataRef("system.switches.S_OH_ELEC_BAT1") == 1;
-    bool flightPlanLoaded = ProsimController.IsFlightplanLoaded();
-    stateManager.UpdateState(simOnGround, ProsimController.enginesRunning, batteryOn, flightPlanLoaded, ProsimController.flightPlanID, Model.TestArrival);
-
-    // Handle ACARS initialization in PREFLIGHT state
-    if (stateManager.IsPreflight() && simOnGround && !ProsimController.enginesRunning && batteryOn)
-    {
-        if (Model.UseAcars && !opsCallsignSet)
-        {
-            try
-            {
-                opsCallsign = acarsService.FlightCallsignToOpsCallsign(ProsimController.flightNumber);
-                acarsService.Initialize(ProsimController.flightNumber);
-                opsCallsignSet = true;
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Error, "GsxController:RunServices", $"Unable to set opsCallSign - Error: {ex.Message}");
-            }
-        }
-
-        if (SimConnect.ReadLvar("FSDT_GSX_COUATL_STARTED") != 1)
-        {
-            Logger.Log(LogLevel.Information, "GsxController:RunServices", $"Couatl Engine not running");
-
-            if (Model.GsxVolumeControl && gsxAudioSession != null)
-            {
-                Logger.Log(LogLevel.Information, "GsxController:RunServices", $"Resetting GSX Audio (Engine not running)");
-                gsxAudioSession = null;
-            }
-
-            return;
-        }
-
-        if (Model.RepositionPlane && !planePositioned)
-        {
-            Logger.Log(LogLevel.Information, "GsxController:RunServices", $"Waiting {Model.RepositionDelay}s before Repositioning ...");
-            ProsimController.SetServiceChocks(true);
-            Thread.Sleep((int)(Model.RepositionDelay * 1000.0f));
-            Logger.Log(LogLevel.Information, "GsxController:RunServices", $"Repositioning Plane");
-            MenuOpen();
-            Thread.Sleep(100);
-            MenuItem(10);
-            Thread.Sleep(250);
-            MenuItem(1);
-            planePositioned = true;
-            Thread.Sleep(1500);
-            return;
-        }
-        else if (!Model.RepositionPlane && !planePositioned)
-        {
-            planePositioned = true;
-            Logger.Log(LogLevel.Information, "GsxController:RunServices", $"Repositioning was skipped (disabled in Settings)");
-        }
-
-        if (Model.AutoConnect && !connectCalled)
-        {
-            CallJetwayStairs();
-            connectCalled = true;
-            return;
-        }
-
-        if (Model.ConnectPCA && !pcaCalled && (!Model.PcaOnlyJetways || (Model.PcaOnlyJetways && SimConnect.ReadLvar("FSDT_GSX_JETWAY") != 2)))
-        {
-            Logger.Log(LogLevel.Information, "GsxController:RunServices", $"Connecting PCA");
-            ProsimController.SetServicePCA(true);
-            pcaCalled = true;
-            return;
-        }
-
-        if (firstRun)
-        {
-            Logger.Log(LogLevel.Information, "GsxController:RunServices", $"Setting GPU and Chocks");
-            ProsimController.SetServiceChocks(true);
-            ProsimController.SetServiceGPU(true);
-            Logger.Log(LogLevel.Information, "GsxController:RunServices", $"State: Preparation (Waiting for Flightplan import)");
-            firstRun = false;
-        }
-
-        if (flightPlanLoaded)
-        {
-            stateManager.TransitionToDeparture(ProsimController.flightPlanID);
-            flightPlanID = ProsimController.flightPlanID;
-            SetPassengers(ProsimController.GetPaxPlanned());
-            if (!prelimFlightData)
-            {
-                macZfw = ProsimController.GetZfwCG();
-                Logger.Log(LogLevel.Information, "GsxController:RunServices", $"MACZFW: {macZfw} %");
-
-                prelimFlightData = true;
-            }
-        }
-    }
-
-    // Handle DEPARTURE state
-    if (stateManager.IsDeparture())
-    {
-        // Get sim Zulu Time and send Prelim Loadsheet
-        if (!prelimLoadsheet)
-        {
-            var simTime = SimConnect.ReadEnvVar("ZULU TIME", "Seconds");
-            TimeSpan time = TimeSpan.FromSeconds(simTime);
-            Logger.Log(LogLevel.Debug, "GsxController:RunServices", $"ZULU time - {simTime}");
-
-            string flightNumber = ProsimController.GetFMSFlightNumber();
-
-            if (Model.UseAcars && !string.IsNullOrEmpty(flightNumber))
-            {
-                var prelimLoadedData = ProsimController.GetLoadedData("prelim");
-                try
-                {
-                    System.Threading.Tasks.Task task = acarsService.SendPreliminaryLoadsheetAsync(ProsimController.GetFMSFlightNumber(), prelimLoadedData);
-                    prelimLoadsheet = true;
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log(LogLevel.Debug, "GsxController:RunServices", $"Error Sending ACARS - {ex.Message}");
-                }
-            }
-        }
-
-        // Boarding & Refueling
-        int refuelState = (int)SimConnect.ReadLvar("FSDT_GSX_REFUELING_STATE");
-        int cateringState = (int)SimConnect.ReadLvar("FSDT_GSX_CATERING_STATE");
-        if (!refuelFinished || !boardFinished)
-        {
-            RunLoadingServices(refuelState, cateringState);
-            return;
-        }
-
-        // Loadsheet & Ground-Equipment
-        if (refuelFinished && boardFinished)
-        {
-            RunDEPARTUREServices();
-            return;
-        }
-    }
-
-    // Handle TAXIOUT -> FLIGHT transition
-    if (stateManager.IsTaxiout() && !simOnGround)
-    {
-        stateManager.TransitionToFlight();
-        return;
-    }
-
-    // Handle FLIGHT -> TAXIIN transition
-    if (stateManager.IsFlight() && simOnGround)
-    {
-        stateManager.TransitionToTaxiin();
-        return;
-    }
-
-    // Handle TAXIIN -> ARRIVAL transition
-    int deboard_state = (int)SimConnect.ReadLvar("FSDT_GSX_DEBOARDING_STATE");
-    if (stateManager.IsTaxiin() && SimConnect.ReadLvar("FSDT_VAR_EnginesStopped") == 1 && SimConnect.ReadLvar("S_MIP_PARKING_BRAKE") == 1 && SimConnect.ReadLvar("S_OH_EXT_LT_BEACON") == 0)
-    {
-        RunArrivalServices(deboard_state);
-        return;
-    }
-
-    // Handle ARRIVAL - Deboarding
-    if (stateManager.IsArrival() && deboard_state >= 4)
-    {
-        RunDeboardingService(deboard_state);
-    }
+    audioService.ResetAudio();
 }
 
-// Update RunDEPARTUREServices method to use stateManager
-private void RunDEPARTUREServices()
+// Replace ControlAudio method with call to service
+public void ControlAudio()
 {
-    // ... existing code ...
-    
-    // Update state transition
-    if (!pushFinished)
-    {
-        // ... existing code ...
-    }
-    else // DEPARTURE -> TAXIOUT
-    {
-        stateManager.TransitionToTaxiout();
-        delay = 0;
-        delayCounter = 0;
-    }
-}
-
-// Update RunArrivalServices method to use stateManager
-private void RunArrivalServices(int deboard_state)
-{
-    // ... existing code ...
-    
-    // Update state transition
-    stateManager.TransitionToArrival();
-    
-    // ... existing code ...
-}
-
-// Update RunDeboardingService method to use stateManager
-private void RunDeboardingService(int deboard_state)
-{
-    // ... existing code ...
-    
-    if (deboarding)
-    {
-        // ... existing code ...
-        
-        if (ProsimController.Deboarding(paxCurrent, (int)SimConnect.ReadLvar("FSDT_GSX_DEBOARDING_CARGO_PERCENT")) || deboard_state == 6 || deboard_state == 1)
-        {
-            deboarding = false;
-            Logger.Log(LogLevel.Information, "GsxController:RunDeboardingService", $"Deboarding finished (GSX State {deboard_state})");
-            ProsimController.DeboardingStop();
-            
-            // Update state transition
-            stateManager.TransitionToTurnaround();
-            
-            Interval = 10000;
-            return;
-        }
-    }
-}
-
-// Clean up resources
-public void Dispose()
-{
-    // Unsubscribe from events
-    if (stateManager != null)
-    {
-        stateManager.StateChanged -= OnStateChanged;
-    }
-    
-    // ... other cleanup code ...
+    audioService.ControlAudio();
 }
 ```
 
-### 5. Update ServiceController.cs
+### 4. Update ServiceController.cs
 
 Update the ServiceController class to initialize the new service:
 
@@ -779,10 +388,9 @@ protected void InitializeServices()
     // Step 6: Create GSX services
     var menuService = new GSXMenuService(Model, IPCManager.SimConnect);
     var audioService = new GSXAudioService(Model, IPCManager.SimConnect);
-    var stateManager = new GSXStateManager();
     
     // Step 7: Create GsxController
-    var gsxController = new GsxController(Model, ProsimController, FlightPlan, acarsService, menuService, audioService, stateManager);
+    var gsxController = new GsxController(Model, ProsimController, FlightPlan, acarsService, menuService, audioService);
     
     // Store the GsxController in IPCManager
     IPCManager.GsxController = gsxController;
@@ -791,75 +399,106 @@ protected void InitializeServices()
 }
 ```
 
-### 6. Add Unit Tests
+### 5. Add Unit Tests
 
-Create unit tests for the new service in the Tests folder:
+Create unit tests for GSXAudioService in the Tests folder:
 
 ```csharp
 [TestClass]
-public class GSXStateManagerTests
+public class GSXAudioServiceTests
 {
     [TestMethod]
-    public void Initialize_SetsStateToPreFlight()
+    public void Constructor_InitializesCorrectly()
     {
         // Arrange
-        var stateManager = new GSXStateManager();
+        var model = new ServiceModel();
+        var simConnectMock = new Mock<MobiSimConnect>();
         
         // Act
-        stateManager.Initialize();
+        var service = new GSXAudioService(model, simConnectMock.Object);
         
         // Assert
-        Assert.AreEqual(FlightState.PREFLIGHT, stateManager.CurrentState);
+        Assert.IsNotNull(service);
     }
     
     [TestMethod]
-    public void UpdateState_TestArrival_TransitionsToFlight()
+    public void ResetAudio_ResetsAudioSessions()
     {
         // Arrange
-        var stateManager = new GSXStateManager();
-        stateManager.Initialize();
-        bool stateChanged = false;
-        stateManager.StateChanged += (sender, e) => stateChanged = true;
+        var model = new ServiceModel { GsxVolumeControl = true };
+        var simConnectMock = new Mock<MobiSimConnect>();
+        var service = new GSXAudioService(model, simConnectMock.Object);
+        
+        // Note: This test would need to mock the CoreAudio dependencies
+        // which is beyond the scope of this implementation plan
         
         // Act
-        bool result = stateManager.UpdateState(true, false, true, true, "123", true);
+        service.ResetAudio();
         
         // Assert
-        Assert.IsTrue(result);
-        Assert.IsTrue(stateChanged);
-        Assert.AreEqual(FlightState.FLIGHT, stateManager.CurrentState);
+        // Verify audio sessions are reset
     }
     
-    // Add more tests for other state transitions
+    // Additional tests for other methods...
 }
 ```
 
-### 7. Test the Implementation
+### 6. Test the Implementation
 
 Test the implementation to ensure it works correctly.
 
 ## Benefits
 
 1. **Improved Separation of Concerns**
-   - State management is now handled by a dedicated service
-   - State transitions are centralized and consistent
+   - Audio control is now handled by a dedicated service
+   - The service has a single responsibility
    - GsxController is simplified and more focused
+   - Clear boundaries between different functionalities
 
 2. **Enhanced Testability**
-   - State transitions can be tested in isolation
+   - The service can be tested in isolation
    - Dependencies are explicit and can be mocked
-   - Unit tests can be written for each state transition
+   - Unit tests can be written for the service
+   - Easier to simulate different scenarios
 
 3. **Better Maintainability**
-   - Changes to state management can be made without affecting other parts of the system
+   - Changes to audio control can be made without affecting other parts of the system
    - Code is more organized and easier to understand
-   - New states or transitions can be added without modifying GsxController
+   - New features can be added to the service without modifying GsxController
+   - Reduced complexity in GsxController
 
-4. **Event-Based Communication**
-   - Components can subscribe to state changes
-   - Reduces tight coupling between components
-   - Makes the system more extensible
+4. **Improved Error Handling**
+   - More focused error handling in the service
+   - Better isolation of failures
+   - Clearer logging and diagnostics
+   - Easier to recover from specific failures
+
+## Implementation Considerations
+
+### Dependencies
+- **CoreAudio**: The GSXAudioService will depend on the CoreAudio library for audio control
+- **SimConnect**: The service will need access to SimConnect for reading/writing L-vars
+- **Process Monitoring**: The service will need to monitor process state
+
+### Error Handling
+- Implement robust error handling in the service
+- Use try-catch blocks for operations that might fail
+- Log exceptions with appropriate context
+- Provide fallback behavior when possible
+
+### Testing Strategy
+- Create unit tests for the service
+- Test normal operation paths
+- Test error handling paths
+- Test edge cases (e.g., missing audio sessions, process exits)
+- Mock CoreAudio dependencies for testing
+
+### Refactoring Opportunities
+- Consider further breaking down the GSXAudioService into smaller components:
+  - GSXAudioSessionManager for managing audio sessions
+  - GSXAudioVolumeController for controlling volume
+  - GSXProcessMonitor for monitoring process state
 
 ## Next Steps
 
-After implementing Phase 3.2, we'll proceed with Phase 3.3 to extract service coordination functionality into a dedicated GSXServiceCoordinator service.
+After implementing Phase 3.2, we'll proceed with Phase 3.3 to extract state management functionality into a dedicated GSXStateManager service. This will further reduce the complexity of the GsxController and improve the overall architecture of the application.
