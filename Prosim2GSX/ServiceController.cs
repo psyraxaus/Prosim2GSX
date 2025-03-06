@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Threading;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
@@ -173,13 +173,14 @@ namespace Prosim2GSX
             // Step 7: Create GSX services
             var menuService = new GSXMenuService(Model, IPCManager.SimConnect);
             var audioService = new GSXAudioService(Model, IPCManager.SimConnect, audioSessionManager);
+            var stateManager = new GSXStateManager();
             
             // Configure audio service properties
             audioService.AudioSessionRetryCount = 5; // Increase retry count for better reliability
             audioService.AudioSessionRetryDelay = TimeSpan.FromSeconds(1); // Shorter delay between retries
             
             // Step 8: Create GsxController
-            var gsxController = new GsxController(Model, ProsimController, FlightPlan, acarsService, menuService, audioService);
+            var gsxController = new GsxController(Model, ProsimController, FlightPlan, acarsService, menuService, audioService, stateManager);
             
             // Store the GsxController in IPCManager so it can be accessed by the MainWindow
             IPCManager.GsxController = gsxController;
