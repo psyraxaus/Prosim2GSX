@@ -2,322 +2,39 @@
 
 ## Overview
 
-This document outlines the implementation plan for Phase 3.2 of the Prosim2GSX modularization strategy. In this phase, we'll extract audio control functionality from the GsxController into a separate service following the Single Responsibility Principle.
+This document outlines the enhanced implementation plan for Phase 3.2 of the Prosim2GSX modularization strategy. In this phase, we'll extract audio control functionality from the GsxController into a separate service following the Single Responsibility Principle, with improved testability, thread safety, and event-based communication.
 
 ## Implementation Timeline
 
 | Task | Estimated Duration | Dependencies |
 |------|-------------------|--------------|
+| Create IAudioSessionManager interface and implementation | 0.5 day | None |
 | Create IGSXAudioService interface | 0.5 day | None |
-| Implement GSXAudioService | 1.5 days | IGSXAudioService |
+| Implement GSXAudioService | 2 days | IGSXAudioService, IAudioSessionManager |
 | Update GsxController | 0.5 day | GSXAudioService |
-| Update ServiceController | 0.5 day | GSXAudioService |
-| Testing | 1 day | All implementation |
-| **Total** | **3-4 days** | |
+| Update ServiceController | 0.5 day | GSXAudioService, AudioSessionManager |
+| Testing | 1.5 days | All implementation |
+| **Total** | **5-5.5 days** | |
 
 ## Implementation Steps
 
-### 1. Create IGSXAudioService.cs
+### 1. Create IAudioSessionManager.cs
 
-Create a new interface file in the Services folder:
+Create a new interface file in the Services folder to abstract CoreAudio functionality.
 
-```csharp
-namespace Prosim2GSX.Services
-{
-    /// <summary>
-    /// Interface for GSX audio control service
-    /// </summary>
-    public interface IGSXAudioService
-    {
-        /// <summary>
-        /// Gets audio sessions for GSX and VHF1
-        /// </summary>
-        void GetAudioSessions();
-        
-        /// <summary>
-        /// Resets audio settings to default
-        /// </summary>
-        void ResetAudio();
-        
-        /// <summary>
-        /// Controls audio based on cockpit controls
-        /// </summary>
-        void ControlAudio();
-    }
-}
-```
+### 2. Create Event Argument Classes
 
-### 2. Create GSXAudioService.cs
+Create event argument classes for audio events.
 
-Create a new implementation file in the Services folder:
+### 3. Create IGSXAudioService.cs
 
-```csharp
-using CoreAudio;
-using System;
-using System.Diagnostics;
+Create a new interface file in the Services folder with enhanced functionality.
 
-namespace Prosim2GSX.Services
-{
-    /// <summary>
-    /// Service for GSX audio control
-    /// </summary>
-    public class GSXAudioService : IGSXAudioService
-    {
-        private readonly string gsxProcess = "Couatl64_MSFS";
-        private AudioSessionControl2 gsxAudioSession = null;
-        private float gsxAudioVolume = -1;
-        private int gsxAudioMute = -1;
-        private AudioSessionControl2 vhf1AudioSession = null;
-        private float vhf1AudioVolume = -1;
-        private int vhf1AudioMute = -1;
-        private string lastVhf1App;
-        
-        private readonly ServiceModel model;
-        private readonly MobiSimConnect simConnect;
-        
-        public GSXAudioService(ServiceModel model, MobiSimConnect simConnect)
-        {
-            this.model = model;
-            this.simConnect = simConnect;
-            
-            if (!string.IsNullOrEmpty(model.Vhf1VolumeApp))
-                lastVhf1App = model.Vhf1VolumeApp;
-        }
-        
-        /// <summary>
-        /// Gets audio sessions for GSX and VHF1
-        /// </summary>
-        public void GetAudioSessions()
-        {
-            if (model.GsxVolumeControl && gsxAudioSession == null)
-            {
-                MMDeviceEnumerator deviceEnumerator = new(Guid.NewGuid());
-                var devices = deviceEnumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
+### 4. Create GSXAudioService.cs
 
-                foreach (var device in devices)
-                {
-                    foreach (var session in device.AudioSessionManager2.Sessions)
-                    {
-                        Process p = Process.GetProcessById((int)session.ProcessID);
-                        if (p.ProcessName == gsxProcess)
-                        {
-                            gsxAudioSession = session;
-                            Logger.Log(LogLevel.Information, "GSXAudioService:GetAudioSessions", $"Found Audio Session for GSX");
-                            break;
-                        }
-                    }
+Create a new implementation file in the Services folder with enhanced functionality.
 
-                    if (gsxAudioSession != null)
-                        break;
-                }
-            }
-
-            if (model.IsVhf1Controllable() && vhf1AudioSession == null)
-            {
-                MMDeviceEnumerator deviceEnumerator = new(Guid.NewGuid());
-                var devices = deviceEnumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
-
-                foreach (var device in devices)
-                {
-                    foreach (var session in device.AudioSessionManager2.Sessions)
-                    {
-                        Process p = Process.GetProcessById((int)session.ProcessID);
-                        if (p.ProcessName == model.Vhf1VolumeApp)
-                        {
-                            vhf1AudioSession = session;
-                            Logger.Log(LogLevel.Information, "GSXAudioService:GetAudioSessions", $"Found Audio Session for {model.Vhf1VolumeApp}");
-                            break;
-                        }
-                    }
-
-                    if (vhf1AudioSession != null)
-                        break;
-                }
-            }
-        }
-        
-        /// <summary>
-        /// Resets audio settings to default
-        /// </summary>
-        public void ResetAudio()
-        {
-            if (gsxAudioSession != null && (gsxAudioSession.SimpleAudioVolume.MasterVolume != 1.0f || gsxAudioSession.SimpleAudioVolume.Mute))
-            {
-                gsxAudioSession.SimpleAudioVolume.MasterVolume = 1.0f;
-                gsxAudioSession.SimpleAudioVolume.Mute = false;
-                Logger.Log(LogLevel.Information, "GSXAudioService:ResetAudio", $"Audio resetted for GSX");
-            }
-
-            if (vhf1AudioSession != null && (vhf1AudioSession.SimpleAudioVolume.MasterVolume != 1.0f || vhf1AudioSession.SimpleAudioVolume.Mute))
-            {
-                vhf1AudioSession.SimpleAudioVolume.MasterVolume = 1.0f;
-                vhf1AudioSession.SimpleAudioVolume.Mute = false;
-                Logger.Log(LogLevel.Information, "GSXAudioService:ResetAudio", $"Audio resetted for {model.Vhf1VolumeApp}");
-            }
-        }
-        
-        /// <summary>
-        /// Controls audio based on cockpit controls
-        /// </summary>
-        public void ControlAudio()
-        {
-            try
-            {
-                if (simConnect.ReadLvar("I_FCU_TRACK_FPA_MODE") == 0 && simConnect.ReadLvar("I_FCU_HEADING_VS_MODE") == 0)
-                {
-                    if (model.GsxVolumeControl || model.IsVhf1Controllable())
-                        ResetAudio();
-                    return;
-                }
-
-                // GSX Audio Control
-                ControlGsxAudio();
-                
-                // VHF1 Audio Control
-                ControlVhf1Audio();
-                
-                // App Change Handling
-                HandleAppChange();
-                
-                // Process Exit Handling
-                HandleProcessExits();
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Debug, "GSXAudioService:ControlAudio", $"Exception {ex.GetType()} during Audio Control: {ex.Message}");
-            }
-        }
-        
-        private void ControlGsxAudio()
-        {
-            if (model.GsxVolumeControl && gsxAudioSession != null)
-            {
-                float volume = simConnect.ReadLvar("A_ASP_INT_VOLUME");
-                int muted = (int)simConnect.ReadLvar("I_ASP_INT_REC");
-                if (volume >= 0 && volume != gsxAudioVolume)
-                {
-                    gsxAudioSession.SimpleAudioVolume.MasterVolume = volume;
-                    gsxAudioVolume = volume;
-                }
-
-                if (muted >= 0 && muted != gsxAudioMute)
-                {
-                    gsxAudioSession.SimpleAudioVolume.Mute = muted == 0;
-                    gsxAudioMute = muted;
-                }
-            }
-            else if (model.GsxVolumeControl && gsxAudioSession == null)
-            {
-                GetAudioSessions();
-                gsxAudioVolume = -1;
-                gsxAudioMute = -1;
-            }
-            else if (!model.GsxVolumeControl && gsxAudioSession != null)
-            {
-                gsxAudioSession.SimpleAudioVolume.MasterVolume = 1.0f;
-                gsxAudioSession.SimpleAudioVolume.Mute = false;
-                gsxAudioSession = null;
-                gsxAudioVolume = -1;
-                gsxAudioMute = -1;
-                Logger.Log(LogLevel.Information, "GSXAudioService:ControlAudio", $"Disabled Audio Session for GSX (Setting disabled)");
-            }
-        }
-        
-        private void ControlVhf1Audio()
-        {
-            if (model.IsVhf1Controllable() && vhf1AudioSession != null)
-            {
-                float volume = simConnect.ReadLvar("A_ASP_VHF_1_VOLUME");
-                int muted = (int)simConnect.ReadLvar("I_ASP_VHF_1_REC");
-                if (volume >= 0 && volume != vhf1AudioVolume)
-                {
-                    vhf1AudioSession.SimpleAudioVolume.MasterVolume = volume;
-                    vhf1AudioVolume = volume;
-                }
-
-                if (model.Vhf1LatchMute && muted >= 0 && muted != vhf1AudioMute)
-                {
-                    vhf1AudioSession.SimpleAudioVolume.Mute = muted == 0;
-                    vhf1AudioMute = muted;
-                }
-                else if (!model.Vhf1LatchMute && vhf1AudioSession.SimpleAudioVolume.Mute)
-                {
-                    Logger.Log(LogLevel.Information, "GSXAudioService:ControlAudio", $"Unmuting {lastVhf1App} (App muted and Mute-Option disabled)");
-                    vhf1AudioSession.SimpleAudioVolume.Mute = false;
-                    vhf1AudioMute = -1;
-                }
-            }
-            else if (model.IsVhf1Controllable() && vhf1AudioSession == null)
-            {
-                GetAudioSessions();
-                vhf1AudioVolume = -1;
-                vhf1AudioMute = -1;
-            }
-            else if (!model.Vhf1VolumeControl && !string.IsNullOrEmpty(lastVhf1App) && vhf1AudioSession != null)
-            {
-                vhf1AudioSession.SimpleAudioVolume.MasterVolume = 1.0f;
-                vhf1AudioSession.SimpleAudioVolume.Mute = false;
-                vhf1AudioSession = null;
-                vhf1AudioVolume = -1;
-                vhf1AudioMute = -1;
-                Logger.Log(LogLevel.Information, "GSXAudioService:ControlAudio", $"Disabled Audio Session for {lastVhf1App} (Setting disabled)");
-            }
-        }
-        
-        private void HandleAppChange()
-        {
-            if (lastVhf1App != model.Vhf1VolumeApp)
-            {
-                if (vhf1AudioSession != null)
-                {
-                    vhf1AudioSession.SimpleAudioVolume.MasterVolume = 1.0f;
-                    vhf1AudioSession.SimpleAudioVolume.Mute = false;
-                    vhf1AudioSession = null;
-                    vhf1AudioVolume = -1;
-                    vhf1AudioMute = -1;
-                    Logger.Log(LogLevel.Information, "GSXAudioService:ControlAudio", $"Disabled Audio Session for {lastVhf1App} (App changed)");
-                }
-                GetAudioSessions();
-            }
-            lastVhf1App = model.Vhf1VolumeApp;
-        }
-        
-        private void HandleProcessExits()
-        {
-            // GSX exited
-            if (model.GsxVolumeControl && gsxAudioSession != null && !IPCManager.IsProcessRunning(gsxProcess))
-            {
-                gsxAudioSession = null;
-                gsxAudioVolume = -1;
-                gsxAudioMute = -1;
-                Logger.Log(LogLevel.Information, "GSXAudioService:ControlAudio", $"Disabled Audio Session for GSX (App not running)");
-            }
-
-            // COUATL
-            if (model.GsxVolumeControl && gsxAudioSession != null && simConnect.ReadLvar("FSDT_GSX_COUATL_STARTED") != 1)
-            {
-                gsxAudioSession.SimpleAudioVolume.MasterVolume = 1.0f;
-                gsxAudioSession.SimpleAudioVolume.Mute = false;
-                gsxAudioSession = null;
-                gsxAudioVolume = -1;
-                gsxAudioMute = -1;
-                Logger.Log(LogLevel.Information, "GSXAudioService:ControlAudio", $"Disabled Audio Session for GSX (Couatl Engine not started)");
-            }
-
-            // VHF1 exited
-            if (model.IsVhf1Controllable() && vhf1AudioSession != null && !IPCManager.IsProcessRunning(model.Vhf1VolumeApp))
-            {
-                vhf1AudioSession = null;
-                vhf1AudioVolume = -1;
-                vhf1AudioMute = -1;
-                Logger.Log(LogLevel.Information, "GSXAudioService:ControlAudio", $"Disabled Audio Session for {model.Vhf1VolumeApp} (App not running)");
-            }
-        }
-    }
-}
-```
-
-### 3. Update GsxController.cs
+### 5. Update GsxController.cs
 
 Update the GsxController class to use the new service:
 
@@ -326,17 +43,43 @@ Update the GsxController class to use the new service:
 private readonly IGSXAudioService audioService;
 
 // Update constructor (assuming GSXMenuService was already added in Phase 3.1)
-public GsxController(ServiceModel model, ProsimController prosimController, FlightPlan flightPlan, IAcarsService acarsService, IGSXMenuService menuService, IGSXAudioService audioService)
+public GsxController(ServiceModel model, ProsimController prosimController, FlightPlan flightPlan, 
+    IAcarsService acarsService, IGSXMenuService menuService, IGSXAudioService audioService)
 {
     Model = model;
     ProsimController = prosimController;
     FlightPlan = flightPlan;
     this.acarsService = acarsService;
     this.menuService = menuService;
-    this.audioService = audioService;
+    this.audioService = audioService ?? throw new ArgumentNullException(nameof(audioService));
 
     SimConnect = IPCManager.SimConnect;
+    
+    // Subscribe to audio service events
+    this.audioService.AudioSessionFound += OnAudioSessionFound;
+    this.audioService.VolumeChanged += OnVolumeChanged;
+    this.audioService.MuteChanged += OnMuteChanged;
+    
     // Subscribe to SimConnect variables...
+}
+
+// Add event handlers for audio service events
+private void OnAudioSessionFound(object sender, AudioSessionEventArgs e)
+{
+    Logger.Log(LogLevel.Information, "GsxController:OnAudioSessionFound", 
+        $"Audio session found for {e.ProcessName}");
+}
+
+private void OnVolumeChanged(object sender, AudioVolumeChangedEventArgs e)
+{
+    Logger.Log(LogLevel.Debug, "GsxController:OnVolumeChanged", 
+        $"Volume changed for {e.ProcessName}: {e.Volume}");
+}
+
+private void OnMuteChanged(object sender, AudioMuteChangedEventArgs e)
+{
+    Logger.Log(LogLevel.Debug, "GsxController:OnMuteChanged", 
+        $"Mute state changed for {e.ProcessName}: {e.Muted}");
 }
 
 // Replace GetAudioSessions method with call to service
@@ -356,9 +99,26 @@ public void ControlAudio()
 {
     audioService.ControlAudio();
 }
+
+// Add cleanup in Dispose method
+protected override void Dispose(bool disposing)
+{
+    if (disposing)
+    {
+        // Unsubscribe from events
+        if (audioService != null)
+        {
+            audioService.AudioSessionFound -= OnAudioSessionFound;
+            audioService.VolumeChanged -= OnVolumeChanged;
+            audioService.MuteChanged -= OnMuteChanged;
+        }
+    }
+    
+    base.Dispose(disposing);
+}
 ```
 
-### 4. Update ServiceController.cs
+### 6. Update ServiceController.cs
 
 Update the ServiceController class to initialize the new service:
 
@@ -385,11 +145,18 @@ protected void InitializeServices()
     // Step 5: Create AcarsService
     var acarsService = new AcarsService(Model.AcarsSecret, Model.AcarsNetworkUrl);
     
-    // Step 6: Create GSX services
-    var menuService = new GSXMenuService(Model, IPCManager.SimConnect);
-    var audioService = new GSXAudioService(Model, IPCManager.SimConnect);
+    // Step 6: Create AudioSessionManager
+    var audioSessionManager = new CoreAudioSessionManager();
     
-    // Step 7: Create GsxController
+    // Step 7: Create GSX services
+    var menuService = new GSXMenuService(Model, IPCManager.SimConnect);
+    var audioService = new GSXAudioService(Model, IPCManager.SimConnect, audioSessionManager);
+    
+    // Configure audio service properties
+    audioService.AudioSessionRetryCount = 5; // Increase retry count for better reliability
+    audioService.AudioSessionRetryDelay = TimeSpan.FromSeconds(1); // Shorter delay between retries
+    
+    // Step 8: Create GsxController
     var gsxController = new GsxController(Model, ProsimController, FlightPlan, acarsService, menuService, audioService);
     
     // Store the GsxController in IPCManager
@@ -399,7 +166,7 @@ protected void InitializeServices()
 }
 ```
 
-### 5. Add Unit Tests
+### 7. Add Unit Tests
 
 Create unit tests for GSXAudioService in the Tests folder:
 
@@ -413,39 +180,183 @@ public class GSXAudioServiceTests
         // Arrange
         var model = new ServiceModel();
         var simConnectMock = new Mock<MobiSimConnect>();
+        var audioSessionManagerMock = new Mock<IAudioSessionManager>();
         
         // Act
-        var service = new GSXAudioService(model, simConnectMock.Object);
+        var service = new GSXAudioService(model, simConnectMock.Object, audioSessionManagerMock.Object);
         
         // Assert
         Assert.IsNotNull(service);
+        Assert.AreEqual(3, service.AudioSessionRetryCount);
+        Assert.AreEqual(TimeSpan.FromSeconds(2), service.AudioSessionRetryDelay);
+    }
+    
+    [TestMethod]
+    public void Constructor_WithNullModel_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var simConnectMock = new Mock<MobiSimConnect>();
+        var audioSessionManagerMock = new Mock<IAudioSessionManager>();
+        
+        // Act & Assert
+        Assert.ThrowsException<ArgumentNullException>(() => 
+            new GSXAudioService(null, simConnectMock.Object, audioSessionManagerMock.Object));
+    }
+    
+    [TestMethod]
+    public void Constructor_WithNullSimConnect_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var model = new ServiceModel();
+        var audioSessionManagerMock = new Mock<IAudioSessionManager>();
+        
+        // Act & Assert
+        Assert.ThrowsException<ArgumentNullException>(() => 
+            new GSXAudioService(model, null, audioSessionManagerMock.Object));
+    }
+    
+    [TestMethod]
+    public void Constructor_WithNullAudioSessionManager_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var model = new ServiceModel();
+        var simConnectMock = new Mock<MobiSimConnect>();
+        
+        // Act & Assert
+        Assert.ThrowsException<ArgumentNullException>(() => 
+            new GSXAudioService(model, simConnectMock.Object, null));
+    }
+    
+    [TestMethod]
+    public void GetAudioSessions_CallsAudioSessionManager()
+    {
+        // Arrange
+        var model = new ServiceModel { GsxVolumeControl = true, Vhf1VolumeControl = true, Vhf1VolumeApp = "TestApp" };
+        var simConnectMock = new Mock<MobiSimConnect>();
+        var audioSessionManagerMock = new Mock<IAudioSessionManager>();
+        
+        audioSessionManagerMock
+            .Setup(m => m.GetSessionForProcessWithRetry(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<TimeSpan>()))
+            .Returns((string processName, int retryCount, TimeSpan retryDelay) => 
+                new AudioSessionControl2());
+        
+        var service = new GSXAudioService(model, simConnectMock.Object, audioSessionManagerMock.Object);
+        
+        bool audioSessionFoundRaised = false;
+        service.AudioSessionFound += (sender, e) => audioSessionFoundRaised = true;
+        
+        // Act
+        service.GetAudioSessions();
+        
+        // Assert
+        audioSessionManagerMock.Verify(m => 
+            m.GetSessionForProcessWithRetry("Couatl64_MSFS", It.IsAny<int>(), It.IsAny<TimeSpan>()), 
+            Times.Once);
+        audioSessionManagerMock.Verify(m => 
+            m.GetSessionForProcessWithRetry("TestApp", It.IsAny<int>(), It.IsAny<TimeSpan>()), 
+            Times.Once);
+        Assert.IsTrue(audioSessionFoundRaised);
     }
     
     [TestMethod]
     public void ResetAudio_ResetsAudioSessions()
     {
         // Arrange
-        var model = new ServiceModel { GsxVolumeControl = true };
+        var model = new ServiceModel { GsxVolumeControl = true, Vhf1VolumeControl = true, Vhf1VolumeApp = "TestApp" };
         var simConnectMock = new Mock<MobiSimConnect>();
-        var service = new GSXAudioService(model, simConnectMock.Object);
+        var audioSessionManagerMock = new Mock<IAudioSessionManager>();
         
-        // Note: This test would need to mock the CoreAudio dependencies
-        // which is beyond the scope of this implementation plan
+        var gsxSession = new AudioSessionControl2();
+        var vhf1Session = new AudioSessionControl2();
+        
+        audioSessionManagerMock
+            .Setup(m => m.GetSessionForProcessWithRetry("Couatl64_MSFS", It.IsAny<int>(), It.IsAny<TimeSpan>()))
+            .Returns(gsxSession);
+        audioSessionManagerMock
+            .Setup(m => m.GetSessionForProcessWithRetry("TestApp", It.IsAny<int>(), It.IsAny<TimeSpan>()))
+            .Returns(vhf1Session);
+        
+        var service = new GSXAudioService(model, simConnectMock.Object, audioSessionManagerMock.Object);
+        
+        bool volumeChangedRaised = false;
+        bool muteChangedRaised = false;
+        service.VolumeChanged += (sender, e) => volumeChangedRaised = true;
+        service.MuteChanged += (sender, e) => muteChangedRaised = true;
+        
+        // Get sessions first
+        service.GetAudioSessions();
         
         // Act
         service.ResetAudio();
         
         // Assert
-        // Verify audio sessions are reset
+        audioSessionManagerMock.Verify(m => m.ResetSession(gsxSession), Times.Once);
+        audioSessionManagerMock.Verify(m => m.ResetSession(vhf1Session), Times.Once);
+        Assert.IsTrue(volumeChangedRaised);
+        Assert.IsTrue(muteChangedRaised);
+    }
+    
+    [TestMethod]
+    public async Task ControlAudioAsync_WithCancellation_DoesNotThrow()
+    {
+        // Arrange
+        var model = new ServiceModel();
+        var simConnectMock = new Mock<MobiSimConnect>();
+        var audioSessionManagerMock = new Mock<IAudioSessionManager>();
+        
+        var service = new GSXAudioService(model, simConnectMock.Object, audioSessionManagerMock.Object);
+        
+        using var cts = new CancellationTokenSource();
+        cts.Cancel(); // Cancel immediately
+        
+        // Act & Assert
+        await service.ControlAudioAsync(cts.Token); // Should not throw
+    }
+    
+    [TestMethod]
+    public void ControlAudio_WithNoAudioMode_ResetsAudio()
+    {
+        // Arrange
+        var model = new ServiceModel { GsxVolumeControl = true };
+        var simConnectMock = new Mock<MobiSimConnect>();
+        var audioSessionManagerMock = new Mock<IAudioSessionManager>();
+        
+        simConnectMock.Setup(m => m.ReadLvar("I_FCU_TRACK_FPA_MODE")).Returns(0);
+        simConnectMock.Setup(m => m.ReadLvar("I_FCU_HEADING_VS_MODE")).Returns(0);
+        
+        var service = new GSXAudioService(model, simConnectMock.Object, audioSessionManagerMock.Object);
+        
+        // Create a spy to check if ResetAudio is called
+        var serviceSpy = new Mock<IGSXAudioService>();
+        serviceSpy.Setup(s => s.ResetAudio()).Verifiable();
+        
+        // Act
+        service.ControlAudio();
+        
+        // Assert
+        // This is a bit tricky to test directly since we can't mock the service itself
+        // In a real test, we would use a test spy or refactor to make this more testable
+        // For now, we'll just verify the simConnect calls
+        simConnectMock.Verify(m => m.ReadLvar("I_FCU_TRACK_FPA_MODE"), Times.Once);
+        simConnectMock.Verify(m => m.ReadLvar("I_FCU_HEADING_VS_MODE"), Times.Once);
     }
     
     // Additional tests for other methods...
 }
 ```
 
-### 6. Test the Implementation
+### 8. Test the Implementation
 
-Test the implementation to ensure it works correctly.
+Test the implementation to ensure it works correctly:
+
+1. Build the solution to verify there are no compilation errors
+2. Run the application and verify that audio control works as expected
+3. Check the logs to ensure proper operation and error handling
+4. Test edge cases such as:
+   - Application startup with no audio sessions available
+   - Audio sessions becoming available after startup
+   - Audio sessions disappearing during operation
+   - Configuration changes during operation
 
 ## Benefits
 
@@ -472,6 +383,24 @@ Test the implementation to ensure it works correctly.
    - Better isolation of failures
    - Clearer logging and diagnostics
    - Easier to recover from specific failures
+
+5. **Thread Safety**
+   - Explicit locking for shared resources
+   - Clear documentation of thread safety guarantees
+   - Reduced risk of race conditions
+   - Safer concurrent access to audio sessions
+
+6. **Event-Based Communication**
+   - Loose coupling between components
+   - Clear notification of state changes
+   - Easier to add new subscribers
+   - More flexible architecture
+
+7. **Async Support**
+   - Better responsiveness during long-running operations
+   - Support for cancellation
+   - Improved resource utilization
+   - More flexible integration options
 
 ## Implementation Considerations
 
