@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using System;
+﻿﻿using System;
 using System.Threading;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
@@ -204,6 +204,13 @@ namespace Prosim2GSX
                 doorManager, 
                 acarsService,
                 stateManager);
+                
+            // Create passenger coordinator
+            var passengerCoordinator = new GSXPassengerCoordinator(
+                ProsimController.GetPassengerService(), 
+                serviceOrchestrator, 
+                Logger.Instance);
+            passengerCoordinator.Initialize();
             
             // Step 10: Create GSXControllerFacade
             var gsxControllerFacade = new GSXControllerFacade(
@@ -219,6 +226,7 @@ namespace Prosim2GSX
                 serviceOrchestrator,
                 doorCoordinator,
                 equipmentCoordinator,
+                passengerCoordinator,
                 Logger.Instance);
             
             // Store the GSXControllerFacade in IPCManager so it can be accessed by the MainWindow
