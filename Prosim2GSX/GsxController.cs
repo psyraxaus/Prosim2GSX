@@ -1,4 +1,4 @@
-﻿﻿using CoreAudio;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using CoreAudio;
 using Microsoft.Win32;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
@@ -39,13 +39,6 @@ namespace Prosim2GSX
         private int delay = 0;
         private int delayCounter = 0;
         private bool equipmentRemoved = false;
-        private double finalFuel = 0d;
-        private bool finalLoadsheetSend = false;
-        private double finalMacTow = 00.0d;
-        private double finalMacZfw = 00.0d;
-        private int finalPax = 0;
-        private double finalTow = 00.0d;
-        private double finalZfw = 00.0d;
         private bool firstRun = true;
         private string flightPlanID = "0";
         private bool initialFuelSet = false;
@@ -59,14 +52,9 @@ namespace Prosim2GSX
         private bool pcaCalled = false;
         private bool pcaRemoved = false;
         private bool planePositioned = false;
-        private bool prelimFlightData = false;
-        private double prelimFuel = 0d;
         private bool prelimLoadsheet = false;
-        private double prelimMacTow = 00.0d;
-        private double prelimMacZfw = 00.0d;
-        private int prelimPax = 0;
-        private double prelimTow = 00.0d;
-        private double prelimZfw = 00.0d;
+        private bool finalLoadsheetSend = false;
+        private bool prelimFlightData = false;
         private bool pushFinished = false;
         private bool pushNwsDisco = false;
         private bool pushRunning = false;
@@ -166,36 +154,6 @@ namespace Prosim2GSX
                 ProsimController.Update(true);
                 
             Logger.Log(LogLevel.Information, "GsxController:Constructor", "GSX Controller initialized");
-        }
-
-        private string FlightCallsignToOpsCallsign(string flightNumber)
-        {
-            Logger.Log(LogLevel.Debug, "GsxController:FlightCallsignToOpsCallsign", $"Flight Number obtained from flight plan: {flightNumber}");
-
-            var count = 0;
-
-            foreach (char c in flightNumber)
-            {
-                if (!char.IsLetter(c))
-                {
-                    break;
-                }
-
-                ++count;
-            }
-
-            StringBuilder sb = new StringBuilder(flightNumber, 8);
-            sb.Remove(0, count);
-
-            if (sb.Length >= 5)
-            {
-                sb.Remove(0, (sb.Length - 4));
-            }
-
-            sb.Insert(0, "OPS");
-            Logger.Log(LogLevel.Debug, "GsxController:FlightCallsignToOpsCallsign", $"Changed OPS callsign: {sb.ToString()}");
-
-            return sb.ToString();
         }
 
         public void ResetAudio()
@@ -1126,238 +1084,6 @@ namespace Prosim2GSX
             menuService.MenuWaitReady();
         }
 
-        private string FormatLoadSheet(string loadsheetType, string time, string flightNumber, string tailNumber, string day, string date, string orig, string dest, double est_zfw, double max_zfw, double est_tow, double max_tow, double est_law, double max_law, int paxInfants, int paxAdults, double macZfw, double macTow, int paxZoneA, int paxZoneB, int paxZoneC, double fuelInTanks)
-        {
-            string formattedLoadSheet = "";
-            var limitedBy = GetWeightLimitation(est_zfw, max_zfw, est_tow, max_tow, est_law, max_law);
-
-
-            if (loadsheetType == "prelim")
-            {
-                prelimZfw = est_zfw;
-                prelimTow = est_tow;
-                prelimMacZfw = macZfw;
-                prelimMacTow = macTow;
-                prelimPax = paxAdults;
-                prelimFuel = Math.Round(fuelInTanks);
-                string zfwLimited = limitedBy.Item1;
-                string towLimited = limitedBy.Item2;
-                string lawLimited = limitedBy.Item3;
-                // Format weights as whole numbers
-                int zfwWhole = (int)Math.Round(est_zfw);
-                int towWhole = (int)Math.Round(est_tow);
-                int lawWhole = (int)Math.Round(est_law);
-                int maxZfwWhole = (int)Math.Round(max_zfw);
-                int maxTowWhole = (int)Math.Round(max_tow);
-                int maxLawWhole = (int)Math.Round(max_law);
-                int tofWhole = (int)Math.Round(est_tow - est_zfw);
-                int tifWhole = (int)Math.Round(est_tow - est_law);
-                int undloWhole = (int)Math.Round(max_law - est_law);
-                int fuelInTanksWhole = (int)Math.Round(fuelInTanks);
-
-                formattedLoadSheet = $"- LOADSHEET PRELIM {time}\nEDNO 1\n{flightNumber}/{day} {date}\n{orig} {dest} {tailNumber} 2/4\nZFW  {zfwWhole}  MAX  {maxZfwWhole}  {zfwLimited}\nTOF  {tofWhole}\nTOW  {towWhole}  MAX  {maxTowWhole}  {towLimited}\nTIF {tifWhole}\nLAW  {lawWhole}  MAX  {maxLawWhole}  {lawLimited}\nUNDLO  {undloWhole}\nPAX/{paxInfants}/{paxAdults} TTL {paxInfants + paxAdults}\nMACZFW  {macZfw}\nMACTOW  {macTow}\nA{paxZoneA}  B{paxZoneB}  C{paxZoneC}\nCABIN SECTION TRIM\nSI SERVICE WEIGHT\nADJUSTMENT WEIGHT/INDEX\nADD\n{dest} POTABLE WATER xx/10\n100PCT\n441 -0.5\nDEDUCTIONS\nNIL PANTRY EFFECT 2590/0.0\n......................\nPREPARED BY\n{GetRandomName()} +1 800 555 0199\nLICENCE {GetRandomLicenceNumber()}\nFUEL IN TANKS {fuelInTanksWhole}\nEND";
-            }
-            else if (loadsheetType == "final")
-            {
-                finalZfw = est_zfw;
-                finalTow = est_tow;
-                finalMacZfw = macZfw;
-                finalMacTow = macTow;
-                finalPax = paxAdults;
-                finalFuel = Math.Round(fuelInTanks);
-
-                var differentValues = GetLoadSheetDifferences(prelimZfw, prelimTow, prelimPax, prelimMacZfw, prelimMacTow, prelimFuel, finalZfw, finalTow, finalPax, finalMacZfw, finalMacTow, finalFuel);
-
-                string zfwChanged = differentValues.Item1;
-                string towChanged = differentValues.Item2;
-                string paxChanged = differentValues.Item3;
-                string macZfwChanged = differentValues.Item4;
-                string macTowChanged = differentValues.Item5;
-                string fuelChanged = differentValues.Item6;
-
-                string finalTitle = "";
-
-                if (differentValues.Item7)
-                {
-                    finalTitle = "REVISIONS TO EDNO 1";
-                }
-                else
-                {
-                    finalTitle = "COMPLIANCE WITH EDNO 1";
-                }
-
-                // Calculate the difference between the preliminary and final passenger numbers
-                int paxDifference = finalPax - prelimPax;
-                string paxDiffString = "";
-                // Create the result string based on whether there is an increase or decrease in passengers
-                if (paxDifference > 0)
-                {
-                    paxDiffString = $"{finalPax} plus {paxDifference}";
-                }
-                else if (paxDifference < 0)
-                {
-                    paxDiffString = $"{finalPax} minus {-paxDifference}";
-                }
-                else
-                {
-                    paxDiffString = $"{finalPax} no change";
-                }
-
-                // Format weights as whole numbers
-                int finalZfwWhole = (int)Math.Round(finalZfw);
-                int finalTowWhole = (int)Math.Round(finalTow);
-                int finalFuelWhole = (int)Math.Round(finalFuel);
-
-                formattedLoadSheet = $"{finalTitle}\n{flightNumber}/{day}  {date}\n{orig}  {dest}  {tailNumber}  2/4\n......................\nZFW  {finalZfwWhole}  {zfwChanged}\nTOW  {finalTowWhole}  {towChanged}\nPAX  {paxDiffString}\nMACZFW  {finalMacZfw}  {macZfwChanged}\nMACTOW  {finalMacTow}  {macTowChanged}\nFUEL IN TANKS  {finalFuelWhole}  {fuelChanged}\nEND";
-
-            }
-            return formattedLoadSheet;
-        }
-
-        private string GetRandomName()
-        {
-            // Lists of first names and last names
-            string[] firstNames = {
-            "John", "Jane", "Michael", "Emily", "David",
-            "Sarah", "Christopher", "Jennifer", "Daniel", "Jessica"
-        };
-
-            string[] lastNames = {
-            "Smith", "Johnson", "Williams", "Brown", "Jones",
-            "Garcia", "Miller", "Davis", "Martinez", "Hernandez"
-        };
-
-            // Random number generator
-            Random random = new Random();
-
-            // Select a random first name and last name
-            string firstName = firstNames[random.Next(firstNames.Length)];
-            string lastName = lastNames[random.Next(lastNames.Length)];
-
-            // Return the formatted name
-            return $"{firstName}/{lastName}";
-        }
-
-        static string GetRandomLicenceNumber()
-        {
-            // Random number generator
-            Random random = new Random();
-            // Arrays of uppercase letters and digits
-            char[] letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
-            char[] digits = "0123456789".ToCharArray();
-
-            // Generate 3 random letters
-            char letter1 = letters[random.Next(letters.Length)];
-            char letter2 = letters[random.Next(letters.Length)];
-            char letter3 = letters[random.Next(letters.Length)];
-
-            // Generate 3 random digits
-            char digit1 = digits[random.Next(digits.Length)];
-            char digit2 = digits[random.Next(digits.Length)];
-            char digit3 = digits[random.Next(digits.Length)];
-
-            // Return the formatted license number
-            return $"{letter1}{letter2}{letter3}{digit1}{digit2}{digit3}";
-        }
-
-        private (string, string, string) GetWeightLimitation(double est_zfw, double max_zfw, double est_tow, double max_tow, double est_law, double max_law)
-        {
-            const int WeightThreshold = 1000;
-            string zfwLimited = "";
-            string towLimited = "";
-            string lawLimited = "";
-            bool zfwExceeds = est_zfw > max_zfw;
-            bool towExceeds = est_tow > max_tow;
-            bool lawExceeds = est_law > max_law;
-            bool zfwApproaches = !zfwExceeds && (max_zfw - est_zfw <= WeightThreshold);
-            bool towApproaches = !towExceeds && (max_tow - est_tow <= WeightThreshold);
-            bool lawApproaches = !lawExceeds && (max_law - est_law <= WeightThreshold);
-
-
-            if (zfwApproaches || zfwExceeds)
-            {
-                zfwLimited = "L";
-            }
-
-            if (towApproaches || towExceeds)
-            {
-                towLimited = "L";
-            }
-
-            if (lawApproaches || lawExceeds)
-            {
-                lawLimited = "L";
-            }
-
-            return (zfwLimited, towLimited, lawLimited);
-        }
-        
-        /// <summary>
-        /// Compares preliminary and final loadsheet values and marks changes with "//"
-        /// </summary>
-        private (string, string, string, string, string, string, bool) GetLoadSheetDifferences(double prezfw, double preTow, int prePax, double preMacZfw, double preMacTow, double prefuel, double finalZfw, double finalTow, int finalPax, double finalMacZfw, double finalMacTow, double finalfuel)
-        {
-            // Tolerance values for detecting changes
-            const double WeightTolerance = 1000.0; // 100 kg tolerance for weight values
-            const double MacTolerance = 0.1;     // 0.1% tolerance for MAC values
-            
-            string zfwChanged = "";
-            string towChanged = "";
-            string paxChanged = "";
-            string macZfwChanged = "";
-            string macTowChanged = "";
-            string fuelChanged = "";
-
-            // Check if values have changed beyond tolerance
-            bool hasZfwChanged = Math.Abs(prezfw - finalZfw) > WeightTolerance;
-            bool hasTowChanged = Math.Abs(preTow - finalTow) > WeightTolerance;
-            bool hasPaxChanged = prePax != finalPax;
-            bool hasMacZfwChanged = Math.Abs(preMacZfw - finalMacZfw) > MacTolerance;
-            bool hasMacTowChanged = Math.Abs(preMacTow - finalMacTow) > MacTolerance;
-            bool hasFuelChanged = Math.Abs(prefuel - finalfuel) > WeightTolerance;
-
-            // Mark changes with "//"
-            if (hasZfwChanged)
-            {
-                zfwChanged = "//";
-                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"ZFW changed: {prezfw} -> {finalZfw}");
-            }
-
-            if (hasTowChanged)
-            {
-                towChanged = "//";
-                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"TOW changed: {preTow} -> {finalTow}");
-            }
-
-            if (hasPaxChanged)
-            {
-                paxChanged = "//";
-                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"PAX changed: {prePax} -> {finalPax}");
-            }
-
-            if (hasMacZfwChanged)
-            {
-                macZfwChanged = "//";
-                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"MACZFW changed: {preMacZfw} -> {finalMacZfw}");
-            }
-
-            if (hasMacTowChanged)
-            {
-                macTowChanged = "//";
-                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"MACTOW changed: {preMacTow} -> {finalMacTow}");
-            }
-
-            if (hasFuelChanged)
-            {
-                fuelChanged = "//";
-                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"Fuel changed: {prefuel} -> {finalfuel}");
-            }
-
-            // Determine if any values have changed
-            bool hasChanged = hasZfwChanged || hasTowChanged || hasPaxChanged || hasMacZfwChanged || hasMacTowChanged || hasFuelChanged;
-
-            return (zfwChanged, towChanged, paxChanged, macZfwChanged, macTowChanged, fuelChanged, hasChanged);
-        }
         
         public void Dispose()
         {
