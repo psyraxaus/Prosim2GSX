@@ -302,6 +302,73 @@ flowchart TD
    - Provides commands for user interaction
    - Controls application visibility
 
+### Planned EFB UI Architecture
+
+The future Electronic Flight Bag (EFB) style user interface will follow a more sophisticated architecture that resembles actual EFBs used by A320 pilots. This UI will be implemented after the completion of the modularization effort.
+
+```mermaid
+graph TD
+    A[EFB Main Window] --> B[Navigation Framework]
+    A --> C[Theme Engine]
+    A --> D[Data Binding Framework]
+    
+    B --> E[Home Dashboard]
+    B --> F[Services Page]
+    B --> G[Plan Page]
+    B --> H[Ground Page]
+    B --> I[Audio/System Pages]
+    B --> J[Logs Page]
+    
+    E --> K[Status Overview]
+    E --> L[Flight Phase Indicator]
+    
+    F --> M[Refueling Controls]
+    F --> N[Boarding Controls]
+    F --> O[Catering Controls]
+    F --> P[Cargo Management]
+    
+    Q[Aircraft Visualization] --> R[Aircraft Diagram]
+    Q --> S[Service Vehicle Visualization]
+    Q --> T[Ground Equipment Visualization]
+    Q --> U[Progress Visualization]
+    
+    C --> V[Airline Theming System]
+    V --> W[Theme Configuration]
+    V --> X[Visual Theming Components]
+    V --> Y[Default Airline Themes]
+    
+    Z[Multi-Window Support] --> AA[Window Management]
+    Z --> AB[Secondary Monitor Support]
+```
+
+The EFB UI will introduce several new components:
+
+1. **EFB Main Window**
+   - Primary container for the EFB interface
+   - Supports detaching to secondary monitor
+   - Provides window management controls
+
+2. **Navigation Framework**
+   - Tab-based navigation system
+   - Page transition animations
+   - Navigation history and state preservation
+
+3. **Theme Engine**
+   - JSON-based theme configuration
+   - Dynamic resource dictionary management
+   - Airline-specific theming support
+
+4. **Aircraft Visualization**
+   - Interactive A320 aircraft diagram
+   - Service vehicle visualization
+   - Ground equipment visualization
+   - Enhanced progress indicators
+
+5. **Flight Phase Integration**
+   - Contextual UI adaptation based on flight phase
+   - Proactive notifications for upcoming actions
+   - Countdown timers for ongoing processes
+
 ## State Management
 
 The application uses a state machine pattern to manage the flight lifecycle:
@@ -361,6 +428,11 @@ The UI follows the MVVM pattern:
 - **Model**: ServiceModel and other data classes
 - **View**: MainWindow and NotifyIconResources
 - **ViewModel**: NotifyIconViewModel
+
+The planned EFB UI will extend this pattern with:
+- **View**: EFB-specific views and controls
+- **ViewModel**: Page-specific view models with enhanced data binding
+- **Model**: Extended ServiceModel with additional EFB-specific properties
 
 ### 2. Dependency Injection
 Components receive their dependencies through constructors, promoting loose coupling and testability:
@@ -446,6 +518,27 @@ The modularized services use event-based communication:
 - Reduces direct dependencies between services
 - Improves flexibility and extensibility
 
+### 14. Theme Provider Pattern
+The planned EFB UI will implement the Theme Provider pattern:
+- Centralized theme management
+- Dynamic theme switching at runtime
+- Consistent styling across all components
+- Airline-specific theme customization
+
+### 15. Composite Pattern
+The planned EFB UI will use the Composite pattern for UI components:
+- Complex UI elements composed of simpler ones
+- Consistent interface for all UI components
+- Hierarchical organization of UI elements
+- Simplified management of complex UI structures
+
+### 16. Template Method Pattern
+The planned EFB UI will use the Template Method pattern for page layouts:
+- Common page structure defined in base classes
+- Specific pages override only what they need to change
+- Consistent layout and behavior across pages
+- Reduced code duplication
+
 ## Data Flow
 
 ```mermaid
@@ -479,6 +572,18 @@ flowchart LR
     SM[ServiceModel] <--> G
     SM <--> C
     SM <--> UI[User Interface]
+    
+    %% Future EFB UI data flow (dotted lines for planned)
+    UI -.-> EFB[EFB Main Window]
+    SM -.-> EFB
+    EFB -.-> VIS[Aircraft Visualization]
+    EFB -.-> THEME[Theme Engine]
+    GS1 -.-> EFB
+    PS1 -.-> VIS
+    PS2 -.-> VIS
+    PS3 -.-> VIS
+    PS4 -.-> VIS
+    PS5 -.-> VIS
 ```
 
 ### Key Data Flows

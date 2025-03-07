@@ -301,13 +301,77 @@ The following steps are recommended for continued development and improvement of
 
 2. **User Experience Improvements**
    - Develop EFB-style UI as outlined in efb-ui-implementation-strategy.md
-   - Enhance status feedback
-   - Improve configuration options
+   - Implement the phased approach for EFB UI development
+   - Enhance status feedback and visualization
+   - Improve configuration options with airline-specific theming
+   - Optimize for secondary monitor use
 
 3. **Extensibility Enhancements**
    - Design for future platform extensions
    - Create plugin architecture
    - Add configuration-driven behavior
+
+### EFB UI Implementation Strategy
+
+The EFB UI implementation strategy has been documented in to-do/efb-ui-implementation-strategy.md and integrated into the project roadmap. This implementation will begin after the completion of the modularization effort and will provide a more realistic and intuitive user experience.
+
+1. **Implementation Dependencies**
+   - The .NET 8.0 migration has been completed successfully
+   - The modularization of GSXController and ProsimController classes is in progress
+   - Implementation will begin after Phase 3 of the modularization strategy is complete
+
+2. **Phased Implementation Approach**
+   - Phase 1: Foundation Framework (3 weeks)
+     - Project structure setup
+     - Multi-window support
+     - Navigation framework
+     - Theme engine foundation
+     - Data binding framework
+   
+   - Phase 2: Basic UI Components (4 weeks)
+     - EFB style resource dictionary
+     - Custom EFB controls
+     - Home dashboard
+     - Services, Plan, Ground, Audio, System, and Logs pages
+   
+   - Phase 3: Aircraft Visualization (3 weeks)
+     - Aircraft diagram component
+     - Service vehicle visualization
+     - Ground equipment visualization
+     - Enhanced progress visualization
+   
+   - Phase 4: Flight Phase Integration (2 weeks)
+     - Flight phase detection enhancement
+     - Contextual UI adaptation
+     - Proactive notifications
+     - Voice feedback system (optional)
+   
+   - Phase 5: Airline Theming System (3 weeks)
+     - Theme configuration system
+     - Visual theming components
+     - Default airline themes
+     - Theme editor (optional)
+     - User documentation
+   
+   - Phase 6: Optimization and Polish (2 weeks)
+     - Performance optimization
+     - Usability enhancements
+     - Accessibility improvements
+     - Final polish
+
+3. **Minimal Viable Product (MVP) Approach**
+   - If time constraints are significant, a minimal viable product approach is defined
+   - MVP Phase 1: Core Framework (2 weeks)
+   - MVP Phase 2: Essential UI (3 weeks)
+   - This approach would deliver a functional, if simplified, EFB-style interface in approximately 5 weeks
+
+4. **Benefits of the EFB UI**
+   - More realistic and intuitive experience resembling actual EFBs used by A320 pilots
+   - Customization options for different airlines
+   - Optimizations for secondary monitor use
+   - Enhanced visualization of aircraft state and services
+   - Contextual awareness and flight phase adaptation
+   - Improved user feedback and interaction
 
 ## Active Decisions
 
@@ -344,6 +408,13 @@ The following steps are recommended for continued development and improvement of
    - How to design for future platform extensions?
    - What extension points should be provided?
    - How to balance flexibility with complexity?
+
+4. **EFB UI Implementation**
+   - How will the new UI integrate with the modularized architecture?
+   - What is the best approach for binding the UI to the existing ServiceModel?
+   - How to handle multi-window support and window management?
+   - What is the best approach for implementing the airline theming system?
+   - How to optimize performance for the aircraft visualization components?
 
 ## Current Challenges
 

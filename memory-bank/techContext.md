@@ -13,15 +13,34 @@
    - UI framework for Windows desktop applications
    - XAML for UI definition
    - Data binding for UI updates
+   - Custom controls for EFB UI components
+   - Multi-window support for secondary monitor use
 
 3. **Newtonsoft.Json**
    - JSON parsing and serialization
    - Used for handling flight plan data and configuration
+   - Will be used for EFB theme configuration
 
 4. **CommunityToolkit.Mvvm**
    - MVVM implementation for WPF
    - Provides source generators for boilerplate code
    - Simplifies property change notification
+   - Used for EFB UI view models
+
+5. **SVG.NET (Planned)**
+   - SVG rendering for aircraft diagrams
+   - Vector graphics for scalable UI elements
+   - Animation support for state changes
+
+6. **WPF Animation Framework**
+   - Page transition animations
+   - State change visualizations
+   - Progress indicators and loading animations
+
+7. **WPF Theming System**
+   - Dynamic resource dictionaries
+   - Runtime theme switching
+   - Airline-specific theme customization
 
 ### External SDKs and APIs
 
@@ -42,6 +61,11 @@
    - Used for controlling audio levels of external applications
    - Enables volume control and mute functionality
 
+4. **System.Speech (Planned)**
+   - Text-to-speech capabilities for EFB UI
+   - Voice notifications for critical events
+   - Configurable voice settings
+
 ### Testing Frameworks
 
 1. **MSTest**
@@ -59,12 +83,18 @@
    - Enhances test readability and maintainability
    - Simplifies complex assertions
 
+4. **WPF UI Testing (Planned)**
+   - UI automation testing for EFB interface
+   - Visual verification of UI components
+   - Interaction testing for EFB controls
+
 ### Development Tools
 
 1. **Visual Studio**
    - Primary IDE for development
    - C# and XAML editing
    - Debugging and profiling
+   - WPF Designer for UI development
 
 2. **Git**
    - Version control system
@@ -77,6 +107,18 @@
    - All commands use Windows/PowerShell syntax (not Linux/Mac)
    - File paths use Windows conventions with backslashes (C:\path\to\file)
    - PowerShell cmdlets preferred over legacy cmd.exe commands
+
+4. **Blend for Visual Studio (Planned)**
+   - Advanced XAML design
+   - Animation creation and editing
+   - Visual state management
+   - Resource dictionary editing
+
+5. **SVG Editing Tools (Planned)**
+   - Creation and editing of aircraft diagrams
+   - Service vehicle visualizations
+   - Ground equipment icons
+   - Airline logos and branding assets
 
 ## Development Environment
 
@@ -131,6 +173,12 @@
    - Verifies end-to-end workflows
    - Uses real or mocked external dependencies
 
+5. **UI Testing (Planned)**
+   - Visual verification of EFB UI components
+   - Interaction testing for EFB controls
+   - Theme switching and customization testing
+   - Multi-window and secondary monitor testing
+
 ## Technical Constraints
 
 ### Platform Limitations
@@ -143,6 +191,7 @@
 2. **Single-Instance**
    - Only one instance of the application can run at a time
    - Uses system tray for UI to minimize footprint
+   - EFB UI will support multiple windows but single application instance
 
 3. **External Process Dependencies**
    - Relies on MSFS2020 and ProsimA320 running
@@ -171,17 +220,25 @@
    - Minimal CPU and memory footprint
    - Runs alongside resource-intensive simulation software
    - Polling intervals adjusted based on flight phase
+   - EFB UI will use resource loading optimization and caching
 
 2. **Responsiveness**
    - UI must remain responsive during background operations
    - Service operations run on background threads
    - Throttling of update frequency during less critical phases
+   - EFB UI will use throttling mechanisms for performance optimization
 
 3. **Thread Safety**
    - Services may be called from different threads
    - Critical sections protected with locks
    - Async methods with cancellation support
    - Thread-safe event raising
+
+4. **Graphics Performance (Planned)**
+   - Optimized rendering for aircraft visualization
+   - Efficient animation system
+   - Hardware acceleration for UI components
+   - Caching for theme assets and resources
 
 ## Dependencies
 
@@ -225,6 +282,28 @@
    - Requires network connectivity
    - Supported networks: Hoppie, SayIntentions
 
+### EFB UI Assets (Planned)
+
+1. **Aircraft Diagram SVG/XAML**
+   - Scalable A320 aircraft diagram
+   - Interactive elements for doors and service points
+   - Animation states for different configurations
+
+2. **Airline Branding Assets**
+   - Logos for major airlines
+   - Color schemes and typography
+   - Background images and textures
+
+3. **EFB Control Images and Icons**
+   - Button and control graphics
+   - Status indicators and alerts
+   - Navigation icons and symbols
+
+4. **Font Resources**
+   - Airline-specific typography
+   - Readable fonts for EFB displays
+   - Icon fonts for common symbols
+
 ## Configuration Management
 
 1. **User Settings**
@@ -243,6 +322,18 @@
    - Reset on application restart
    - Some state (fuel, hydraulic fluids) can be saved between sessions
 
+4. **EFB Themes (Planned)**
+   - Stored in JSON format
+   - Airline-specific themes
+   - User customization options
+   - Dynamic loading at runtime
+
+5. **EFB Window State (Planned)**
+   - Window position and size
+   - Detached state for secondary monitor
+   - Page navigation history
+   - Persisted between sessions
+
 ## Security Considerations
 
 1. **No Network Authentication**
@@ -257,6 +348,11 @@
 3. **Local File Access**
    - Reads/writes local configuration files
    - No access to system files or protected areas
+
+4. **Theme Validation (Planned)**
+   - JSON schema validation for theme files
+   - Sanitization of external theme content
+   - Error handling for invalid themes
 
 ## Architecture Patterns
 
@@ -286,6 +382,18 @@
    - Thread-safe event raising
    - Immutable data structures where appropriate
 
+6. **MVVM Pattern (Enhanced for EFB UI)**
+   - Clear separation of View, ViewModel, and Model
+   - Data binding for UI updates
+   - Commands for user interactions
+   - State management through view models
+
+7. **Theme Provider Pattern (Planned)**
+   - Centralized theme management
+   - Dynamic resource dictionary loading
+   - Theme switching at runtime
+   - Consistent styling across components
+
 ## Error Handling Strategy
 
 1. **Service-Specific Exceptions**
@@ -307,3 +415,9 @@
    - Structured logging with Serilog
    - Appropriate log levels based on context
    - Detailed context information in log messages
+
+5. **UI Error Handling (Planned)**
+   - User-friendly error messages
+   - Visual indicators for error states
+   - Recovery options where possible
+   - Detailed logging for troubleshooting
