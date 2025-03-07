@@ -212,6 +212,14 @@ namespace Prosim2GSX
                 Logger.Instance);
             passengerCoordinator.Initialize();
             
+            // Create cargo coordinator
+            var cargoCoordinator = new GSXCargoCoordinator(
+                ProsimController.GetCargoService(),
+                serviceOrchestrator,
+                Logger.Instance);
+            cargoCoordinator.Initialize();
+            cargoCoordinator.RegisterDoorCoordinator(doorCoordinator);
+            
             // Step 10: Create GSXControllerFacade
             var gsxControllerFacade = new GSXControllerFacade(
                 Model, 
@@ -227,6 +235,7 @@ namespace Prosim2GSX
                 doorCoordinator,
                 equipmentCoordinator,
                 passengerCoordinator,
+                cargoCoordinator,
                 Logger.Instance);
             
             // Store the GSXControllerFacade in IPCManager so it can be accessed by the MainWindow

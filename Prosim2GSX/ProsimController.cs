@@ -355,6 +355,15 @@ namespace Prosim2GSX
         }
         
         /// <summary>
+        /// Gets the cargo service
+        /// </summary>
+        /// <returns>The cargo service</returns>
+        public IProsimCargoService GetCargoService()
+        {
+            return _cargoService;
+        }
+        
+        /// <summary>
         /// Gets the Take Off Weight Center of Gravity (MACTOW)
         /// This is the aircraft center of gravity with fuel, passengers, and cargo
         /// </summary>

@@ -14,6 +14,7 @@ namespace Prosim2GSX.Services
         private readonly IGSXDoorCoordinator _doorCoordinator;
         private readonly IGSXEquipmentCoordinator _equipmentCoordinator;
         private readonly IGSXPassengerCoordinator _passengerCoordinator;
+        private readonly IGSXCargoCoordinator _cargoCoordinator;
         private readonly IGSXAudioService _audioService;
         private readonly ILogger _logger;
         
@@ -44,6 +45,7 @@ namespace Prosim2GSX.Services
             IGSXDoorCoordinator doorCoordinator,
             IGSXEquipmentCoordinator equipmentCoordinator,
             IGSXPassengerCoordinator passengerCoordinator,
+            IGSXCargoCoordinator cargoCoordinator,
             ILogger logger)
         {
             try
@@ -54,6 +56,7 @@ namespace Prosim2GSX.Services
                 _doorCoordinator = doorCoordinator ?? throw new ArgumentNullException(nameof(doorCoordinator));
                 _equipmentCoordinator = equipmentCoordinator ?? throw new ArgumentNullException(nameof(equipmentCoordinator));
                 _passengerCoordinator = passengerCoordinator ?? throw new ArgumentNullException(nameof(passengerCoordinator));
+                _cargoCoordinator = cargoCoordinator ?? throw new ArgumentNullException(nameof(cargoCoordinator));
                 _audioService = audioService ?? throw new ArgumentNullException(nameof(audioService));
                 _logger = logger ?? throw new ArgumentNullException(nameof(logger));
                 
@@ -78,6 +81,7 @@ namespace Prosim2GSX.Services
                 _doorCoordinator.RegisterForStateChanges(_stateManager);
                 _equipmentCoordinator.RegisterForStateChanges(_stateManager);
                 _passengerCoordinator.RegisterForStateChanges(_stateManager);
+                _cargoCoordinator.RegisterForStateChanges(_stateManager);
                 
                 _logger.Log(LogLevel.Information, "GSXControllerFacade:Constructor", "GSX Controller Facade initialized");
             }
@@ -185,6 +189,7 @@ namespace Prosim2GSX.Services
                 _doorCoordinator?.Dispose();
                 _equipmentCoordinator?.Dispose();
                 _passengerCoordinator?.Dispose();
+                _cargoCoordinator?.Dispose();
                 
                 // Dispose the controller
                 _controller.Dispose();
