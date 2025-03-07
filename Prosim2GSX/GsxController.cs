@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using CoreAudio;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using CoreAudio;
 using Microsoft.Win32;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
@@ -64,12 +64,9 @@ namespace Prosim2GSX
         private bool refuelRequested = false;
 
 
-        private readonly IAcarsService acarsService;
-        private readonly IGSXMenuService menuService;
         private readonly IGSXAudioService audioService;
         private readonly IGSXStateManager stateManager;
-        private readonly IGSXLoadsheetManager loadsheetManager;
-        private readonly IGSXDoorManager doorManager;
+        private readonly IGSXServiceCoordinator serviceCoordinator;
         private readonly MobiSimConnect SimConnect;
         private readonly ProsimController ProsimController;
         private readonly ServiceModel Model;
@@ -77,17 +74,14 @@ namespace Prosim2GSX
 
         public int Interval { get; set; } = 1000;
 
-        public GsxController(ServiceModel model, ProsimController prosimController, FlightPlan flightPlan, IAcarsService acarsService, IGSXMenuService menuService, IGSXAudioService audioService, IGSXStateManager stateManager, IGSXLoadsheetManager loadsheetManager, IGSXDoorManager doorManager)
+        public GsxController(ServiceModel model, ProsimController prosimController, FlightPlan flightPlan, IAcarsService acarsService, IGSXMenuService menuService, IGSXAudioService audioService, IGSXStateManager stateManager, IGSXLoadsheetManager loadsheetManager, IGSXDoorManager doorManager, IGSXServiceCoordinator serviceCoordinator)
         {
             Model = model;
             ProsimController = prosimController;
             FlightPlan = flightPlan;
-            this.acarsService = acarsService;
-            this.menuService = menuService;
             this.audioService = audioService ?? throw new ArgumentNullException(nameof(audioService));
             this.stateManager = stateManager ?? throw new ArgumentNullException(nameof(stateManager));
-            this.loadsheetManager = loadsheetManager ?? throw new ArgumentNullException(nameof(loadsheetManager));
-            this.doorManager = doorManager ?? throw new ArgumentNullException(nameof(doorManager));
+            this.serviceCoordinator = serviceCoordinator ?? throw new ArgumentNullException(nameof(serviceCoordinator));
 
             // Subscribe to audio service events
             this.audioService.AudioSessionFound += OnAudioSessionFound;
@@ -97,15 +91,12 @@ namespace Prosim2GSX
             // Subscribe to state manager events
             this.stateManager.StateChanged += OnStateChanged;
             
-            // Subscribe to loadsheet manager events
-            this.loadsheetManager.LoadsheetGenerated += OnLoadsheetGenerated;
+            // Subscribe to service coordinator events
+            this.serviceCoordinator.ServiceStatusChanged += OnServiceStatusChanged;
             
-            // Subscribe to door manager events
-            this.doorManager.DoorStateChanged += OnDoorStateChanged;
-            
-            // Initialize state manager and door manager
+            // Initialize state manager and service coordinator
             this.stateManager.Initialize();
-            this.doorManager.Initialize();
+            this.serviceCoordinator.Initialize();
 
             SimConnect = IPCManager.SimConnect;
             SimConnect.SubscribeSimVar("SIM ON GROUND", "Bool");
@@ -192,30 +183,50 @@ namespace Prosim2GSX
         }
         
         // Event handler for door manager events
-        private void OnDoorStateChanged(object sender, DoorStateChangedEventArgs e)
+        // Event handler for service coordinator events
+        private void OnServiceStatusChanged(object sender, ServiceStatusChangedEventArgs e)
         {
-            // Update local state variables based on door state changes
-            switch (e.DoorType)
+            Logger.Log(LogLevel.Information, "GsxController:OnServiceStatusChanged", 
+                $"Service status changed: {e.ServiceType} - {e.Status} - {(e.IsCompleted ? "Completed" : "In Progress")}");
+            
+            // Update local state variables based on service status
+            switch (e.ServiceType)
             {
-                case DoorType.ForwardRight:
-                    forwardRightDoorOpened = e.IsOpen;
-                    Logger.Log(LogLevel.Information, "GsxController:OnDoorStateChanged", 
-                        $"Forward right door is now {(e.IsOpen ? "open" : "closed")}");
+                case "Refuel":
+                    if (e.IsCompleted && e.Status.Contains("Completed"))
+                        refuelFinished = true;
                     break;
-                case DoorType.AftRight:
-                    aftRightDoorOpened = e.IsOpen;
-                    Logger.Log(LogLevel.Information, "GsxController:OnDoorStateChanged", 
-                        $"Aft right door is now {(e.IsOpen ? "open" : "closed")}");
+                case "Boarding":
+                    if (e.IsCompleted && e.Status.Contains("Completed"))
+                        boardFinished = true;
                     break;
-                case DoorType.ForwardCargo:
-                    forwardCargoDoorOpened = e.IsOpen;
-                    Logger.Log(LogLevel.Information, "GsxController:OnDoorStateChanged", 
-                        $"Forward cargo door is now {(e.IsOpen ? "open" : "closed")}");
+                case "Catering":
+                    if (e.IsCompleted && e.Status.Contains("Completed"))
+                        cateringFinished = true;
                     break;
-                case DoorType.AftCargo:
-                    aftCargoDoorOpened = e.IsOpen;
-                    Logger.Log(LogLevel.Information, "GsxController:OnDoorStateChanged", 
-                        $"Aft cargo door is now {(e.IsOpen ? "open" : "closed")}");
+                case "Loadsheet":
+                    if (e.Status.Contains("Preliminary"))
+                        prelimLoadsheet = true;
+                    else if (e.Status.Contains("Final"))
+                        finalLoadsheetSend = true;
+                    break;
+                case "Equipment":
+                    if (e.IsCompleted && e.Status.Contains("Removed"))
+                        equipmentRemoved = true;
+                    break;
+                case "Pushback":
+                    if (e.IsCompleted && (e.Status.Contains("Completed") || e.Status.Contains("Skipped")))
+                        pushFinished = true;
+                    break;
+                case "Door":
+                    if (e.Status.Contains("Forward right door"))
+                        forwardRightDoorOpened = e.Status.Contains("opened");
+                    else if (e.Status.Contains("Aft right door"))
+                        aftRightDoorOpened = e.Status.Contains("opened");
+                    else if (e.Status.Contains("Forward cargo door"))
+                        forwardCargoDoorOpened = e.Status.Contains("opened");
+                    else if (e.Status.Contains("Aft cargo door"))
+                        aftCargoDoorOpened = e.Status.Contains("opened");
                     break;
             }
         }
@@ -479,18 +490,17 @@ namespace Prosim2GSX
             //DEPARTURE - Boarding & Refueling
             int refuelState = (int)SimConnect.ReadLvar("FSDT_GSX_REFUELING_STATE");
             int cateringState = (int)SimConnect.ReadLvar("FSDT_GSX_CATERING_STATE");
-            if (stateManager.IsDeparture() && (!refuelFinished || !boardFinished))
+            if (stateManager.IsDeparture() && (!serviceCoordinator.IsRefuelingComplete() || !serviceCoordinator.IsBoardingComplete()))
             {
-                RunLoadingServices(refuelState, cateringState);
-
+                serviceCoordinator.RunLoadingServices(refuelState, cateringState);
                 return;
             }
 
             //DEPARTURE - Loadsheet & Ground-Equipment
-            if (stateManager.IsDeparture() && refuelFinished && boardFinished)
+            int departureState = (int)SimConnect.ReadLvar("FSDT_GSX_DEPARTURE_STATE");
+            if (stateManager.IsDeparture() && serviceCoordinator.IsRefuelingComplete() && serviceCoordinator.IsBoardingComplete())
             {
-                RunDEPARTUREServices();
-
+                serviceCoordinator.RunDepartureServices(departureState);
                 return;
             }
 
@@ -528,15 +538,14 @@ namespace Prosim2GSX
             int deboard_state = (int)SimConnect.ReadLvar("FSDT_GSX_DEBOARDING_STATE");
             if (stateManager.IsTaxiin() && SimConnect.ReadLvar("FSDT_VAR_EnginesStopped") == 1 && SimConnect.ReadLvar("S_MIP_PARKING_BRAKE") == 1 && SimConnect.ReadLvar("S_OH_EXT_LT_BEACON") == 0)
             {
-                RunArrivalServices(deboard_state);
-
+                serviceCoordinator.RunArrivalServices(deboard_state);
                 return;
             }
 
             //ARRIVAL - Deboarding
             if (stateManager.IsArrival() && deboard_state >= 4)
             {
-                RunDeboardingService(deboard_state);
+                serviceCoordinator.RunDeboardingService(deboard_state);
             }
 
             //Pre-Flight - Turn-Around
@@ -1106,14 +1115,9 @@ namespace Prosim2GSX
                 stateManager.StateChanged -= OnStateChanged;
             }
             
-            if (loadsheetManager != null)
+            if (serviceCoordinator != null)
             {
-                loadsheetManager.LoadsheetGenerated -= OnLoadsheetGenerated;
-            }
-            
-            if (doorManager != null)
-            {
-                doorManager.DoorStateChanged -= OnDoorStateChanged;
+                serviceCoordinator.ServiceStatusChanged -= OnServiceStatusChanged;
             }
             
             Logger.Log(LogLevel.Information, "GsxController:Dispose", "GSX Controller disposed");

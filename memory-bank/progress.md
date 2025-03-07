@@ -28,7 +28,7 @@ Prosim2GSX is currently in a transitional state as it undergoes significant modu
 |-------|--------|--------------|
 | Phase 1: Core Services | Completed | 100% |
 | Phase 2: Shared and ProSim Services | Completed | 100% |
-| Phase 3: GSX Services | In Progress | 65% |
+| Phase 3: GSX Services | In Progress | 80% |
 | Phase 4: Further GSX Controller Modularization | Planned | 0% |
 | Phase 5: Refine Architecture and Improve Integration | Planned | 0% |
 
@@ -127,6 +127,8 @@ Prosim2GSX is currently in a transitional state as it undergoes significant modu
    - ✅ GSXAudioService for audio control
    - ✅ GSXStateManager for flight state management
    - ✅ GSXLoadsheetManager for loadsheet generation and transmission
+   - ✅ GSXDoorManager for aircraft door control
+   - ✅ GSXServiceCoordinator for coordinating GSX services
 
 ## What's Left to Build
 
@@ -141,11 +143,13 @@ Prosim2GSX is currently in a transitional state as it undergoes significant modu
      - ✅ Implemented validation for state transitions
      - ✅ Updated GsxController to use the new service
      - ✅ Modified ServiceController to initialize the service
-   - 🔜 Phase 3.4: Implement GSXServiceCoordinator
-     - 🔜 Create IGSXServiceCoordinator interface and implementation
-     - 🔜 Extract service coordination logic from GsxController
-     - 🔜 Add methods for running various GSX services
-     - 🔜 Add event-based communication for service status changes
+   - ✅ Phase 3.4: Implement GSXServiceCoordinator
+     - ✅ Created IGSXServiceCoordinator interface and implementation
+     - ✅ Extracted service coordination logic from GsxController
+     - ✅ Added methods for running various GSX services
+     - ✅ Added event-based communication for service status changes
+     - ✅ Updated GsxController to use the new service
+     - ✅ Modified ServiceController to initialize the service
    - ✅ Phase 3.5: Implement GSXDoorManager
      - ✅ Created IGSXDoorManager interface and implementation
      - ✅ Extracted door management logic from GsxController
@@ -451,8 +455,7 @@ Based on the current state and modularization strategy, the following priorities
      - Added state transition methods and state query methods
      - Added event-based notification for state changes
      - Implemented validation for state transitions
-   - 🔜 Implement remaining GSX services (Phases 3.4-3.7)
-     - GSXServiceCoordinator, GSXDoorManager
+   - 🔜 Implement remaining GSX services (Phase 3.7)
      - Refine GsxController to be a thin facade
 
 2. **Begin Further GSX Controller Modularization (Phase 4)**

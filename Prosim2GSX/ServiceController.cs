@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿using System;
 using System.Threading;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
@@ -186,8 +186,28 @@ namespace Prosim2GSX
             var loadsheetManager = new GSXLoadsheetManager(acarsService, flightDataService, FlightPlan, Model);
             loadsheetManager.Initialize();
             
-            // Step 9: Create GsxController
-            var gsxController = new GsxController(Model, ProsimController, FlightPlan, acarsService, menuService, audioService, stateManager, loadsheetManager, doorManager);
+            // Step 9: Create GSXServiceCoordinator
+            var serviceCoordinator = new GSXServiceCoordinator(
+                Model, 
+                IPCManager.SimConnect, 
+                ProsimController, 
+                menuService, 
+                loadsheetManager, 
+                doorManager, 
+                acarsService);
+            
+            // Step 10: Create GsxController
+            var gsxController = new GsxController(
+                Model, 
+                ProsimController, 
+                FlightPlan, 
+                acarsService, 
+                menuService, 
+                audioService, 
+                stateManager, 
+                loadsheetManager, 
+                doorManager, 
+                serviceCoordinator);
             
             // Store the GsxController in IPCManager so it can be accessed by the MainWindow
             IPCManager.GsxController = gsxController;
