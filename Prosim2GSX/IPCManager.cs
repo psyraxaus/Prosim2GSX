@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿using Prosim2GSX.Models;
+﻿﻿﻿﻿﻿﻿﻿﻿using Prosim2GSX.Models;
 using Prosim2GSX.Services;
 using System.Diagnostics;
 using System.Linq;
@@ -12,7 +12,7 @@ namespace Prosim2GSX
 
         public static ISimConnectService SimConnectService { get; set; } = null;
         public static MobiSimConnect SimConnect { get; set; } = null;
-        public static GsxController GsxController { get; set; } = null;
+        public static IGSXControllerFacade GsxController { get; set; } = null;
 
         public static bool WaitForSimulator(ServiceModel model)
         {

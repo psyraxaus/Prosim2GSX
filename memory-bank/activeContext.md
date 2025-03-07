@@ -175,11 +175,14 @@ The current focus for Prosim2GSX is implementing the modularization strategy to 
      - Will improve event handling and state management
      - Will enhance error handling and logging
 
-4. **Further GSX Controller Modularization (Phase 4, Planned)**
-   - Phase 4.1: Create GSXControllerFacade
-     - Will create IGSXControllerFacade interface
-     - Will create GSXControllerFacade implementation
-     - Will update ServiceController to use GSXControllerFacade
+4. **Further GSX Controller Modularization (Phase 4, In Progress)**
+   - Completed Phase 4.1: Create GSXControllerFacade
+     - Created IGSXControllerFacade interface
+     - Created GSXControllerFacade implementation
+     - Updated ServiceController to use GSXControllerFacade
+     - Added event forwarding for state and service status changes
+     - Improved error handling and logging
+     - Implementation details available in to-do/modularization-implementation-phase4.1.md
    
    - Phase 4.2: Enhance GSXStateMachine
      - Will enhance IGSXStateManager interface
@@ -264,9 +267,12 @@ The following steps are recommended for continued development and improvement of
 
 ### Short-term Tasks
 
-1. **Complete Phase 3 of Modularization**
-   - Implement GSXServiceCoordinator (Phase 3.4)
-   - Refine GsxController (Phase 3.7)
+1. **Continue Phase 4 of Modularization**
+   - Implement Phase 4.2: Enhance GSXStateMachine
+     - Enhance IGSXStateManager interface
+     - Enhance GSXStateManager implementation
+     - Improve state transition logic
+   - Prepare for Phase 4.3: Create GSXServiceOrchestrator
 
 2. **Enhance Testing**
    - Implement unit tests for new services
@@ -280,11 +286,10 @@ The following steps are recommended for continued development and improvement of
 
 ### Medium-term Tasks
 
-1. **Begin Phase 4 of Modularization**
-   - Create GSXControllerFacade
-   - Enhance GSXStateMachine
-   - Create GSXServiceOrchestrator
-   - Implement coordinators for specific domains
+1. **Complete Phase 4 of Modularization**
+   - Implement GSXServiceOrchestrator (Phase 4.3)
+   - Create domain-specific coordinators (Phase 4.4-4.8)
+   - Implement comprehensive testing (Phase 4.9)
 
 2. **Performance Optimization**
    - Identify and address performance bottlenecks

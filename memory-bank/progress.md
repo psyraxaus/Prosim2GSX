@@ -29,7 +29,7 @@ Prosim2GSX is currently in a transitional state as it undergoes significant modu
 | Phase 1: Core Services | Completed | 100% |
 | Phase 2: Shared and ProSim Services | Completed | 100% |
 | Phase 3: GSX Services | Completed | 100% |
-| Phase 4: Further GSX Controller Modularization | Planned | 0% |
+| Phase 4: Further GSX Controller Modularization | In Progress | 20% |
 | Phase 5: Refine Architecture and Improve Integration | Planned | 0% |
 
 ### EFB UI Implementation Progress
@@ -173,10 +173,11 @@ Prosim2GSX is currently in a transitional state as it undergoes significant modu
      - ✅ Implementation details available in to-do/modularization-implementation-phase3.7.md
 
 2. **Phase 4: Further GSX Controller Modularization**
-   - 🔜 Phase 4.1: Create GSXControllerFacade
-     - 🔜 Create IGSXControllerFacade interface
-     - 🔜 Create GSXControllerFacade implementation
-     - 🔜 Update ServiceController to use GSXControllerFacade
+   - ✅ Phase 4.1: Create GSXControllerFacade
+     - ✅ Created IGSXControllerFacade interface
+     - ✅ Created GSXControllerFacade implementation
+     - ✅ Updated ServiceController to use GSXControllerFacade
+     - ✅ Implementation details available in to-do/modularization-implementation-phase4.1.md
    - 🔜 Phase 4.2: Enhance GSXStateMachine
      - 🔜 Enhance IGSXStateManager interface
      - 🔜 Enhance GSXStateManager implementation
@@ -462,11 +463,11 @@ Based on the current state and modularization strategy, the following priorities
      - Enhanced error handling and logging
      - Implemented proper IDisposable pattern
 
-2. **Begin Further GSX Controller Modularization (Phase 4)**
-   - 🔜 Create GSXControllerFacade
-   - 🔜 Enhance GSXStateMachine
-   - 🔜 Create GSXServiceOrchestrator
-   - 🔜 Create domain-specific coordinators
+2. **Continue Further GSX Controller Modularization (Phase 4)**
+   - ✅ Create GSXControllerFacade (Phase 4.1)
+   - 🔜 Enhance GSXStateMachine (Phase 4.2)
+   - 🔜 Create GSXServiceOrchestrator (Phase 4.3)
+   - 🔜 Create domain-specific coordinators (Phase 4.4-4.8)
 
 3. **Implement Comprehensive Testing**
    - 🔜 Unit tests for all services

@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Threading;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
@@ -196,8 +196,8 @@ namespace Prosim2GSX
                 doorManager, 
                 acarsService);
             
-            // Step 10: Create GsxController
-            var gsxController = new GsxController(
+            // Step 10: Create GSXControllerFacade
+            var gsxControllerFacade = new GSXControllerFacade(
                 Model, 
                 ProsimController, 
                 FlightPlan, 
@@ -209,8 +209,8 @@ namespace Prosim2GSX
                 doorManager, 
                 serviceCoordinator);
             
-            // Store the GsxController in IPCManager so it can be accessed by the MainWindow
-            IPCManager.GsxController = gsxController;
+            // Store the GSXControllerFacade in IPCManager so it can be accessed by the MainWindow
+            IPCManager.GsxController = gsxControllerFacade;
             
             Logger.Log(LogLevel.Information, "ServiceController:InitializeServices", "Services initialized successfully");
         }
