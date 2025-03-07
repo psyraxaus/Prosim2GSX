@@ -193,10 +193,56 @@ Prosim2GSX is currently in a transitional state as it undergoes significant modu
      - ✅ Coordinated service execution based on state
      - ✅ Updated GsxController to use the new service
      - ✅ Modified ServiceController to initialize the service
-   - 🔜 Phase 4.4-4.8: Create Domain-Specific Coordinators
-     - 🔜 Implement coordinators for doors, equipment, passengers, cargo, and fuel
-     - 🔜 Each coordinator will manage specific operations and state tracking
-     - 🔜 Provide event-based communication for state changes
+   - 🔜 Phase 4.4: Create GSXDoorCoordinator
+     - 🔜 Create IGSXDoorCoordinator interface with comprehensive door management capabilities
+     - 🔜 Implement GSXDoorCoordinator to coordinate between GSXDoorManager and ProsimDoorService
+     - 🔜 Add synchronous and asynchronous door operation methods
+     - 🔜 Implement door state tracking and synchronization
+     - 🔜 Add state-based door management
+     - 🔜 Provide event-based communication for door state changes
+     - 🔜 Include comprehensive error handling and logging
+     - 🔜 Update GSXControllerFacade to use the new coordinator
+     - 🔜 Modify ServiceController to initialize the coordinator
+   - 🔜 Phase 4.5: Create GSXEquipmentCoordinator
+     - 🔜 Create IGSXEquipmentCoordinator interface with equipment management capabilities
+     - 🔜 Implement GSXEquipmentCoordinator to coordinate with ProsimEquipmentService
+     - 🔜 Add synchronous and asynchronous equipment operation methods
+     - 🔜 Implement equipment state tracking and synchronization
+     - 🔜 Add state-based equipment management
+     - 🔜 Provide event-based communication for equipment state changes
+     - 🔜 Include comprehensive error handling and logging
+     - 🔜 Update GSXControllerFacade to use the new coordinator
+     - 🔜 Modify ServiceController to initialize the coordinator
+   - 🔜 Phase 4.6: Create GSXPassengerCoordinator
+     - 🔜 Create IGSXPassengerCoordinator interface with passenger management capabilities
+     - 🔜 Implement GSXPassengerCoordinator to coordinate between GSXServiceOrchestrator and ProsimPassengerService
+     - 🔜 Add synchronous and asynchronous passenger operation methods
+     - 🔜 Implement passenger count tracking and boarding/deboarding progress
+     - 🔜 Add state-based passenger management
+     - 🔜 Provide event-based communication for passenger state changes
+     - 🔜 Include comprehensive error handling and logging
+     - 🔜 Update GSXControllerFacade to use the new coordinator
+     - 🔜 Modify ServiceController to initialize the coordinator
+   - 🔜 Phase 4.7: Create GSXCargoCoordinator
+     - 🔜 Create IGSXCargoCoordinator interface with cargo management capabilities
+     - 🔜 Implement GSXCargoCoordinator to coordinate between GSXServiceOrchestrator and ProsimCargoService
+     - 🔜 Add synchronous and asynchronous cargo operation methods
+     - 🔜 Implement cargo weight tracking and loading/unloading progress
+     - 🔜 Add state-based cargo management
+     - 🔜 Provide event-based communication for cargo state changes
+     - 🔜 Include comprehensive error handling and logging
+     - 🔜 Update GSXControllerFacade to use the new coordinator
+     - 🔜 Modify ServiceController to initialize the coordinator
+   - 🔜 Phase 4.8: Create GSXFuelCoordinator
+     - 🔜 Create IGSXFuelCoordinator interface with fuel management capabilities
+     - 🔜 Implement GSXFuelCoordinator to coordinate between GSXServiceOrchestrator and ProsimFuelService
+     - 🔜 Add synchronous and asynchronous fuel operation methods
+     - 🔜 Implement fuel quantity tracking and refueling progress
+     - 🔜 Add state-based fuel management
+     - 🔜 Provide event-based communication for fuel state changes
+     - 🔜 Include comprehensive error handling and logging
+     - 🔜 Update GSXControllerFacade to use the new coordinator
+     - 🔜 Modify ServiceController to initialize the coordinator
    - 🔜 Phase 4.9: Comprehensive Testing
      - 🔜 Create unit tests for all new components
      - 🔜 Create integration tests for component interactions
