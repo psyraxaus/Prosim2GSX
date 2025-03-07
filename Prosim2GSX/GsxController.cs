@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using CoreAudio;
+﻿﻿using CoreAudio;
 using Microsoft.Win32;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
@@ -69,7 +69,7 @@ namespace Prosim2GSX
         // Dependencies (injected through constructor)
         private readonly IGSXAudioService audioService;
         private readonly IGSXStateManager stateManager;
-        private readonly IGSXServiceCoordinator serviceCoordinator;
+        private readonly IGSXServiceOrchestrator serviceOrchestrator;
         private readonly IGSXLoadsheetManager loadsheetManager;
         private readonly IGSXDoorManager doorManager;
         private readonly IGSXMenuService menuService;
@@ -102,7 +102,7 @@ namespace Prosim2GSX
             IGSXStateManager stateManager, 
             IGSXLoadsheetManager loadsheetManager, 
             IGSXDoorManager doorManager, 
-            IGSXServiceCoordinator serviceCoordinator)
+            IGSXServiceOrchestrator serviceOrchestrator)
         {
             try
             {
@@ -114,7 +114,7 @@ namespace Prosim2GSX
                 this.menuService = menuService ?? throw new ArgumentNullException(nameof(menuService));
                 this.audioService = audioService ?? throw new ArgumentNullException(nameof(audioService));
                 this.stateManager = stateManager ?? throw new ArgumentNullException(nameof(stateManager));
-                this.serviceCoordinator = serviceCoordinator ?? throw new ArgumentNullException(nameof(serviceCoordinator));
+                this.serviceOrchestrator = serviceOrchestrator ?? throw new ArgumentNullException(nameof(serviceOrchestrator));
                 this.loadsheetManager = loadsheetManager ?? throw new ArgumentNullException(nameof(loadsheetManager));
                 this.doorManager = doorManager ?? throw new ArgumentNullException(nameof(doorManager));
 
@@ -196,8 +196,8 @@ namespace Prosim2GSX
                 // Subscribe to state manager events
                 stateManager.StateChanged += OnStateChanged;
                 
-                // Subscribe to service coordinator events
-                serviceCoordinator.ServiceStatusChanged += OnServiceStatusChanged;
+                // Subscribe to service orchestrator events
+                serviceOrchestrator.ServiceStatusChanged += OnServiceStatusChanged;
                 
                 // Subscribe to loadsheet manager events
                 loadsheetManager.LoadsheetGenerated += OnLoadsheetGenerated;
@@ -234,10 +234,10 @@ namespace Prosim2GSX
                     stateManager.StateChanged -= OnStateChanged;
                 }
                 
-                // Unsubscribe from service coordinator events
-                if (serviceCoordinator != null)
+                // Unsubscribe from service orchestrator events
+                if (serviceOrchestrator != null)
                 {
-                    serviceCoordinator.ServiceStatusChanged -= OnServiceStatusChanged;
+                    serviceOrchestrator.ServiceStatusChanged -= OnServiceStatusChanged;
                 }
                 
                 // Unsubscribe from loadsheet manager events
@@ -324,9 +324,9 @@ namespace Prosim2GSX
         {
             try
             {
-                // Initialize state manager and service coordinator
+                // Initialize state manager and service orchestrator
                 stateManager.Initialize();
-                serviceCoordinator.Initialize();
+                serviceOrchestrator.Initialize();
                 
                 Logger.Log(LogLevel.Debug, "GsxController:InitializeServices", "Services initialized");
             }
@@ -384,7 +384,7 @@ namespace Prosim2GSX
                 $"Door state changed: {e.DoorType} - {(e.IsOpen ? "Opened" : "Closed")}");
         }
         
-        // Event handler for service coordinator events
+        // Event handler for service orchestrator events
         private void OnServiceStatusChanged(object sender, ServiceStatusChangedEventArgs e)
         {
             Logger.Log(LogLevel.Information, "GsxController:OnServiceStatusChanged", 
@@ -689,17 +689,17 @@ namespace Prosim2GSX
             //DEPARTURE - Boarding & Refueling
             int refuelState = (int)SimConnect.ReadLvar("FSDT_GSX_REFUELING_STATE");
             int cateringState = (int)SimConnect.ReadLvar("FSDT_GSX_CATERING_STATE");
-            if (stateManager.IsDeparture() && (!serviceCoordinator.IsRefuelingComplete() || !serviceCoordinator.IsBoardingComplete()))
+            if (stateManager.IsDeparture() && (!serviceOrchestrator.IsRefuelingComplete() || !serviceOrchestrator.IsBoardingComplete()))
             {
-                serviceCoordinator.RunLoadingServices(refuelState, cateringState);
+                serviceOrchestrator.RunLoadingServices(refuelState, cateringState);
                 return;
             }
 
             //DEPARTURE - Loadsheet & Ground-Equipment
             int departureState = (int)SimConnect.ReadLvar("FSDT_GSX_DEPARTURE_STATE");
-            if (stateManager.IsDeparture() && serviceCoordinator.IsRefuelingComplete() && serviceCoordinator.IsBoardingComplete())
+            if (stateManager.IsDeparture() && serviceOrchestrator.IsRefuelingComplete() && serviceOrchestrator.IsBoardingComplete())
             {
-                serviceCoordinator.RunDepartureServices(departureState);
+                serviceOrchestrator.RunDepartureServices(departureState);
                 return;
             }
 
@@ -737,14 +737,14 @@ namespace Prosim2GSX
             int deboard_state = (int)SimConnect.ReadLvar("FSDT_GSX_DEBOARDING_STATE");
             if (stateManager.IsTaxiin() && SimConnect.ReadLvar("FSDT_VAR_EnginesStopped") == 1 && SimConnect.ReadLvar("S_MIP_PARKING_BRAKE") == 1 && SimConnect.ReadLvar("S_OH_EXT_LT_BEACON") == 0)
             {
-                serviceCoordinator.RunArrivalServices(deboard_state);
+                serviceOrchestrator.RunArrivalServices(deboard_state);
                 return;
             }
 
             //ARRIVAL - Deboarding
             if (stateManager.IsArrival() && deboard_state >= 4)
             {
-                serviceCoordinator.RunDeboardingService(deboard_state);
+                serviceOrchestrator.RunDeboardingService(deboard_state);
             }
 
             //Pre-Flight - Turn-Around
@@ -795,8 +795,8 @@ namespace Prosim2GSX
         // - RunArrivalServices
         // - RunDeboardingService
         // 
-        // These methods contained business logic that has been moved to the GSXServiceCoordinator.
-        // The GsxController now delegates to the service coordinator in the RunServices method.
+        // These methods contained business logic that has been moved to the GSXServiceOrchestrator.
+        // The GsxController now delegates to the service orchestrator in the RunServices method.
 
         private void SetPassengers(int numPax)
         {

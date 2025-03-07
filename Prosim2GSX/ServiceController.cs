@@ -186,15 +186,16 @@ namespace Prosim2GSX
             var loadsheetManager = new GSXLoadsheetManager(acarsService, flightDataService, FlightPlan, Model);
             loadsheetManager.Initialize();
             
-            // Step 9: Create GSXServiceCoordinator
-            var serviceCoordinator = new GSXServiceCoordinator(
+            // Step 9: Create GSXServiceOrchestrator
+            var serviceOrchestrator = new GSXServiceOrchestrator(
                 Model, 
                 IPCManager.SimConnect, 
                 ProsimController, 
                 menuService, 
                 loadsheetManager, 
                 doorManager, 
-                acarsService);
+                acarsService,
+                stateManager);
             
             // Step 10: Create GSXControllerFacade
             var gsxControllerFacade = new GSXControllerFacade(
@@ -207,7 +208,7 @@ namespace Prosim2GSX
                 stateManager, 
                 loadsheetManager, 
                 doorManager, 
-                serviceCoordinator);
+                serviceOrchestrator);
             
             // Store the GSXControllerFacade in IPCManager so it can be accessed by the MainWindow
             IPCManager.GsxController = gsxControllerFacade;

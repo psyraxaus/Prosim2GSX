@@ -10,7 +10,7 @@ namespace Prosim2GSX.Services
     {
         private readonly GsxController _controller;
         private readonly IGSXStateManager _stateManager;
-        private readonly IGSXServiceCoordinator _serviceCoordinator;
+        private readonly IGSXServiceOrchestrator _serviceOrchestrator;
         
         /// <summary>
         /// Event raised when the flight state changes
@@ -35,13 +35,13 @@ namespace Prosim2GSX.Services
             IGSXStateManager stateManager, 
             IGSXLoadsheetManager loadsheetManager, 
             IGSXDoorManager doorManager, 
-            IGSXServiceCoordinator serviceCoordinator)
+            IGSXServiceOrchestrator serviceOrchestrator)
         {
             try
             {
                 // Store references to services that we need to subscribe to events
                 _stateManager = stateManager ?? throw new ArgumentNullException(nameof(stateManager));
-                _serviceCoordinator = serviceCoordinator ?? throw new ArgumentNullException(nameof(serviceCoordinator));
+                _serviceOrchestrator = serviceOrchestrator ?? throw new ArgumentNullException(nameof(serviceOrchestrator));
                 
                 // Create the controller
                 _controller = new GsxController(
@@ -54,11 +54,11 @@ namespace Prosim2GSX.Services
                     stateManager, 
                     loadsheetManager, 
                     doorManager, 
-                    serviceCoordinator);
+                    serviceOrchestrator);
                 
                 // Subscribe to events
                 _stateManager.StateChanged += OnStateChanged;
-                _serviceCoordinator.ServiceStatusChanged += OnServiceStatusChanged;
+                _serviceOrchestrator.ServiceStatusChanged += OnServiceStatusChanged;
                 
                 Logger.Log(LogLevel.Information, "GSXControllerFacade:Constructor", "GSX Controller Facade initialized");
             }
@@ -137,7 +137,7 @@ namespace Prosim2GSX.Services
         }
         
         /// <summary>
-        /// Handles the ServiceStatusChanged event from the service coordinator
+        /// Handles the ServiceStatusChanged event from the service orchestrator
         /// </summary>
         private void OnServiceStatusChanged(object sender, ServiceStatusChangedEventArgs e)
         {
@@ -159,8 +159,8 @@ namespace Prosim2GSX.Services
                 // Unsubscribe from events
                 if (_stateManager != null)
                     _stateManager.StateChanged -= OnStateChanged;
-                if (_serviceCoordinator != null)
-                    _serviceCoordinator.ServiceStatusChanged -= OnServiceStatusChanged;
+                if (_serviceOrchestrator != null)
+                    _serviceOrchestrator.ServiceStatusChanged -= OnServiceStatusChanged;
                 
                 // Dispose the controller
                 _controller.Dispose();

@@ -29,7 +29,7 @@ Prosim2GSX is currently in a transitional state as it undergoes significant modu
 | Phase 1: Core Services | Completed | 100% |
 | Phase 2: Shared and ProSim Services | Completed | 100% |
 | Phase 3: GSX Services | Completed | 100% |
-| Phase 4: Further GSX Controller Modularization | In Progress | 40% |
+| Phase 4: Further GSX Controller Modularization | In Progress | 60% |
 | Phase 5: Refine Architecture and Improve Integration | Planned | 0% |
 
 ### EFB UI Implementation Progress
@@ -187,10 +187,12 @@ Prosim2GSX is currently in a transitional state as it undergoes significant modu
      - ✅ Implemented timeout handling with cancellation support
      - ✅ Added state persistence with JSON serialization
      - ✅ Implementation details available in to-do/modularization-implementation-phase4.2.md
-   - 🔜 Phase 4.3: Create GSXServiceOrchestrator
-     - 🔜 Create IGSXServiceOrchestrator interface
-     - 🔜 Create GSXServiceOrchestrator implementation
-     - 🔜 Coordinate service execution based on state
+   - ✅ Phase 4.3: Create GSXServiceOrchestrator
+     - ✅ Created IGSXServiceOrchestrator interface
+     - ✅ Created GSXServiceOrchestrator implementation
+     - ✅ Coordinated service execution based on state
+     - ✅ Updated GsxController to use the new service
+     - ✅ Modified ServiceController to initialize the service
    - 🔜 Phase 4.4-4.8: Create Domain-Specific Coordinators
      - 🔜 Implement coordinators for doors, equipment, passengers, cargo, and fuel
      - 🔜 Each coordinator will manage specific operations and state tracking
@@ -478,7 +480,11 @@ Based on the current state and modularization strategy, the following priorities
      - Added conditional state transitions with validation
      - Implemented timeout handling with cancellation support
      - Added state persistence with JSON serialization
-   - 🔜 Create GSXServiceOrchestrator (Phase 4.3)
+   - ✅ Create GSXServiceOrchestrator (Phase 4.3)
+     - Created IGSXServiceOrchestrator interface
+     - Created GSXServiceOrchestrator implementation
+     - Coordinated service execution based on state
+     - Updated GsxController to use the new service
    - 🔜 Create domain-specific coordinators (Phase 4.4-4.8)
 
 3. **Implement Comprehensive Testing**
