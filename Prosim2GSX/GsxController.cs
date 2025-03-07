@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿using CoreAudio;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using CoreAudio;
 using Microsoft.Win32;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
@@ -25,9 +25,9 @@ namespace Prosim2GSX
         private string menuFile = "";
 
         // Minimal state variables (only those needed for coordination)
-        private bool _isInitialized = false;
         private string flightPlanID = "0";
         private string lastVhf1App;
+        private bool _isInitialized = false;
         
         // State variables that will be moved to services in future phases
         private bool aftCargoDoorOpened = false;
@@ -384,7 +384,6 @@ namespace Prosim2GSX
                 $"Door state changed: {e.DoorType} - {(e.IsOpen ? "Opened" : "Closed")}");
         }
         
-        // Event handler for door manager events
         // Event handler for service coordinator events
         private void OnServiceStatusChanged(object sender, ServiceStatusChangedEventArgs e)
         {
@@ -502,8 +501,6 @@ namespace Prosim2GSX
             }
         }
         
-        // Flag to track if the controller is fully initialized
-        private bool _isInitialized = false;
 
         public void RunServices()
         {
@@ -792,435 +789,14 @@ namespace Prosim2GSX
             }
         }
 
-        private void RunLoadingServices(int refuelState, int cateringState)
-        {
-            Interval = 1000;
-            if (Model.AutoRefuel)
-            {
-                if (!initialFuelSet)
-                {
-                    ProsimController.SetInitialFuel();
-                    initialFuelSet = true;
-                }
-
-                if (Model.SetSaveHydraulicFluids && !initialFluidsSet)
-                {
-                    ProsimController.SetInitialFluids();
-                    initialFluidsSet = true;
-                }
-
-                if (!refuelRequested && refuelState != 6)
-                {
-                    Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Calling Refuel Service");
-                    MenuOpen();
-                    MenuItem(3);
-                    refuelRequested = true;
-                    return;
-                }
-
-                if (Model.CallCatering && !cateringRequested && cateringState != 6)
-                {
-                    Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Calling Catering Service");
-                    MenuOpen();
-                    MenuItem(2);
-                    OperatorSelection();
-                    cateringRequested = true;
-                    return;
-                }
-            }
-
-            // Handle doors for catering
-            if (Model.SetOpenCateringDoor)
-            {
-                // Check service toggles and delegate to door manager
-                bool service1Toggle = SimConnect.ReadLvar("FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE") == 1;
-                bool service2Toggle = SimConnect.ReadLvar("FSDT_GSX_AIRCRAFT_SERVICE_2_TOGGLE") == 1;
-                
-                if (service1Toggle || service2Toggle)
-                {
-                    doorManager.HandleServiceToggle(
-                        service1Toggle ? 1 : 2, 
-                        service1Toggle ? !doorManager.IsForwardRightDoorOpen : !doorManager.IsAftRightDoorOpen);
-                }
-            }
-
-            if (!cateringFinished && cateringState == 6)
-            {
-                cateringFinished = true;
-                Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Catering finished");
-                
-                // Close forward right door when catering is finished (if not already closed)
-                if (Model.SetOpenCateringDoor && doorManager.IsForwardRightDoorOpen)
-                {
-                    doorManager.CloseDoor(DoorType.ForwardRight);
-                }
-                
-                // Open cargo doors after catering is finished if enabled
-                if (Model.SetOpenCargoDoors)
-                {
-                    doorManager.OpenDoor(DoorType.ForwardCargo);
-                    doorManager.OpenDoor(DoorType.AftCargo);
-                    Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Opened cargo doors for loading");
-                }
-            }
-
-            if (Model.AutoBoarding)
-            {
-                if (!boardingRequested && refuelFinished && ((Model.CallCatering && cateringFinished) || !Model.CallCatering))
-                {
-                    if (delayCounter == 0)
-                        Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Waiting 90s before calling Boarding");
-
-                    if (delayCounter < 90)
-                        delayCounter++;
-                    else
-                    {
-                        Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Calling Boarding Service");
-                        SetPassengers(ProsimController.GetPaxPlanned());
-                        MenuOpen();
-                        MenuItem(4);
-                        delayCounter = 0;
-                        boardingRequested = true;
-                    }
-                    return;
-                }
-            }
-
-            if (!refueling && !refuelFinished && refuelState == 5)
-            {
-                refueling = true;
-                refuelPaused = true;
-                Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Fuel Service active");
-                ProsimController.RefuelStart();
-            }
-            else if (refueling)
-            {
-
-                if (SimConnect.ReadLvar("FSDT_GSX_FUELHOSE_CONNECTED") == 1)
-                {
-                    if (refuelPaused)
-                    {
-                        Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Fuel Hose connected - refueling");
-
-                        refuelPaused = false;
-                    }
-
-                    if (ProsimController.Refuel())
-                    {
-                        refueling = false;
-                        refuelFinished = true;
-                        refuelPaused = false;
-                        ProsimController.RefuelStop();
-                        Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Refuel completed");
-                    }
-                }
-                else
-                {
-                    if (!refuelPaused && !refuelFinished)
-                    {
-                        Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Fuel Hose disconnected - waiting for next Truck");
-                        refuelPaused = true;
-                    }
-                }
-            }
-
-            if (!boarding && !boardFinished && SimConnect.ReadLvar("FSDT_GSX_BOARDING_STATE") >= 4)
-            {
-                boarding = true;
-                ProsimController.BoardingStart();
-                Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Boarding Service active");
-            }
-            else if (boarding)
-            {
-                // Check cargo loading percentage
-                int cargoPercent = (int)SimConnect.ReadLvar("FSDT_GSX_BOARDING_CARGO_PERCENT");
-                
-                // Close cargo doors when cargo loading reaches 100%
-                if (cargoPercent == 100)
-                {
-                    if (doorManager.IsForwardCargoDoorOpen)
-                    {
-                        doorManager.CloseDoor(DoorType.ForwardCargo);
-                        Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Closed forward cargo door after loading");
-                    }
-                    
-                    if (doorManager.IsAftCargoDoorOpen)
-                    {
-                        doorManager.CloseDoor(DoorType.AftCargo);
-                        Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Closed aft cargo door after loading");
-                    }
-                }
-                
-                // Check if boarding and cargo loading are complete
-                if (ProsimController.Boarding((int)SimConnect.ReadLvar("FSDT_GSX_NUMPASSENGERS_BOARDING_TOTAL"), cargoPercent) || SimConnect.ReadLvar("FSDT_GSX_BOARDING_STATE") == 6)
-                {
-                    boarding = false;
-                    boardFinished = true;
-                    ProsimController.BoardingStop();
-                    Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Boarding completed");
-                    
-                    // Ensure cargo doors are closed when boarding is complete
-                    if (doorManager.IsForwardCargoDoorOpen)
-                    {
-                        doorManager.CloseDoor(DoorType.ForwardCargo);
-                        Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Closed forward cargo door after boarding");
-                    }
-                    
-                    if (doorManager.IsAftCargoDoorOpen)
-                    {
-                        doorManager.CloseDoor(DoorType.AftCargo);
-                        Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Closed aft cargo door after boarding");
-                    }
-                }
-            }
-        }
-
-        private void RunDEPARTUREServices()
-        {
-            if (Model.ConnectPCA && !pcaRemoved)
-            {
-                // Check for APU started with APU bleed on, beacon on, and external power changed from on to Avail
-                bool apuStarted = ProsimController.GetStatusFunction("system.indicators.I_OH_ELEC_APU_START_U") != 0;
-                bool apuBleedOn = ProsimController.GetStatusFunction("system.switches.S_OH_PNEUMATIC_APU_BLEED") != 0;
-                bool beaconOn = ProsimController.GetStatusFunction("system.switches.S_OH_EXT_LT_BEACON") != 0;
-                bool extPowerAvail = ProsimController.GetStatusFunction("system.indicators.I_OH_ELEC_EXT_PWR_L") == 0;
-                
-                if (apuStarted && apuBleedOn && beaconOn && extPowerAvail)
-                {
-                    ProsimController.SetServicePCA(false);
-                    pcaRemoved = true;
-                    Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"APU Started with Bleed on, Beacon on, and External Power Avail - removing PCA");
-                }
-            }
-
-            //LOADSHEET
-            int departState = (int)SimConnect.ReadLvar("FSDT_GSX_DEPARTURE_STATE");
-            if (!loadsheetManager.IsFinalLoadsheetSent())
-            {
-                if (delay == 0)
-                {
-                    delay = new Random().Next(90, 150);
-                    delayCounter = 0;
-                    Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Final Loadsheet in {delay}s");
-                }
-
-                if (delayCounter < delay)
-                {
-                    delayCounter++;
-                    return;
-                }
-                else
-                {
-                    Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Transmitting Final Loadsheet ...");
-                    ProsimController.TriggerFinal();
-                    
-                    if (Model.UseAcars)
-                    {
-                        string flightNumber = ProsimController.GetFMSFlightNumber();
-                        if (!string.IsNullOrEmpty(flightNumber))
-                        {
-                            try
-                            {
-                                // Use the loadsheet manager to generate and send the final loadsheet
-                                // We don't need to await this as it's a fire-and-forget operation
-                                // The loadsheet manager will handle the async operation and raise an event when complete
-                                _ = loadsheetManager.GenerateFinalLoadsheetAsync(flightNumber);
-                                Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Final loadsheet generation initiated");
-                            }
-                            catch (Exception ex)
-                            {
-                                Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", $"Error initiating final loadsheet generation: {ex.Message}");
-                            }
-                        }
-                        else
-                        {
-                            Logger.Log(LogLevel.Warning, "GsxController:RunDEPARTUREServices", $"Flight number is empty, cannot send final loadsheet");
-                            // Mark as sent anyway to avoid getting stuck
-                            finalLoadsheetSend = true;
-                        }
-                    }
-                    else
-                    {
-                        Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"ACARS is disabled, skipping final loadsheet");
-                        // Mark as sent anyway to avoid getting stuck
-                        finalLoadsheetSend = true;
-                    }
-                }
-            }
-            //EQUIPMENT
-            else if (!equipmentRemoved)
-            {
-                //equipmentRemoved = SimConnect.ReadLvar("S_MIP_PARKING_BRAKE") == 1 && SimConnect.ReadLvar("S_OH_EXT_LT_BEACON") == 1 && SimConnect.ReadLvar("I_OH_ELEC_EXT_PWR_L") == 0;
-                if (ProsimController.GetStatusFunction("system.switches.S_MIP_PARKING_BRAKE") == 1 && ProsimController.GetStatusFunction("system.switches.S_OH_EXT_LT_BEACON") == 1 && ProsimController.GetStatusFunction("system.indicators.I_OH_ELEC_EXT_PWR_L") == 0) { equipmentRemoved = true;};
-                if (equipmentRemoved)
-                {
-                    Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Preparing for Pushback - removing Equipment");
-                    if (departState < 4 && SimConnect.ReadLvar("FSDT_GSX_JETWAY") != 2 && SimConnect.ReadLvar("FSDT_GSX_JETWAY") == 5 && SimConnect.ReadLvar("FSDT_GSX_OPERATEJETWAYS_STATE") < 3)
-                    {
-                        MenuOpen();
-                        Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Removing Jetway");
-                        MenuItem(6);
-                    }
-                    ProsimController.SetServiceChocks(false);
-                    ProsimController.SetServicePCA(false);
-                    ProsimController.SetServiceGPU(false);
-                }
-            }
-            //PUSHBACK
-            else if (!pushFinished)
-            {
-                if (!Model.SynchBypass)
-                {
-                    pushFinished = true;
-                    return;
-                }
-
-                double gs = SimConnect.ReadSimVar("GPS GROUND SPEED", "Meters per second") * 0.00002966071308045356;
-                if (!pushRunning && gs > 1.5 && (SimConnect.ReadLvar("A_FC_THROTTLE_LEFT_INPUT") > 2.05 || SimConnect.ReadLvar("A_FC_THROTTLE_RIGHT_INPUT") > 2.05))
-                {
-                    Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Push-Back was skipped");
-                    pushFinished = true;
-                    pushRunning = false;
-                    return;
-                }
-
-                if (!pushRunning && departState >= 4)
-                {
-                    Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Push-Back Service is active");
-                    pushRunning = true;
-                    Interval = 100;
-                }
-
-                if (pushRunning)
-                {
-                    bool gsxPinInserted = SimConnect.ReadLvar("FSDT_GSX_BYPASS_PIN") != 0;
-                    if (gsxPinInserted && !pushNwsDisco)
-                    {
-                        Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"By Pass Pin inserted");
-                        SimConnect.WriteLvar("FSDT_VAR_Frozen", 1);
-                        pushNwsDisco = true;
-                    }
-                    else if (gsxPinInserted && pushNwsDisco)
-                    {
-                        bool isFrozen = SimConnect.ReadLvar("FSDT_VAR_Frozen") == 1;
-
-                        if (!isFrozen)
-                        {
-                            Logger.Log(LogLevel.Debug, "GsxController:RunDEPARTUREServices", $"Re-Freezing Plane");
-                            SimConnect.WriteLvar("FSDT_VAR_Frozen", 1);
-                        }
-                    }
-
-                    if (!gsxPinInserted && pushNwsDisco)
-                    {
-                        Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"By Pass Pin removed");
-                        SimConnect.WriteLvar("FSDT_VAR_Frozen", 0);
-                        pushNwsDisco = false;
-                        pushRunning = false;
-                        pushFinished = true;
-                        Interval = 1000;
-                    }
-                }
-            }
-            else //DEPARTURE -> TAXIOUT
-            {
-                    stateManager.TransitionToTaxiout();
-                    delay = 0;
-                    delayCounter = 0;
-            }
-        }
-
-        private void RunArrivalServices(int deboard_state)
-        {
-            if (SimConnect.ReadLvar("FSDT_GSX_COUATL_STARTED") != 1)
-            {
-                Logger.Log(LogLevel.Information, "GsxController:RunArrivalServices", $"Couatl Engine not running");
-                if (Model.GsxVolumeControl)
-                {
-                    Logger.Log(LogLevel.Information, "GsxController:RunArrivalServices", $"Resetting GSX Audio (Engine not running)");
-                    audioService.ResetAudio();
-                }
-                return;
-            }
-
-            if (Model.AutoConnect && !connectCalled)
-            {
-                CallJetwayStairs();
-                connectCalled = true;
-                return;
-            }
-
-            if (SimConnect.ReadLvar("S_OH_EXT_LT_BEACON") == 1)
-                return;
-
-            if (Model.ConnectPCA && !pcaCalled && (!Model.PcaOnlyJetways || (Model.PcaOnlyJetways && SimConnect.ReadLvar("FSDT_GSX_JETWAY") != 2)))
-            {
-                Logger.Log(LogLevel.Information, "GsxController:RunArrivalServices", $"Connecting PCA");
-                ProsimController.SetServicePCA(true);
-                pcaCalled = true;
-            }
-
-            Logger.Log(LogLevel.Information, "GsxController:RunArrivalServices", $"Setting GPU and Chocks");
-            ProsimController.SetServiceChocks(true);
-            ProsimController.SetServiceGPU(true);
-            SetPassengers(ProsimController.GetPaxPlanned());
-
-            stateManager.TransitionToArrival();
-
-            if (Model.AutoDeboarding && deboard_state < 4)
-            {
-                Logger.Log(LogLevel.Information, "GsxController:RunArrivalServices", $"Calling Deboarding Service");
-                SetPassengers(ProsimController.GetPaxPlanned());
-                MenuOpen();
-                MenuItem(1);
-                if (!Model.AutoConnect)
-                    OperatorSelection();
-            }
-
-            if (Model.SetSaveFuel)
-            {
-                double arrivalFuel = ProsimController.GetFuelAmount();
-                Model.SavedFuelAmount = arrivalFuel;
-            }
-
-            if (Model.SetSaveHydraulicFluids)
-            {
-                var hydraulicFluids = ProsimController.GetHydraulicFluidValues();
-                Model.HydaulicsBlueAmount = hydraulicFluids.Item1;
-                Model.HydaulicsGreenAmount = hydraulicFluids.Item2;
-                Model.HydaulicsYellowAmount = hydraulicFluids.Item3;
-            }
-        }
-
-        private void RunDeboardingService(int deboard_state)
-        {
-            if (!deboarding)
-            {
-                deboarding = true;
-                ProsimController.DeboardingStart();
-                Interval = 1000;
-                Logger.Log(LogLevel.Information, "GsxController:RunDeboardingService", $"Deboarding Service active");
-                return;
-            }
-            else if (deboarding)
-            {
-                if (SimConnect.ReadLvar("FSDT_GSX_NUMPASSENGERS") != paxPlanned)
-                {
-                    Logger.Log(LogLevel.Warning, "GsxController:RunDeboardingService", $"Passenger changed during Boarding! Trying to reset Number ...");
-                    SimConnect.WriteLvar("FSDT_GSX_NUMPASSENGERS", paxPlanned);
-                }
-
-                int paxCurrent = (int)SimConnect.ReadLvar("FSDT_GSX_NUMPASSENGERS") - (int)SimConnect.ReadLvar("FSDT_GSX_NUMPASSENGERS_DEBOARDING_TOTAL");
-                if (ProsimController.Deboarding(paxCurrent, (int)SimConnect.ReadLvar("FSDT_GSX_DEBOARDING_CARGO_PERCENT")) || deboard_state == 6 || deboard_state == 1)
-                {
-                    deboarding = false;
-                    Logger.Log(LogLevel.Information, "GsxController:RunDeboardingService", $"Deboarding finished (GSX State {deboard_state})");
-                    ProsimController.DeboardingStop();
-                    stateManager.TransitionToTurnaround();
-                    return;
-                }
-            }
-        }
+        // Note: The following methods have been removed as part of the refactoring to make GsxController a thin facade:
+        // - RunLoadingServices
+        // - RunDEPARTUREServices
+        // - RunArrivalServices
+        // - RunDeboardingService
+        // 
+        // These methods contained business logic that has been moved to the GSXServiceCoordinator.
+        // The GsxController now delegates to the service coordinator in the RunServices method.
 
         private void SetPassengers(int numPax)
         {
@@ -1311,18 +887,6 @@ namespace Prosim2GSX
             {
                 // Unsubscribe from all events
                 UnsubscribeFromEvents();
-                
-                // Unsubscribe from loadsheet manager events
-                if (loadsheetManager != null)
-                {
-                    loadsheetManager.LoadsheetGenerated -= OnLoadsheetGenerated;
-                }
-                
-                // Unsubscribe from door manager events
-                if (doorManager != null)
-                {
-                    doorManager.DoorStateChanged -= OnDoorStateChanged;
-                }
                 
                 Logger.Log(LogLevel.Information, "GsxController:Dispose", "GSX Controller disposed");
             }
