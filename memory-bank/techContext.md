@@ -221,24 +221,59 @@
    - Runs alongside resource-intensive simulation software
    - Polling intervals adjusted based on flight phase
    - EFB UI will use resource loading optimization and caching
+   - Optimized memory usage with .NET 8.0 features like FrozenDictionary and Span<T>
 
 2. **Responsiveness**
    - UI must remain responsive during background operations
    - Service operations run on background threads
    - Throttling of update frequency during less critical phases
    - EFB UI will use throttling mechanisms for performance optimization
+   - Improved asynchronous operations with ValueTask for reduced allocation overhead
 
 3. **Thread Safety**
    - Services may be called from different threads
    - Critical sections protected with locks
    - Async methods with cancellation support
    - Thread-safe event raising
+   - Thread-safe immutable collections with FrozenDictionary
+   - Planned implementation of System.Threading.Channels for producer-consumer scenarios
 
 4. **Graphics Performance (Planned)**
    - Optimized rendering for aircraft visualization
    - Efficient animation system
    - Hardware acceleration for UI components
    - Caching for theme assets and resources
+
+5. **.NET 8.0 Performance Features**
+   - FrozenDictionary<TKey, TValue> for read-heavy dictionary operations
+     - Immutable dictionary with optimized lookup performance
+     - Thread-safe without locks
+     - Reduced memory usage compared to standard Dictionary
+     - Used in SimConnectService for variable lookups
+   
+   - Span<T> and Memory<T> for efficient memory operations
+     - Reduced allocations for string operations
+     - Stack-based memory for small buffers
+     - Improved garbage collection behavior
+     - Used in Logger.cs and SimConnectService.cs for string formatting
+   
+   - ValueTask for optimized asynchronous operations
+     - Reduced allocation overhead compared to Task
+     - Better performance for short-running async methods
+     - Improved thread pool utilization
+     - Used in GSXAudioService and CoreAudioSessionManager
+   
+   - Planned System.Threading.Channels implementation
+     - Efficient producer-consumer pattern
+     - Reduced lock contention
+     - Improved thread safety
+     - Planned for audio processing in GSXAudioService
+   
+   - Planned object pooling for frequently allocated objects
+     - Reduced garbage collection pressure
+     - Reuse of expensive objects
+     - Improved memory usage patterns
+     - Planned for ClientDataString objects in SimConnectService
 
 ## Dependencies
 

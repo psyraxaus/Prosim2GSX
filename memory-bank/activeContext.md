@@ -268,7 +268,7 @@ The current focus for Prosim2GSX is implementing the modularization strategy to 
      - Update GSXControllerFacade to use the new coordinator
      - Modify ServiceController to initialize the coordinator
 
-### .NET 8.0 Migration (March 2025)
+### .NET 8.0 Migration and Optimization (March 2025)
 
 1. **Framework Update**
    - Updated target framework from .NET 7.0 to .NET 8.0
@@ -291,6 +291,17 @@ The current focus for Prosim2GSX is implementing the modularization strategy to 
    - Updated CefSharp initialization in App.xaml.cs
    - Enhanced error handling and logging throughout the application
    - Improved application startup and configuration
+
+4. **Performance Improvements**
+   - Identified high-impact .NET 8.0 performance features to implement:
+     - FrozenDictionary<TKey, TValue> for read-heavy dictionary operations
+     - Span<T> for reducing string allocations and improving memory usage
+     - ValueTask for optimizing asynchronous operations
+   - Created detailed implementation plans for each improvement:
+     - Phase 1: High-impact, low-risk improvements (FrozenDictionary, Span<T>, ValueTask)
+     - Phase 2: Medium-impact improvements (System.Threading.Channels, Object Pooling, IMemoryCache)
+     - Phase 3: Specialized optimizations (JSON serialization, Hardware Intrinsics, Trimming)
+   - Documentation available in to-do/dotnet8-performance-improvements.md
 
 ### Development Environment Updates (March 2025)
 
@@ -362,10 +373,14 @@ The following steps are recommended for continued development and improvement of
    - Create domain-specific coordinators (Phase 4.4-4.8)
    - Implement comprehensive testing (Phase 4.9)
 
-2. **Performance Optimization**
-   - Identify and address performance bottlenecks
-   - Optimize critical paths
-   - Leverage .NET 8.0 performance features
+2. **Implement .NET 8.0 Performance Improvements**
+   - Implement Phase 1 improvements (FrozenDictionary, Span<T>, ValueTask)
+     - Optimize dictionary operations in SimConnectService.cs
+     - Improve string handling in Logger.cs and SimConnectService.cs
+     - Enhance asynchronous operations in GSXAudioService.cs
+   - Evaluate and implement Phase 2 improvements
+   - Measure performance impact and adjust implementation as needed
+   - Documentation available in to-do/dotnet8-performance-implementation-plan.md
 
 3. **Error Handling Improvements**
    - Implement retry mechanisms for transient failures
@@ -486,11 +501,14 @@ The EFB UI implementation strategy has been documented in to-do/efb-ui-implement
    - Will the modularized architecture impact performance?
    - How to measure and optimize performance?
    - What are the critical paths that need optimization?
+   - How will the .NET 8.0 performance improvements affect overall application performance?
+   - What is the best approach for benchmarking before and after implementation?
 
 2. **Testing Coverage**
    - What level of test coverage is appropriate?
    - How to test interactions with external systems?
    - How to automate testing of UI components?
+   - How to verify that performance improvements don't introduce regressions?
 
 3. **Future Extensions**
    - How to design for future platform extensions?

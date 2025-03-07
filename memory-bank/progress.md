@@ -424,10 +424,22 @@ Prosim2GSX is currently in a transitional state as it undergoes significant modu
 
 ### Technical Improvements
 
-1. **.NET Framework Migration**
+1. **.NET Framework Migration and Optimization**
    - ✅ Migration from .NET 7.0 to .NET 8.0
    - ✅ Update of dependencies to .NET 8.0 compatible versions
    - 🔄 Implementation of .NET 8.0 performance improvements
+     - 🔄 Phase 1: High-impact improvements
+       - 🔄 FrozenDictionary<TKey, TValue> for read-heavy dictionary operations
+       - 🔄 Span<T> for reducing string allocations
+       - 🔄 ValueTask for optimizing asynchronous operations
+     - 🔜 Phase 2: Medium-impact improvements
+       - 🔜 System.Threading.Channels for audio processing
+       - 🔜 Object pooling for frequently allocated objects
+       - 🔜 IMemoryCache for frequently accessed data
+     - 🔜 Phase 3: Specialized optimizations
+       - 🔜 JSON serialization for configuration
+       - 🔜 Hardware intrinsics for weight conversion
+       - 🔜 Trimming for release builds
 
 2. **Enhanced Service Design**
    - 🔄 Interface Segregation for more focused interfaces
@@ -535,7 +547,20 @@ Based on the current state and modularization strategy, the following priorities
      - Updated GsxController to use the new service
    - 🔜 Create domain-specific coordinators (Phase 4.4-4.8)
 
-3. **Implement Comprehensive Testing**
+3. **Implement .NET 8.0 Performance Improvements**
+   - 🔄 Analyze performance bottlenecks and optimization opportunities
+     - ✅ Identified high-impact .NET 8.0 performance features
+     - ✅ Created detailed implementation plans for each improvement
+     - ✅ Documented in to-do/dotnet8-performance-improvements.md
+   - 🔄 Implement Phase 1: High-impact improvements
+     - 🔄 Optimize dictionary operations with FrozenDictionary
+     - 🔄 Implement Span<T> for string operations
+     - 🔄 Implement ValueTask for asynchronous operations
+   - 🔜 Implement Phase 2: Medium-impact improvements
+   - 🔜 Implement Phase 3: Specialized optimizations
+   - 🔜 Measure and document performance improvements
+
+4. **Implement Comprehensive Testing**
    - 🔜 Unit tests for all services
    - 🔜 Integration tests for service interactions
    - 🔜 Performance tests for critical paths
