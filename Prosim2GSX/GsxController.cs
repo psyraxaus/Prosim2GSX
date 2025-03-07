@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using CoreAudio;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using CoreAudio;
 using Microsoft.Win32;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
@@ -69,6 +69,7 @@ namespace Prosim2GSX
         private readonly IGSXAudioService audioService;
         private readonly IGSXStateManager stateManager;
         private readonly IGSXLoadsheetManager loadsheetManager;
+        private readonly IGSXDoorManager doorManager;
         private readonly MobiSimConnect SimConnect;
         private readonly ProsimController ProsimController;
         private readonly ServiceModel Model;
@@ -76,7 +77,7 @@ namespace Prosim2GSX
 
         public int Interval { get; set; } = 1000;
 
-        public GsxController(ServiceModel model, ProsimController prosimController, FlightPlan flightPlan, IAcarsService acarsService, IGSXMenuService menuService, IGSXAudioService audioService, IGSXStateManager stateManager, IGSXLoadsheetManager loadsheetManager)
+        public GsxController(ServiceModel model, ProsimController prosimController, FlightPlan flightPlan, IAcarsService acarsService, IGSXMenuService menuService, IGSXAudioService audioService, IGSXStateManager stateManager, IGSXLoadsheetManager loadsheetManager, IGSXDoorManager doorManager)
         {
             Model = model;
             ProsimController = prosimController;
@@ -86,6 +87,7 @@ namespace Prosim2GSX
             this.audioService = audioService ?? throw new ArgumentNullException(nameof(audioService));
             this.stateManager = stateManager ?? throw new ArgumentNullException(nameof(stateManager));
             this.loadsheetManager = loadsheetManager ?? throw new ArgumentNullException(nameof(loadsheetManager));
+            this.doorManager = doorManager ?? throw new ArgumentNullException(nameof(doorManager));
 
             // Subscribe to audio service events
             this.audioService.AudioSessionFound += OnAudioSessionFound;
@@ -98,8 +100,12 @@ namespace Prosim2GSX
             // Subscribe to loadsheet manager events
             this.loadsheetManager.LoadsheetGenerated += OnLoadsheetGenerated;
             
-            // Initialize state manager
+            // Subscribe to door manager events
+            this.doorManager.DoorStateChanged += OnDoorStateChanged;
+            
+            // Initialize state manager and door manager
             this.stateManager.Initialize();
+            this.doorManager.Initialize();
 
             SimConnect = IPCManager.SimConnect;
             SimConnect.SubscribeSimVar("SIM ON GROUND", "Bool");
@@ -183,6 +189,35 @@ namespace Prosim2GSX
         {
             Logger.Log(LogLevel.Debug, "GsxController:OnMuteChanged", 
                 $"Mute state changed for {e.ProcessName}: {e.Muted}");
+        }
+        
+        // Event handler for door manager events
+        private void OnDoorStateChanged(object sender, DoorStateChangedEventArgs e)
+        {
+            // Update local state variables based on door state changes
+            switch (e.DoorType)
+            {
+                case DoorType.ForwardRight:
+                    forwardRightDoorOpened = e.IsOpen;
+                    Logger.Log(LogLevel.Information, "GsxController:OnDoorStateChanged", 
+                        $"Forward right door is now {(e.IsOpen ? "open" : "closed")}");
+                    break;
+                case DoorType.AftRight:
+                    aftRightDoorOpened = e.IsOpen;
+                    Logger.Log(LogLevel.Information, "GsxController:OnDoorStateChanged", 
+                        $"Aft right door is now {(e.IsOpen ? "open" : "closed")}");
+                    break;
+                case DoorType.ForwardCargo:
+                    forwardCargoDoorOpened = e.IsOpen;
+                    Logger.Log(LogLevel.Information, "GsxController:OnDoorStateChanged", 
+                        $"Forward cargo door is now {(e.IsOpen ? "open" : "closed")}");
+                    break;
+                case DoorType.AftCargo:
+                    aftCargoDoorOpened = e.IsOpen;
+                    Logger.Log(LogLevel.Information, "GsxController:OnDoorStateChanged", 
+                        $"Aft cargo door is now {(e.IsOpen ? "open" : "closed")}");
+                    break;
+            }
         }
         
         // Event handler for loadsheet manager events
@@ -586,36 +621,15 @@ namespace Prosim2GSX
             // Handle doors for catering
             if (Model.SetOpenCateringDoor)
             {
-                // Check if catering service is waiting for forward door to be opened
-                if (SimConnect.ReadLvar("FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE") == 1 && !forwardRightDoorOpened)
-                {
-                    ProsimController.SetForwardRightDoor(true);
-                    forwardRightDoorOpened = true;
-                    Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Opened forward right door for catering (service 1 toggle)");
-                }
+                // Check service toggles and delegate to door manager
+                bool service1Toggle = SimConnect.ReadLvar("FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE") == 1;
+                bool service2Toggle = SimConnect.ReadLvar("FSDT_GSX_AIRCRAFT_SERVICE_2_TOGGLE") == 1;
                 
-                // Check if catering service is waiting for aft door to be closed
-                if (SimConnect.ReadLvar("FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE") == 1 && forwardRightDoorOpened)
+                if (service1Toggle || service2Toggle)
                 {
-                    ProsimController.SetForwardRightDoor(false);
-                    forwardRightDoorOpened = false;
-                    Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Closed forward right door to complete catering service (service 1 toggle)");
-                }
-
-                // Check if catering service is waiting for door to be opened
-                if (SimConnect.ReadLvar("FSDT_GSX_AIRCRAFT_SERVICE_2_TOGGLE") == 1 && !aftRightDoorOpened)
-                {
-                    ProsimController.SetAftRightDoor(true);
-                    aftRightDoorOpened = true;
-                    Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Opened aft right door for catering (service 2 toggle)");
-                }
-
-                // Check if catering service is waiting for door to be closed
-                if (SimConnect.ReadLvar("FSDT_GSX_AIRCRAFT_SERVICE_2_TOGGLE") == 1 && aftRightDoorOpened)
-                {
-                    ProsimController.SetAftRightDoor(false);
-                    aftRightDoorOpened = false;
-                    Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Closed aft right door to complete catering service (service 2 toggle)");
+                    doorManager.HandleServiceToggle(
+                        service1Toggle ? 1 : 2, 
+                        service1Toggle ? !doorManager.IsForwardRightDoorOpen : !doorManager.IsAftRightDoorOpen);
                 }
             }
 
@@ -625,20 +639,16 @@ namespace Prosim2GSX
                 Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Catering finished");
                 
                 // Close forward right door when catering is finished (if not already closed)
-                if (Model.SetOpenCateringDoor && forwardRightDoorOpened)
+                if (Model.SetOpenCateringDoor && doorManager.IsForwardRightDoorOpen)
                 {
-                    ProsimController.SetForwardRightDoor(false);
-                    forwardRightDoorOpened = false;
-                    Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Closed forward right door after catering");
+                    doorManager.CloseDoor(DoorType.ForwardRight);
                 }
                 
                 // Open cargo doors after catering is finished if enabled
                 if (Model.SetOpenCargoDoors)
                 {
-                    ProsimController.SetForwardCargoDoor(true);
-                    ProsimController.SetAftCargoDoor(true);
-                    forwardCargoDoorOpened = true;
-                    aftCargoDoorOpened = true;
+                    doorManager.OpenDoor(DoorType.ForwardCargo);
+                    doorManager.OpenDoor(DoorType.AftCargo);
                     Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Opened cargo doors for loading");
                 }
             }
@@ -717,17 +727,15 @@ namespace Prosim2GSX
                 // Close cargo doors when cargo loading reaches 100%
                 if (cargoPercent == 100)
                 {
-                    if (forwardCargoDoorOpened)
+                    if (doorManager.IsForwardCargoDoorOpen)
                     {
-                        ProsimController.SetForwardCargoDoor(false);
-                        forwardCargoDoorOpened = false;
+                        doorManager.CloseDoor(DoorType.ForwardCargo);
                         Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Closed forward cargo door after loading");
                     }
                     
-                    if (aftCargoDoorOpened)
+                    if (doorManager.IsAftCargoDoorOpen)
                     {
-                        ProsimController.SetAftCargoDoor(false);
-                        aftCargoDoorOpened = false;
+                        doorManager.CloseDoor(DoorType.AftCargo);
                         Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Closed aft cargo door after loading");
                     }
                 }
@@ -741,17 +749,15 @@ namespace Prosim2GSX
                     Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Boarding completed");
                     
                     // Ensure cargo doors are closed when boarding is complete
-                    if (forwardCargoDoorOpened)
+                    if (doorManager.IsForwardCargoDoorOpen)
                     {
-                        ProsimController.SetForwardCargoDoor(false);
-                        forwardCargoDoorOpened = false;
+                        doorManager.CloseDoor(DoorType.ForwardCargo);
                         Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Closed forward cargo door after boarding");
                     }
                     
-                    if (aftCargoDoorOpened)
+                    if (doorManager.IsAftCargoDoorOpen)
                     {
-                        ProsimController.SetAftCargoDoor(false);
-                        aftCargoDoorOpened = false;
+                        doorManager.CloseDoor(DoorType.AftCargo);
                         Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Closed aft cargo door after boarding");
                     }
                 }
@@ -1103,6 +1109,11 @@ namespace Prosim2GSX
             if (loadsheetManager != null)
             {
                 loadsheetManager.LoadsheetGenerated -= OnLoadsheetGenerated;
+            }
+            
+            if (doorManager != null)
+            {
+                doorManager.DoorStateChanged -= OnDoorStateChanged;
             }
             
             Logger.Log(LogLevel.Information, "GsxController:Dispose", "GSX Controller disposed");
