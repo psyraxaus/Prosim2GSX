@@ -59,6 +59,7 @@ namespace Prosim2GSX.Services
         {
             try
             {
+                double previousPlanned = _fuelPlanned;
                 _fuelPlanned = plannedFuel;
                 
                 // Update fuel units from ProSim
@@ -68,9 +69,12 @@ namespace Prosim2GSX.Services
                 if (_fuelUnits == "LBS")
                     _fuelPlanned = WeightConversionUtility.LbsToKg(_fuelPlanned);
                 
-                // Log the updated fuel amount
-                Logger.Log(LogLevel.Debug, "ProsimFuelService:UpdateFromFlightPlan", 
-                    $"Updated planned fuel amount to {_fuelPlanned} kg");
+                // Only log if the value has changed significantly (more than 0.1 kg)
+                if (Math.Abs(_fuelPlanned - previousPlanned) > 0.1)
+                {
+                    Logger.Log(LogLevel.Debug, "ProsimFuelService:UpdateFromFlightPlan", 
+                        $"Updated planned fuel amount to {_fuelPlanned} kg");
+                }
                 
                 // If requested, also update current fuel state to match planned
                 if (forceCurrentUpdate)

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,6 +23,9 @@ namespace Prosim2GSX.Services
         private string _fuelUnits;
         private int _refuelingProgressPercentage;
         private readonly object _stateLock = new object();
+        
+        // State processing tracking to prevent redundant operations
+        private readonly HashSet<FlightState> _processedStates = new HashSet<FlightState>();
         
         /// <summary>
         /// Event raised when fuel state changes
@@ -592,12 +596,21 @@ namespace Prosim2GSX.Services
             {
                 _logger.Log(LogLevel.Debug, "GSXFuelCoordinator:ManageFuelForStateAsync", $"Managing fuel for state: {state}");
                 
+                // Skip if we've already processed this state (unless it's DEPARTURE or TURNAROUND which may need repeated processing)
+                if (_processedStates.Contains(state) && state != FlightState.DEPARTURE && state != FlightState.TURNAROUND)
+                {
+                    _logger.Log(LogLevel.Debug, "GSXFuelCoordinator:ManageFuelForStateAsync", 
+                        $"State {state} already processed, skipping");
+                    return;
+                }
+                
                 switch (state)
                 {
                     case FlightState.PREFLIGHT:
                         // In preflight, ensure fuel quantities are synchronized and set initial fuel
                         await SynchronizeFuelQuantitiesAsync(cancellationToken);
                         _prosimFuelService.SetInitialFuel();
+                        _processedStates.Add(state); // Mark as processed
                         break;
                         
                     case FlightState.DEPARTURE:
@@ -697,6 +710,14 @@ namespace Prosim2GSX.Services
             {
                 _logger.Log(LogLevel.Debug, "GSXFuelCoordinator:OnStateChanged", 
                     $"State changed from {e.PreviousState} to {e.NewState}");
+                
+                // Clear processed states when transitioning to a new state
+                if (e.PreviousState != e.NewState)
+                {
+                    _logger.Log(LogLevel.Debug, "GSXFuelCoordinator:OnStateChanged", 
+                        "Clearing processed states due to state transition");
+                    _processedStates.Clear();
+                }
                 
                 // Manage fuel based on the new state
                 await ManageFuelForStateAsync(e.NewState);
