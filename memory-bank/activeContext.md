@@ -151,11 +151,14 @@ The current focus for Prosim2GSX is implementing the modularization strategy to 
      - Will add methods for running various GSX services (boarding, refueling, etc.)
      - Will add event-based communication for service status changes
    
-   - Planned: Phase 3.5: GSXDoorManager implementation
-     - Will create IGSXDoorManager interface and implementation
-     - Will extract door management logic from GsxController
-     - Will add methods for controlling aircraft doors
-     - Will add event-based communication for door state changes
+   - Completed Phase 3.5: GSXDoorManager implementation
+     - Created IGSXDoorManager interface and implementation
+     - Extracted door management logic from GsxController
+     - Added methods for controlling aircraft doors
+     - Added event-based communication for door state changes
+     - Updated GsxController to use the new service
+     - Modified ServiceController to initialize the service
+     - Implementation details available in to-do/modularization-implementation-phase3.5.md
    
    - Completed Phase 3.6: GSXLoadsheetManager implementation
      - Created IGSXLoadsheetManager interface and implementation
@@ -263,8 +266,6 @@ The following steps are recommended for continued development and improvement of
 
 1. **Complete Phase 3 of Modularization**
    - Implement GSXServiceCoordinator (Phase 3.4)
-   - Implement GSXDoorManager (Phase 3.5)
-   - Implement GSXLoadsheetManager (Phase 3.6)
    - Refine GsxController (Phase 3.7)
 
 2. **Enhance Testing**

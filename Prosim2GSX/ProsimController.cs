@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using Newtonsoft.Json.Linq;
+﻿﻿﻿﻿﻿﻿using Newtonsoft.Json.Linq;
 using ProSimSDK;
 using System;
 using System.Xml;
@@ -325,6 +325,15 @@ namespace Prosim2GSX
         public IProsimFlightDataService GetFlightDataService()
         {
             return _flightDataService;
+        }
+        
+        /// <summary>
+        /// Gets the door service
+        /// </summary>
+        /// <returns>The door service</returns>
+        public IProsimDoorService GetDoorService()
+        {
+            return _doorService;
         }
         
         /// <summary>

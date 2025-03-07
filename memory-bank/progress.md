@@ -146,11 +146,14 @@ Prosim2GSX is currently in a transitional state as it undergoes significant modu
      - 🔜 Extract service coordination logic from GsxController
      - 🔜 Add methods for running various GSX services
      - 🔜 Add event-based communication for service status changes
-   - 🔜 Phase 3.5: Implement GSXDoorManager
-     - 🔜 Create IGSXDoorManager interface and implementation
-     - 🔜 Extract door management logic from GsxController
-     - 🔜 Add methods for controlling aircraft doors
-     - 🔜 Add event-based communication for door state changes
+   - ✅ Phase 3.5: Implement GSXDoorManager
+     - ✅ Created IGSXDoorManager interface and implementation
+     - ✅ Extracted door management logic from GsxController
+     - ✅ Added methods for controlling aircraft doors
+     - ✅ Added event-based communication for door state changes
+     - ✅ Updated GsxController to use the new service
+     - ✅ Modified ServiceController to initialize the service
+     - ✅ Implementation details available in to-do/modularization-implementation-phase3.5.md
    - ✅ Phase 3.6: Implement GSXLoadsheetManager
      - ✅ Created IGSXLoadsheetManager interface and implementation
      - ✅ Extracted loadsheet management logic from GsxController
