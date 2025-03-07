@@ -29,7 +29,7 @@ Prosim2GSX is currently in a transitional state as it undergoes significant modu
 | Phase 1: Core Services | Completed | 100% |
 | Phase 2: Shared and ProSim Services | Completed | 100% |
 | Phase 3: GSX Services | Completed | 100% |
-| Phase 4: Further GSX Controller Modularization | In Progress | 60% |
+| Phase 4: Further GSX Controller Modularization | In Progress | 70% |
 | Phase 5: Refine Architecture and Improve Integration | Planned | 0% |
 
 ### EFB UI Implementation Progress
@@ -203,16 +203,16 @@ Prosim2GSX is currently in a transitional state as it undergoes significant modu
      - ✅ Included comprehensive error handling and logging
      - ✅ Updated GSXControllerFacade to use the new coordinator
      - ✅ Modified ServiceController to initialize the coordinator
-   - 🔜 Phase 4.5: Create GSXEquipmentCoordinator
-     - 🔜 Create IGSXEquipmentCoordinator interface with equipment management capabilities
-     - 🔜 Implement GSXEquipmentCoordinator to coordinate with ProsimEquipmentService
-     - 🔜 Add synchronous and asynchronous equipment operation methods
-     - 🔜 Implement equipment state tracking and synchronization
-     - 🔜 Add state-based equipment management
-     - 🔜 Provide event-based communication for equipment state changes
-     - 🔜 Include comprehensive error handling and logging
-     - 🔜 Update GSXControllerFacade to use the new coordinator
-     - 🔜 Modify ServiceController to initialize the coordinator
+   - ✅ Phase 4.5: Create GSXEquipmentCoordinator
+     - ✅ Created IGSXEquipmentCoordinator interface with equipment management capabilities
+     - ✅ Implemented GSXEquipmentCoordinator to coordinate with ProsimEquipmentService
+     - ✅ Added synchronous and asynchronous equipment operation methods
+     - ✅ Implemented equipment state tracking and synchronization
+     - ✅ Added state-based equipment management
+     - ✅ Provided event-based communication for equipment state changes
+     - ✅ Included comprehensive error handling and logging
+     - ✅ Updated GSXControllerFacade to use the new coordinator
+     - ✅ Modified ServiceController to initialize the coordinator
    - 🔜 Phase 4.6: Create GSXPassengerCoordinator
      - 🔜 Create IGSXPassengerCoordinator interface with passenger management capabilities
      - 🔜 Implement GSXPassengerCoordinator to coordinate between GSXServiceOrchestrator and ProsimPassengerService
