@@ -11,6 +11,9 @@ namespace Prosim2GSX.Services
         private readonly GsxController _controller;
         private readonly IGSXStateManager _stateManager;
         private readonly IGSXServiceOrchestrator _serviceOrchestrator;
+        private readonly IGSXDoorCoordinator _doorCoordinator;
+        private readonly IGSXAudioService _audioService;
+        private readonly ILogger _logger;
         
         /// <summary>
         /// Event raised when the flight state changes
@@ -35,13 +38,18 @@ namespace Prosim2GSX.Services
             IGSXStateManager stateManager, 
             IGSXLoadsheetManager loadsheetManager, 
             IGSXDoorManager doorManager, 
-            IGSXServiceOrchestrator serviceOrchestrator)
+            IGSXServiceOrchestrator serviceOrchestrator,
+            IGSXDoorCoordinator doorCoordinator,
+            ILogger logger)
         {
             try
             {
                 // Store references to services that we need to subscribe to events
                 _stateManager = stateManager ?? throw new ArgumentNullException(nameof(stateManager));
                 _serviceOrchestrator = serviceOrchestrator ?? throw new ArgumentNullException(nameof(serviceOrchestrator));
+                _doorCoordinator = doorCoordinator ?? throw new ArgumentNullException(nameof(doorCoordinator));
+                _audioService = audioService ?? throw new ArgumentNullException(nameof(audioService));
+                _logger = logger ?? throw new ArgumentNullException(nameof(logger));
                 
                 // Create the controller
                 _controller = new GsxController(
@@ -60,11 +68,14 @@ namespace Prosim2GSX.Services
                 _stateManager.StateChanged += OnStateChanged;
                 _serviceOrchestrator.ServiceStatusChanged += OnServiceStatusChanged;
                 
-                Logger.Log(LogLevel.Information, "GSXControllerFacade:Constructor", "GSX Controller Facade initialized");
+                // Register coordinators for state changes
+                _doorCoordinator.RegisterForStateChanges(_stateManager);
+                
+                _logger.Log(LogLevel.Information, "GSXControllerFacade:Constructor", "GSX Controller Facade initialized");
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Critical, "GSXControllerFacade:Constructor", $"Error initializing GSX Controller Facade: {ex.Message}");
+                _logger.Log(LogLevel.Critical, "GSXControllerFacade:Constructor", $"Error initializing GSX Controller Facade: {ex.Message}");
                 throw;
             }
         }
@@ -162,14 +173,17 @@ namespace Prosim2GSX.Services
                 if (_serviceOrchestrator != null)
                     _serviceOrchestrator.ServiceStatusChanged -= OnServiceStatusChanged;
                 
+                // Dispose services
+                _doorCoordinator?.Dispose();
+                
                 // Dispose the controller
                 _controller.Dispose();
                 
-                Logger.Log(LogLevel.Information, "GSXControllerFacade:Dispose", "GSX Controller Facade disposed");
+                _logger.Log(LogLevel.Information, "GSXControllerFacade:Dispose", "GSX Controller Facade disposed");
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, "GSXControllerFacade:Dispose", $"Error disposing facade: {ex.Message}");
+                _logger.Log(LogLevel.Error, "GSXControllerFacade:Dispose", $"Error disposing facade: {ex.Message}");
             }
         }
     }

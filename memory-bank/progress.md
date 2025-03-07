@@ -193,16 +193,16 @@ Prosim2GSX is currently in a transitional state as it undergoes significant modu
      - ✅ Coordinated service execution based on state
      - ✅ Updated GsxController to use the new service
      - ✅ Modified ServiceController to initialize the service
-   - 🔜 Phase 4.4: Create GSXDoorCoordinator
-     - 🔜 Create IGSXDoorCoordinator interface with comprehensive door management capabilities
-     - 🔜 Implement GSXDoorCoordinator to coordinate between GSXDoorManager and ProsimDoorService
-     - 🔜 Add synchronous and asynchronous door operation methods
-     - 🔜 Implement door state tracking and synchronization
-     - 🔜 Add state-based door management
-     - 🔜 Provide event-based communication for door state changes
-     - 🔜 Include comprehensive error handling and logging
-     - 🔜 Update GSXControllerFacade to use the new coordinator
-     - 🔜 Modify ServiceController to initialize the coordinator
+   - ✅ Phase 4.4: Create GSXDoorCoordinator
+     - ✅ Created IGSXDoorCoordinator interface with comprehensive door management capabilities
+     - ✅ Implemented GSXDoorCoordinator to coordinate between GSXDoorManager and ProsimDoorService
+     - ✅ Added synchronous and asynchronous door operation methods
+     - ✅ Implemented door state tracking and synchronization
+     - ✅ Added state-based door management
+     - ✅ Provided event-based communication for door state changes
+     - ✅ Included comprehensive error handling and logging
+     - ✅ Updated GSXControllerFacade to use the new coordinator
+     - ✅ Modified ServiceController to initialize the coordinator
    - 🔜 Phase 4.5: Create GSXEquipmentCoordinator
      - 🔜 Create IGSXEquipmentCoordinator interface with equipment management capabilities
      - 🔜 Implement GSXEquipmentCoordinator to coordinate with ProsimEquipmentService
