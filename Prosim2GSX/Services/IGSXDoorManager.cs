@@ -31,6 +31,11 @@ namespace Prosim2GSX.Services
         public bool IsOpen { get; }
 
         /// <summary>
+        /// Gets the name of the door that changed state
+        /// </summary>
+        public string DoorName { get; }
+
+        /// <summary>
         /// Gets the timestamp when the state change occurred
         /// </summary>
         public DateTime Timestamp { get; }
@@ -44,6 +49,30 @@ namespace Prosim2GSX.Services
         {
             DoorType = doorType;
             IsOpen = isOpen;
+            DoorName = doorType.ToString();
+            Timestamp = DateTime.Now;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DoorStateChangedEventArgs"/> class
+        /// </summary>
+        /// <param name="doorName">The name of the door that changed state</param>
+        /// <param name="isOpen">A value indicating whether the door is open</param>
+        public DoorStateChangedEventArgs(string doorName, bool isOpen)
+        {
+            DoorName = doorName;
+            IsOpen = isOpen;
+            
+            // Map string identifiers to enum values
+            DoorType = doorName switch
+            {
+                "ForwardRightDoor" => DoorType.ForwardRight,
+                "AftRightDoor" => DoorType.AftRight,
+                "ForwardCargoDoor" => DoorType.ForwardCargo,
+                "AftCargoDoor" => DoorType.AftCargo,
+                _ => throw new ArgumentException($"Unknown door name: {doorName}", nameof(doorName))
+            };
+            
             Timestamp = DateTime.Now;
         }
     }

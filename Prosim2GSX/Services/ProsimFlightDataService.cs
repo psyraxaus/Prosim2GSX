@@ -332,7 +332,8 @@ namespace Prosim2GSX.Services
         /// <param name="previousValue">Previous value (optional)</param>
         protected virtual void OnFlightDataChanged(string dataType, object currentValue, object previousValue = null)
         {
-            FlightDataChanged?.Invoke(this, new FlightDataChangedEventArgs(dataType, currentValue, previousValue));
+            string currentValueString = currentValue?.ToString() ?? string.Empty;
+            FlightDataChanged?.Invoke(this, new FlightDataChangedEventArgs(dataType, dataType, currentValueString));
         }
     }
 }

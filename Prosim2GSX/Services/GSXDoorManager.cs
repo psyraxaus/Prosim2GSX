@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Prosim2GSX.Models;
 
 namespace Prosim2GSX.Services
 {
@@ -85,11 +86,11 @@ namespace Prosim2GSX.Services
                 _simConnect.SubscribeLvar("FSDT_GSX_BOARDING_CARGO_PERCENT");
                 _simConnect.SubscribeLvar("FSDT_GSX_DEBOARDING_CARGO_PERCENT");
 
-                // Initialize door states from ProSim
-                _isForwardRightDoorOpen = _prosimDoorService.IsForwardRightDoorOpen;
-                _isAftRightDoorOpen = _prosimDoorService.IsAftRightDoorOpen;
-                _isForwardCargoDoorOpen = _prosimDoorService.IsForwardCargoDoorOpen;
-                _isAftCargoDoorOpen = _prosimDoorService.IsAftCargoDoorOpen;
+                // Initialize door states to closed
+                _isForwardRightDoorOpen = false;
+                _isAftRightDoorOpen = false;
+                _isForwardCargoDoorOpen = false;
+                _isAftCargoDoorOpen = false;
 
                 _isInitialized = true;
                 Logger.Log(LogLevel.Information, "GSXDoorManager:Initialize", "GSX Door Manager initialized");
@@ -112,32 +113,36 @@ namespace Prosim2GSX.Services
                 switch (doorType)
                 {
                     case DoorType.ForwardRight:
-                        result = _prosimDoorService.SetForwardRightDoor(true);
-                        if (result && !_isForwardRightDoorOpen)
+                        _prosimDoorService.SetForwardRightDoor(true);
+                        if (!_isForwardRightDoorOpen)
                         {
                             SetDoorState(doorType, true);
                         }
+                        result = true;
                         break;
                     case DoorType.AftRight:
-                        result = _prosimDoorService.SetAftRightDoor(true);
-                        if (result && !_isAftRightDoorOpen)
+                        _prosimDoorService.SetAftRightDoor(true);
+                        if (!_isAftRightDoorOpen)
                         {
                             SetDoorState(doorType, true);
                         }
+                        result = true;
                         break;
                     case DoorType.ForwardCargo:
-                        result = _prosimDoorService.SetForwardCargoDoor(true);
-                        if (result && !_isForwardCargoDoorOpen)
+                        _prosimDoorService.SetForwardCargoDoor(true);
+                        if (!_isForwardCargoDoorOpen)
                         {
                             SetDoorState(doorType, true);
                         }
+                        result = true;
                         break;
                     case DoorType.AftCargo:
-                        result = _prosimDoorService.SetAftCargoDoor(true);
-                        if (result && !_isAftCargoDoorOpen)
+                        _prosimDoorService.SetAftCargoDoor(true);
+                        if (!_isAftCargoDoorOpen)
                         {
                             SetDoorState(doorType, true);
                         }
+                        result = true;
                         break;
                     default:
                         Logger.Log(LogLevel.Warning, "GSXDoorManager:OpenDoor", $"Unknown door type: {doorType}");
@@ -169,32 +174,36 @@ namespace Prosim2GSX.Services
                 switch (doorType)
                 {
                     case DoorType.ForwardRight:
-                        result = _prosimDoorService.SetForwardRightDoor(false);
-                        if (result && _isForwardRightDoorOpen)
+                        _prosimDoorService.SetForwardRightDoor(false);
+                        if (_isForwardRightDoorOpen)
                         {
                             SetDoorState(doorType, false);
                         }
+                        result = true;
                         break;
                     case DoorType.AftRight:
-                        result = _prosimDoorService.SetAftRightDoor(false);
-                        if (result && _isAftRightDoorOpen)
+                        _prosimDoorService.SetAftRightDoor(false);
+                        if (_isAftRightDoorOpen)
                         {
                             SetDoorState(doorType, false);
                         }
+                        result = true;
                         break;
                     case DoorType.ForwardCargo:
-                        result = _prosimDoorService.SetForwardCargoDoor(false);
-                        if (result && _isForwardCargoDoorOpen)
+                        _prosimDoorService.SetForwardCargoDoor(false);
+                        if (_isForwardCargoDoorOpen)
                         {
                             SetDoorState(doorType, false);
                         }
+                        result = true;
                         break;
                     case DoorType.AftCargo:
-                        result = _prosimDoorService.SetAftCargoDoor(false);
-                        if (result && _isAftCargoDoorOpen)
+                        _prosimDoorService.SetAftCargoDoor(false);
+                        if (_isAftCargoDoorOpen)
                         {
                             SetDoorState(doorType, false);
                         }
+                        result = true;
                         break;
                     default:
                         Logger.Log(LogLevel.Warning, "GSXDoorManager:CloseDoor", $"Unknown door type: {doorType}");

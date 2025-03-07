@@ -43,7 +43,27 @@ namespace Prosim2GSX.Services
         
         protected virtual void OnDoorStateChanged(string doorName, bool isOpen)
         {
-            DoorStateChanged?.Invoke(this, new DoorStateChangedEventArgs(doorName, isOpen));
+            DoorType doorType;
+            switch (doorName)
+            {
+                case "ForwardRightDoor":
+                    doorType = DoorType.ForwardRight;
+                    break;
+                case "AftRightDoor":
+                    doorType = DoorType.AftRight;
+                    break;
+                case "ForwardCargoDoor":
+                    doorType = DoorType.ForwardCargo;
+                    break;
+                case "AftCargoDoor":
+                    doorType = DoorType.AftCargo;
+                    break;
+                default:
+                    Logger.Log(LogLevel.Warning, "ProsimDoorService:OnDoorStateChanged", $"Unknown door name: {doorName}");
+                    return;
+            }
+            
+            DoorStateChanged?.Invoke(this, new DoorStateChangedEventArgs(doorType, isOpen));
         }
     }
 }

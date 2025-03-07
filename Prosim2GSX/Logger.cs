@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿﻿using System.Collections;
+using Prosim2GSX.Services;
 
 namespace Prosim2GSX
 {
@@ -14,6 +15,13 @@ namespace Prosim2GSX
 
     public static class Logger
     {
+        private static readonly LoggerImplementation _instance = new LoggerImplementation();
+        
+        /// <summary>
+        /// Gets the singleton instance of the logger
+        /// </summary>
+        public static ILogger Instance => _instance;
+        
         public static Queue MessageQueue = new();
 
         public static void Log(LogLevel level, string context, string message)
@@ -45,6 +53,20 @@ namespace Prosim2GSX
             }
             if (level != LogLevel.Debug)
                 MessageQueue.Enqueue(message);
+        }
+        
+        /// <summary>
+        /// Implementation of the ILogger interface that uses the static Logger methods
+        /// </summary>
+        private class LoggerImplementation : ILogger
+        {
+            /// <summary>
+            /// Logs a message with the specified level, context, and message
+            /// </summary>
+            public void Log(LogLevel level, string context, string message)
+            {
+                Logger.Log(level, context, message);
+            }
         }
     }
 }

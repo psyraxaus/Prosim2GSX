@@ -44,15 +44,7 @@ namespace Prosim2GSX.Services
         /// </summary>
         public event EventHandler<PredictedStateChangedEventArgs> PredictedStateChanged;
         
-        /// <summary>
-        /// Event raised when a state timeout occurs
-        /// </summary>
-        public event EventHandler<StateTimeoutEventArgs> StateTimeout;
-        
-        /// <summary>
-        /// Event raised when state is restored from persistence
-        /// </summary>
-        public event EventHandler<StateRestoredEventArgs> StateRestored;
+        // Events are inherited from IGSXStateManager interface
         
         #endregion
         
@@ -384,7 +376,7 @@ namespace Prosim2GSX.Services
             var prediction = PredictNextStateInternal(aircraftParameters);
             
             // If the prediction has changed, update and raise event
-            if (_predictedNextState != prediction.PredictedState || Math.Abs(_predictionConfidence - prediction.Confidence) > 0.1f)
+            if (!_predictedNextState.HasValue || _predictedNextState.Value != prediction.PredictedState || Math.Abs(_predictionConfidence - prediction.Confidence) > 0.1f)
             {
                 var previousPrediction = _predictedNextState;
                 _predictedNextState = prediction.PredictedState;

@@ -42,6 +42,16 @@ namespace Prosim2GSX.Services
         /// Gets a value indicating whether the equipment is connected
         /// </summary>
         public bool IsConnected { get; }
+        
+        /// <summary>
+        /// Gets the name of the equipment that changed state
+        /// </summary>
+        public string EquipmentName { get; }
+        
+        /// <summary>
+        /// Gets a value indicating whether the equipment is enabled
+        /// </summary>
+        public bool IsEnabled { get; }
 
         /// <summary>
         /// Gets the timestamp when the state change occurred
@@ -57,6 +67,8 @@ namespace Prosim2GSX.Services
         {
             EquipmentType = equipmentType;
             IsConnected = isConnected;
+            EquipmentName = equipmentType.ToString();
+            IsEnabled = isConnected;
             Timestamp = DateTime.Now;
         }
 
@@ -76,6 +88,8 @@ namespace Prosim2GSX.Services
                 _ => throw new ArgumentException($"Unknown equipment name: {equipmentName}", nameof(equipmentName))
             };
             IsConnected = isEnabled;
+            EquipmentName = equipmentName;
+            IsEnabled = isEnabled;
             Timestamp = DateTime.Now;
         }
     }

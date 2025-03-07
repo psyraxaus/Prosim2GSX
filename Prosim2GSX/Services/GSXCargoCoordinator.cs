@@ -623,14 +623,14 @@ namespace Prosim2GSX.Services
                 if (forLoading)
                 {
                     // Open cargo doors for loading
-                    await _doorCoordinator.OpenDoorAsync("FWD_CARGO", cancellationToken);
-                    await _doorCoordinator.OpenDoorAsync("AFT_CARGO", cancellationToken);
+                    await _doorCoordinator.OpenDoorAsync(DoorType.ForwardCargo, cancellationToken);
+                    await _doorCoordinator.OpenDoorAsync(DoorType.AftCargo, cancellationToken);
                 }
                 else
                 {
                     // Close cargo doors after loading/unloading
-                    await _doorCoordinator.CloseDoorAsync("FWD_CARGO", cancellationToken);
-                    await _doorCoordinator.CloseDoorAsync("AFT_CARGO", cancellationToken);
+                    await _doorCoordinator.CloseDoorAsync(DoorType.ForwardCargo, cancellationToken);
+                    await _doorCoordinator.CloseDoorAsync(DoorType.AftCargo, cancellationToken);
                 }
             }
             catch (OperationCanceledException)

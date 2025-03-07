@@ -1055,3 +1055,5 @@ namespace Prosim2GSX.Services
                 _disposed = true;
             }
         }
+    }
+}
