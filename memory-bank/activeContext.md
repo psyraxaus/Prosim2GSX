@@ -157,11 +157,14 @@ The current focus for Prosim2GSX is implementing the modularization strategy to 
      - Will add methods for controlling aircraft doors
      - Will add event-based communication for door state changes
    
-   - Planned: Phase 3.6: GSXLoadsheetManager implementation
-     - Will create IGSXLoadsheetManager interface and implementation
-     - Will extract loadsheet management logic from GsxController
-     - Will add methods for generating and sending loadsheets
-     - Will add event-based communication for loadsheet generation
+   - Completed Phase 3.6: GSXLoadsheetManager implementation
+     - Created IGSXLoadsheetManager interface and implementation
+     - Extracted loadsheet management logic from GsxController
+     - Added methods for generating and sending loadsheets
+     - Added event-based communication for loadsheet generation
+     - Updated GsxController to use the new service
+     - Modified ServiceController to initialize the service
+     - Implementation details available in to-do/modularization-implementation-phase3.6.md
    
    - Planned: Phase 3.7: Refine GsxController
      - Will refactor GsxController to be a thin facade

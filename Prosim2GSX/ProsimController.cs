@@ -1,4 +1,4 @@
-﻿﻿using Newtonsoft.Json.Linq;
+﻿﻿﻿﻿using Newtonsoft.Json.Linq;
 using ProSimSDK;
 using System;
 using System.Xml;
@@ -316,6 +316,15 @@ namespace Prosim2GSX
         public double GetZfwCG()
         {
             return _flightDataService.GetZfwCG();
+        }
+        
+        /// <summary>
+        /// Gets the flight data service
+        /// </summary>
+        /// <returns>The flight data service</returns>
+        public IProsimFlightDataService GetFlightDataService()
+        {
+            return _flightDataService;
         }
         
         /// <summary>

@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using CoreAudio;
+﻿﻿using CoreAudio;
 using Microsoft.Win32;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
@@ -80,6 +80,7 @@ namespace Prosim2GSX
         private readonly IGSXMenuService menuService;
         private readonly IGSXAudioService audioService;
         private readonly IGSXStateManager stateManager;
+        private readonly IGSXLoadsheetManager loadsheetManager;
         private readonly MobiSimConnect SimConnect;
         private readonly ProsimController ProsimController;
         private readonly ServiceModel Model;
@@ -87,7 +88,7 @@ namespace Prosim2GSX
 
         public int Interval { get; set; } = 1000;
 
-        public GsxController(ServiceModel model, ProsimController prosimController, FlightPlan flightPlan, IAcarsService acarsService, IGSXMenuService menuService, IGSXAudioService audioService, IGSXStateManager stateManager)
+        public GsxController(ServiceModel model, ProsimController prosimController, FlightPlan flightPlan, IAcarsService acarsService, IGSXMenuService menuService, IGSXAudioService audioService, IGSXStateManager stateManager, IGSXLoadsheetManager loadsheetManager)
         {
             Model = model;
             ProsimController = prosimController;
@@ -96,6 +97,7 @@ namespace Prosim2GSX
             this.menuService = menuService;
             this.audioService = audioService ?? throw new ArgumentNullException(nameof(audioService));
             this.stateManager = stateManager ?? throw new ArgumentNullException(nameof(stateManager));
+            this.loadsheetManager = loadsheetManager ?? throw new ArgumentNullException(nameof(loadsheetManager));
 
             // Subscribe to audio service events
             this.audioService.AudioSessionFound += OnAudioSessionFound;
@@ -104,6 +106,9 @@ namespace Prosim2GSX
             
             // Subscribe to state manager events
             this.stateManager.StateChanged += OnStateChanged;
+            
+            // Subscribe to loadsheet manager events
+            this.loadsheetManager.LoadsheetGenerated += OnLoadsheetGenerated;
             
             // Initialize state manager
             this.stateManager.Initialize();
@@ -220,6 +225,24 @@ namespace Prosim2GSX
         {
             Logger.Log(LogLevel.Debug, "GsxController:OnMuteChanged", 
                 $"Mute state changed for {e.ProcessName}: {e.Muted}");
+        }
+        
+        // Event handler for loadsheet manager events
+        private void OnLoadsheetGenerated(object sender, LoadsheetGeneratedEventArgs e)
+        {
+            // Update local state variables based on loadsheet type
+            if (e.LoadsheetType.Equals("prelim", StringComparison.OrdinalIgnoreCase))
+            {
+                prelimLoadsheet = true;
+                Logger.Log(LogLevel.Information, "GsxController:OnLoadsheetGenerated", 
+                    $"Preliminary loadsheet for flight {e.FlightNumber} generated {(e.Success ? "successfully" : "with errors")} at {e.Timestamp:HH:mm:ss}");
+            }
+            else if (e.LoadsheetType.Equals("final", StringComparison.OrdinalIgnoreCase))
+            {
+                finalLoadsheetSend = true;
+                Logger.Log(LogLevel.Information, "GsxController:OnLoadsheetGenerated", 
+                    $"Final loadsheet for flight {e.FlightNumber} generated {(e.Success ? "successfully" : "with errors")} at {e.Timestamp:HH:mm:ss}");
+            }
         }
         
         private void OnStateChanged(object sender, StateChangedEventArgs e)
@@ -427,30 +450,37 @@ namespace Prosim2GSX
             }
 
             //DEPARTURE - Get sim Zulu Time and send Prelim Loadsheet
-            if (stateManager.IsDeparture() && !prelimLoadsheet)
+            if (stateManager.IsDeparture() && !loadsheetManager.IsPreliminaryLoadsheetSent())
             {
-
                 var simTime = SimConnect.ReadEnvVar("ZULU TIME", "Seconds");
                 TimeSpan time = TimeSpan.FromSeconds(simTime);
                 Logger.Log(LogLevel.Debug, "GsxController:RunServices", $"ZULU time - {simTime}");
 
-                string flightNumber  = ProsimController.GetFMSFlightNumber();
+                string flightNumber = ProsimController.GetFMSFlightNumber();
 
-                //string str = time.ToString(@"hh\:mm\:ss");  simTime <= FlightPlan.ScheduledDepartureTime + 15 && 
                 if (Model.UseAcars && !string.IsNullOrEmpty(flightNumber))
                 {
-                    var prelimLoadedData = ProsimController.GetLoadedData("prelim");
                     try
                     {
-                        System.Threading.Tasks.Task task = acarsService.SendPreliminaryLoadsheetAsync(ProsimController.GetFMSFlightNumber(), prelimLoadedData);
-                        prelimLoadsheet = true;
+                        // Use the loadsheet manager to generate and send the preliminary loadsheet
+                        // We don't need to await this as it's a fire-and-forget operation
+                        // The loadsheet manager will handle the async operation and raise an event when complete
+                        _ = loadsheetManager.GeneratePreliminaryLoadsheetAsync(flightNumber);
+                        Logger.Log(LogLevel.Information, "GsxController:RunServices", $"Preliminary loadsheet generation initiated");
                     }
                     catch (Exception ex)
                     {
-                        Logger.Log(LogLevel.Debug, "GsxController:RunServices", $"Error Sending ACARS - {ex.Message}");
+                        Logger.Log(LogLevel.Error, "GsxController:RunServices", $"Error initiating preliminary loadsheet generation: {ex.Message}");
                     }
                 }
-                
+                else if (!Model.UseAcars)
+                {
+                    Logger.Log(LogLevel.Information, "GsxController:RunServices", $"ACARS is disabled, skipping preliminary loadsheet");
+                }
+                else if (string.IsNullOrEmpty(flightNumber))
+                {
+                    Logger.Log(LogLevel.Warning, "GsxController:RunServices", $"Flight number is empty, cannot send preliminary loadsheet");
+                }
             }
 
             //DEPARTURE - Boarding & Refueling
@@ -790,14 +820,13 @@ namespace Prosim2GSX
 
             //LOADSHEET
             int departState = (int)SimConnect.ReadLvar("FSDT_GSX_DEPARTURE_STATE");
-            if (!finalLoadsheetSend)
+            if (!loadsheetManager.IsFinalLoadsheetSent())
             {
                 if (delay == 0)
                 {
                     delay = new Random().Next(90, 150);
                     delayCounter = 0;
                     Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Final Loadsheet in {delay}s");
-
                 }
 
                 if (delayCounter < delay)
@@ -809,13 +838,37 @@ namespace Prosim2GSX
                 {
                     Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Transmitting Final Loadsheet ...");
                     ProsimController.TriggerFinal();
-                    finalLoadsheetSend = true;
-                    Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Final Loadsheet sent to ACARS");
+                    
                     if (Model.UseAcars)
                     {
-                        var finalLoadedData = ProsimController.GetLoadedData("final");
-                        var prelimData = (prelimZfw, prelimTow, prelimPax, prelimMacZfw, prelimMacTow, prelimFuel);
-                        System.Threading.Tasks.Task task = acarsService.SendFinalLoadsheetAsync(ProsimController.GetFMSFlightNumber(), finalLoadedData, prelimData);
+                        string flightNumber = ProsimController.GetFMSFlightNumber();
+                        if (!string.IsNullOrEmpty(flightNumber))
+                        {
+                            try
+                            {
+                                // Use the loadsheet manager to generate and send the final loadsheet
+                                // We don't need to await this as it's a fire-and-forget operation
+                                // The loadsheet manager will handle the async operation and raise an event when complete
+                                _ = loadsheetManager.GenerateFinalLoadsheetAsync(flightNumber);
+                                Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Final loadsheet generation initiated");
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", $"Error initiating final loadsheet generation: {ex.Message}");
+                            }
+                        }
+                        else
+                        {
+                            Logger.Log(LogLevel.Warning, "GsxController:RunDEPARTUREServices", $"Flight number is empty, cannot send final loadsheet");
+                            // Mark as sent anyway to avoid getting stuck
+                            finalLoadsheetSend = true;
+                        }
+                    }
+                    else
+                    {
+                        Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"ACARS is disabled, skipping final loadsheet");
+                        // Mark as sent anyway to avoid getting stuck
+                        finalLoadsheetSend = true;
                     }
                 }
             }
@@ -1321,5 +1374,12 @@ namespace Prosim2GSX
                 stateManager.StateChanged -= OnStateChanged;
             }
             
+            if (loadsheetManager != null)
+            {
+                loadsheetManager.LoadsheetGenerated -= OnLoadsheetGenerated;
+            }
+            
             Logger.Log(LogLevel.Information, "GsxController:Dispose", "GSX Controller disposed");
         }
+    }
+}
