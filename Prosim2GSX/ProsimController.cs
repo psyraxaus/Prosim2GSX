@@ -1,4 +1,4 @@
-﻿﻿using Newtonsoft.Json.Linq;
+﻿﻿﻿﻿using Newtonsoft.Json.Linq;
 using ProSimSDK;
 using System;
 using System.Xml;
@@ -361,6 +361,15 @@ namespace Prosim2GSX
         public IProsimCargoService GetCargoService()
         {
             return _cargoService;
+        }
+        
+        /// <summary>
+        /// Gets the fuel service
+        /// </summary>
+        /// <returns>The fuel service</returns>
+        public IProsimFuelService GetFuelService()
+        {
+            return _fuelService;
         }
         
         /// <summary>
