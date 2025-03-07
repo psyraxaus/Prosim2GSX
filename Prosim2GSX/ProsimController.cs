@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿using Newtonsoft.Json.Linq;
+﻿﻿﻿﻿﻿﻿﻿﻿using Newtonsoft.Json.Linq;
 using ProSimSDK;
 using System;
 using System.Xml;
@@ -334,6 +334,15 @@ namespace Prosim2GSX
         public IProsimDoorService GetDoorService()
         {
             return _doorService;
+        }
+        
+        /// <summary>
+        /// Gets the equipment service
+        /// </summary>
+        /// <returns>The equipment service</returns>
+        public IProsimEquipmentService GetEquipmentService()
+        {
+            return _equipmentService;
         }
         
         /// <summary>

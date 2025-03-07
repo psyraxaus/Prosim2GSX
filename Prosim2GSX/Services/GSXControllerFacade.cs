@@ -12,6 +12,7 @@ namespace Prosim2GSX.Services
         private readonly IGSXStateManager _stateManager;
         private readonly IGSXServiceOrchestrator _serviceOrchestrator;
         private readonly IGSXDoorCoordinator _doorCoordinator;
+        private readonly IGSXEquipmentCoordinator _equipmentCoordinator;
         private readonly IGSXAudioService _audioService;
         private readonly ILogger _logger;
         
@@ -40,6 +41,7 @@ namespace Prosim2GSX.Services
             IGSXDoorManager doorManager, 
             IGSXServiceOrchestrator serviceOrchestrator,
             IGSXDoorCoordinator doorCoordinator,
+            IGSXEquipmentCoordinator equipmentCoordinator,
             ILogger logger)
         {
             try
@@ -48,6 +50,7 @@ namespace Prosim2GSX.Services
                 _stateManager = stateManager ?? throw new ArgumentNullException(nameof(stateManager));
                 _serviceOrchestrator = serviceOrchestrator ?? throw new ArgumentNullException(nameof(serviceOrchestrator));
                 _doorCoordinator = doorCoordinator ?? throw new ArgumentNullException(nameof(doorCoordinator));
+                _equipmentCoordinator = equipmentCoordinator ?? throw new ArgumentNullException(nameof(equipmentCoordinator));
                 _audioService = audioService ?? throw new ArgumentNullException(nameof(audioService));
                 _logger = logger ?? throw new ArgumentNullException(nameof(logger));
                 
@@ -70,6 +73,7 @@ namespace Prosim2GSX.Services
                 
                 // Register coordinators for state changes
                 _doorCoordinator.RegisterForStateChanges(_stateManager);
+                _equipmentCoordinator.RegisterForStateChanges(_stateManager);
                 
                 _logger.Log(LogLevel.Information, "GSXControllerFacade:Constructor", "GSX Controller Facade initialized");
             }
@@ -175,6 +179,7 @@ namespace Prosim2GSX.Services
                 
                 // Dispose services
                 _doorCoordinator?.Dispose();
+                _equipmentCoordinator?.Dispose();
                 
                 // Dispose the controller
                 _controller.Dispose();

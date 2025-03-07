@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿﻿using System;
 using System.Threading;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
@@ -181,6 +181,10 @@ namespace Prosim2GSX
             var doorCoordinator = new GSXDoorCoordinator(doorManager, ProsimController.GetDoorService(), Logger.Instance);
             doorCoordinator.Initialize();
             
+            // Create equipment coordinator
+            var equipmentCoordinator = new GSXEquipmentCoordinator(ProsimController.GetEquipmentService(), Logger.Instance);
+            equipmentCoordinator.Initialize();
+            
             // Configure audio service properties
             audioService.AudioSessionRetryCount = 5; // Increase retry count for better reliability
             audioService.AudioSessionRetryDelay = TimeSpan.FromSeconds(1); // Shorter delay between retries
@@ -214,6 +218,7 @@ namespace Prosim2GSX
                 doorManager, 
                 serviceOrchestrator,
                 doorCoordinator,
+                equipmentCoordinator,
                 Logger.Instance);
             
             // Store the GSXControllerFacade in IPCManager so it can be accessed by the MainWindow
