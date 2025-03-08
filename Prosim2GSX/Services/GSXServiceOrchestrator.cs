@@ -1096,6 +1096,15 @@ namespace Prosim2GSX.Services
         }
         
         /// <summary>
+        /// Gets the internal service coordinator
+        /// </summary>
+        /// <returns>The service coordinator</returns>
+        public IGSXServiceCoordinator GetCoordinator()
+        {
+            return _coordinator;
+        }
+        
+        /// <summary>
         /// Disposes resources used by the GSXServiceOrchestrator
         /// </summary>
         protected virtual void Dispose(bool disposing)

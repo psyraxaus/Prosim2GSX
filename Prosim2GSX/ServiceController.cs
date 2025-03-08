@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Threading;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
@@ -216,6 +216,18 @@ namespace Prosim2GSX
             cargoCoordinator.Initialize();
             cargoCoordinator.RegisterDoorCoordinator(doorCoordinator);
             cargoCoordinator.RegisterForStateChanges(stateManager);
+            
+            // Set the cargo coordinator in the service coordinator
+            var serviceCoordinator = serviceOrchestrator.GetCoordinator() as GSXServiceCoordinator;
+            if (serviceCoordinator != null)
+            {
+                serviceCoordinator.SetCargoCoordinator(cargoCoordinator);
+                Logger.Log(LogLevel.Information, "ServiceController:InitializeServices", "Set cargo coordinator in service coordinator");
+            }
+            else
+            {
+                Logger.Log(LogLevel.Warning, "ServiceController:InitializeServices", "Could not set cargo coordinator in service coordinator");
+            }
                 
             // Create passenger coordinator
             var passengerCoordinator = new GSXPassengerCoordinator(

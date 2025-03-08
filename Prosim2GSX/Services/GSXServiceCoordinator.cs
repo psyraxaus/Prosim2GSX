@@ -15,7 +15,7 @@ namespace Prosim2GSX.Services
         private readonly IGSXMenuService menuService;
         private readonly IGSXLoadsheetManager loadsheetManager;
         private readonly IGSXDoorManager doorManager;
-        private readonly IGSXCargoCoordinator cargoCoordinator;
+        private IGSXCargoCoordinator cargoCoordinator;
         private readonly IAcarsService acarsService;
         
         // Service state variables
@@ -86,7 +86,7 @@ namespace Prosim2GSX.Services
             this.menuService = menuService ?? throw new ArgumentNullException(nameof(menuService));
             this.loadsheetManager = loadsheetManager ?? throw new ArgumentNullException(nameof(loadsheetManager));
             this.doorManager = doorManager ?? throw new ArgumentNullException(nameof(doorManager));
-            this.cargoCoordinator = cargoCoordinator ?? throw new ArgumentNullException(nameof(cargoCoordinator));
+            this.cargoCoordinator = cargoCoordinator; // Can be null initially, will be set later
             this.acarsService = acarsService ?? throw new ArgumentNullException(nameof(acarsService));
             
             // Subscribe to loadsheet manager events
@@ -250,7 +250,7 @@ namespace Prosim2GSX.Services
                                 Logger.Log(LogLevel.Information, "GSXServiceCoordinator:RunLoadingServices", 
                                     $"Starting cargo loading before boarding");
                                 
-                                bool cargoStarted = cargoCoordinator.TryStartLoading(true);
+                                bool cargoStarted = cargoCoordinator?.TryStartLoading(true) ?? false;
                                 
                                 if (cargoStarted)
                                 {
@@ -338,7 +338,7 @@ namespace Prosim2GSX.Services
                     Logger.Log(LogLevel.Information, "GSXServiceCoordinator:RunLoadingServices", 
                         $"Starting cargo loading during boarding process");
                     
-                    bool cargoStarted = cargoCoordinator.TryStartLoading(true);
+                    bool cargoStarted = cargoCoordinator?.TryStartLoading(true) ?? false;
                     
                     if (cargoStarted)
                     {
@@ -899,6 +899,16 @@ namespace Prosim2GSX.Services
         public IGSXDoorManager GetDoorManager()
         {
             return doorManager;
+        }
+        
+        /// <summary>
+        /// Sets the cargo coordinator after construction
+        /// </summary>
+        /// <param name="cargoCoordinator">The cargo coordinator to set</param>
+        public void SetCargoCoordinator(IGSXCargoCoordinator cargoCoordinator)
+        {
+            this.cargoCoordinator = cargoCoordinator ?? throw new ArgumentNullException(nameof(cargoCoordinator));
+            Logger.Log(LogLevel.Information, "GSXServiceCoordinator:SetCargoCoordinator", "Cargo coordinator set");
         }
     }
 }
