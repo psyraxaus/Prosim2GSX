@@ -193,20 +193,8 @@ namespace Prosim2GSX.Services
                 }
             }
 
-            // Handle doors for catering
-            if (model.SetOpenCateringDoor)
-            {
-                // Check service toggles and delegate to door manager
-                bool service1Toggle = simConnect.ReadLvar("FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE") == 1;
-                bool service2Toggle = simConnect.ReadLvar("FSDT_GSX_AIRCRAFT_SERVICE_2_TOGGLE") == 1;
-                
-                if (service1Toggle || service2Toggle)
-                {
-                    doorManager.HandleServiceToggle(
-                        service1Toggle ? 1 : 2, 
-                        service1Toggle ? !doorManager.IsForwardRightDoorOpen : !doorManager.IsAftRightDoorOpen);
-                }
-            }
+            // Passenger door handling for catering has been moved to GSXServiceOrchestrator.CheckAllDoorToggles()
+            // to ensure consistent handling with cargo doors
 
             if (!cateringFinished && cateringState == 6)
             {
