@@ -4,6 +4,8 @@
 
 The current focus for Prosim2GSX is implementing the modularization strategy to improve code organization, maintainability, and testability. This involves extracting functionality into well-defined services with clear interfaces, following a phased approach. The .NET 8.0 migration has been completed successfully, and now the focus is on continuing the architectural improvements.
 
+Additionally, a critical issue with the catering door opening prematurely has been identified and is being addressed. After a flight plan is loaded into the MCDU, the forward right passenger door is being opened immediately and going into a loop, when it should remain closed until the catering service specifically requests it to be opened. A phased implementation plan has been created to fix this issue while maintaining the overall architecture.
+
 ### Primary Objectives
 
 1. **Modularization Implementation**
@@ -12,12 +14,18 @@ The current focus for Prosim2GSX is implementing the modularization strategy to 
    - Improve separation of concerns and testability
    - Enhance error handling and resilience
 
-2. **.NET 8.0 Optimization**
+2. **Catering Door Fix Implementation**
+   - Implement the phased approach outlined in to-do/catering-door-fix-implementation.md
+   - Phase 1: Critical fixes to prevent automatic door opening
+   - Phase 2: Enhanced robustness with flight state awareness and debounce logic
+   - Phase 3: Improved diagnostics with enhanced logging and explicit initialization
+
+3. **.NET 8.0 Optimization**
    - Leverage .NET 8.0 features for performance improvements
    - Ensure compatibility with all dependencies
    - Address any issues discovered during testing
 
-3. **Testing and Validation**
+4. **Testing and Validation**
    - Implement unit tests for new services
    - Verify all major application workflows
    - Validate integration with external systems
@@ -25,7 +33,33 @@ The current focus for Prosim2GSX is implementing the modularization strategy to 
 
 ## Recent Changes
 
-### Bug Fixes (March 2025)
+### Bug Fixes and Improvements (March 2025)
+
+1. **Catering Door Issue Fix - Phase 1 Implementation**
+   - Implemented Phase 1 of the catering door fix to address the issue with forward right passenger door opening prematurely
+   - Fixed root causes:
+     - Modified GSXDoorCoordinator.ManageDoorsForStateAsync() to keep doors closed in DEPARTURE state
+     - Added toggle state tracking variables to GSXServiceOrchestrator
+     - Modified CheckAllDoorToggles() to only process toggle changes when the value actually changes
+   - Results:
+     - Doors now remain closed after loading a flight plan
+     - Doors only open when explicitly requested by GSX services
+     - Door opening loop issue has been resolved
+   - Phases 2 and 3 of the implementation plan are still pending
+   - Detailed implementation plan available in to-do/catering-door-fix-implementation.md
+
+2. **Catering Door Issue Identification and Plan**
+   - Identified issue with forward right passenger door opening prematurely after flight plan loading
+   - Analyzed root causes:
+     - Conflicting door management systems between GSXDoorManager, GSXDoorCoordinator, and GSXServiceCoordinator
+     - Automatic door opening in GSXDoorCoordinator.ManageDoorsForStateAsync() for DEPARTURE state
+     - Missing toggle state tracking in GSXServiceOrchestrator.CheckAllDoorToggles()
+     - Redundant door state variables in GSXServiceCoordinator
+   - Created phased implementation plan:
+     - Phase 1: Remove automatic door opening and implement toggle state tracking
+     - Phase 2: Add flight state awareness, remove redundant variables, and implement debounce logic
+     - Phase 3: Enhance logging and implement explicit door state initialization
+   - Detailed implementation plan available in to-do/catering-door-fix-implementation.md
 
 1. **GSXCargoCoordinator Initialization Fix**
    - Fixed critical exception in ServiceController: "Value cannot be null. (Parameter 'cargoCoordinator')"

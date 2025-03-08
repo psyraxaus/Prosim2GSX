@@ -22,6 +22,12 @@ namespace Prosim2GSX.Services
         private IReadOnlyCollection<ServicePrediction> _lastPredictions = Array.Empty<ServicePrediction>();
         private bool _disposed = false;
         
+        // Toggle state tracking variables
+        private bool _previousService1Toggle = false;
+        private bool _previousService2Toggle = false;
+        private bool _previousCargo1Toggle = false;
+        private bool _previousCargo2Toggle = false;
+        
         /// <summary>
         /// Event raised when a service status changes
         /// </summary>
@@ -266,22 +272,21 @@ namespace Prosim2GSX.Services
                 if (_model.SetOpenCateringDoor)
                 {
                     bool service1Toggle = _simConnect.ReadLvar("FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE") == 1;
-                    bool service2Toggle = _simConnect.ReadLvar("FSDT_GSX_AIRCRAFT_SERVICE_2_TOGGLE") == 1;
-                    
-                    if (service1Toggle || service2Toggle)
+                    if (service1Toggle != _previousService1Toggle)
                     {
                         Logger.Log(LogLevel.Debug, "GSXServiceOrchestrator:CheckAllDoorToggles", 
-                            $"Passenger door toggles: Forward={service1Toggle}, Aft={service2Toggle}");
-                        
-                        if (service1Toggle)
-                        {
-                            doorManager.HandleServiceToggle(1, true);
-                        }
-                        
-                        if (service2Toggle)
-                        {
-                            doorManager.HandleServiceToggle(2, true);
-                        }
+                            $"Service 1 toggle changed from {_previousService1Toggle} to {service1Toggle}");
+                        doorManager.HandleServiceToggle(1, service1Toggle);
+                        _previousService1Toggle = service1Toggle;
+                    }
+                    
+                    bool service2Toggle = _simConnect.ReadLvar("FSDT_GSX_AIRCRAFT_SERVICE_2_TOGGLE") == 1;
+                    if (service2Toggle != _previousService2Toggle)
+                    {
+                        Logger.Log(LogLevel.Debug, "GSXServiceOrchestrator:CheckAllDoorToggles", 
+                            $"Service 2 toggle changed from {_previousService2Toggle} to {service2Toggle}");
+                        doorManager.HandleServiceToggle(2, service2Toggle);
+                        _previousService2Toggle = service2Toggle;
                     }
                 }
                 
@@ -289,22 +294,21 @@ namespace Prosim2GSX.Services
                 if (_model.SetOpenCargoDoors)
                 {
                     bool cargo1Toggle = _simConnect.ReadLvar("FSDT_GSX_AIRCRAFT_CARGO_1_TOGGLE") == 1;
-                    bool cargo2Toggle = _simConnect.ReadLvar("FSDT_GSX_AIRCRAFT_CARGO_2_TOGGLE") == 1;
-                    
-                    if (cargo1Toggle || cargo2Toggle)
+                    if (cargo1Toggle != _previousCargo1Toggle)
                     {
                         Logger.Log(LogLevel.Debug, "GSXServiceOrchestrator:CheckAllDoorToggles", 
-                            $"Cargo door toggles: Forward={cargo1Toggle}, Aft={cargo2Toggle}");
-                        
-                        if (cargo1Toggle)
-                        {
-                            doorManager.HandleCargoDoorToggle(1, true);
-                        }
-                        
-                        if (cargo2Toggle)
-                        {
-                            doorManager.HandleCargoDoorToggle(2, true);
-                        }
+                            $"Cargo 1 toggle changed from {_previousCargo1Toggle} to {cargo1Toggle}");
+                        doorManager.HandleCargoDoorToggle(1, cargo1Toggle);
+                        _previousCargo1Toggle = cargo1Toggle;
+                    }
+                    
+                    bool cargo2Toggle = _simConnect.ReadLvar("FSDT_GSX_AIRCRAFT_CARGO_2_TOGGLE") == 1;
+                    if (cargo2Toggle != _previousCargo2Toggle)
+                    {
+                        Logger.Log(LogLevel.Debug, "GSXServiceOrchestrator:CheckAllDoorToggles", 
+                            $"Cargo 2 toggle changed from {_previousCargo2Toggle} to {cargo2Toggle}");
+                        doorManager.HandleCargoDoorToggle(2, cargo2Toggle);
+                        _previousCargo2Toggle = cargo2Toggle;
                     }
                 }
             }

@@ -301,13 +301,13 @@ namespace Prosim2GSX.Services
                         break;
                         
                     case FlightState.DEPARTURE:
-                        // In departure, passenger doors should be open for boarding
-                        await OpenDoorAsync(DoorType.ForwardRight, cancellationToken);
-                        await OpenDoorAsync(DoorType.AftRight, cancellationToken);
-                        
-                        // Cargo doors should be open for loading
-                        await OpenDoorAsync(DoorType.ForwardCargo, cancellationToken);
-                        await OpenDoorAsync(DoorType.AftCargo, cancellationToken);
+                        // Do NOT automatically open doors
+                        // Instead, ensure doors are closed initially and wait for GSX requests
+                        await CloseDoorAsync(DoorType.ForwardRight, cancellationToken);
+                        await CloseDoorAsync(DoorType.AftRight, cancellationToken);
+                        // Cargo doors should also remain closed until explicitly requested
+                        await CloseDoorAsync(DoorType.ForwardCargo, cancellationToken);
+                        await CloseDoorAsync(DoorType.AftCargo, cancellationToken);
                         break;
                         
                     case FlightState.TAXIOUT:

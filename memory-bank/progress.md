@@ -43,6 +43,14 @@ Prosim2GSX is currently in a transitional state as it undergoes significant modu
 | Phase 5: Airline Theming System | Planned | 0% |
 | Phase 6: Optimization and Polish | Planned | 0% |
 
+### Catering Door Fix Implementation Progress
+
+| Phase | Status | Completion % |
+|-------|--------|--------------|
+| Phase 1: Critical Fixes | Completed | 100% |
+| Phase 2: Enhanced Robustness | Planned | 0% |
+| Phase 3: Improved Diagnostics | Planned | 0% |
+
 ## What Works
 
 ### Recent Improvements
@@ -149,6 +157,35 @@ Prosim2GSX is currently in a transitional state as it undergoes significant modu
    - ✅ GSXServiceCoordinator for coordinating GSX services
 
 ## What's Left to Build
+
+### Catering Door Fix Implementation
+
+1. **Phase 1: Critical Fixes**
+   - ✅ Remove Automatic Door Opening in DEPARTURE State
+     - ✅ Modified GSXDoorCoordinator.ManageDoorsForStateAsync() to remove automatic door opening
+     - ✅ Replaced with code that ensures doors are closed initially and wait for GSX requests
+   - ✅ Implement Toggle State Tracking in GSXServiceOrchestrator
+     - ✅ Added class-level variables to track previous toggle states
+     - ✅ Modified CheckAllDoorToggles() to only process toggle changes when the value actually changes
+
+2. **Phase 2: Enhanced Robustness**
+   - 🔜 Add Flight State Awareness to Door Operations
+     - 🔜 Modify GSXDoorManager.HandleServiceToggle() to check the current flight state
+     - 🔜 Only allow door operations in appropriate flight states
+   - 🔜 Remove Redundant Door State Variables
+     - 🔜 Remove the redundant door state tracking variables from GSXServiceCoordinator
+     - 🔜 Update any code that references these variables to use the GSXDoorManager properties instead
+   - 🔜 Implement Debounce Logic for Toggle Changes
+     - 🔜 Add debounce mechanism to prevent rapid toggle changes
+     - 🔜 This helps avoid potential race conditions or unintended door operations
+
+3. **Phase 3: Improved Diagnostics**
+   - 🔜 Enhance Logging for Door Operations
+     - 🔜 Add more detailed logging to track door operations and toggle states
+     - 🔜 This will make it easier to diagnose issues in the future
+   - 🔜 Implement Explicit Door State Initialization
+     - 🔜 Add explicit initialization of door states during startup
+     - 🔜 This ensures a consistent starting state for all door-related operations
 
 ### Modularization Implementation
 
@@ -485,6 +522,22 @@ Prosim2GSX is currently in a transitional state as it undergoes significant modu
 
 ## Known Issues
 
+### Door Management Issues
+
+1. **Catering Door Opening Issue (Partially Resolved)**
+   - ✅ Fixed: Forward right passenger door no longer opens immediately after flight plan loading
+   - ✅ Fixed: Door opening/closing loop issue has been resolved
+   - ✅ Fixed root causes:
+     - ✅ Modified GSXDoorCoordinator.ManageDoorsForStateAsync() to keep doors closed in DEPARTURE state
+     - ✅ Added toggle state tracking in GSXServiceOrchestrator.CheckAllDoorToggles()
+   - 🔜 Remaining enhancements (Phases 2 and 3):
+     - 🔜 Add flight state awareness to door operations
+     - 🔜 Remove redundant door state variables
+     - 🔜 Implement debounce logic for toggle changes
+     - 🔜 Enhance logging for door operations
+     - 🔜 Implement explicit door state initialization
+   - Implementation plan available in to-do/catering-door-fix-implementation.md
+
 ### Integration Issues
 
 1. **GSX Menu Interaction**
@@ -535,7 +588,20 @@ Prosim2GSX is currently in a transitional state as it undergoes significant modu
 
 Based on the current state and modularization strategy, the following priorities are recommended for future development:
 
-1. **Complete GSX Services Extraction (Phase 3)**
+1. **Continue Catering Door Fix Implementation**
+   - ✅ Phase 1: Completed critical fixes
+     - ✅ Removed automatic door opening in DEPARTURE state
+     - ✅ Implemented toggle state tracking in GSXServiceOrchestrator
+   - 🔜 Phase 2: Implement enhanced robustness
+     - 🔜 Add flight state awareness to door operations
+     - 🔜 Remove redundant door state variables
+     - 🔜 Implement debounce logic for toggle changes
+   - 🔜 Phase 3: Implement improved diagnostics
+     - 🔜 Enhance logging for door operations
+     - 🔜 Implement explicit door state initialization
+   - Test thoroughly after each phase to ensure doors behave correctly
+
+2. **Complete GSX Services Extraction (Phase 3)**
    - ✅ Implement GSXStateManager (Phase 3.3)
      - Created IGSXStateManager interface and implementation
      - Extracted state management logic from GsxController
@@ -548,7 +614,7 @@ Based on the current state and modularization strategy, the following priorities
      - Enhanced error handling and logging
      - Implemented proper IDisposable pattern
 
-2. **Continue Further GSX Controller Modularization (Phase 4)**
+3. **Continue Further GSX Controller Modularization (Phase 4)**
    - ✅ Create GSXControllerFacade (Phase 4.1)
    - ✅ Enhance GSXStateMachine (Phase 4.2)
      - Enhanced IGSXStateManager interface with new capabilities
@@ -562,77 +628,4 @@ Based on the current state and modularization strategy, the following priorities
      - Created IGSXServiceOrchestrator interface
      - Created GSXServiceOrchestrator implementation
      - Coordinated service execution based on state
-     - Updated GsxController to use the new service
-   - 🔜 Create domain-specific coordinators (Phase 4.4-4.8)
-
-3. **Implement .NET 8.0 Performance Improvements**
-   - 🔄 Analyze performance bottlenecks and optimization opportunities
-     - ✅ Identified high-impact .NET 8.0 performance features
-     - ✅ Created detailed implementation plans for each improvement
-     - ✅ Documented in to-do/dotnet8-performance-improvements.md
-   - 🔄 Implement Phase 1: High-impact improvements
-     - 🔄 Optimize dictionary operations with FrozenDictionary
-     - 🔄 Implement Span<T> for string operations
-     - 🔄 Implement ValueTask for asynchronous operations
-   - 🔜 Implement Phase 2: Medium-impact improvements
-   - 🔜 Implement Phase 3: Specialized optimizations
-   - 🔜 Measure and document performance improvements
-
-4. **Implement Comprehensive Testing**
-   - 🔜 Unit tests for all services
-   - 🔜 Integration tests for service interactions
-   - 🔜 Performance tests for critical paths
-
-4. **EFB-Style UI Development**
-   - Create a new Electronic Flight Bag (EFB) style user interface that resembles actual EFBs used by A320 pilots
-   - Implement the phased approach outlined in the EFB UI implementation strategy:
-     - Phase 1: Foundation Framework (3 weeks)
-     - Phase 2: Basic UI Components (4 weeks)
-     - Phase 3: Aircraft Visualization (3 weeks)
-     - Phase 4: Flight Phase Integration (2 weeks)
-     - Phase 5: Airline Theming System (3 weeks)
-     - Phase 6: Optimization and Polish (2 weeks)
-   - Implement airline customization options with theming system
-   - Optimize for secondary monitor use with detachable window support
-   - Provide realistic visualization of aircraft and services
-   - Implement contextual awareness and flight phase adaptation
-   - Detailed implementation plan available in to-do/efb-ui-implementation-strategy.md
-
-5. **Stability Improvements**
-   - Enhance error handling and recovery
-   - Improve connection stability
-   - Address known issues with service timing
-
-## Benefits of Modularization
-
-The modularization effort will provide the following benefits:
-
-1. **Improved Maintainability**
-   - Smaller, focused components are easier to understand and modify
-   - Clear separation of concerns reduces side effects
-   - Better organization makes code navigation easier
-
-2. **Enhanced Testability**
-   - Services with clear interfaces are easier to test in isolation
-   - Dependency injection enables better mocking for tests
-   - Reduced coupling makes unit testing more effective
-   - Comprehensive test strategy ensures quality and reliability
-
-3. **Better Extensibility**
-   - New features can be added with minimal changes to existing code
-   - Services can be enhanced independently
-   - New integrations can be implemented without affecting core functionality
-
-4. **Reduced Complexity**
-   - Each service has a single responsibility
-   - Dependencies are explicit and manageable
-   - State management is more predictable
-
-## Risks and Mitigations
-
-| Risk | Impact | Likelihood | Mitigation |
-|------|--------|------------|------------|
-| Breaking existing functionality | High | Medium | Implement changes incrementally with thorough testing after each phase |
-| Introducing performance overhead | Medium | Low | Monitor performance metrics and optimize as needed |
-| Creating overly complex architecture | Medium | Medium | Regular code reviews to ensure appropriate abstraction levels |
-| Circular dependencies | High | Medium | Careful design of service interfaces and use of dependency injection |
+     -
