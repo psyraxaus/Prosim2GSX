@@ -101,6 +101,26 @@ namespace Prosim2GSX.Services
         /// Gets a value indicating whether the aft cargo door is open
         /// </summary>
         bool IsAftCargoDoorOpen { get; }
+        
+        /// <summary>
+        /// Gets a value indicating whether the forward right service is active
+        /// </summary>
+        bool IsForwardRightServiceActive { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the aft right service is active
+        /// </summary>
+        bool IsAftRightServiceActive { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the forward cargo service is active
+        /// </summary>
+        bool IsForwardCargoServiceActive { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the aft cargo service is active
+        /// </summary>
+        bool IsAftCargoServiceActive { get; }
 
         /// <summary>
         /// Initializes the door manager
@@ -127,6 +147,13 @@ namespace Prosim2GSX.Services
         /// <param name="serviceNumber">The service number (1 or 2)</param>
         /// <param name="isActive">True if the service is active, false otherwise</param>
         void HandleServiceToggle(int serviceNumber, bool isActive);
+        
+        /// <summary>
+        /// Handles a cargo door toggle from GSX
+        /// </summary>
+        /// <param name="cargoNumber">The cargo door number (1 for forward, 2 for aft)</param>
+        /// <param name="isActive">True if the toggle is active, false otherwise</param>
+        void HandleCargoDoorToggle(int cargoNumber, bool isActive);
 
         /// <summary>
         /// Handles cargo loading percentage updates
@@ -158,6 +185,15 @@ namespace Prosim2GSX.Services
         /// <param name="cancellationToken">A cancellation token</param>
         /// <returns>A task that represents the asynchronous operation</returns>
         Task HandleServiceToggleAsync(int serviceNumber, bool isActive, CancellationToken cancellationToken = default);
+        
+        /// <summary>
+        /// Handles a cargo door toggle from GSX asynchronously
+        /// </summary>
+        /// <param name="cargoNumber">The cargo door number (1 for forward, 2 for aft)</param>
+        /// <param name="isActive">True if the toggle is active, false otherwise</param>
+        /// <param name="cancellationToken">A cancellation token</param>
+        /// <returns>A task that represents the asynchronous operation</returns>
+        Task HandleCargoDoorToggleAsync(int cargoNumber, bool isActive, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Handles cargo loading percentage updates asynchronously

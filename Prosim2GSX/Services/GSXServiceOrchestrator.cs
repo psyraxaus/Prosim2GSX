@@ -213,6 +213,9 @@ namespace Prosim2GSX.Services
                 // Predict services before execution
                 var predictions = PredictServices(state, parameters);
                 
+                // Check door toggles (new addition)
+                CheckAllDoorToggles();
+                
                 // Execute services based on the current state
                 switch (state)
                 {
@@ -242,6 +245,73 @@ namespace Prosim2GSX.Services
             catch (Exception ex)
             {
                 Logger.Log(LogLevel.Error, "GSXServiceOrchestrator:OrchestrateServices", $"Error orchestrating services: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Checks all door toggle LVARs and handles door operations accordingly
+        /// </summary>
+        private void CheckAllDoorToggles()
+        {
+            try
+            {
+                // Get reference to door manager from coordinator
+                var doorManager = (_coordinator as GSXServiceCoordinator)?.GetDoorManager();
+                if (doorManager == null)
+                {
+                    return;
+                }
+                
+                // Check passenger door toggles (for catering)
+                if (_model.SetOpenCateringDoor)
+                {
+                    bool service1Toggle = _simConnect.ReadLvar("FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE") == 1;
+                    bool service2Toggle = _simConnect.ReadLvar("FSDT_GSX_AIRCRAFT_SERVICE_2_TOGGLE") == 1;
+                    
+                    if (service1Toggle || service2Toggle)
+                    {
+                        Logger.Log(LogLevel.Debug, "GSXServiceOrchestrator:CheckAllDoorToggles", 
+                            $"Passenger door toggles: Forward={service1Toggle}, Aft={service2Toggle}");
+                        
+                        if (service1Toggle)
+                        {
+                            doorManager.HandleServiceToggle(1, true);
+                        }
+                        
+                        if (service2Toggle)
+                        {
+                            doorManager.HandleServiceToggle(2, true);
+                        }
+                    }
+                }
+                
+                // Check cargo door toggles
+                if (_model.SetOpenCargoDoors)
+                {
+                    bool cargo1Toggle = _simConnect.ReadLvar("FSDT_GSX_AIRCRAFT_CARGO_1_TOGGLE") == 1;
+                    bool cargo2Toggle = _simConnect.ReadLvar("FSDT_GSX_AIRCRAFT_CARGO_2_TOGGLE") == 1;
+                    
+                    if (cargo1Toggle || cargo2Toggle)
+                    {
+                        Logger.Log(LogLevel.Debug, "GSXServiceOrchestrator:CheckAllDoorToggles", 
+                            $"Cargo door toggles: Forward={cargo1Toggle}, Aft={cargo2Toggle}");
+                        
+                        if (cargo1Toggle)
+                        {
+                            doorManager.HandleCargoDoorToggle(1, true);
+                        }
+                        
+                        if (cargo2Toggle)
+                        {
+                            doorManager.HandleCargoDoorToggle(2, true);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "GSXServiceOrchestrator:CheckAllDoorToggles", 
+                    $"Error checking door toggles: {ex.Message}");
             }
         }
         

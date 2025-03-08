@@ -45,6 +45,17 @@ Prosim2GSX is currently in a transitional state as it undergoes significant modu
 
 ## What Works
 
+### Recent Improvements
+
+1. **Reactive Door Control System**
+   - ✅ Enhanced door management with reactive control for both passenger and cargo doors
+   - ✅ Implemented complete toggle cycle handling for GSX Pro ground crew requests
+   - ✅ Added service state tracking in GSXDoorManager
+   - ✅ Implemented continuous door toggle monitoring in GSXServiceOrchestrator
+   - ✅ Removed automatic door opening code from GSXServiceCoordinator
+   - ✅ Improved realism by matching real-world ground operations
+   - ✅ Enhanced error handling and logging for door operations
+
 ### Core Functionality
 
 1. **Connectivity**

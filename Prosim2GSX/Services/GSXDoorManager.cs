@@ -20,6 +20,12 @@ namespace Prosim2GSX.Services
         private bool _isForwardCargoDoorOpen;
         private bool _isAftCargoDoorOpen;
         private bool _isInitialized;
+        
+        // Service state tracking
+        private bool _isForwardRightServiceActive;
+        private bool _isAftRightServiceActive;
+        private bool _isForwardCargoServiceActive;
+        private bool _isAftCargoServiceActive;
 
         /// <summary>
         /// Gets a value indicating whether the forward right door is open
@@ -40,6 +46,26 @@ namespace Prosim2GSX.Services
         /// Gets a value indicating whether the aft cargo door is open
         /// </summary>
         public bool IsAftCargoDoorOpen => _isAftCargoDoorOpen;
+        
+        /// <summary>
+        /// Gets a value indicating whether the forward right service is active
+        /// </summary>
+        public bool IsForwardRightServiceActive => _isForwardRightServiceActive;
+
+        /// <summary>
+        /// Gets a value indicating whether the aft right service is active
+        /// </summary>
+        public bool IsAftRightServiceActive => _isAftRightServiceActive;
+
+        /// <summary>
+        /// Gets a value indicating whether the forward cargo service is active
+        /// </summary>
+        public bool IsForwardCargoServiceActive => _isForwardCargoServiceActive;
+
+        /// <summary>
+        /// Gets a value indicating whether the aft cargo service is active
+        /// </summary>
+        public bool IsAftCargoServiceActive => _isAftCargoServiceActive;
 
         /// <summary>
         /// Occurs when a door state changes
@@ -83,6 +109,8 @@ namespace Prosim2GSX.Services
                 // Subscribe to SimConnect variables
                 _simConnect.SubscribeLvar("FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE");
                 _simConnect.SubscribeLvar("FSDT_GSX_AIRCRAFT_SERVICE_2_TOGGLE");
+                _simConnect.SubscribeLvar("FSDT_GSX_AIRCRAFT_CARGO_1_TOGGLE");
+                _simConnect.SubscribeLvar("FSDT_GSX_AIRCRAFT_CARGO_2_TOGGLE");
                 _simConnect.SubscribeLvar("FSDT_GSX_BOARDING_CARGO_PERCENT");
                 _simConnect.SubscribeLvar("FSDT_GSX_DEBOARDING_CARGO_PERCENT");
 
@@ -91,6 +119,12 @@ namespace Prosim2GSX.Services
                 _isAftRightDoorOpen = false;
                 _isForwardCargoDoorOpen = false;
                 _isAftCargoDoorOpen = false;
+                
+                // Initialize service states to inactive
+                _isForwardRightServiceActive = false;
+                _isAftRightServiceActive = false;
+                _isForwardCargoServiceActive = false;
+                _isAftCargoServiceActive = false;
 
                 _isInitialized = true;
                 Logger.Log(LogLevel.Information, "GSXDoorManager:Initialize", "GSX Door Manager initialized");
@@ -233,52 +267,64 @@ namespace Prosim2GSX.Services
                 if (!_model.SetOpenCateringDoor)
                 {
                     Logger.Log(LogLevel.Information, "GSXDoorManager:HandleServiceToggle", 
-                        $"Automatic door opening for catering is disabled. Service {serviceNumber} toggle ignored.");
+                        $"Automatic door handling for catering is disabled. Service {serviceNumber} toggle ignored.");
                     return;
                 }
 
                 switch (serviceNumber)
                 {
-                    case 1:
-                        if (isActive)
+                    case 1: // Forward right door
+                        // Toggle is active (1) and door is closed and service not active -> Open door and start service
+                        if (isActive && !_isForwardRightDoorOpen && !_isForwardRightServiceActive)
                         {
-                            if (!_isForwardRightDoorOpen)
-                            {
-                                Logger.Log(LogLevel.Information, "GSXDoorManager:HandleServiceToggle", 
-                                    $"Opening forward right door for service {serviceNumber}");
-                                OpenDoor(DoorType.ForwardRight);
-                            }
+                            Logger.Log(LogLevel.Information, "GSXDoorManager:HandleServiceToggle", 
+                                $"Opening forward right door in response to GSX ground crew request");
+                            OpenDoor(DoorType.ForwardRight);
+                            _isForwardRightServiceActive = true;
                         }
-                        else
+                        // Toggle is inactive (0) and door is open and service active -> Service in progress
+                        else if (!isActive && _isForwardRightDoorOpen && _isForwardRightServiceActive)
                         {
-                            if (_isForwardRightDoorOpen)
-                            {
-                                Logger.Log(LogLevel.Information, "GSXDoorManager:HandleServiceToggle", 
-                                    $"Closing forward right door after service {serviceNumber}");
-                                CloseDoor(DoorType.ForwardRight);
-                            }
+                            Logger.Log(LogLevel.Debug, "GSXDoorManager:HandleServiceToggle", 
+                                $"Forward right door service in progress");
+                            // No action needed, service is in progress
                         }
-                        break;
-                    case 2:
-                        if (isActive)
+                        // Toggle is active (1) again and door is open and service active -> Close door and end service
+                        else if (isActive && _isForwardRightDoorOpen && _isForwardRightServiceActive)
                         {
-                            if (!_isAftRightDoorOpen)
-                            {
-                                Logger.Log(LogLevel.Information, "GSXDoorManager:HandleServiceToggle", 
-                                    $"Opening aft right door for service {serviceNumber}");
-                                OpenDoor(DoorType.AftRight);
-                            }
-                        }
-                        else
-                        {
-                            if (_isAftRightDoorOpen)
-                            {
-                                Logger.Log(LogLevel.Information, "GSXDoorManager:HandleServiceToggle", 
-                                    $"Closing aft right door after service {serviceNumber}");
-                                CloseDoor(DoorType.AftRight);
-                            }
+                            Logger.Log(LogLevel.Information, "GSXDoorManager:HandleServiceToggle", 
+                                $"Closing forward right door as service is complete");
+                            CloseDoor(DoorType.ForwardRight);
+                            _isForwardRightServiceActive = false;
                         }
                         break;
+
+                    case 2: // Aft right door
+                        // Toggle is active (1) and door is closed and service not active -> Open door and start service
+                        if (isActive && !_isAftRightDoorOpen && !_isAftRightServiceActive)
+                        {
+                            Logger.Log(LogLevel.Information, "GSXDoorManager:HandleServiceToggle", 
+                                $"Opening aft right door in response to GSX ground crew request");
+                            OpenDoor(DoorType.AftRight);
+                            _isAftRightServiceActive = true;
+                        }
+                        // Toggle is inactive (0) and door is open and service active -> Service in progress
+                        else if (!isActive && _isAftRightDoorOpen && _isAftRightServiceActive)
+                        {
+                            Logger.Log(LogLevel.Debug, "GSXDoorManager:HandleServiceToggle", 
+                                $"Aft right door service in progress");
+                            // No action needed, service is in progress
+                        }
+                        // Toggle is active (1) again and door is open and service active -> Close door and end service
+                        else if (isActive && _isAftRightDoorOpen && _isAftRightServiceActive)
+                        {
+                            Logger.Log(LogLevel.Information, "GSXDoorManager:HandleServiceToggle", 
+                                $"Closing aft right door as service is complete");
+                            CloseDoor(DoorType.AftRight);
+                            _isAftRightServiceActive = false;
+                        }
+                        break;
+
                     default:
                         Logger.Log(LogLevel.Warning, "GSXDoorManager:HandleServiceToggle", 
                             $"Unknown service number: {serviceNumber}");
@@ -289,6 +335,91 @@ namespace Prosim2GSX.Services
             {
                 Logger.Log(LogLevel.Error, "GSXDoorManager:HandleServiceToggle", 
                     $"Error handling service toggle for service {serviceNumber}: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Handles a cargo door toggle from GSX
+        /// </summary>
+        /// <param name="cargoNumber">The cargo door number (1 for forward, 2 for aft)</param>
+        /// <param name="isActive">True if the toggle is active, false otherwise</param>
+        public void HandleCargoDoorToggle(int cargoNumber, bool isActive)
+        {
+            EnsureInitialized();
+
+            try
+            {
+                if (!_model.SetOpenCargoDoors)
+                {
+                    Logger.Log(LogLevel.Information, "GSXDoorManager:HandleCargoDoorToggle", 
+                        $"Automatic door handling for cargo is disabled. Cargo door {cargoNumber} toggle ignored.");
+                    return;
+                }
+
+                switch (cargoNumber)
+                {
+                    case 1: // Forward cargo door
+                        // Toggle is active (1) and door is closed and service not active -> Open door and start service
+                        if (isActive && !_isForwardCargoDoorOpen && !_isForwardCargoServiceActive)
+                        {
+                            Logger.Log(LogLevel.Information, "GSXDoorManager:HandleCargoDoorToggle", 
+                                $"Opening forward cargo door in response to GSX ground crew request");
+                            OpenDoor(DoorType.ForwardCargo);
+                            _isForwardCargoServiceActive = true;
+                        }
+                        // Toggle is inactive (0) and door is open and service active -> Service in progress
+                        else if (!isActive && _isForwardCargoDoorOpen && _isForwardCargoServiceActive)
+                        {
+                            Logger.Log(LogLevel.Debug, "GSXDoorManager:HandleCargoDoorToggle", 
+                                $"Forward cargo door service in progress");
+                            // No action needed, service is in progress
+                        }
+                        // Toggle is active (1) again and door is open and service active -> Close door and end service
+                        else if (isActive && _isForwardCargoDoorOpen && _isForwardCargoServiceActive)
+                        {
+                            Logger.Log(LogLevel.Information, "GSXDoorManager:HandleCargoDoorToggle", 
+                                $"Closing forward cargo door as service is complete");
+                            CloseDoor(DoorType.ForwardCargo);
+                            _isForwardCargoServiceActive = false;
+                        }
+                        break;
+
+                    case 2: // Aft cargo door
+                        // Toggle is active (1) and door is closed and service not active -> Open door and start service
+                        if (isActive && !_isAftCargoDoorOpen && !_isAftCargoServiceActive)
+                        {
+                            Logger.Log(LogLevel.Information, "GSXDoorManager:HandleCargoDoorToggle", 
+                                $"Opening aft cargo door in response to GSX ground crew request");
+                            OpenDoor(DoorType.AftCargo);
+                            _isAftCargoServiceActive = true;
+                        }
+                        // Toggle is inactive (0) and door is open and service active -> Service in progress
+                        else if (!isActive && _isAftCargoDoorOpen && _isAftCargoServiceActive)
+                        {
+                            Logger.Log(LogLevel.Debug, "GSXDoorManager:HandleCargoDoorToggle", 
+                                $"Aft cargo door service in progress");
+                            // No action needed, service is in progress
+                        }
+                        // Toggle is active (1) again and door is open and service active -> Close door and end service
+                        else if (isActive && _isAftCargoDoorOpen && _isAftCargoServiceActive)
+                        {
+                            Logger.Log(LogLevel.Information, "GSXDoorManager:HandleCargoDoorToggle", 
+                                $"Closing aft cargo door as service is complete");
+                            CloseDoor(DoorType.AftCargo);
+                            _isAftCargoServiceActive = false;
+                        }
+                        break;
+
+                    default:
+                        Logger.Log(LogLevel.Warning, "GSXDoorManager:HandleCargoDoorToggle", 
+                            $"Unknown cargo door number: {cargoNumber}");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "GSXDoorManager:HandleCargoDoorToggle", 
+                    $"Error handling cargo door toggle for door {cargoNumber}: {ex.Message}");
             }
         }
 
@@ -381,6 +512,18 @@ namespace Prosim2GSX.Services
         public async Task HandleServiceToggleAsync(int serviceNumber, bool isActive, CancellationToken cancellationToken = default)
         {
             await Task.Run(() => HandleServiceToggle(serviceNumber, isActive), cancellationToken);
+        }
+        
+        /// <summary>
+        /// Handles a cargo door toggle from GSX asynchronously
+        /// </summary>
+        /// <param name="cargoNumber">The cargo door number (1 for forward, 2 for aft)</param>
+        /// <param name="isActive">True if the toggle is active, false otherwise</param>
+        /// <param name="cancellationToken">A cancellation token</param>
+        /// <returns>A task that represents the asynchronous operation</returns>
+        public async Task HandleCargoDoorToggleAsync(int cargoNumber, bool isActive, CancellationToken cancellationToken = default)
+        {
+            await Task.Run(() => HandleCargoDoorToggle(cargoNumber, isActive), cancellationToken);
         }
 
         /// <summary>

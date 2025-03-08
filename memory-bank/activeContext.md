@@ -25,6 +25,20 @@ The current focus for Prosim2GSX is implementing the modularization strategy to 
 
 ## Recent Changes
 
+### Reactive Door Control Implementation (March 2025)
+
+1. **Enhanced Door Management System**
+   - Implemented reactive door control for both passenger and cargo doors
+   - Doors now respond to GSX Pro ground crew requests via toggle LVARs
+   - Added complete toggle cycle handling:
+     - Toggle = 1 + door closed + service inactive → Open door and start service
+     - Toggle = 0 + door open + service active → Service in progress (no action)
+     - Toggle = 1 + door open + service active → Close door and end service
+   - Removed automatic door opening code from GSXServiceCoordinator
+   - Added continuous monitoring of door toggle LVARs in GSXServiceOrchestrator
+   - Enhanced GSXDoorManager with service state tracking
+   - Improved realism by matching real-world ground operations
+
 ### Modularization Implementation (March 2025)
 
 1. **Core Services Extraction (Phase 1)**

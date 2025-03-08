@@ -220,13 +220,8 @@ namespace Prosim2GSX.Services
                     doorManager.CloseDoor(DoorType.ForwardRight);
                 }
                 
-                // Open cargo doors after catering is finished if enabled
-                if (model.SetOpenCargoDoors)
-                {
-                    doorManager.OpenDoor(DoorType.ForwardCargo);
-                    doorManager.OpenDoor(DoorType.AftCargo);
-                    Logger.Log(LogLevel.Information, "GSXServiceCoordinator:RunLoadingServices", $"Opened cargo doors for loading");
-                }
+                // Cargo doors will now be opened by the door manager in response to GSX Pro ground crew requests
+                // The automatic door opening code has been removed
             }
 
             if (model.AutoBoarding)
@@ -895,6 +890,15 @@ namespace Prosim2GSX.Services
         protected virtual void OnServiceStatusChanged(string serviceType, string status, bool isCompleted)
         {
             ServiceStatusChanged?.Invoke(this, new ServiceStatusChangedEventArgs(serviceType, status, isCompleted));
+        }
+        
+        /// <summary>
+        /// Gets the door manager instance
+        /// </summary>
+        /// <returns>The door manager instance</returns>
+        public IGSXDoorManager GetDoorManager()
+        {
+            return doorManager;
         }
     }
 }

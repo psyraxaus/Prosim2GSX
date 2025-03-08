@@ -48,24 +48,24 @@ namespace Prosim2GSX.Services
         /// </summary>
         public bool IsUnloadingInProgress => _isUnloadingInProgress;
         
-        /// <summary>
-        /// Initializes a new instance of the <see cref="GSXCargoCoordinator"/> class
-        /// </summary>
-        /// <param name="prosimCargoService">The ProSim cargo service</param>
-        /// <param name="serviceOrchestrator">The GSX service orchestrator</param>
-        /// <param name="logger">The logger</param>
-        public GSXCargoCoordinator(
-            IProsimCargoService prosimCargoService,
-            IGSXServiceOrchestrator serviceOrchestrator,
-            ILogger logger)
-        {
-            _prosimCargoService = prosimCargoService ?? throw new ArgumentNullException(nameof(prosimCargoService));
-            _serviceOrchestrator = serviceOrchestrator ?? throw new ArgumentNullException(nameof(serviceOrchestrator));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            
-            // Subscribe to cargo state change events
-            _prosimCargoService.CargoStateChanged += OnProsimCargoStateChanged;
-        }
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GSXCargoCoordinator"/> class
+    /// </summary>
+    /// <param name="prosimCargoService">The ProSim cargo service</param>
+    /// <param name="serviceOrchestrator">The GSX service orchestrator (can be null and set later via SetServiceOrchestrator)</param>
+    /// <param name="logger">The logger</param>
+    public GSXCargoCoordinator(
+        IProsimCargoService prosimCargoService,
+        IGSXServiceOrchestrator serviceOrchestrator,
+        ILogger logger)
+    {
+        _prosimCargoService = prosimCargoService ?? throw new ArgumentNullException(nameof(prosimCargoService));
+        _serviceOrchestrator = serviceOrchestrator; // Allow null, will be set later via SetServiceOrchestrator
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        
+        // Subscribe to cargo state change events
+        _prosimCargoService.CargoStateChanged += OnProsimCargoStateChanged;
+    }
         
         /// <summary>
         /// Initializes the cargo coordinator
@@ -803,7 +803,8 @@ namespace Prosim2GSX.Services
         /// <param name="orchestrator">The service orchestrator</param>
         public void SetServiceOrchestrator(IGSXServiceOrchestrator orchestrator)
         {
-            _serviceOrchestrator = orchestrator;
+            _serviceOrchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
+            _logger.Log(LogLevel.Debug, "GSXCargoCoordinator:SetServiceOrchestrator", "Service orchestrator set successfully");
         }
         
         /// <summary>
