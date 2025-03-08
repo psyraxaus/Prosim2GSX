@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Prosim2GSX.Models;
@@ -448,7 +449,9 @@ namespace Prosim2GSX.Services
                 return false;
             }
 
-            var (lastChange, changeCount) = _doorChangeTracking[doorType];
+            DateTime lastChange;
+            int changeCount;
+            (lastChange, changeCount) = _doorChangeTracking[doorType];
             var timeSinceLastChange = now - lastChange;
 
             // If we've had more than 5 changes in less than 5 seconds, prevent further changes
