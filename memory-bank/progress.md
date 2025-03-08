@@ -47,7 +47,14 @@ Prosim2GSX is currently in a transitional state as it undergoes significant modu
 
 ### Recent Improvements
 
-1. **Reactive Door Control System**
+1. **GSXCargoCoordinator Initialization Fix**
+   - ✅ Fixed critical exception in ServiceController: "Value cannot be null. (Parameter 'cargoCoordinator')"
+   - ✅ Modified GSXCargoCoordinator constructor to allow null serviceOrchestrator parameter initially
+   - ✅ Added support for circular dependency resolution pattern where serviceOrchestrator is set after construction
+   - ✅ Enhanced initialization sequence in ServiceController to properly handle dependencies
+   - ✅ Improved error handling and logging for coordinator initialization
+
+2. **Reactive Door Control System**
    - ✅ Enhanced door management with reactive control for both passenger and cargo doors
    - ✅ Implemented complete toggle cycle handling for GSX Pro ground crew requests
    - ✅ Added service state tracking in GSXDoorManager

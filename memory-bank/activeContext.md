@@ -25,6 +25,15 @@ The current focus for Prosim2GSX is implementing the modularization strategy to 
 
 ## Recent Changes
 
+### Bug Fixes (March 2025)
+
+1. **GSXCargoCoordinator Initialization Fix**
+   - Fixed critical exception in ServiceController: "Value cannot be null. (Parameter 'cargoCoordinator')"
+   - Modified GSXCargoCoordinator constructor to allow null serviceOrchestrator parameter initially
+   - Added support for circular dependency resolution pattern where serviceOrchestrator is set after construction
+   - Enhanced initialization sequence in ServiceController to properly handle dependencies
+   - Improved error handling and logging for coordinator initialization
+
 ### Reactive Door Control Implementation (March 2025)
 
 1. **Enhanced Door Management System**

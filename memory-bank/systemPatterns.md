@@ -532,7 +532,32 @@ The planned EFB UI will use the Composite pattern for UI components:
 - Hierarchical organization of UI elements
 - Simplified management of complex UI structures
 
-### 16. Template Method Pattern
+### 16. Circular Dependency Resolution Pattern
+The application uses a specific pattern to resolve circular dependencies between components:
+- Constructor accepts potentially null dependency
+- Separate setter method provided to set the dependency after construction
+- Null checks in methods that use the dependency
+- Clear documentation of the dependency lifecycle
+- Example: GSXCargoCoordinator and GSXServiceOrchestrator have a circular dependency
+  - GSXCargoCoordinator is created first with null serviceOrchestrator
+  - GSXServiceOrchestrator is created with the cargoCoordinator
+  - SetServiceOrchestrator method is called to complete the dependency
+
+```mermaid
+sequenceDiagram
+    participant SC as ServiceController
+    participant CC as GSXCargoCoordinator
+    participant SO as GSXServiceOrchestrator
+    
+    SC->>CC: new GSXCargoCoordinator(prosimCargoService, null, logger)
+    Note right of CC: Created with null orchestrator
+    SC->>SO: new GSXServiceOrchestrator(..., cargoCoordinator, ...)
+    Note right of SO: Created with reference to coordinator
+    SC->>CC: cargoCoordinator.SetServiceOrchestrator(serviceOrchestrator)
+    Note right of CC: Circular dependency resolved
+```
+
+### 17. Template Method Pattern
 The planned EFB UI will use the Template Method pattern for page layouts:
 - Common page structure defined in base classes
 - Specific pages override only what they need to change
