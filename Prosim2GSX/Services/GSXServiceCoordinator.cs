@@ -15,6 +15,7 @@ namespace Prosim2GSX.Services
         private readonly IGSXMenuService menuService;
         private readonly IGSXLoadsheetManager loadsheetManager;
         private readonly IGSXDoorManager doorManager;
+        private readonly IGSXCargoCoordinator cargoCoordinator;
         private readonly IAcarsService acarsService;
         
         // Service state variables
@@ -67,6 +68,7 @@ namespace Prosim2GSX.Services
         /// <param name="menuService">The GSX menu service</param>
         /// <param name="loadsheetManager">The GSX loadsheet manager</param>
         /// <param name="doorManager">The GSX door manager</param>
+        /// <param name="cargoCoordinator">The GSX cargo coordinator</param>
         /// <param name="acarsService">The ACARS service</param>
         public GSXServiceCoordinator(
             ServiceModel model,
@@ -75,6 +77,7 @@ namespace Prosim2GSX.Services
             IGSXMenuService menuService,
             IGSXLoadsheetManager loadsheetManager,
             IGSXDoorManager doorManager,
+            IGSXCargoCoordinator cargoCoordinator,
             IAcarsService acarsService)
         {
             this.model = model ?? throw new ArgumentNullException(nameof(model));
@@ -83,6 +86,7 @@ namespace Prosim2GSX.Services
             this.menuService = menuService ?? throw new ArgumentNullException(nameof(menuService));
             this.loadsheetManager = loadsheetManager ?? throw new ArgumentNullException(nameof(loadsheetManager));
             this.doorManager = doorManager ?? throw new ArgumentNullException(nameof(doorManager));
+            this.cargoCoordinator = cargoCoordinator ?? throw new ArgumentNullException(nameof(cargoCoordinator));
             this.acarsService = acarsService ?? throw new ArgumentNullException(nameof(acarsService));
             
             // Subscribe to loadsheet manager events
@@ -229,13 +233,51 @@ namespace Prosim2GSX.Services
             {
                 if (!boardingRequested && refuelFinished && ((model.CallCatering && cateringFinished) || !model.CallCatering))
                 {
+                    // Add enhanced logging
                     if (delayCounter == 0)
-                        Logger.Log(LogLevel.Information, "GSXServiceCoordinator:RunLoadingServices", $"Waiting 90s before calling Boarding");
+                    {
+                        Logger.Log(LogLevel.Information, "GSXServiceCoordinator:RunLoadingServices", 
+                            $"Services complete - Waiting 90s before proceeding with cargo and boarding");
+                    }
 
                     if (delayCounter < 90)
+                    {
                         delayCounter++;
+                    }
                     else
                     {
+                        // Start cargo loading based on configuration
+                        if (model.SetOpenCargoDoors)
+                        {
+                            if (model.CargoLoadingBeforeBoarding)
+                            {
+                                // Start cargo loading before boarding
+                                Logger.Log(LogLevel.Information, "GSXServiceCoordinator:RunLoadingServices", 
+                                    $"Starting cargo loading before boarding");
+                                
+                                bool cargoStarted = cargoCoordinator.TryStartLoading(true);
+                                
+                                if (cargoStarted)
+                                {
+                                    OnServiceStatusChanged("Cargo", "Loading started before boarding", false);
+                                }
+                                else
+                                {
+                                    Logger.Log(LogLevel.Warning, "GSXServiceCoordinator:RunLoadingServices", 
+                                        $"Failed to start cargo loading before boarding");
+                                }
+                                
+                                // Add a small delay to allow cargo loading to initialize
+                                Thread.Sleep(1000);
+                            }
+                            else
+                            {
+                                Logger.Log(LogLevel.Information, "GSXServiceCoordinator:RunLoadingServices", 
+                                    $"Cargo loading will start during boarding process");
+                            }
+                        }
+
+                        // Then proceed with boarding
                         Logger.Log(LogLevel.Information, "GSXServiceCoordinator:RunLoadingServices", $"Calling Boarding Service");
                         SetPassengers(prosimController.GetPaxPlanned());
                         menuService.MenuOpen();
@@ -294,6 +336,25 @@ namespace Prosim2GSX.Services
                 prosimController.BoardingStart();
                 Logger.Log(LogLevel.Information, "GSXServiceCoordinator:RunLoadingServices", $"Boarding Service active");
                 OnServiceStatusChanged("Boarding", "Active", false);
+                
+                // Start cargo loading during boarding if configured that way
+                if (model.SetOpenCargoDoors && !model.CargoLoadingBeforeBoarding)
+                {
+                    Logger.Log(LogLevel.Information, "GSXServiceCoordinator:RunLoadingServices", 
+                        $"Starting cargo loading during boarding process");
+                    
+                    bool cargoStarted = cargoCoordinator.TryStartLoading(true);
+                    
+                    if (cargoStarted)
+                    {
+                        OnServiceStatusChanged("Cargo", "Loading started during boarding", false);
+                    }
+                    else
+                    {
+                        Logger.Log(LogLevel.Warning, "GSXServiceCoordinator:RunLoadingServices", 
+                            $"Failed to start cargo loading during boarding");
+                    }
+                }
             }
             else if (boarding)
             {

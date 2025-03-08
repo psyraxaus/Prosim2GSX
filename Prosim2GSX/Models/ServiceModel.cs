@@ -1,4 +1,4 @@
-﻿﻿using Prosim2GSX.Behaviours;
+﻿﻿﻿﻿using Prosim2GSX.Behaviours;
 using System;
 
 namespace Prosim2GSX.Models
@@ -15,6 +15,7 @@ namespace Prosim2GSX.Models
         public bool AutoRefuel { get; set; }
         public bool CallCatering { get; set; }
         public bool CancellationRequested { get; set; } = false;
+        public bool CargoLoadingBeforeBoarding { get; set; }
         public bool ConnectPCA { get; set; }
         public bool DisableCrew { get; set; }
         public string FlightPlanType { get; set; }
@@ -76,6 +77,7 @@ namespace Prosim2GSX.Models
             AutoDeboarding = Convert.ToBoolean(ConfigurationFile.GetSetting("autoDeboarding", "true"));
             AutoRefuel = Convert.ToBoolean(ConfigurationFile.GetSetting("autoRefuel", "true"));
             CallCatering = Convert.ToBoolean(ConfigurationFile.GetSetting("callCatering", "true"));
+            CargoLoadingBeforeBoarding = Convert.ToBoolean(ConfigurationFile.GetSetting("cargoLoadingBeforeBoarding", "true"));
             ConnectPCA = Convert.ToBoolean(ConfigurationFile.GetSetting("connectPCA", "true"));
             DisableCrew = Convert.ToBoolean(ConfigurationFile.GetSetting("disableCrew", "true"));
             FlightPlanType = Convert.ToString(ConfigurationFile.GetSetting("flightPlanType", "MCDU"));

@@ -155,5 +155,20 @@ namespace Prosim2GSX.Services
         /// </summary>
         /// <param name="doorCoordinator">The door coordinator to register</param>
         void RegisterDoorCoordinator(IGSXDoorCoordinator doorCoordinator);
+        
+        /// <summary>
+        /// Starts cargo loading if appropriate based on the current state
+        /// </summary>
+        /// <param name="force">If true, starts loading regardless of current state</param>
+        /// <returns>True if loading was started successfully, false otherwise</returns>
+        bool TryStartLoading(bool force = false);
+        
+        /// <summary>
+        /// Starts cargo loading asynchronously if appropriate based on the current state
+        /// </summary>
+        /// <param name="force">If true, starts loading regardless of current state</param>
+        /// <param name="cancellationToken">A cancellation token</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains true if loading was started successfully, false otherwise</returns>
+        Task<bool> TryStartLoadingAsync(bool force = false, CancellationToken cancellationToken = default);
     }
 }

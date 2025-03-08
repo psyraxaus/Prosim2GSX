@@ -11,6 +11,11 @@ namespace Prosim2GSX.Services
         Idle,
         
         /// <summary>
+        /// Refueling has been requested but not yet started
+        /// </summary>
+        Requested,
+        
+        /// <summary>
         /// Refueling is in progress
         /// </summary>
         Refueling,

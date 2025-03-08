@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Threading;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
@@ -194,7 +194,13 @@ namespace Prosim2GSX
             var loadsheetManager = new GSXLoadsheetManager(acarsService, flightDataService, FlightPlan, Model);
             loadsheetManager.Initialize();
             
-            // Step 9: Create GSXServiceOrchestrator
+            // Create cargo coordinator first (before service orchestrator)
+            var cargoCoordinator = new GSXCargoCoordinator(
+                ProsimController.GetCargoService(),
+                null, // Will set serviceOrchestrator later
+                Logger.Instance);
+            
+            // Step 9: Create GSXServiceOrchestrator with cargo coordinator
             var serviceOrchestrator = new GSXServiceOrchestrator(
                 Model, 
                 IPCManager.SimConnect, 
@@ -204,6 +210,12 @@ namespace Prosim2GSX
                 doorManager, 
                 acarsService,
                 stateManager);
+            
+            // Now initialize the cargo coordinator with the service orchestrator
+            cargoCoordinator.SetServiceOrchestrator(serviceOrchestrator);
+            cargoCoordinator.Initialize();
+            cargoCoordinator.RegisterDoorCoordinator(doorCoordinator);
+            cargoCoordinator.RegisterForStateChanges(stateManager);
                 
             // Create passenger coordinator
             var passengerCoordinator = new GSXPassengerCoordinator(
@@ -211,14 +223,6 @@ namespace Prosim2GSX
                 serviceOrchestrator, 
                 Logger.Instance);
             passengerCoordinator.Initialize();
-            
-            // Create cargo coordinator
-            var cargoCoordinator = new GSXCargoCoordinator(
-                ProsimController.GetCargoService(),
-                serviceOrchestrator,
-                Logger.Instance);
-            cargoCoordinator.Initialize();
-            cargoCoordinator.RegisterDoorCoordinator(doorCoordinator);
             
             // Create fuel coordinator
             var fuelCoordinator = new GSXFuelCoordinator(

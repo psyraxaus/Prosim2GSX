@@ -7,10 +7,10 @@ namespace Prosim2GSX.Services
     /// <summary>
     /// Coordinates cargo operations between GSX and ProSim
     /// </summary>
-    public class GSXCargoCoordinator : IGSXCargoCoordinator
+    public class GSXCargoCoordinator : IGSXCargoCoordinator, IDisposable
     {
         private readonly IProsimCargoService _prosimCargoService;
-        private readonly IGSXServiceOrchestrator _serviceOrchestrator;
+        private IGSXServiceOrchestrator _serviceOrchestrator;
         private readonly ILogger _logger;
         private IGSXStateManager _stateManager;
         private IGSXDoorCoordinator _doorCoordinator;
@@ -511,6 +511,85 @@ namespace Prosim2GSX.Services
         }
         
         /// <summary>
+        /// Starts cargo loading if appropriate based on the current state
+        /// </summary>
+        /// <param name="force">If true, starts loading regardless of current state</param>
+        /// <returns>True if loading was started successfully, false otherwise</returns>
+        public bool TryStartLoading(bool force = false)
+        {
+            try
+            {
+                _logger.Log(LogLevel.Debug, "GSXCargoCoordinator:TryStartLoading", 
+                    $"Attempting to start cargo loading (Force: {force})");
+                
+                lock (_stateLock)
+                {
+                    // Check if loading is already in progress
+                    if (_isLoadingInProgress)
+                    {
+                        _logger.Log(LogLevel.Warning, "GSXCargoCoordinator:TryStartLoading", 
+                            "Loading already in progress");
+                        return false;
+                    }
+                    
+                    // Check if unloading is in progress
+                    if (_isUnloadingInProgress)
+                    {
+                        _logger.Log(LogLevel.Warning, "GSXCargoCoordinator:TryStartLoading", 
+                            "Cannot start loading while unloading is in progress");
+                        return false;
+                    }
+                    
+                    // Check if we're in an appropriate state to start loading
+                    if (!force && _stateManager != null && _stateManager.CurrentState != FlightState.DEPARTURE)
+                    {
+                        _logger.Log(LogLevel.Warning, "GSXCargoCoordinator:TryStartLoading", 
+                            $"Cannot start loading in current state: {_stateManager.CurrentState}");
+                        return false;
+                    }
+                    
+                    // All checks passed, start loading
+                    return StartLoading();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Log(LogLevel.Error, "GSXCargoCoordinator:TryStartLoading", 
+                    $"Error trying to start loading: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Starts cargo loading asynchronously if appropriate based on the current state
+        /// </summary>
+        /// <param name="force">If true, starts loading regardless of current state</param>
+        /// <param name="cancellationToken">A cancellation token</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains true if loading was started successfully, false otherwise</returns>
+        public async Task<bool> TryStartLoadingAsync(bool force = false, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                _logger.Log(LogLevel.Debug, "GSXCargoCoordinator:TryStartLoadingAsync", 
+                    $"Attempting to start cargo loading asynchronously (Force: {force})");
+                
+                return await Task.Run(() => TryStartLoading(force), cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.Log(LogLevel.Warning, "GSXCargoCoordinator:TryStartLoadingAsync", 
+                    "Operation canceled");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.Log(LogLevel.Error, "GSXCargoCoordinator:TryStartLoadingAsync", 
+                    $"Error trying to start loading asynchronously: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
         /// Manages cargo based on the current flight state
         /// </summary>
         /// <param name="state">The current flight state</param>
@@ -530,11 +609,10 @@ namespace Prosim2GSX.Services
                         break;
                         
                     case FlightState.DEPARTURE:
-                        // In departure, start loading if not already in progress
-                        if (!_isLoadingInProgress && !_isUnloadingInProgress)
-                        {
-                            await StartLoadingAsync(cancellationToken);
-                        }
+                        // In departure, we no longer automatically start loading
+                        // Loading will be triggered by GSXServiceCoordinator
+                        _logger.Log(LogLevel.Debug, "GSXCargoCoordinator:ManageCargoForStateAsync", 
+                            "In DEPARTURE state - cargo loading will be triggered by service coordinator");
                         break;
                         
                     case FlightState.TAXIOUT:
@@ -717,6 +795,15 @@ namespace Prosim2GSX.Services
         protected virtual void OnCargoStateChanged(string operationType, int currentPercentage, int plannedAmount)
         {
             CargoStateChanged?.Invoke(this, new CargoStateChangedEventArgs(operationType, currentPercentage, plannedAmount));
+        }
+        
+        /// <summary>
+        /// Sets the service orchestrator reference
+        /// </summary>
+        /// <param name="orchestrator">The service orchestrator</param>
+        public void SetServiceOrchestrator(IGSXServiceOrchestrator orchestrator)
+        {
+            _serviceOrchestrator = orchestrator;
         }
         
         /// <summary>

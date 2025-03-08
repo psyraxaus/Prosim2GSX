@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using System;
+﻿﻿using System;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Media;
@@ -53,6 +53,7 @@ namespace Prosim2GSX
             chkGsxVolumeControl.IsChecked = serviceModel.GsxVolumeControl;
             chkOpenDoorCatering.IsChecked = serviceModel.SetOpenCateringDoor;
             chkOpenCargoDoors.IsChecked = serviceModel.SetOpenCargoDoors;
+            chkCargoLoadingBeforeBoarding.IsChecked = serviceModel.CargoLoadingBeforeBoarding;
             chkPcaOnlyJetway.IsChecked = serviceModel.PcaOnlyJetways;
             chkSynchBypass.IsChecked = serviceModel.SynchBypass;
             chkSaveFuel.IsChecked = serviceModel.SetSaveFuel;
@@ -186,6 +187,11 @@ namespace Prosim2GSX
         private void chkOpenCargoDoors_Click(object sender, RoutedEventArgs e)
         {
             serviceModel.SetSetting("setOpenCargoDoors", chkOpenCargoDoors.IsChecked.ToString().ToLower());
+        }
+        
+        private void chkCargoLoadingBeforeBoarding_Click(object sender, RoutedEventArgs e)
+        {
+            serviceModel.SetSetting("cargoLoadingBeforeBoarding", chkCargoLoadingBeforeBoarding.IsChecked.ToString().ToLower());
         }
         
         private void chkPcaOnlyJetway_Click(object sender, RoutedEventArgs e)
@@ -462,8 +468,5 @@ namespace Prosim2GSX
                 timer.Start();
             }
         }
-
-
-
     }
 }

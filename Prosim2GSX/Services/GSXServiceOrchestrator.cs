@@ -58,6 +58,7 @@ namespace Prosim2GSX.Services
                 menuService, 
                 loadsheetManager, 
                 doorManager, 
+                null, // cargoCoordinator will be set later
                 acarsService);
             
             // Forward the ServiceStatusChanged event

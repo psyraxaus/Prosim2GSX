@@ -75,7 +75,7 @@
                 </CheckBox>
             </StackPanel>
         </GroupBox>
-        <GroupBox Grid.Row="1" BorderBrush="DarkGray" BorderThickness="1" Margin="215,10,10,32" Grid.Column="1" Grid.RowSpan="2">
+        <GroupBox Grid.Row="1" BorderBrush="DarkGray" BorderThickness="1" Margin="215,10,10,20" Grid.Column="1" Grid.RowSpan="2">
             <GroupBox.Header>Service Calls</GroupBox.Header>
             <StackPanel Orientation="Vertical" Margin="0,0,-2,0">
                 <CheckBox Name="chkAutoReposition" Margin="8,8,8,0" VerticalContentAlignment="Center" Click="chkAutoReposition_Click" ToolTip="Uses the 'Reposition here at current Gate' Option of GSX to position the Plane in accordance with the Airport Profile.&#x0a;The Repositioning is done when the Flight-Session becomes ready and after the configurable Delay below.">
@@ -104,6 +104,9 @@
                 <CheckBox Name="chkOpenCargoDoors" Margin="8,8,8,0" VerticalContentAlignment="Center" Click="chkOpenCargoDoors_Click" ToolTip="Automatically open and close cargo doors after catering is finished.">
                     <TextBlock>Auto Open/Close <Underline>Cargo Doors</Underline> after catering has finished</TextBlock>
                 </CheckBox>
+                <CheckBox Name="chkCargoLoadingBeforeBoarding" Margin="28,8,8,0" VerticalContentAlignment="Center" Click="chkCargoLoadingBeforeBoarding_Click" ToolTip="If checked, cargo loading will start before boarding. If unchecked, cargo loading will start during the boarding process.">
+                    <TextBlock>Start cargo loading <Underline>before</Underline> boarding (otherwise during boarding)</TextBlock>
+                </CheckBox>
                 <CheckBox Name="chkAutoBoard" Margin="8,8,8,0" VerticalContentAlignment="Center" Click="chkAutoBoard_Click" ToolTip="Boarding will automatically start 90s after Refueling is finished (regardless if the Refuel Service was called automatically or manually).&#x0a;Boarding-Synchronization still works when this Option is disabled!&#x0a;The Final Loadsheet will always be send regardless who called Refueling and Boarding.">
                     <TextBlock>Automatically start <Underline>Boarding</Underline> when Refuel and Catering are finished</TextBlock>
                 </CheckBox>
@@ -122,7 +125,7 @@
             </StackPanel>
         </GroupBox>
 
-        <GroupBox Grid.Row="2" BorderBrush="DarkGray" BorderThickness="1" Margin="10,113,10,29" Grid.ColumnSpan="2" Grid.RowSpan="2">
+        <GroupBox Grid.Row="2" BorderBrush="DarkGray" BorderThickness="1" Margin="10,125,10,18" Grid.ColumnSpan="2" Grid.RowSpan="2">
             <GroupBox.Header>Ground Handling</GroupBox.Header>
             <StackPanel Orientation="Vertical">
                 <CheckBox Name="chkAutoConnect" Margin="8,8,8,0" VerticalContentAlignment="Center" Click="chkAutoConnect_Click" ToolTip="The Jetway and Stairs will automatically be called when the Session is started, the Plane is ready for Push-Back or has arrived at the Gate.&#x0a;Ready for Push-Back = External Power disconnected &amp; Parking Brake is set &amp; Beacon Light is On.&#x0a;Handling of other Ground-Equipment (Chocks, GPU) will always be performed!">
@@ -143,7 +146,7 @@
             </StackPanel>
         </GroupBox>
 
-        <GroupBox Grid.Row="3" BorderBrush="DarkGray" BorderThickness="1" Margin="10,113,10,170" Grid.ColumnSpan="2" Grid.RowSpan="2">
+        <GroupBox Grid.Row="3" BorderBrush="DarkGray" BorderThickness="1" Margin="10,129,10,170" Grid.ColumnSpan="2" Grid.RowSpan="2">
             <GroupBox.Header>Volume Control</GroupBox.Header>
             <StackPanel Orientation="Vertical">
                 <CheckBox Name="chkGsxVolumeControl" Margin="8,8,8,0" VerticalContentAlignment="Center" Click="chkGsxVolumeControl_Click" ToolTip="The Volume of the GSX (Couatl) Application will be controlled on the OS-Level.&#x0a;The Volume-Level is controlled with the INT Knob on ACP1. Pushing/Pulling the Knob will mute/unmute the whole Application.&#x0a;Volume Control will only start after the Plane is powered (that is FCU Displays are On).&#x0a;Be aware that the default Position in the Fenix is 50%!">
@@ -162,7 +165,7 @@
                 </StackPanel>
             </StackPanel>
         </GroupBox>
-        
+
         <GroupBox Grid.Row="4" BorderBrush="DarkGray" BorderThickness="1" Margin="10,117,10,10" Grid.ColumnSpan="2">
             <GroupBox.Header>Log Messages</GroupBox.Header>
             <TextBlock Name="txtLogMessages" Margin="4"></TextBlock>
