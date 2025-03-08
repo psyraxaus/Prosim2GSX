@@ -300,15 +300,20 @@ namespace Prosim2GSX.Services
                         await CloseDoorAsync(DoorType.AftRight, cancellationToken);
                         break;
                         
-                    case FlightState.DEPARTURE:
-                        // Do NOT automatically open doors
-                        // Instead, ensure doors are closed initially and wait for GSX requests
-                        await CloseDoorAsync(DoorType.ForwardRight, cancellationToken);
-                        await CloseDoorAsync(DoorType.AftRight, cancellationToken);
-                        // Cargo doors should also remain closed until explicitly requested
-                        await CloseDoorAsync(DoorType.ForwardCargo, cancellationToken);
-                        await CloseDoorAsync(DoorType.AftCargo, cancellationToken);
-                        break;
+case FlightState.DEPARTURE:
+    // Do NOT automatically open doors
+    // Instead, ensure doors are closed initially and wait for GSX requests
+    // Only close doors if no service is active
+    if (!_gsxDoorManager.IsForwardRightServiceActive)
+        await CloseDoorAsync(DoorType.ForwardRight, cancellationToken);
+    if (!_gsxDoorManager.IsAftRightServiceActive)
+        await CloseDoorAsync(DoorType.AftRight, cancellationToken);
+    // Cargo doors should also remain closed until explicitly requested
+    if (!_gsxDoorManager.IsForwardCargoServiceActive)
+        await CloseDoorAsync(DoorType.ForwardCargo, cancellationToken);
+    if (!_gsxDoorManager.IsAftCargoServiceActive)
+        await CloseDoorAsync(DoorType.AftCargo, cancellationToken);
+    break;
                         
                     case FlightState.TAXIOUT:
                         // In taxiout, all doors should be closed

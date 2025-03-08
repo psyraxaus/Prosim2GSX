@@ -20,12 +20,19 @@ namespace Prosim2GSX.Services
         private bool _isForwardCargoDoorOpen;
         private bool _isAftCargoDoorOpen;
         private bool _isInitialized;
-        
+
         // Service state tracking
         private bool _isForwardRightServiceActive;
         private bool _isAftRightServiceActive;
         private bool _isForwardCargoServiceActive;
         private bool _isAftCargoServiceActive;
+
+        // Toggle-to-door mapping
+        private Dictionary<int, DoorType> _toggleToDoorMapping = new Dictionary<int, DoorType>();
+
+        // Door state change tracking for circuit breaker
+        private Dictionary<DoorType, (DateTime LastChange, int ChangeCount)> _doorChangeTracking = 
+            new Dictionary<DoorType, (DateTime, int)>();
 
         /// <summary>
         /// Gets a value indicating whether the forward right door is open
@@ -271,64 +278,59 @@ namespace Prosim2GSX.Services
                     return;
                 }
 
-                switch (serviceNumber)
+                // Determine which door this toggle controls
+                DoorType doorType = DetermineDoorForToggle(serviceNumber, isActive);
+                
+                // Log the current state for debugging
+                int cateringState = (int)_simConnect.ReadLvar("FSDT_GSX_CATERING_STATE");
+                Logger.Log(LogLevel.Debug, "GSXDoorManager:HandleServiceToggle", 
+                    $"Handling service toggle {serviceNumber}={isActive} with catering state {cateringState} for door {doorType}");
+
+                // Get the current door state and service state
+                bool isDoorOpen = IsDoorOpen(doorType);
+                bool isServiceActive = IsServiceActive(doorType);
+
+                // Check if we should prevent rapid changes to this door
+                if (ShouldPreventRapidChanges(doorType))
                 {
-                    case 1: // Forward right door
-                        // Toggle is active (1) and door is closed and service not active -> Open door and start service
-                        if (isActive && !_isForwardRightDoorOpen && !_isForwardRightServiceActive)
-                        {
-                            Logger.Log(LogLevel.Information, "GSXDoorManager:HandleServiceToggle", 
-                                $"Opening forward right door in response to GSX ground crew request");
-                            OpenDoor(DoorType.ForwardRight);
-                            _isForwardRightServiceActive = true;
-                        }
-                        // Toggle is inactive (0) and door is open and service active -> Service in progress
-                        else if (!isActive && _isForwardRightDoorOpen && _isForwardRightServiceActive)
-                        {
-                            Logger.Log(LogLevel.Debug, "GSXDoorManager:HandleServiceToggle", 
-                                $"Forward right door service in progress");
-                            // No action needed, service is in progress
-                        }
-                        // Toggle is active (1) again and door is open and service active -> Close door and end service
-                        else if (isActive && _isForwardRightDoorOpen && _isForwardRightServiceActive)
-                        {
-                            Logger.Log(LogLevel.Information, "GSXDoorManager:HandleServiceToggle", 
-                                $"Closing forward right door as service is complete");
-                            CloseDoor(DoorType.ForwardRight);
-                            _isForwardRightServiceActive = false;
-                        }
-                        break;
+                    Logger.Log(LogLevel.Warning, "GSXDoorManager:HandleServiceToggle", 
+                        $"Preventing rapid changes to {doorType}");
+                    return;
+                }
 
-                    case 2: // Aft right door
-                        // Toggle is active (1) and door is closed and service not active -> Open door and start service
-                        if (isActive && !_isAftRightDoorOpen && !_isAftRightServiceActive)
-                        {
-                            Logger.Log(LogLevel.Information, "GSXDoorManager:HandleServiceToggle", 
-                                $"Opening aft right door in response to GSX ground crew request");
-                            OpenDoor(DoorType.AftRight);
-                            _isAftRightServiceActive = true;
-                        }
-                        // Toggle is inactive (0) and door is open and service active -> Service in progress
-                        else if (!isActive && _isAftRightDoorOpen && _isAftRightServiceActive)
-                        {
-                            Logger.Log(LogLevel.Debug, "GSXDoorManager:HandleServiceToggle", 
-                                $"Aft right door service in progress");
-                            // No action needed, service is in progress
-                        }
-                        // Toggle is active (1) again and door is open and service active -> Close door and end service
-                        else if (isActive && _isAftRightDoorOpen && _isAftRightServiceActive)
-                        {
-                            Logger.Log(LogLevel.Information, "GSXDoorManager:HandleServiceToggle", 
-                                $"Closing aft right door as service is complete");
-                            CloseDoor(DoorType.AftRight);
-                            _isAftRightServiceActive = false;
-                        }
-                        break;
+                // Special handling for catering state 4 (service requested)
+                if (cateringState == 4 && isActive && !isDoorOpen)
+                {
+                    // Catering is waiting for door to open
+                    Logger.Log(LogLevel.Information, "GSXDoorManager:HandleServiceToggle", 
+                        $"Catering service is waiting for door to open");
+                    OpenDoor(doorType);
+                    SetServiceActive(doorType, true);
+                    return;
+                }
 
-                    default:
-                        Logger.Log(LogLevel.Warning, "GSXDoorManager:HandleServiceToggle", 
-                            $"Unknown service number: {serviceNumber}");
-                        break;
+                // Toggle is active (1) and door is closed and service not active -> Open door and start service
+                if (isActive && !isDoorOpen && !isServiceActive)
+                {
+                    Logger.Log(LogLevel.Information, "GSXDoorManager:HandleServiceToggle", 
+                        $"Opening {doorType} door in response to GSX ground crew request");
+                    OpenDoor(doorType);
+                    SetServiceActive(doorType, true);
+                }
+                // Toggle is inactive (0) and door is open and service active -> Service in progress
+                else if (!isActive && isDoorOpen && isServiceActive)
+                {
+                    Logger.Log(LogLevel.Debug, "GSXDoorManager:HandleServiceToggle", 
+                        $"{doorType} door service in progress");
+                    // No action needed, service is in progress
+                }
+                // Toggle is active (1) again and door is open and service active -> Close door and end service
+                else if (isActive && isDoorOpen && isServiceActive)
+                {
+                    Logger.Log(LogLevel.Information, "GSXDoorManager:HandleServiceToggle", 
+                        $"Closing {doorType} door as service is complete");
+                    CloseDoor(doorType);
+                    SetServiceActive(doorType, false);
                 }
             }
             catch (Exception ex)
@@ -336,6 +338,130 @@ namespace Prosim2GSX.Services
                 Logger.Log(LogLevel.Error, "GSXDoorManager:HandleServiceToggle", 
                     $"Error handling service toggle for service {serviceNumber}: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Determines which door a toggle controls
+        /// </summary>
+        /// <param name="toggleNumber">The toggle number (1 or 2)</param>
+        /// <param name="isActive">True if the toggle is active, false otherwise</param>
+        /// <returns>The door type that this toggle controls</returns>
+        private DoorType DetermineDoorForToggle(int toggleNumber, bool isActive)
+        {
+            // If we already have a mapping for this toggle, use it
+            if (_toggleToDoorMapping.ContainsKey(toggleNumber))
+            {
+                return _toggleToDoorMapping[toggleNumber];
+            }
+
+            // If this is the first time we're seeing this toggle active,
+            // we need to determine which door it's controlling
+            if (isActive)
+            {
+                // Check catering state to see if this is for catering
+                int cateringState = (int)_simConnect.ReadLvar("FSDT_GSX_CATERING_STATE");
+                
+                if (cateringState == 4) // Service requested
+                {
+                    // This toggle is being used for catering
+                    // Determine which door based on airline configuration
+                    // For now, we'll use a heuristic: 
+                    // If forward door is already in use, use aft door, otherwise use forward door
+                    DoorType doorToUse = _isForwardRightServiceActive ? 
+                        DoorType.AftRight : DoorType.ForwardRight;
+                        
+                    // Store the mapping for future use
+                    _toggleToDoorMapping[toggleNumber] = doorToUse;
+                    
+                    Logger.Log(LogLevel.Information, "GSXDoorManager:DetermineDoorForToggle", 
+                        $"Mapped toggle {toggleNumber} to door {doorToUse} for catering service");
+                        
+                    return doorToUse;
+                }
+            }
+            
+            // Default mapping if we can't determine dynamically
+            return toggleNumber == 1 ? DoorType.ForwardRight : DoorType.AftRight;
+        }
+
+        /// <summary>
+        /// Checks if a door is open
+        /// </summary>
+        /// <param name="doorType">The door type</param>
+        /// <returns>True if the door is open, false otherwise</returns>
+        private bool IsDoorOpen(DoorType doorType)
+        {
+            switch (doorType)
+            {
+                case DoorType.ForwardRight: return _isForwardRightDoorOpen;
+                case DoorType.AftRight: return _isAftRightDoorOpen;
+                case DoorType.ForwardCargo: return _isForwardCargoDoorOpen;
+                case DoorType.AftCargo: return _isAftCargoDoorOpen;
+                default: return false;
+            }
+        }
+
+        /// <summary>
+        /// Checks if a service is active for a door
+        /// </summary>
+        /// <param name="doorType">The door type</param>
+        /// <returns>True if the service is active, false otherwise</returns>
+        private bool IsServiceActive(DoorType doorType)
+        {
+            switch (doorType)
+            {
+                case DoorType.ForwardRight: return _isForwardRightServiceActive;
+                case DoorType.AftRight: return _isAftRightServiceActive;
+                case DoorType.ForwardCargo: return _isForwardCargoServiceActive;
+                case DoorType.AftCargo: return _isAftCargoServiceActive;
+                default: return false;
+            }
+        }
+
+        /// <summary>
+        /// Sets the service active state for a door
+        /// </summary>
+        /// <param name="doorType">The door type</param>
+        /// <param name="active">True to set the service active, false otherwise</param>
+        private void SetServiceActive(DoorType doorType, bool active)
+        {
+            switch (doorType)
+            {
+                case DoorType.ForwardRight: _isForwardRightServiceActive = active; break;
+                case DoorType.AftRight: _isAftRightServiceActive = active; break;
+                case DoorType.ForwardCargo: _isForwardCargoServiceActive = active; break;
+                case DoorType.AftCargo: _isAftCargoServiceActive = active; break;
+            }
+        }
+
+        /// <summary>
+        /// Checks if rapid changes to a door should be prevented
+        /// </summary>
+        /// <param name="doorType">The door type</param>
+        /// <returns>True if rapid changes should be prevented, false otherwise</returns>
+        private bool ShouldPreventRapidChanges(DoorType doorType)
+        {
+            var now = DateTime.UtcNow;
+            if (!_doorChangeTracking.ContainsKey(doorType))
+            {
+                _doorChangeTracking[doorType] = (now, 1);
+                return false;
+            }
+
+            var (lastChange, changeCount) = _doorChangeTracking[doorType];
+            var timeSinceLastChange = now - lastChange;
+
+            // If we've had more than 5 changes in less than 5 seconds, prevent further changes
+            if (timeSinceLastChange.TotalSeconds < 5 && changeCount > 5)
+            {
+                Logger.Log(LogLevel.Warning, "GSXDoorManager:ShouldPreventRapidChanges", 
+                    $"Preventing rapid changes to {doorType} (already changed {changeCount} times in 5 seconds)");
+                return true;
+            }
+
+            // Update tracking
+            _doorChangeTracking[doorType] = (now, timeSinceLastChange.TotalSeconds < 5 ? changeCount + 1 : 1);
+            return false;
         }
         
         /// <summary>
@@ -608,19 +734,7 @@ namespace Prosim2GSX.Services
         /// <param name="e">The event arguments</param>
         protected virtual void OnDoorStateChanged(DoorStateChangedEventArgs e)
         {
-            EventHandler<DoorStateChangedEventArgs> handler = DoorStateChanged;
-            if (handler != null)
-            {
-                try
-                {
-                    handler(this, e);
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log(LogLevel.Error, "GSXDoorManager:OnDoorStateChanged", 
-                        $"Error raising DoorStateChanged event: {ex.Message}");
-                }
-            }
+            DoorStateChanged?.Invoke(this, e);
         }
 
         /// <summary>
