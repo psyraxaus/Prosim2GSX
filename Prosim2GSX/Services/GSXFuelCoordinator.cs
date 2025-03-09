@@ -13,6 +13,7 @@ namespace Prosim2GSX.Services
         private readonly IProsimFuelService _prosimFuelService;
         private readonly IGSXServiceOrchestrator _serviceOrchestrator;
         private readonly ILogger _logger;
+        private readonly MobiSimConnect _simConnect;
         private IGSXStateManager _stateManager;
         private bool _disposed;
         
@@ -72,14 +73,17 @@ namespace Prosim2GSX.Services
         /// </summary>
         /// <param name="prosimFuelService">The ProSim fuel service</param>
         /// <param name="serviceOrchestrator">The GSX service orchestrator</param>
+        /// <param name="simConnect">The SimConnect instance</param>
         /// <param name="logger">The logger</param>
         public GSXFuelCoordinator(
             IProsimFuelService prosimFuelService,
             IGSXServiceOrchestrator serviceOrchestrator,
+            MobiSimConnect simConnect,
             ILogger logger)
         {
             _prosimFuelService = prosimFuelService ?? throw new ArgumentNullException(nameof(prosimFuelService));
             _serviceOrchestrator = serviceOrchestrator ?? throw new ArgumentNullException(nameof(serviceOrchestrator));
+            _simConnect = simConnect ?? throw new ArgumentNullException(nameof(simConnect));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             
             _refuelingState = RefuelingState.Idle;
@@ -132,7 +136,7 @@ namespace Prosim2GSX.Services
                         return false;
                     }
                     
-                    _refuelingState = RefuelingState.Refueling;
+                    _refuelingState = RefuelingState.Requested;
                 }
                 
                 // Start refueling in ProSim
@@ -358,33 +362,65 @@ namespace Prosim2GSX.Services
                 {
                     // Monitor refueling progress asynchronously
                     await Task.Run(async () => {
-                        while (_refuelingState == RefuelingState.Refueling && !cancellationToken.IsCancellationRequested)
+                        bool fuelHoseConnected = false;
+                        
+                        while ((_refuelingState == RefuelingState.Requested || _refuelingState == RefuelingState.Refueling) && 
+                               !cancellationToken.IsCancellationRequested)
                         {
-                            // Update current fuel amount
-                            _fuelCurrent = _prosimFuelService.GetFuelAmount();
+                            // Check if fuel hose is connected
+                            bool isHoseConnected = _simConnect.ReadLvar("FSDT_GSX_FUELHOSE_CONNECTED") == 1;
                             
-                            // Calculate progress percentage
-                            if (_fuelPlanned > 0)
+                            if (isHoseConnected && !fuelHoseConnected)
                             {
-                                _refuelingProgressPercentage = (int)((_fuelCurrent / _fuelPlanned) * 100);
-                                _refuelingProgressPercentage = Math.Min(100, _refuelingProgressPercentage);
-                            }
-                            
-                            // Raise progress event
-                            OnRefuelingProgressChanged(_refuelingProgressPercentage, _fuelCurrent, _fuelPlanned);
-                            
-                            // Check if refueling is complete
-                            bool isComplete = _prosimFuelService.Refuel();
-                            if (isComplete)
-                            {
+                                _logger.Log(LogLevel.Information, "GSXFuelCoordinator:StartRefuelingAsync", 
+                                    "Fuel hose connected - starting fuel transfer");
+                                
                                 lock (_stateLock)
                                 {
-                                    _refuelingState = RefuelingState.Complete;
-                                    _refuelingProgressPercentage = 100;
+                                    _refuelingState = RefuelingState.Refueling;
                                 }
                                 
-                                OnFuelStateChanged("RefuelingComplete", _fuelCurrent, _fuelPlanned);
-                                break;
+                                OnFuelStateChanged("FuelHoseConnected", _fuelCurrent, _fuelPlanned);
+                                fuelHoseConnected = true;
+                            }
+                            else if (!isHoseConnected && fuelHoseConnected)
+                            {
+                                _logger.Log(LogLevel.Information, "GSXFuelCoordinator:StartRefuelingAsync", 
+                                    "Fuel hose disconnected - pausing fuel transfer");
+                                
+                                fuelHoseConnected = false;
+                                OnFuelStateChanged("FuelHoseDisconnected", _fuelCurrent, _fuelPlanned);
+                            }
+                            
+                            // Only pump fuel when hose is connected and we're in Refueling state
+                            if (_refuelingState == RefuelingState.Refueling && fuelHoseConnected)
+                            {
+                                // Update current fuel amount
+                                _fuelCurrent = _prosimFuelService.GetFuelAmount();
+                                
+                                // Calculate progress percentage
+                                if (_fuelPlanned > 0)
+                                {
+                                    _refuelingProgressPercentage = (int)((_fuelCurrent / _fuelPlanned) * 100);
+                                    _refuelingProgressPercentage = Math.Min(100, _refuelingProgressPercentage);
+                                }
+                                
+                                // Raise progress event
+                                OnRefuelingProgressChanged(_refuelingProgressPercentage, _fuelCurrent, _fuelPlanned);
+                                
+                                // Perform refueling at the configured rate
+                                bool isComplete = _prosimFuelService.Refuel();
+                                if (isComplete)
+                                {
+                                    lock (_stateLock)
+                                    {
+                                        _refuelingState = RefuelingState.Complete;
+                                        _refuelingProgressPercentage = 100;
+                                    }
+                                    
+                                    OnFuelStateChanged("RefuelingComplete", _fuelCurrent, _fuelPlanned);
+                                    break;
+                                }
                             }
                             
                             // Wait before checking again

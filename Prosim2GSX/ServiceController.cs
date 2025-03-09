@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿﻿using System;
 using System.Threading;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
@@ -240,6 +240,7 @@ namespace Prosim2GSX
             var fuelCoordinator = new GSXFuelCoordinator(
                 ProsimController.GetFuelService(),
                 serviceOrchestrator,
+                IPCManager.SimConnect,
                 Logger.Instance);
             fuelCoordinator.Initialize();
             
