@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿using System;
 using System.Threading;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
@@ -165,7 +165,7 @@ namespace Prosim2GSX
             ProsimController.InitializeFlightPlan(FlightPlan);
             
             // Step 5: Create AcarsService
-            var acarsService = new AcarsService(Model.AcarsSecret, Model.AcarsNetworkUrl);
+            var acarsService = new AcarsService(Model.AcarsNetworkUrl, Model.AcarsSecret);
             
             // Step 6: Create AudioSessionManager
             var audioSessionManager = new CoreAudioSessionManager();
