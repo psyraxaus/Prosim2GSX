@@ -33,7 +33,17 @@ namespace Prosim2GSX.Services
         void SetInitialFuel();
         
         /// <summary>
-        /// Starts the refueling process
+        /// Prepares the refueling process by setting up the target fuel amount
+        /// </summary>
+        void PrepareRefueling();
+        
+        /// <summary>
+        /// Starts the fuel transfer by setting refuelingPower to true
+        /// </summary>
+        void StartFuelTransfer();
+        
+        /// <summary>
+        /// Starts the refueling process (combines PrepareRefueling and StartFuelTransfer)
         /// </summary>
         void RefuelStart();
         
@@ -59,6 +69,18 @@ namespace Prosim2GSX.Services
         /// </summary>
         /// <returns>The fuel rate in kg/s</returns>
         float GetFuelRateKGS();
+        
+        /// <summary>
+        /// Updates planned fuel data from a flight plan without changing the current fuel amount
+        /// </summary>
+        /// <param name="plannedFuel">The planned fuel amount from the flight plan</param>
+        void UpdatePlannedFuel(double plannedFuel);
+        
+        /// <summary>
+        /// Sets the current fuel amount to the specified value
+        /// </summary>
+        /// <param name="fuelAmount">The fuel amount to set</param>
+        void SetCurrentFuel(double fuelAmount);
         
         /// <summary>
         /// Updates fuel data from a flight plan

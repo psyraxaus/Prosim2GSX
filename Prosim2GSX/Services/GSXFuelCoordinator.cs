@@ -139,8 +139,8 @@ namespace Prosim2GSX.Services
                     _refuelingState = RefuelingState.Requested;
                 }
                 
-                // Start refueling in ProSim
-                _prosimFuelService.RefuelStart();
+                // Prepare refueling in ProSim (but don't start fuel transfer yet)
+                _prosimFuelService.PrepareRefueling();
                 
                 // Update fuel state
                 _fuelPlanned = _prosimFuelService.GetFuelPlanned();
@@ -323,7 +323,24 @@ namespace Prosim2GSX.Services
                     return false;
                 }
                 
-                _prosimFuelService.UpdateFromFlightPlan(fuelAmount, true);
+                // Always update the planned fuel amount
+                _prosimFuelService.UpdatePlannedFuel(fuelAmount);
+                
+                // Only set the current fuel amount if we're not in a refueling state
+                bool isRefueling = _refuelingState == RefuelingState.Requested || 
+                                   _refuelingState == RefuelingState.Refueling;
+                
+                if (!isRefueling)
+                {
+                    _logger.Log(LogLevel.Debug, "GSXFuelCoordinator:UpdateFuelAmount", 
+                        "Not in refueling state, setting current fuel to match planned");
+                    _prosimFuelService.SetCurrentFuel(fuelAmount);
+                }
+                else
+                {
+                    _logger.Log(LogLevel.Debug, "GSXFuelCoordinator:UpdateFuelAmount", 
+                        "In refueling state, not updating current fuel amount");
+                }
                 
                 // Update fuel state
                 _fuelPlanned = _prosimFuelService.GetFuelPlanned();
@@ -374,6 +391,9 @@ namespace Prosim2GSX.Services
                             {
                                 _logger.Log(LogLevel.Information, "GSXFuelCoordinator:StartRefuelingAsync", 
                                     "Fuel hose connected - starting fuel transfer");
+                                
+                                // Now that the fuel hose is connected, start the actual fuel transfer
+                                _prosimFuelService.StartFuelTransfer();
                                 
                                 lock (_stateLock)
                                 {
