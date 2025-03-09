@@ -30,9 +30,18 @@ namespace Prosim2GSX.Services
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(AcarsNetworkUrl))
+                {
+                    Logger.Log(LogLevel.Error, "AcarsService:Initialize", "ACARS network URL is not set");
+                    isInitialized = false;
+                    return false;
+                }
+                
+                Logger.Log(LogLevel.Debug, "AcarsService:Initialize", $"Initializing ACARS service with URL: {AcarsNetworkUrl}");
                 Callsign = FlightCallsignToOpsCallsign(flightNumber);
                 acarsClient = new AcarsClient(Callsign, LogonSecret, AcarsNetworkUrl);
                 isInitialized = true;
+                Logger.Log(LogLevel.Information, "AcarsService:Initialize", $"ACARS service initialized successfully with callsign: {Callsign}");
                 return true;
             }
             catch (Exception ex)
@@ -53,12 +62,14 @@ namespace Prosim2GSX.Services
 
             try
             {
+                Logger.Log(LogLevel.Debug, "AcarsService:SendMessageAsync", $"Sending message to {toCallsign} via {AcarsNetworkUrl}");
                 await acarsClient.SendMessageToAcars(toCallsign, messageType, packetData);
                 Logger.Log(LogLevel.Debug, "AcarsService:SendMessageAsync", $"Message sent to {toCallsign}");
             }
             catch (Exception ex)
             {
                 Logger.Log(LogLevel.Error, "AcarsService:SendMessageAsync", $"Error sending ACARS message: {ex.Message}");
+                // Don't rethrow - we want to handle the error gracefully
             }
         }
 
