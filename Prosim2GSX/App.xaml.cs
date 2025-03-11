@@ -1,7 +1,8 @@
-﻿﻿﻿﻿using CefSharp;
+﻿﻿using CefSharp;
 using CefSharp.OffScreen;
 using H.NotifyIcon;
 using Prosim2GSX.Models;
+using Prosim2GSX.Services;
 using Serilog;
 using System;
 using System.Diagnostics;
@@ -18,7 +19,7 @@ namespace Prosim2GSX
     public partial class App : Application
     {
         private ServiceModel Model;
-        private ServiceController Controller;
+        private EnhancedServiceController Controller;
 
         private TaskbarIcon notifyIcon;
 
@@ -80,7 +81,7 @@ namespace Prosim2GSX
                 InitCef();
 
                 // Start service controller
-                Controller = new(Model);
+                Controller = new EnhancedServiceController(Model, Logger.Instance, new EventAggregator(Logger.Instance));
                 Task.Run(Controller.Run);
 
                 // Set up timer for service monitoring
