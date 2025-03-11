@@ -9,6 +9,16 @@ namespace Prosim2GSX.Services
     /// </summary>
     public class ProsimFuelService : IProsimFuelService
     {
+        // Constants
+        private const string FUEL_AMOUNT_DATAREF = "aircraft.fuel.total.amount.kg";
+        private const string FUEL_UNITS_DATAREF = "system.config.Units.Weight";
+        private const string REFUELING_POWER_DATAREF = "aircraft.refuel.refuelingPower";
+        private const string REFUELING_RATE_DATAREF = "aircraft.refuel.refuelingRate";
+        private const string FUEL_TARGET_DATAREF = "aircraft.refuel.fuelTarget";
+        private const double SIGNIFICANT_CHANGE_THRESHOLD = 0.1;
+        private const double REFUELING_COMPLETE_THRESHOLD = 1.0;
+        
+        // Private fields
         private readonly IProsimService _prosimService;
         private readonly ServiceModel _model;
         private double _fuelCurrent;
@@ -50,42 +60,168 @@ namespace Prosim2GSX.Services
             _fuelUnits = "KG";
         }
         
+        #region Helper Methods
+        
+        /// <summary>
+        /// Executes an action with standardized error handling
+        /// </summary>
+        private T ExecuteWithErrorHandling<T>(string methodName, Func<T> action, string errorMessage = null)
+        {
+            try
+            {
+                return action();
+            }
+            catch (Exception ex)
+            {
+                string logMessage = errorMessage ?? $"Error in {methodName}";
+                Logger.Log(LogLevel.Error, $"ProsimFuelService:{methodName}", $"{logMessage}: {ex.Message}");
+                throw; // Preserve original exception for proper error propagation
+            }
+        }
+        
+        /// <summary>
+        /// Executes an action with standardized error handling (void version)
+        /// </summary>
+        private void ExecuteWithErrorHandling(string methodName, Action action, string errorMessage = null)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception ex)
+            {
+                string logMessage = errorMessage ?? $"Error in {methodName}";
+                Logger.Log(LogLevel.Error, $"ProsimFuelService:{methodName}", $"{logMessage}: {ex.Message}");
+                throw; // Preserve original exception for proper error propagation
+            }
+        }
+        
+        /// <summary>
+        /// Reads a value from ProSim with error handling
+        /// </summary>
+        private T ReadProSimValue<T>(string dataRef, string methodName)
+        {
+            try
+            {
+                var value = _prosimService.ReadDataRef(dataRef);
+                return (T)Convert.ChangeType(value, typeof(T));
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, $"ProsimFuelService:{methodName}", 
+                    $"Error reading ProSim variable {dataRef}: {ex.Message}");
+                throw; // Rethrow to maintain error propagation
+            }
+        }
+        
+        /// <summary>
+        /// Sets a value in ProSim with error handling
+        /// </summary>
+        private void SetProSimValue<T>(string dataRef, T value, string methodName)
+        {
+            try
+            {
+                _prosimService.SetVariable(dataRef, value);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, $"ProsimFuelService:{methodName}", 
+                    $"Error setting ProSim variable {dataRef} to {value}: {ex.Message}");
+                throw; // Rethrow to maintain error propagation
+            }
+        }
+        
+        /// <summary>
+        /// Updates fuel state and raises the appropriate event
+        /// </summary>
+        private void UpdateFuelState(
+            string operationType, 
+            double? newCurrentFuel = null, 
+            double? newPlannedFuel = null,
+            bool logStateChange = true)
+        {
+            bool stateChanged = false;
+            double previousCurrent = _fuelCurrent;
+            double previousPlanned = _fuelPlanned;
+            
+            // Update current fuel if provided
+            if (newCurrentFuel.HasValue)
+            {
+                _fuelCurrent = newCurrentFuel.Value;
+                stateChanged = stateChanged || Math.Abs(_fuelCurrent - previousCurrent) > SIGNIFICANT_CHANGE_THRESHOLD;
+            }
+            
+            // Update planned fuel if provided
+            if (newPlannedFuel.HasValue)
+            {
+                _fuelPlanned = newPlannedFuel.Value;
+                stateChanged = stateChanged || Math.Abs(_fuelPlanned - previousPlanned) > SIGNIFICANT_CHANGE_THRESHOLD;
+            }
+            
+            // Log significant changes
+            if (logStateChange && stateChanged)
+            {
+                Logger.Log(LogLevel.Debug, $"ProsimFuelService:{operationType}", 
+                    $"Fuel state updated - Current: {_fuelCurrent} kg, Planned: {_fuelPlanned} kg");
+            }
+            
+            // Always raise the event to maintain compatibility with existing code
+            OnFuelStateChanged(operationType, _fuelCurrent, _fuelPlanned);
+        }
+        
+        /// <summary>
+        /// Reads the current fuel amount from ProSim
+        /// </summary>
+        private double ReadCurrentFuel(string methodName)
+        {
+            return ReadProSimValue<double>(FUEL_AMOUNT_DATAREF, methodName);
+        }
+        
+        /// <summary>
+        /// Updates the fuel units from ProSim
+        /// </summary>
+        private void UpdateFuelUnits(string methodName)
+        {
+            _fuelUnits = ReadProSimValue<string>(FUEL_UNITS_DATAREF, methodName);
+        }
+        
+        /// <summary>
+        /// Raises the FuelStateChanged event
+        /// </summary>
+        protected virtual void OnFuelStateChanged(string operationType, double currentAmount, double plannedAmount)
+        {
+            FuelStateChanged?.Invoke(this, new FuelStateChangedEventArgs(operationType, currentAmount, plannedAmount, _fuelUnits));
+        }
+        
+        #endregion
+        
+        #region Public Methods
+        
         /// <summary>
         /// Updates planned fuel data from a flight plan without changing the current fuel amount
         /// </summary>
         /// <param name="plannedFuel">The planned fuel amount from the flight plan</param>
         public void UpdatePlannedFuel(double plannedFuel)
         {
-            try
+            ExecuteWithErrorHandling("UpdatePlannedFuel", () =>
             {
-                double previousPlanned = _fuelPlanned;
-                _fuelPlanned = plannedFuel;
-                
                 // Update fuel units from ProSim
-                _fuelUnits = _prosimService.ReadDataRef("system.config.Units.Weight");
+                UpdateFuelUnits("UpdatePlannedFuel");
                 
                 // Convert if necessary
+                double convertedFuel = plannedFuel;
                 if (_fuelUnits == "LBS")
-                    _fuelPlanned = WeightConversionUtility.LbsToKg(_fuelPlanned);
-                
-                // Only log if the value has changed significantly (more than 0.1 kg)
-                if (Math.Abs(_fuelPlanned - previousPlanned) > 0.1)
-                {
-                    Logger.Log(LogLevel.Debug, "ProsimFuelService:UpdatePlannedFuel", 
-                        $"Updated planned fuel amount to {_fuelPlanned} kg");
-                }
+                    convertedFuel = WeightConversionUtility.LbsToKg(convertedFuel);
                 
                 // Read current fuel amount (but don't change it)
-                _fuelCurrent = _prosimService.ReadDataRef("aircraft.fuel.total.amount.kg");
+                double currentFuel = ReadCurrentFuel("UpdatePlannedFuel");
                 
-                OnFuelStateChanged("UpdatedPlannedFuel", _fuelCurrent, _fuelPlanned);
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Error, "ProsimFuelService:UpdatePlannedFuel", 
-                    $"Error updating planned fuel: {ex.Message}");
-                throw;
-            }
+                // Update state and raise event
+                UpdateFuelState(
+                    "UpdatedPlannedFuel", 
+                    newCurrentFuel: currentFuel, 
+                    newPlannedFuel: convertedFuel);
+            });
         }
         
         /// <summary>
@@ -94,22 +230,14 @@ namespace Prosim2GSX.Services
         /// <param name="fuelAmount">The fuel amount to set</param>
         public void SetCurrentFuel(double fuelAmount)
         {
-            try
+            ExecuteWithErrorHandling("SetCurrentFuel", () =>
             {
-                _fuelCurrent = fuelAmount;
-                _prosimService.SetVariable("aircraft.fuel.total.amount.kg", _fuelCurrent);
+                // Set the fuel amount in ProSim
+                SetProSimValue(FUEL_AMOUNT_DATAREF, fuelAmount, "SetCurrentFuel");
                 
-                Logger.Log(LogLevel.Debug, "ProsimFuelService:SetCurrentFuel", 
-                    $"Set current fuel amount to {_fuelCurrent} kg");
-                
-                OnFuelStateChanged("SetCurrentFuel", _fuelCurrent, _fuelPlanned);
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Error, "ProsimFuelService:SetCurrentFuel", 
-                    $"Error setting current fuel: {ex.Message}");
-                throw;
-            }
+                // Update state and raise event
+                UpdateFuelState("SetCurrentFuel", newCurrentFuel: fuelAmount);
+            });
         }
         
         /// <summary>
@@ -119,7 +247,7 @@ namespace Prosim2GSX.Services
         /// <param name="forceCurrentUpdate">Whether to update current fuel state to match planned</param>
         public void UpdateFromFlightPlan(double plannedFuel, bool forceCurrentUpdate = false)
         {
-            try
+            ExecuteWithErrorHandling("UpdateFromFlightPlan", () =>
             {
                 // Update the planned fuel amount
                 UpdatePlannedFuel(plannedFuel);
@@ -130,14 +258,9 @@ namespace Prosim2GSX.Services
                     SetCurrentFuel(_fuelPlanned);
                 }
                 
-                OnFuelStateChanged("UpdatedFromFlightPlan", _fuelCurrent, _fuelPlanned);
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Error, "ProsimFuelService:UpdateFromFlightPlan", 
-                    $"Error updating from flight plan: {ex.Message}");
-                throw;
-            }
+                // Raise event for the overall operation
+                UpdateFuelState("UpdatedFromFlightPlan", logStateChange: false);
+            });
         }
         
         /// <summary>
@@ -145,40 +268,39 @@ namespace Prosim2GSX.Services
         /// </summary>
         public void SetInitialFuel()
         {
-            try
+            ExecuteWithErrorHandling("SetInitialFuel", () =>
             {
-                bool useZeroFuel = _model.SetZeroFuel;
+                double fuelToSet = _fuelCurrent;
+                string logMessage = null;
                 
-                if (useZeroFuel)
+                if (_model.SetZeroFuel)
                 {
-                    Logger.Log(LogLevel.Information, "ProsimFuelService:SetInitialFuel", 
-                        $"Start at Zero Fuel amount - Resetting to 0kg (0lbs)");
-                    _prosimService.SetVariable("aircraft.fuel.total.amount.kg", 0.0D);
-                    _fuelCurrent = 0D;
+                    fuelToSet = 0.0;
+                    logMessage = $"Start at Zero Fuel amount - Resetting to 0kg (0lbs)";
                 }
                 else if (_model.SetSaveFuel)
                 {
-                    Logger.Log(LogLevel.Information, "ProsimFuelService:SetInitialFuel", 
-                        $"Using saved fuel value - Resetting to {_model.SavedFuelAmount}");
-                    _prosimService.SetVariable("aircraft.fuel.total.amount.kg", _model.SavedFuelAmount);
-                    _fuelCurrent = _model.SavedFuelAmount;
+                    fuelToSet = _model.SavedFuelAmount;
+                    logMessage = $"Using saved fuel value - Resetting to {fuelToSet}";
                 }
                 else if (_fuelCurrent > _fuelPlanned)
                 {
-                    Logger.Log(LogLevel.Information, "ProsimFuelService:SetInitialFuel", 
-                        $"Current Fuel higher than planned - Resetting to 1500kg (3307lbs)");
-                    _prosimService.SetVariable("aircraft.fuel.total.amount.kg", 1500.0D);
-                    _fuelCurrent = 1500D;
+                    fuelToSet = 1500.0;
+                    logMessage = $"Current Fuel higher than planned - Resetting to 1500kg (3307lbs)";
                 }
                 
-                OnFuelStateChanged("SetInitialFuel", _fuelCurrent, _fuelPlanned);
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Error, "ProsimFuelService:SetInitialFuel", 
-                    $"Error setting initial fuel: {ex.Message}");
-                throw;
-            }
+                if (logMessage != null)
+                {
+                    Logger.Log(LogLevel.Information, "ProsimFuelService:SetInitialFuel", logMessage);
+                    SetProSimValue(FUEL_AMOUNT_DATAREF, fuelToSet, "SetInitialFuel");
+                    UpdateFuelState("SetInitialFuel", newCurrentFuel: fuelToSet);
+                }
+                else
+                {
+                    // No changes needed, just raise the event
+                    UpdateFuelState("SetInitialFuel", logStateChange: false);
+                }
+            });
         }
         
         /// <summary>
@@ -186,31 +308,25 @@ namespace Prosim2GSX.Services
         /// </summary>
         public void PrepareRefueling()
         {
-            try
+            ExecuteWithErrorHandling("PrepareRefueling", () =>
             {
-                _prosimService.SetVariable("aircraft.refuel.refuelingRate", 0.0D);
+                // Set refueling rate to 0
+                SetProSimValue(REFUELING_RATE_DATAREF, 0.0, "PrepareRefueling");
                 
                 // Round up planned fuel to the nearest 100
                 double roundedFuelPlanned = Math.Ceiling(_fuelPlanned / 100.0) * 100.0;
                 Logger.Log(LogLevel.Debug, "ProsimFuelService:PrepareRefueling", 
                     $"Rounding fuel from {_fuelPlanned} to {roundedFuelPlanned}");
                 
+                // Set the fuel target in the appropriate units
                 if (_fuelUnits == "KG")
-                    _prosimService.SetVariable("aircraft.refuel.fuelTarget", roundedFuelPlanned);
+                    SetProSimValue(FUEL_TARGET_DATAREF, roundedFuelPlanned, "PrepareRefueling");
                 else
-                    _prosimService.SetVariable("aircraft.refuel.fuelTarget", WeightConversionUtility.KgToLbs(roundedFuelPlanned));
+                    SetProSimValue(FUEL_TARGET_DATAREF, WeightConversionUtility.KgToLbs(roundedFuelPlanned), "PrepareRefueling");
                 
                 // Update the fuelPlanned value to the rounded value
-                _fuelPlanned = roundedFuelPlanned;
-                
-                OnFuelStateChanged("PrepareRefueling", _fuelCurrent, _fuelPlanned);
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Error, "ProsimFuelService:PrepareRefueling", 
-                    $"Error preparing refueling: {ex.Message}");
-                throw;
-            }
+                UpdateFuelState("PrepareRefueling", newPlannedFuel: roundedFuelPlanned);
+            });
         }
         
         /// <summary>
@@ -218,30 +334,25 @@ namespace Prosim2GSX.Services
         /// </summary>
         public void StartFuelTransfer()
         {
-            try
+            ExecuteWithErrorHandling("StartFuelTransfer", () =>
             {
                 // Get current fuel amount before starting transfer
-                _fuelCurrent = _prosimService.ReadDataRef("aircraft.fuel.total.amount.kg");
+                double currentFuel = ReadCurrentFuel("StartFuelTransfer");
                 
                 Logger.Log(LogLevel.Information, "ProsimFuelService:StartFuelTransfer", 
-                    $"Starting fuel transfer with refuelingPower=true. Current: {_fuelCurrent} kg, Target: {_fuelPlanned} kg");
+                    $"Starting fuel transfer with refuelingPower=true. Current: {currentFuel} kg, Target: {_fuelPlanned} kg");
                 
                 // Set refueling power to true to start the actual fuel transfer
-                _prosimService.SetVariable("aircraft.refuel.refuelingPower", true);
+                SetProSimValue(REFUELING_POWER_DATAREF, true, "StartFuelTransfer");
                 
                 // Verify the refueling power was set
-                bool refuelingPower = Convert.ToBoolean(_prosimService.ReadDataRef("aircraft.refuel.refuelingPower"));
+                bool refuelingPower = ReadProSimValue<bool>(REFUELING_POWER_DATAREF, "StartFuelTransfer");
                 Logger.Log(LogLevel.Debug, "ProsimFuelService:StartFuelTransfer", 
                     $"Refueling power state after setting: {refuelingPower}");
                 
-                OnFuelStateChanged("StartFuelTransfer", _fuelCurrent, _fuelPlanned);
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Error, "ProsimFuelService:StartFuelTransfer", 
-                    $"Error starting fuel transfer: {ex.Message}");
-                throw;
-            }
+                // Update state and raise event
+                UpdateFuelState("StartFuelTransfer", newCurrentFuel: currentFuel);
+            });
         }
         
         /// <summary>
@@ -249,7 +360,7 @@ namespace Prosim2GSX.Services
         /// </summary>
         public void RefuelStart()
         {
-            try
+            ExecuteWithErrorHandling("RefuelStart", () =>
             {
                 // Only prepare for refueling, don't start fuel transfer yet
                 // The fuel transfer will be started by StartFuelTransfer() when the hose is connected
@@ -258,14 +369,9 @@ namespace Prosim2GSX.Services
                 Logger.Log(LogLevel.Information, "ProsimFuelService:RefuelStart", 
                     $"Prepared for refueling. Target: {_fuelPlanned} {_fuelUnits}, Current: {_fuelCurrent} {_fuelUnits}");
                 
-                OnFuelStateChanged("RefuelStart", _fuelCurrent, _fuelPlanned);
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Error, "ProsimFuelService:RefuelStart", 
-                    $"Error starting refueling: {ex.Message}");
-                throw;
-            }
+                // Raise event for the overall operation
+                UpdateFuelState("RefuelStart", logStateChange: false);
+            });
         }
         
         /// <summary>
@@ -274,10 +380,10 @@ namespace Prosim2GSX.Services
         /// <returns>True if refueling is complete, false otherwise</returns>
         public bool Refuel()
         {
-            try
+            return ExecuteWithErrorHandling("Refuel", () =>
             {
                 // Check if refueling power is active
-                bool refuelingPower = Convert.ToBoolean(_prosimService.ReadDataRef("aircraft.refuel.refuelingPower"));
+                bool refuelingPower = ReadProSimValue<bool>(REFUELING_POWER_DATAREF, "Refuel");
                 
                 if (!refuelingPower)
                 {
@@ -287,32 +393,37 @@ namespace Prosim2GSX.Services
                 }
                 
                 // Get current fuel amount
-                _fuelCurrent = _prosimService.ReadDataRef("aircraft.fuel.total.amount.kg");
+                double currentFuel = ReadCurrentFuel("Refuel");
                 
                 // Calculate fuel step based on rate
                 float step = GetFuelRateKGS();
                 
                 // Calculate new fuel amount
                 double newFuelAmount;
-                if (_fuelCurrent + step < _fuelPlanned)
-                    newFuelAmount = _fuelCurrent + step;
+                if (currentFuel + step < _fuelPlanned)
+                    newFuelAmount = currentFuel + step;
                 else
                     newFuelAmount = _fuelPlanned;
                 
                 // Only update if there's a meaningful change
-                if (Math.Abs(newFuelAmount - _fuelCurrent) > 0.1)
+                if (Math.Abs(newFuelAmount - currentFuel) > SIGNIFICANT_CHANGE_THRESHOLD)
                 {
-                    _fuelCurrent = newFuelAmount;
-                    _prosimService.SetVariable("aircraft.fuel.total.amount.kg", _fuelCurrent);
+                    SetProSimValue(FUEL_AMOUNT_DATAREF, newFuelAmount, "Refuel");
                     
                     Logger.Log(LogLevel.Debug, "ProsimFuelService:Refuel", 
-                        $"Transferred fuel: Current: {_fuelCurrent} kg, Target: {_fuelPlanned} kg");
+                        $"Transferred fuel: Current: {newFuelAmount} kg, Target: {_fuelPlanned} kg");
                     
-                    OnFuelStateChanged("Refuel", _fuelCurrent, _fuelPlanned);
+                    // Update state and raise event
+                    UpdateFuelState("Refuel", newCurrentFuel: newFuelAmount);
+                }
+                else
+                {
+                    // Still update our internal state even if we didn't update ProSim
+                    _fuelCurrent = currentFuel;
                 }
                 
                 // Check if refueling is complete
-                bool isComplete = Math.Abs(_fuelCurrent - _fuelPlanned) < 1.0; // Allow for small floating point differences
+                bool isComplete = Math.Abs(_fuelCurrent - _fuelPlanned) < REFUELING_COMPLETE_THRESHOLD;
                 
                 if (isComplete)
                 {
@@ -321,13 +432,7 @@ namespace Prosim2GSX.Services
                 }
                 
                 return isComplete;
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Error, "ProsimFuelService:Refuel", 
-                    $"Error during refueling: {ex.Message}");
-                throw;
-            }
+            });
         }
         
         /// <summary>
@@ -335,24 +440,24 @@ namespace Prosim2GSX.Services
         /// </summary>
         public void RefuelStop()
         {
-            try
+            ExecuteWithErrorHandling("RefuelStop", () =>
             {
                 // Get current fuel amount
-                _fuelCurrent = _prosimService.ReadDataRef("aircraft.fuel.total.amount.kg");
+                double currentFuel = ReadCurrentFuel("RefuelStop");
                 
                 // Calculate completion percentage
                 double completionPercentage = 0;
                 if (_fuelPlanned > 0)
                 {
-                    completionPercentage = (_fuelCurrent / _fuelPlanned) * 100;
+                    completionPercentage = (currentFuel / _fuelPlanned) * 100;
                     completionPercentage = Math.Min(100, completionPercentage);
                 }
                 
                 Logger.Log(LogLevel.Information, "ProsimFuelService:RefuelStop", 
-                    $"Stopping refueling. Current: {_fuelCurrent} kg, Target: {_fuelPlanned} kg, Completion: {completionPercentage:F1}%");
+                    $"Stopping refueling. Current: {currentFuel} kg, Target: {_fuelPlanned} kg, Completion: {completionPercentage:F1}%");
                 
                 // Check if refueling is complete (within 1% of target)
-                bool isComplete = Math.Abs(_fuelCurrent - _fuelPlanned) < (_fuelPlanned * 0.01);
+                bool isComplete = Math.Abs(currentFuel - _fuelPlanned) < (_fuelPlanned * 0.01);
                 
                 if (isComplete)
                 {
@@ -366,21 +471,16 @@ namespace Prosim2GSX.Services
                 }
                 
                 // Set refueling power to false to stop the fuel transfer
-                _prosimService.SetVariable("aircraft.refuel.refuelingPower", false);
+                SetProSimValue(REFUELING_POWER_DATAREF, false, "RefuelStop");
                 
                 // Verify the refueling power was set to false
-                bool refuelingPower = Convert.ToBoolean(_prosimService.ReadDataRef("aircraft.refuel.refuelingPower"));
+                bool refuelingPower = ReadProSimValue<bool>(REFUELING_POWER_DATAREF, "RefuelStop");
                 Logger.Log(LogLevel.Debug, "ProsimFuelService:RefuelStop", 
                     $"Refueling power state after stopping: {refuelingPower}");
                 
-                OnFuelStateChanged("RefuelStop", _fuelCurrent, _fuelPlanned);
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Error, "ProsimFuelService:RefuelStop", 
-                    $"Error stopping refueling: {ex.Message}");
-                throw;
-            }
+                // Update state and raise event
+                UpdateFuelState("RefuelStop", newCurrentFuel: currentFuel);
+            });
         }
         
         /// <summary>
@@ -389,17 +489,12 @@ namespace Prosim2GSX.Services
         /// <returns>The current fuel amount in kg</returns>
         public double GetFuelAmount()
         {
-            try
+            return ExecuteWithErrorHandling("GetFuelAmount", () =>
             {
-                _fuelCurrent = _prosimService.ReadDataRef("aircraft.fuel.total.amount.kg");
-                return _fuelCurrent;
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Error, "ProsimFuelService:GetFuelAmount", 
-                    $"Error getting fuel amount: {ex.Message}");
-                throw;
-            }
+                double currentFuel = ReadCurrentFuel("GetFuelAmount");
+                _fuelCurrent = currentFuel; // Update internal state
+                return currentFuel;
+            });
         }
         
         /// <summary>
@@ -408,19 +503,13 @@ namespace Prosim2GSX.Services
         /// <returns>The fuel rate in kg/s</returns>
         public float GetFuelRateKGS()
         {
-            try
+            return ExecuteWithErrorHandling("GetFuelRateKGS", () =>
             {
                 if (_model.RefuelUnit == "KGS")
                     return _model.RefuelRate;
                 else
                     return (float)WeightConversionUtility.LbsToKg(_model.RefuelRate);
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Error, "ProsimFuelService:GetFuelRateKGS", 
-                    $"Error getting fuel rate: {ex.Message}");
-                throw;
-            }
+            });
         }
         
         /// <summary>
@@ -441,15 +530,6 @@ namespace Prosim2GSX.Services
             return _fuelCurrent;
         }
         
-        /// <summary>
-        /// Raises the FuelStateChanged event
-        /// </summary>
-        /// <param name="operationType">The type of operation that caused the state change</param>
-        /// <param name="currentAmount">The current fuel amount</param>
-        /// <param name="plannedAmount">The planned fuel amount</param>
-        protected virtual void OnFuelStateChanged(string operationType, double currentAmount, double plannedAmount)
-        {
-            FuelStateChanged?.Invoke(this, new FuelStateChangedEventArgs(operationType, currentAmount, plannedAmount, _fuelUnits));
-        }
+        #endregion
     }
 }
