@@ -33,74 +33,95 @@ Additionally, a critical issue with the catering door opening prematurely has be
 
 ## Recent Changes
 
-### Bug Fixes and Improvements (March 2025)
-
-1. **Catering Door Issue Fix - Phase 2 Implementation**
-   - Implemented Phase 2 of the catering door fix to enhance robustness
-   - Added state verification in ProsimDoorService to prevent the infinite loop
-   - Implemented dynamic toggle-to-door mapping in GSXDoorManager
-   - Added circuit breaker to prevent rapid door state changes
-   - Modified GSXDoorCoordinator to respect service toggles
-   - Enhanced door handling with airline-agnostic approach
-   - Results:
-     - Doors now remain closed after loading a flight plan
-     - Doors only open when explicitly requested by GSX services
-     - System adapts to different airline configurations automatically
-     - Door opening loop issue has been completely resolved
-     - Improved resilience against rapid state changes
-   - Phase 3 of the implementation plan is still pending
-   - Detailed implementation plan available in to-do/catering-door-fix-implementation.md
-
-2. **Catering Door Issue Fix - Phase 1 Implementation**
-   - Implemented Phase 1 of the catering door fix to address the issue with forward right passenger door opening prematurely
-   - Fixed root causes:
-     - Modified GSXDoorCoordinator.ManageDoorsForStateAsync() to keep doors closed in DEPARTURE state
-     - Added toggle state tracking variables to GSXServiceOrchestrator
-     - Modified CheckAllDoorToggles() to only process toggle changes when the value actually changes
-   - Results:
-     - Doors now remain closed after loading a flight plan
-     - Doors only open when explicitly requested by GSX services
-     - Door opening loop issue has been resolved
-   - Phases 2 and 3 of the implementation plan are still pending
-   - Detailed implementation plan available in to-do/catering-door-fix-implementation.md
-
-3. **Catering Door Issue Identification and Plan**
-   - Identified issue with forward right passenger door opening prematurely after flight plan loading
-   - Analyzed root causes:
-     - Conflicting door management systems between GSXDoorManager, GSXDoorCoordinator, and GSXServiceCoordinator
-     - Automatic door opening in GSXDoorCoordinator.ManageDoorsForStateAsync() for DEPARTURE state
-     - Missing toggle state tracking in GSXServiceOrchestrator.CheckAllDoorToggles()
-     - Redundant door state variables in GSXServiceCoordinator
-   - Created phased implementation plan:
-     - Phase 1: Remove automatic door opening and implement toggle state tracking
-     - Phase 2: Add flight state awareness, remove redundant variables, and implement debounce logic
-     - Phase 3: Enhance logging and implement explicit door state initialization
-   - Detailed implementation plan available in to-do/catering-door-fix-implementation.md
-
-4. **GSXCargoCoordinator Initialization Fix**
-   - Fixed critical exception in ServiceController: "Value cannot be null. (Parameter 'cargoCoordinator')"
-   - Modified GSXCargoCoordinator constructor to allow null serviceOrchestrator parameter initially
-   - Added support for circular dependency resolution pattern where serviceOrchestrator is set after construction
-   - Enhanced initialization sequence in ServiceController to properly handle dependencies
-   - Improved error handling and logging for coordinator initialization
-
-### Reactive Door Control Implementation (March 2025)
-
-1. **Enhanced Door Management System**
-   - Implemented reactive door control for both passenger and cargo doors
-   - Doors now respond to GSX Pro ground crew requests via toggle LVARs
-   - Added complete toggle cycle handling:
-     - Toggle = 1 + door closed + service inactive → Open door and start service
-     - Toggle = 0 + door open + service active → Service in progress (no action)
-     - Toggle = 1 + door open + service active → Close door and end service
-   - Removed automatic door opening code from GSXServiceCoordinator
-   - Added continuous monitoring of door toggle LVARs in GSXServiceOrchestrator
-   - Enhanced GSXDoorManager with service state tracking
-   - Improved realism by matching real-world ground operations
-
 ### Modularization Implementation (March 2025)
 
-1. **Core Services Extraction (Phase 1)**
+1. **GSXFuelCoordinator Implementation (Phase 4.8)**
+   - Created IGSXFuelCoordinator interface with comprehensive fuel management capabilities
+   - Implemented GSXFuelCoordinator to coordinate between GSXServiceOrchestrator and ProsimFuelService
+   - Added both synchronous and asynchronous fuel operation methods with cancellation support
+   - Implemented fuel quantity tracking and refueling progress monitoring
+   - Added state-based fuel management with RefuelingStateManager
+   - Implemented RefuelingProgressTracker for monitoring progress
+   - Created FuelHoseConnectionMonitor for detecting fuel hose connections
+   - Used Command pattern with RefuelingCommandFactory for fuel operations
+   - Provided event-based communication for fuel state changes
+   - Included comprehensive error handling and logging
+   - Updated GSXControllerFacade to use the new coordinator
+   - Modified ServiceController to initialize the coordinator
+   - Enhanced GSXServiceOrchestrator with improved door toggle handling and service prediction
+   - Results:
+     - Improved fuel management with better state tracking
+     - Enhanced refueling progress monitoring
+     - More reliable fuel hose connection detection
+     - Better coordination between GSX and ProSim fuel systems
+     - Improved error handling and recovery for fuel operations
+
+2. **Bug Fixes and Improvements (March 2025)**
+
+   - **Catering Door Issue Fix - Phase 2 Implementation**
+     - Implemented Phase 2 of the catering door fix to enhance robustness
+     - Added state verification in ProsimDoorService to prevent the infinite loop
+     - Implemented dynamic toggle-to-door mapping in GSXDoorManager
+     - Added circuit breaker to prevent rapid door state changes
+     - Modified GSXDoorCoordinator to respect service toggles
+     - Enhanced door handling with airline-agnostic approach
+     - Results:
+       - Doors now remain closed after loading a flight plan
+       - Doors only open when explicitly requested by GSX services
+       - System adapts to different airline configurations automatically
+       - Door opening loop issue has been completely resolved
+       - Improved resilience against rapid state changes
+     - Phase 3 of the implementation plan is still pending
+     - Detailed implementation plan available in to-do/catering-door-fix-implementation.md
+
+   - **Catering Door Issue Fix - Phase 1 Implementation**
+     - Implemented Phase 1 of the catering door fix to address the issue with forward right passenger door opening prematurely
+     - Fixed root causes:
+       - Modified GSXDoorCoordinator.ManageDoorsForStateAsync() to keep doors closed in DEPARTURE state
+       - Added toggle state tracking variables to GSXServiceOrchestrator
+       - Modified CheckAllDoorToggles() to only process toggle changes when the value actually changes
+     - Results:
+       - Doors now remain closed after loading a flight plan
+       - Doors only open when explicitly requested by GSX services
+       - Door opening loop issue has been resolved
+     - Phases 2 and 3 of the implementation plan are still pending
+     - Detailed implementation plan available in to-do/catering-door-fix-implementation.md
+
+   - **Catering Door Issue Identification and Plan**
+     - Identified issue with forward right passenger door opening prematurely after flight plan loading
+     - Analyzed root causes:
+       - Conflicting door management systems between GSXDoorManager, GSXDoorCoordinator, and GSXServiceCoordinator
+       - Automatic door opening in GSXDoorCoordinator.ManageDoorsForStateAsync() for DEPARTURE state
+       - Missing toggle state tracking in GSXServiceOrchestrator.CheckAllDoorToggles()
+       - Redundant door state variables in GSXServiceCoordinator
+     - Created phased implementation plan:
+       - Phase 1: Remove automatic door opening and implement toggle state tracking
+       - Phase 2: Add flight state awareness, remove redundant variables, and implement debounce logic
+       - Phase 3: Enhance logging and implement explicit door state initialization
+     - Detailed implementation plan available in to-do/catering-door-fix-implementation.md
+
+   - **GSXCargoCoordinator Initialization Fix**
+     - Fixed critical exception in ServiceController: "Value cannot be null. (Parameter 'cargoCoordinator')"
+     - Modified GSXCargoCoordinator constructor to allow null serviceOrchestrator parameter initially
+     - Added support for circular dependency resolution pattern where serviceOrchestrator is set after construction
+     - Enhanced initialization sequence in ServiceController to properly handle dependencies
+     - Improved error handling and logging for coordinator initialization
+
+3. **Reactive Door Control Implementation (March 2025)**
+
+   - **Enhanced Door Management System**
+     - Implemented reactive door control for both passenger and cargo doors
+     - Doors now respond to GSX Pro ground crew requests via toggle LVARs
+     - Added complete toggle cycle handling:
+       - Toggle = 1 + door closed + service inactive → Open door and start service
+       - Toggle = 0 + door open + service active → Service in progress (no action)
+       - Toggle = 1 + door open + service active → Close door and end service
+     - Removed automatic door opening code from GSXServiceCoordinator
+     - Added continuous monitoring of door toggle LVARs in GSXServiceOrchestrator
+     - Enhanced GSXDoorManager with service state tracking
+     - Improved realism by matching real-world ground operations
+
+4. **Core Services Extraction (Phase 1)**
    - Completed Phase 1.1: SimConnectService implementation
      - Created ISimConnectService interface and implementation
      - Updated MobiSimConnect to use SimConnectService
@@ -113,7 +134,7 @@ Additionally, a critical issue with the catering door opening prematurely has be
      - Improved error handling and centralized ProSim SDK interaction
      - Documentation available in to-do/modularization-implementation-phase1.2.md
 
-2. **Shared and ProSim Services Extraction (Phase 2)**
+5. **Shared and ProSim Services Extraction (Phase 2)**
    - Completed Phase 2.1: AcarsService implementation
      - Created IAcarsService interface and implementation
      - Moved ACARS-related methods from GsxController
@@ -188,7 +209,7 @@ Additionally, a critical issue with the catering door opening prematurely has be
      - Designed interfaces to be platform-agnostic for future GSX integration
      - Documentation available in to-do/modularization-implementation-phase2.10.md
 
-3. **GSX Services Extraction (Phase 3, Completed)**
+6. **GSX Services Extraction (Phase 3, Completed)**
    - Completed Phase 3.1: GSXMenuService implementation
      - Created IGSXMenuService interface with methods for menu interaction
      - Implemented GSXMenuService with proper error handling and logging
@@ -252,7 +273,7 @@ Additionally, a critical issue with the catering door opening prematurely has be
      - Enhanced error handling and logging
      - Implementation details available in to-do/modularization-implementation-phase3.7.md
 
-4. **Further GSX Controller Modularization (Phase 4, In Progress)**
+7. **Further GSX Controller Modularization (Phase 4, In Progress)**
    - Completed Phase 4.1: Create GSXControllerFacade
      - Created IGSXControllerFacade interface
      - Created GSXControllerFacade implementation
@@ -280,7 +301,7 @@ Additionally, a critical issue with the catering door opening prematurely has be
      - Replaced all references to serviceCoordinator with serviceOrchestrator
      - Implementation details available in to-do/modularization-implementation-phase4.3.md
    
-   - Next: Phase 4.4-4.8: Create Domain-Specific Coordinators
+   - Next: Phase 4.9: Comprehensive Testing
    
    - ✅ Phase 4.4: Create GSXDoorCoordinator
      - ✅ Created IGSXDoorCoordinator interface with comprehensive door management capabilities
@@ -330,61 +351,65 @@ Additionally, a critical issue with the catering door opening prematurely has be
      - ✅ Modified ServiceController to initialize the coordinator
      - ✅ Implementation details available in to-do/modularization-implementation-phase4.7.md
    
-   - Phase 4.8: Create GSXFuelCoordinator
-     - Create IGSXFuelCoordinator interface with fuel management capabilities
-     - Implement GSXFuelCoordinator to coordinate between GSXServiceOrchestrator and ProsimFuelService
-     - Add synchronous and asynchronous fuel operation methods
-     - Implement fuel quantity tracking and refueling progress
-     - Add state-based fuel management
-     - Provide event-based communication for fuel state changes
-     - Include comprehensive error handling and logging
-     - Update GSXControllerFacade to use the new coordinator
-     - Modify ServiceController to initialize the coordinator
+   - ✅ Phase 4.8: Create GSXFuelCoordinator
+     - ✅ Created IGSXFuelCoordinator interface with fuel management capabilities
+     - ✅ Implemented GSXFuelCoordinator to coordinate between GSXServiceOrchestrator and ProsimFuelService
+     - ✅ Added synchronous and asynchronous fuel operation methods with cancellation support
+     - ✅ Implemented fuel quantity tracking and refueling progress monitoring
+     - ✅ Added state-based fuel management with RefuelingStateManager
+     - ✅ Implemented RefuelingProgressTracker for monitoring progress
+     - ✅ Created FuelHoseConnectionMonitor for detecting fuel hose connections
+     - ✅ Used Command pattern with RefuelingCommandFactory for fuel operations
+     - ✅ Provided event-based communication for fuel state changes
+     - ✅ Included comprehensive error handling and logging
+     - ✅ Updated GSXControllerFacade to use the new coordinator
+     - ✅ Modified ServiceController to initialize the coordinator
+     - ✅ Enhanced GSXServiceOrchestrator with improved door toggle handling and service prediction
 
-### .NET 8.0 Migration and Optimization (March 2025)
+8. **.NET 8.0 Migration and Optimization (March 2025)**
 
-1. **Framework Update**
-   - Updated target framework from .NET 7.0 to .NET 8.0
-   - Updated version number to 0.4.0
-   - Updated copyright year to 2025
-   - Updated application description to indicate .NET 8.0 compatibility
+   - **Framework Update**
+     - Updated target framework from .NET 7.0 to .NET 8.0
+     - Updated version number to 0.4.0
+     - Updated copyright year to 2025
+     - Updated application description to indicate .NET 8.0 compatibility
 
-2. **Dependency Updates**
-   - Updated NuGet packages to .NET 8.0 compatible versions:
-     - CefSharp.OffScreen.NETCore: 112.3.0 → 120.1.110
-     - CommunityToolkit.Mvvm: 8.2.0 → 8.2.2
-     - CoreAudio: 1.27.0 → 1.37.0
-     - H.NotifyIcon.Wpf: 2.0.108 → 2.0.124
-     - Serilog: 2.12.0 → 3.1.1
-     - chromiumembeddedframework.runtime packages: 112.3.0 → 120.1.110
+   - **Dependency Updates**
+     - Updated NuGet packages to .NET 8.0 compatible versions:
+       - CefSharp.OffScreen.NETCore: 112.3.0 → 120.1.110
+       - CommunityToolkit.Mvvm: 8.2.0 → 8.2.2
+       - CoreAudio: 1.27.0 → 1.37.0
+       - H.NotifyIcon.Wpf: 2.0.108 → 2.0.124
+       - Serilog: 2.12.0 → 3.1.1
+       - chromiumembeddedframework.runtime packages: 112.3.0 → 120.1.110
 
-3. **Code Improvements**
-   - Enhanced XML handling in ConfigurationFile.cs
-   - Improved culture and formatting in RealInvariantFormat.cs
-   - Updated CefSharp initialization in App.xaml.cs
-   - Enhanced error handling and logging throughout the application
-   - Improved application startup and configuration
+   - **Code Improvements**
+     - Enhanced XML handling in ConfigurationFile.cs
+     - Improved culture and formatting in RealInvariantFormat.cs
+     - Updated CefSharp initialization in App.xaml.cs
+     - Enhanced error handling and logging throughout the application
+     - Improved application startup and configuration
 
-4. **Performance Improvements**
-   - Identified high-impact .NET 8.0 performance features to implement:
-     - FrozenDictionary<TKey, TValue> for read-heavy dictionary operations
-     - Span<T> for reducing string allocations and improving memory usage
-     - ValueTask for optimizing asynchronous operations
-   - Created detailed implementation plans for each improvement:
-     - Phase 1: High-impact, low-risk improvements (FrozenDictionary, Span<T>, ValueTask)
-     - Phase 2: Medium-impact improvements (System.Threading.Channels, Object Pooling, IMemoryCache)
-     - Phase 3: Specialized optimizations (JSON serialization, Hardware Intrinsics, Trimming)
-   - Documentation available in to-do/dotnet8-performance-improvements.md
+   - **Performance Improvements**
+     - Identified high-impact .NET 8.0 performance features to implement:
+       - FrozenDictionary<TKey, TValue> for read-heavy dictionary operations
+       - Span<T> for reducing string allocations and improving memory usage
+       - ValueTask for optimizing asynchronous operations
+     - Created detailed implementation plans for each improvement:
+       - Phase 1: High-impact, low-risk improvements (FrozenDictionary, Span<T>, ValueTask)
+       - Phase 2: Medium-impact improvements (System.Threading.Channels, Object Pooling, IMemoryCache)
+       - Phase 3: Specialized optimizations (JSON serialization, Hardware Intrinsics, Trimming)
+     - Documentation available in to-do/dotnet8-performance-improvements.md
 
-### Development Environment Updates (March 2025)
+9. **Development Environment Updates (March 2025)**
 
-1. **Shell Preferences**
-   - Added PowerShell as the preferred shell for all terminal commands
-   - Updated .clinerules to include Development Environment section
-   - Standardized on PowerShell conventions for command execution
-   - Commands will be prefixed with "powershell -Command" when executing
-   - All terminal commands will use Windows/PowerShell syntax (not Linux/Mac)
-   - File paths will use Windows conventions (backslashes or properly escaped)
+   - **Shell Preferences**
+     - Added PowerShell as the preferred shell for all terminal commands
+     - Updated .clinerules to include Development Environment section
+     - Standardized on PowerShell conventions for command execution
+     - Commands will be prefixed with "powershell -Command" when executing
+     - All terminal commands will use Windows/PowerShell syntax (not Linux/Mac)
+     - File paths will use Windows conventions (backslashes or properly escaped)
 
 ## Current State Assessment
 
@@ -394,7 +419,7 @@ Based on the modularization progress and code review, Prosim2GSX is in a transit
    - Moving from a monolithic design to a modular service-oriented architecture
    - Core services have been extracted and are functioning well
    - GSX services extraction is complete
-   - Further GSX Controller modularization is in progress
+   - Further GSX Controller modularization is in progress (Phase 4.8 completed)
    - Improved separation of concerns and testability
 
 2. **Functional Status**
@@ -402,6 +427,7 @@ Based on the modularization progress and code review, Prosim2GSX is in a transit
    - Service automation is working with the new architecture
    - Audio control has been improved with the new GSXAudioService
    - State management has been enhanced with the improved GSXStateManager
+   - Fuel management has been improved with the new GSXFuelCoordinator
    - User interface remains unchanged during the architectural improvements
 
 3. **Code Quality Improvements**
@@ -423,12 +449,12 @@ The following steps are recommended for continued development and improvement of
 
 ### Short-term Tasks
 
-1. **Continue Phase 4 of Modularization**
-   - Implement Phase 4.4-4.8: Create Domain-Specific Coordinators
-     - Create coordinators for doors, equipment, passengers, cargo, and fuel
-     - Implement state tracking and event-based communication
-     - Coordinate operations with services
-   - Prepare for Phase 4.9: Comprehensive Testing
+1. **Complete Phase 4 of Modularization**
+   - Implement Phase 4.9: Comprehensive Testing
+     - Create unit tests for all new coordinators
+     - Implement integration tests for coordinator interactions
+     - Verify all major workflows
+     - Test edge cases and error handling
 
 2. **Enhance Testing**
    - Implement unit tests for new services
@@ -442,9 +468,10 @@ The following steps are recommended for continued development and improvement of
 
 ### Medium-term Tasks
 
-1. **Complete Phase 4 of Modularization**
-   - Create domain-specific coordinators (Phase 4.4-4.8)
-   - Implement comprehensive testing (Phase 4.9)
+1. **Prepare for Phase 5 of Modularization**
+   - Refine architecture and improve integration
+   - Enhance error handling and recovery mechanisms
+   - Optimize performance of critical paths
 
 2. **Implement .NET 8.0 Performance Improvements**
    - Implement Phase 1 improvements (FrozenDictionary, Span<T>, ValueTask)
@@ -617,34 +644,4 @@ The EFB UI implementation strategy has been documented in to-do/efb-ui-implement
    - Managing state history for debugging
    - Implementing state prediction for proactive service coordination
    - Ensuring proper timeout handling for better resilience
-   - Implementing state persistence for session continuity
-
-## Benefits of Modularization
-
-The modularization effort provides several key benefits:
-
-1. **Improved Maintainability**
-   - Smaller, focused components are easier to understand and modify
-   - Clear separation of concerns reduces side effects
-   - Better organization makes code navigation easier
-
-2. **Enhanced Testability**
-   - Services with clear interfaces are easier to test in isolation
-   - Dependency injection enables better mocking for tests
-   - Reduced coupling makes unit testing more effective
-
-3. **Better Extensibility**
-   - New features can be added with minimal changes to existing code
-   - Services can be enhanced independently
-   - New integrations can be implemented without affecting core functionality
-
-4. **Reduced Complexity**
-   - Each service has a single responsibility
-   - Dependencies are explicit and manageable
-   - State management is more predictable
-
-5. **Improved Resilience**
-   - Enhanced error handling and recovery
-   - Better state management with validation
-   - Timeout handling for better resilience
-   - State persistence for session continuity
+   - Implementing

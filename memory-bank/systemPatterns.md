@@ -26,8 +26,6 @@ graph TD
     %% Implemented services
     F --> S[GSXMenuService]
     F --> O[GSXAudioService]
-    
-    %% Planned services
     F --> N[GSXStateManager]
     F --> P[GSXServiceCoordinator]
     F --> Q[GSXDoorManager]
@@ -42,14 +40,23 @@ graph TD
     G --> Z[ProsimFluidService]
     J --> AA[FlightPlanService]
     
-    %% Phase 4 planned services (dotted lines for planned)
-    N -.-> P1[GSXControllerFacade]
-    P1 -.-> P2[GSXServiceOrchestrator]
-    P1 -.-> P3[GSXDoorCoordinator]
-    P1 -.-> P4[GSXEquipmentCoordinator]
-    P1 -.-> P5[GSXPassengerCoordinator]
-    P1 -.-> P6[GSXCargoCoordinator]
-    P1 -.-> P7[GSXFuelCoordinator]
+    %% Phase 4 implemented services
+    N --> P1[GSXControllerFacade]
+    P1 --> P2[GSXServiceOrchestrator]
+    P1 --> P3[GSXDoorCoordinator]
+    P1 --> P4[GSXEquipmentCoordinator]
+    P1 --> P5[GSXPassengerCoordinator]
+    P1 --> P6[GSXCargoCoordinator]
+    P1 --> P7[GSXFuelCoordinator]
+    
+    %% GSXFuelCoordinator components
+    P7 --> FC1[RefuelingStateManager]
+    P7 --> FC2[RefuelingProgressTracker]
+    P7 --> FC3[FuelHoseConnectionMonitor]
+    P7 --> FC4[RefuelingCommandFactory]
+    FC4 --> FC5[StartRefuelingCommand]
+    FC4 --> FC6[StopRefuelingCommand]
+    FC4 --> FC7[UpdateFuelAmountCommand]
 ```
 
 ## Modularization Approach
@@ -76,18 +83,25 @@ flowchart TD
 - Extracted ProsimFuelService, ProsimFlightDataService, ProsimFluidService
 - Created shared service interfaces (IPassengerService, ICargoService, IFuelService)
 
-### Phase 3: GSX Services (In Progress)
+### Phase 3: GSX Services (Completed)
 - Completed GSXMenuService implementation
 - Completed GSXAudioService implementation
-- Planned GSXStateManager, GSXServiceCoordinator
-- Planned GSXDoorManager, GSXLoadsheetManager
-- Planned refinement of GsxController
+- Completed GSXStateManager implementation
+- Completed GSXServiceCoordinator implementation
+- Completed GSXDoorManager implementation
+- Completed GSXLoadsheetManager implementation
+- Completed refinement of GsxController
 
-### Phase 4: Further GSX Controller Modularization (Planned)
-- Create GSXControllerFacade
-- Enhance GSXStateMachine
-- Create GSXServiceOrchestrator
-- Create coordinators for doors, equipment, passengers, cargo, and fuel
+### Phase 4: Further GSX Controller Modularization (In Progress)
+- Completed GSXControllerFacade implementation
+- Completed GSXStateMachine enhancements
+- Completed GSXServiceOrchestrator implementation
+- Completed GSXDoorCoordinator implementation
+- Completed GSXEquipmentCoordinator implementation
+- Completed GSXPassengerCoordinator implementation
+- Completed GSXCargoCoordinator implementation
+- Completed GSXFuelCoordinator implementation
+- Next: Comprehensive Testing
 
 ### Phase 5: Refine Architecture and Improve Integration (Planned)
 - Refine service interactions
@@ -229,71 +243,97 @@ flowchart TD
     - Provides event-based communication for audio state changes
     - Offers both synchronous and asynchronous methods with cancellation support
 
-### Planned Modularized Services
+13. **GSXStateManager**
+    - Manages flight state transitions
+    - Provides state query methods
+    - Raises events when state changes
+    - Centralizes state management logic
+    - Implements state validation and state-specific behavior
+    - Tracks state history for debugging purposes
+    - Provides state prediction capabilities
+    - Implements timeout handling with cancellation support
+    - Supports state persistence with JSON serialization
 
-1. **GSXStateManager**
-   - Manages flight state transitions
-   - Provides state query methods
-   - Raises events when state changes
-   - Centralizes state management logic
-   - Implements state validation and state-specific behavior
+14. **GSXServiceCoordinator**
+    - Coordinates GSX services (boarding, refueling, etc.)
+    - Manages service timing and sequencing
+    - Raises events for service status changes
+    - Centralizes service operation logic
 
-2. **GSXServiceCoordinator**
-   - Coordinates GSX services (boarding, refueling, etc.)
-   - Manages service timing and sequencing
-   - Raises events for service status changes
-   - Centralizes service operation logic
+15. **GSXDoorManager**
+    - Manages aircraft door operations
+    - Controls door opening/closing based on service needs
+    - Raises events for door state changes
+    - Handles door toggle requests from GSX
 
-3. **GSXDoorManager**
-   - Manages aircraft door operations
-   - Controls door opening/closing based on service needs
-   - Raises events for door state changes
-   - Handles door toggle requests from GSX
+16. **GSXLoadsheetManager**
+    - Generates and sends loadsheets
+    - Formats loadsheet data for ACARS transmission
+    - Calculates weight and balance information
+    - Raises events when loadsheets are generated
 
-4. **GSXLoadsheetManager**
-   - Generates and sends loadsheets
-   - Formats loadsheet data for ACARS transmission
-   - Calculates weight and balance information
-   - Raises events when loadsheets are generated
+17. **GSXControllerFacade**
+    - Provides a simplified interface to the GSX subsystem
+    - Initializes and manages GSX services
+    - Delegates to specialized services
+    - Handles high-level error recovery
 
-5. **GSXControllerFacade**
-   - Provides a simplified interface to the GSX subsystem
-   - Initializes and manages GSX services
-   - Delegates to specialized services
-   - Handles high-level error recovery
+18. **GSXServiceOrchestrator**
+    - Coordinates service execution based on state
+    - Manages service timing and dependencies
+    - Provides event-based communication for service execution status
+    - Predicts services that will be executed next
+    - Monitors door toggle LVARs for reactive door control
+    - Registers callbacks for pre/post service execution
 
-6. **GSXServiceOrchestrator**
-   - Coordinates service execution based on state
-   - Manages service timing and dependencies
-   - Provides event-based communication for service execution status
+19. **GSXDoorCoordinator**
+    - Manages door operations and state tracking
+    - Coordinates door operations with services
+    - Provides event-based communication for door state changes
+    - Implements synchronous and asynchronous door operation methods
+    - Respects service toggles when managing doors
+    - Includes circuit breaker protection against rapid state changes
 
-7. **GSXDoorCoordinator**
-   - Manages door operations and state tracking
-   - Coordinates door operations with services
-   - Provides event-based communication for door state changes
+20. **GSXEquipmentCoordinator**
+    - Manages equipment operations and state tracking
+    - Coordinates equipment operations with services
+    - Provides event-based communication for equipment state changes
+    - Implements synchronous and asynchronous equipment operation methods
+    - Tracks equipment state for better coordination
 
-8. **GSXEquipmentCoordinator**
-   - Manages equipment operations and state tracking
-   - Coordinates equipment operations with services
-   - Provides event-based communication for equipment state changes
+21. **GSXPassengerCoordinator**
+    - Manages passenger boarding and deboarding
+    - Tracks passenger counts
+    - Coordinates passenger operations with services
+    - Provides event-based communication for passenger state changes
+    - Implements synchronous and asynchronous passenger operation methods
+    - Tracks boarding/deboarding progress
 
-9. **GSXPassengerCoordinator**
-   - Manages passenger boarding and deboarding
-   - Tracks passenger counts
-   - Coordinates passenger operations with services
-   - Provides event-based communication for passenger state changes
-
-10. **GSXCargoCoordinator**
+22. **GSXCargoCoordinator**
     - Manages cargo loading and unloading
     - Tracks cargo states
     - Coordinates cargo operations with services
     - Provides event-based communication for cargo state changes
+    - Implements synchronous and asynchronous cargo operation methods
+    - Tracks loading/unloading progress
 
-11. **GSXFuelCoordinator**
+23. **GSXFuelCoordinator**
     - Manages refueling operations
     - Tracks fuel states
     - Coordinates fuel operations with services
     - Provides event-based communication for fuel state changes
+    - Implements synchronous and asynchronous fuel operation methods with cancellation support
+    - Tracks refueling progress and fuel quantity
+    - Monitors fuel hose connections
+    - Uses Command pattern for fuel operations
+    - Includes the following components:
+      - **RefuelingStateManager**: Manages refueling state transitions
+      - **RefuelingProgressTracker**: Tracks refueling progress percentage
+      - **FuelHoseConnectionMonitor**: Detects fuel hose connections
+      - **RefuelingCommandFactory**: Creates command objects for fuel operations
+      - **StartRefuelingCommand**: Command to start refueling
+      - **StopRefuelingCommand**: Command to stop refueling
+      - **UpdateFuelAmountCommand**: Command to update fuel amount
 
 ### UI Components
 
@@ -470,11 +510,19 @@ The application uses the strategy pattern for service operations:
 - Runtime selection of appropriate strategy
 
 ### 7. Command Pattern
-The GSXMenuService implements the command pattern for menu interactions:
-- Encapsulates menu operations as objects
-- Decouples menu selection from execution
-- Allows for parameterization of menu operations
-- Supports undo/redo operations
+The application uses the command pattern in several places:
+- **GSXMenuService**: Encapsulates menu operations as objects
+  - Decouples menu selection from execution
+  - Allows for parameterization of menu operations
+  - Supports undo/redo operations
+- **RefuelingCommandFactory**: Creates command objects for fuel operations
+  - **StartRefuelingCommand**: Command to start refueling
+  - **StopRefuelingCommand**: Command to stop refueling
+  - **UpdateFuelAmountCommand**: Command to update fuel amount
+  - Encapsulates fuel operations as objects
+  - Decouples operation request from execution
+  - Provides consistent interface for different operations
+  - Supports operation composition and sequencing
 
 ### 8. Adapter Pattern
 The ProsimInterface and MobiSimConnect classes act as adapters:
@@ -564,6 +612,14 @@ The planned EFB UI will use the Template Method pattern for page layouts:
 - Consistent layout and behavior across pages
 - Reduced code duplication
 
+### 18. State Pattern
+The RefuelingStateManager implements the State pattern:
+- Encapsulates state-specific behavior
+- Allows state transitions to be controlled
+- Provides a consistent interface regardless of state
+- Centralizes state transition logic
+- States: Idle, Requested, Refueling, Complete, Defueling, Error
+
 ## Data Flow
 
 ```mermaid
@@ -598,6 +654,22 @@ flowchart LR
     SM <--> C
     SM <--> UI[User Interface]
     
+    %% GSX Controller Facade and Coordinators
+    G --> GCF[GSXControllerFacade]
+    GCF --> GSO[GSXServiceOrchestrator]
+    GCF --> GDC[GSXDoorCoordinator]
+    GCF --> GEC[GSXEquipmentCoordinator]
+    GCF --> GPC[GSXPassengerCoordinator]
+    GCF --> GCC[GSXCargoCoordinator]
+    GCF --> GFC[GSXFuelCoordinator]
+    
+    %% GSXFuelCoordinator components
+    GFC --> RSM[RefuelingStateManager]
+    GFC --> RPT[RefuelingProgressTracker]
+    GFC --> FHM[FuelHoseConnectionMonitor]
+    GFC --> RCF[RefuelingCommandFactory]
+    GFC <--> PS5
+    
     %% Future EFB UI data flow (dotted lines for planned)
     UI -.-> EFB[EFB Main Window]
     SM -.-> EFB
@@ -625,38 +697,43 @@ flowchart LR
    - FlightPlanService parses and validates flight plan
    - FlightPlanService raises event for new flight plan
    - GSXStateManager transitions to appropriate state
-   - GSXServiceCoordinator uses flight plan data to coordinate services
+   - GSXServiceOrchestrator uses flight plan data to coordinate services
 
 3. **Service Flow**:
    - GSXStateManager determines current flight state
-   - GSXServiceCoordinator selects appropriate services based on state
-   - GSXServiceCoordinator calls service methods on GSX
-   - GSXServiceCoordinator raises events for service status changes
-   - GsxController coordinates between GSX services and ProSim services
+   - GSXServiceOrchestrator selects appropriate services based on state
+   - GSXServiceOrchestrator calls service methods on GSX
+   - GSXServiceOrchestrator raises events for service status changes
+   - GSXControllerFacade coordinates between GSX services and ProSim services
 
 4. **Passenger Flow**:
    - ProsimPassengerService provides passenger data
-   - GSXServiceCoordinator uses passenger data for boarding/deboarding
+   - GSXPassengerCoordinator coordinates passenger operations
    - GSXLoadsheetManager generates loadsheet with passenger data
    - AcarsService transmits loadsheet to ACARS network
 
 5. **Cargo Flow**:
    - ProsimCargoService provides cargo data
-   - GSXServiceCoordinator uses cargo data for loading/unloading
+   - GSXCargoCoordinator coordinates cargo operations
    - GSXLoadsheetManager includes cargo data in loadsheet
    - AcarsService transmits loadsheet to ACARS network
 
 6. **Fuel Flow**:
    - ProsimFuelService provides fuel data
-   - GSXServiceCoordinator uses fuel data for refueling
+   - GSXFuelCoordinator coordinates fuel operations
+   - RefuelingStateManager tracks refueling state
+   - RefuelingProgressTracker monitors refueling progress
+   - FuelHoseConnectionMonitor detects fuel hose connections
+   - RefuelingCommandFactory creates commands for fuel operations
    - GSXLoadsheetManager includes fuel data in loadsheet
    - AcarsService transmits loadsheet to ACARS network
 
 7. **Door Flow**:
    - ProsimDoorService provides door state information
+   - GSXDoorCoordinator coordinates door operations
    - GSXDoorManager controls doors based on service needs
-   - GSXServiceCoordinator coordinates door operations with services
-   - GSXDoorManager raises events for door state changes
+   - GSXServiceOrchestrator monitors door toggle LVARs
+   - GSXDoorCoordinator raises events for door state changes
 
 8. **Audio Control Flow**:
    - ProsimController detects changes in cockpit controls
@@ -756,3 +833,11 @@ flowchart LR
 - Appropriate synchronization mechanisms
 - Async patterns for I/O-bound operations
 - Thread isolation for sensitive operations
+
+### 16. Command Pattern for Fuel Operations
+- Encapsulates fuel operations as objects
+- Decouples operation request from execution
+- Provides consistent interface for different operations
+- Supports operation composition and sequencing
+- Simplifies implementation of undo/redo functionality
+- Enhances testability by isolating operation logic
