@@ -11,10 +11,11 @@ namespace Prosim2GSX.Services
     public class GSXFuelCoordinator : IGSXFuelCoordinator
     {
         private readonly IProsimFuelService _prosimFuelService;
-        private readonly IGSXServiceOrchestrator _serviceOrchestrator;
+        private IGSXServiceOrchestrator _serviceOrchestrator;
         private readonly ILogger _logger;
         private readonly MobiSimConnect _simConnect;
         private IGSXStateManager _stateManager;
+        private readonly IEventAggregator _eventAggregator;
         private bool _disposed;
         
         // New components
@@ -70,17 +71,19 @@ namespace Prosim2GSX.Services
         /// Initializes a new instance of the <see cref="GSXFuelCoordinator"/> class
         /// </summary>
         /// <param name="prosimFuelService">The ProSim fuel service</param>
-        /// <param name="serviceOrchestrator">The GSX service orchestrator</param>
+        /// <param name="serviceOrchestrator">The GSX service orchestrator (can be null and set later)</param>
         /// <param name="simConnect">The SimConnect instance</param>
         /// <param name="logger">The logger</param>
+        /// <param name="eventAggregator">The event aggregator for publishing events</param>
         public GSXFuelCoordinator(
             IProsimFuelService prosimFuelService,
             IGSXServiceOrchestrator serviceOrchestrator,
             MobiSimConnect simConnect,
-            ILogger logger)
+            ILogger logger,
+            IEventAggregator eventAggregator = null)
         {
             _prosimFuelService = prosimFuelService ?? throw new ArgumentNullException(nameof(prosimFuelService));
-            _serviceOrchestrator = serviceOrchestrator ?? throw new ArgumentNullException(nameof(serviceOrchestrator));
+            _serviceOrchestrator = serviceOrchestrator; // Can be null, will be set later
             _simConnect = simConnect ?? throw new ArgumentNullException(nameof(simConnect));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             
@@ -575,6 +578,26 @@ namespace Prosim2GSX.Services
         }
         
         /// <summary>
+        /// Sets the service orchestrator
+        /// </summary>
+        /// <param name="serviceOrchestrator">The GSX service orchestrator</param>
+        public void SetServiceOrchestrator(IGSXServiceOrchestrator serviceOrchestrator)
+        {
+            _serviceOrchestrator = serviceOrchestrator ?? throw new ArgumentNullException(nameof(serviceOrchestrator));
+            _logger.Log(LogLevel.Debug, "GSXFuelCoordinator:SetServiceOrchestrator", "Service orchestrator set");
+        }
+        
+        /// <summary>
+        /// Sets the event aggregator for publishing events
+        /// </summary>
+        /// <param name="eventAggregator">The event aggregator</param>
+        public void SetEventAggregator(IEventAggregator eventAggregator)
+        {
+            _eventAggregator = eventAggregator ?? throw new ArgumentNullException(nameof(eventAggregator));
+            _logger.Log(LogLevel.Debug, "GSXFuelCoordinator:SetEventAggregator", "Event aggregator set");
+        }
+        
+        /// <summary>
         /// Registers for state change notifications
         /// </summary>
         /// <param name="stateManager">The state manager to register with</param>
@@ -714,7 +737,15 @@ namespace Prosim2GSX.Services
         {
             try
             {
-                // Forward the event
+                // Use EventAggregator if available
+                if (_eventAggregator != null)
+                {
+                    _logger.Log(LogLevel.Debug, "GSXFuelCoordinator:OnProgressChanged", 
+                        $"Publishing refueling progress event via EventAggregator: {e.ProgressPercentage}%");
+                    _eventAggregator.Publish(e);
+                }
+                
+                // Also raise the event directly for backward compatibility
                 RefuelingProgressChanged?.Invoke(this, e);
             }
             catch (Exception ex)
@@ -789,10 +820,20 @@ namespace Prosim2GSX.Services
         {
             try
             {
+                var args = new FuelStateChangedEventArgs(operationType, currentAmount, plannedAmount, _prosimFuelService.FuelUnits);
+                
+                // Use EventAggregator if available
+                if (_eventAggregator != null)
+                {
+                    _logger.Log(LogLevel.Debug, "GSXFuelCoordinator:OnFuelStateChanged", 
+                        $"Publishing fuel state change event via EventAggregator: {operationType}");
+                    _eventAggregator.Publish(args);
+                }
+                
+                // Also raise the event directly for backward compatibility
                 var handler = FuelStateChanged;
                 if (handler != null)
                 {
-                    var args = new FuelStateChangedEventArgs(operationType, currentAmount, plannedAmount, _prosimFuelService.FuelUnits);
                     handler(this, args);
                 }
             }

@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Threading;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
@@ -170,7 +170,10 @@ namespace Prosim2GSX
             // Step 6: Create AudioSessionManager
             var audioSessionManager = new CoreAudioSessionManager();
             
-            // Step 7: Create GSX services
+            // Step 7: Create EventAggregator for event-based communication
+            var eventAggregator = new EventAggregator(Logger.Instance);
+            
+            // Step 8: Create GSX services
             var menuService = new GSXMenuService(Model, IPCManager.SimConnect);
             var audioService = new GSXAudioService(Model, IPCManager.SimConnect, audioSessionManager);
             var stateManager = new GSXStateManager();
@@ -229,20 +232,42 @@ namespace Prosim2GSX
                 Logger.Log(LogLevel.Warning, "ServiceController:InitializeServices", "Could not set cargo coordinator in service coordinator");
             }
                 
-            // Create passenger coordinator
+            // Create passenger coordinator first (before setting service orchestrator)
             var passengerCoordinator = new GSXPassengerCoordinator(
                 ProsimController.GetPassengerService(), 
-                serviceOrchestrator, 
+                null, // Will set serviceOrchestrator later
                 Logger.Instance);
+            
+            // Now set the service orchestrator in the passenger coordinator
+            passengerCoordinator.SetServiceOrchestrator(serviceOrchestrator);
             passengerCoordinator.Initialize();
             
-            // Create fuel coordinator
+            // Create fuel coordinator first (before setting service orchestrator)
             var fuelCoordinator = new GSXFuelCoordinator(
                 ProsimController.GetFuelService(),
-                serviceOrchestrator,
+                null, // Will set serviceOrchestrator later
                 IPCManager.SimConnect,
-                Logger.Instance);
+                Logger.Instance,
+                eventAggregator); // Pass the event aggregator
+            
+            // Now set the service orchestrator in the fuel coordinator
+            fuelCoordinator.SetServiceOrchestrator(serviceOrchestrator);
             fuelCoordinator.Initialize();
+            fuelCoordinator.RegisterForStateChanges(stateManager);
+            
+            // Subscribe to fuel state change events via EventAggregator
+            eventAggregator.Subscribe<FuelStateChangedEventArgs>(args => 
+            {
+                Logger.Log(LogLevel.Debug, "ServiceController:EventAggregator", 
+                    $"Received fuel state change event: {args.OperationType}, Current: {args.CurrentAmount} {args.FuelUnits}");
+            });
+            
+            // Subscribe to refueling progress events via EventAggregator
+            eventAggregator.Subscribe<RefuelingProgressChangedEventArgs>(args => 
+            {
+                Logger.Log(LogLevel.Debug, "ServiceController:EventAggregator", 
+                    $"Received refueling progress event: {args.ProgressPercentage}%, Current: {args.CurrentAmount} {args.FuelUnits}");
+            });
             
             // Step 10: Create GSXControllerFacade
             var gsxControllerFacade = new GSXControllerFacade(

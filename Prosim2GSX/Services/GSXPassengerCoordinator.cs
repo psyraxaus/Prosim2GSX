@@ -50,7 +50,7 @@ namespace Prosim2GSX.Services
         /// Initializes a new instance of the <see cref="GSXPassengerCoordinator"/> class
         /// </summary>
         /// <param name="prosimPassengerService">The ProSim passenger service</param>
-        /// <param name="serviceOrchestrator">The GSX service orchestrator</param>
+        /// <param name="serviceOrchestrator">The GSX service orchestrator (can be null and set later)</param>
         /// <param name="logger">The logger</param>
         public GSXPassengerCoordinator(
             IProsimPassengerService prosimPassengerService,
@@ -58,11 +58,21 @@ namespace Prosim2GSX.Services
             ILogger logger)
         {
             _prosimPassengerService = prosimPassengerService ?? throw new ArgumentNullException(nameof(prosimPassengerService));
-            _serviceOrchestrator = serviceOrchestrator ?? throw new ArgumentNullException(nameof(serviceOrchestrator));
+            _serviceOrchestrator = serviceOrchestrator; // Can be null initially, set later via SetServiceOrchestrator
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             
             // Subscribe to passenger state change events
             _prosimPassengerService.PassengerStateChanged += OnProsimPassengerStateChanged;
+        }
+        
+        /// <summary>
+        /// Sets the service orchestrator
+        /// </summary>
+        /// <param name="serviceOrchestrator">The GSX service orchestrator</param>
+        public void SetServiceOrchestrator(IGSXServiceOrchestrator serviceOrchestrator)
+        {
+            _serviceOrchestrator = serviceOrchestrator ?? throw new ArgumentNullException(nameof(serviceOrchestrator));
+            _logger.Log(LogLevel.Debug, "GSXPassengerCoordinator:SetServiceOrchestrator", "Service orchestrator set");
         }
         
         /// <summary>
@@ -400,8 +410,16 @@ namespace Prosim2GSX.Services
                 _passengersPlanned = _prosimPassengerService.GetPaxPlanned();
                 _passengersCurrent = _prosimPassengerService.GetPaxCurrent();
                 
-                // Set the passenger count in the service orchestrator
-                _serviceOrchestrator.SetPassengers(_passengersPlanned);
+                // Set the passenger count in the service orchestrator if available
+                if (_serviceOrchestrator != null)
+                {
+                    _serviceOrchestrator.SetPassengers(_passengersPlanned);
+                }
+                else
+                {
+                    _logger.Log(LogLevel.Warning, "GSXPassengerCoordinator:SynchronizePassengerStatesAsync", 
+                        "Service orchestrator not available, passenger count not set");
+                }
                 
                 await Task.CompletedTask;
             }

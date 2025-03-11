@@ -30,7 +30,7 @@ Prosim2GSX is currently in a transitional state as it undergoes significant modu
 | Phase 2: Shared and ProSim Services | Completed | 100% |
 | Phase 3: GSX Services | Completed | 100% |
 | Phase 4: Further GSX Controller Modularization | In Progress | 85% |
-| Phase 5: Refine Architecture and Improve Integration | In Progress | 5% |
+| Phase 5: Refine Architecture and Improve Integration | In Progress | 20% |
 
 ### EFB UI Implementation Progress
 
@@ -364,12 +364,21 @@ Prosim2GSX is currently in a transitional state as it undergoes significant modu
      - 🔜 Create performance tests
 
 3. **Phase 5: Refine Architecture and Improve Integration**
-   - 🔄 Phase 5.1: Service Interaction Refinement (In Progress)
-     - 🔜 Resolve circular dependencies between services
-     - 🔜 Standardize event communication patterns
-     - 🔜 Optimize service dependencies
-     - 🔜 Implement appropriate design patterns (mediator, observer, etc.)
-     - 🔜 Create standardized event argument classes
+   - ✅ Phase 5.1: Service Interaction Refinement
+     - ✅ Created standardized event argument classes (ServiceEventArgs, StateChangedEventArgs<T>, ProgressChangedEventArgs)
+     - ✅ Implemented EventAggregator class for mediator pattern and event-based communication
+     - ✅ Resolved circular dependencies between:
+       - ✅ GSXServiceOrchestrator and GSXFuelCoordinator
+       - ✅ GSXServiceOrchestrator and GSXCargoCoordinator
+       - ✅ GSXServiceOrchestrator and GSXPassengerCoordinator
+     - ✅ Updated ServiceController to use setter injection for circular dependencies
+     - ✅ Improved code organization with dedicated EventArgs directory
+     - ✅ Enhanced maintainability and testability through looser coupling between services
+     - ✅ Implemented EventAggregator pattern for publishing and subscribing to events
+     - ✅ Modified GSXFuelCoordinator to use EventAggregator for event publishing
+     - ✅ Updated ServiceController to subscribe to events via EventAggregator
+     - ✅ Added support for multiple event types (FuelStateChangedEventArgs, RefuelingProgressChangedEventArgs)
+     - ✅ Maintained backward compatibility with direct event handlers
    - 🔜 Phase 5.2: Controller Architecture Improvements
      - 🔜 Refine ProsimController to be a thin facade
      - 🔜 Enhance ServiceController with proper dependency injection

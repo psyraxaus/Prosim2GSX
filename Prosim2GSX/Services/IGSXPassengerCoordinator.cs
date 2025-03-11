@@ -126,5 +126,11 @@ namespace Prosim2GSX.Services
         /// </summary>
         /// <param name="stateManager">The state manager to register with</param>
         void RegisterForStateChanges(IGSXStateManager stateManager);
+        
+        /// <summary>
+        /// Sets the service orchestrator
+        /// </summary>
+        /// <param name="serviceOrchestrator">The GSX service orchestrator</param>
+        void SetServiceOrchestrator(IGSXServiceOrchestrator serviceOrchestrator);
     }
 }

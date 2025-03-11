@@ -144,9 +144,21 @@ namespace Prosim2GSX.Services
         Task ManageFuelForStateAsync(FlightState state, CancellationToken cancellationToken = default);
         
         /// <summary>
+        /// Sets the service orchestrator
+        /// </summary>
+        /// <param name="serviceOrchestrator">The GSX service orchestrator</param>
+        void SetServiceOrchestrator(IGSXServiceOrchestrator serviceOrchestrator);
+        
+        /// <summary>
         /// Registers for state change notifications
         /// </summary>
         /// <param name="stateManager">The state manager to register with</param>
         void RegisterForStateChanges(IGSXStateManager stateManager);
+        
+        /// <summary>
+        /// Sets the event aggregator for publishing events
+        /// </summary>
+        /// <param name="eventAggregator">The event aggregator</param>
+        void SetEventAggregator(IEventAggregator eventAggregator);
     }
 }
