@@ -140,12 +140,16 @@ namespace Prosim2GSX.Services
                 }
                 
                 // Prepare refueling in ProSim (but don't start fuel transfer yet)
+                // This only sets up the target fuel amount but doesn't start pumping fuel
                 _prosimFuelService.PrepareRefueling();
                 
                 // Update fuel state
                 _fuelPlanned = _prosimFuelService.GetFuelPlanned();
                 _fuelCurrent = _prosimFuelService.GetFuelCurrent();
                 _fuelUnits = _prosimFuelService.FuelUnits;
+                
+                _logger.Log(LogLevel.Information, "GSXFuelCoordinator:StartRefueling", 
+                    $"Prepared for refueling. Target: {_fuelPlanned} {_fuelUnits}, Current: {_fuelCurrent} {_fuelUnits}");
                 
                 // Raise event
                 OnFuelStateChanged("RefuelingStarted", _fuelCurrent, _fuelPlanned);
@@ -380,6 +384,8 @@ namespace Prosim2GSX.Services
                     // Monitor refueling progress asynchronously
                     await Task.Run(async () => {
                         bool fuelHoseConnected = false;
+                        bool fuelTransferStarted = false;
+                        bool fuelLoadingComplete = false;
                         
                         while ((_refuelingState == RefuelingState.Requested || _refuelingState == RefuelingState.Refueling) && 
                                !cancellationToken.IsCancellationRequested)
@@ -402,18 +408,34 @@ namespace Prosim2GSX.Services
                                 
                                 OnFuelStateChanged("FuelHoseConnected", _fuelCurrent, _fuelPlanned);
                                 fuelHoseConnected = true;
+                                fuelTransferStarted = true;
                             }
                             else if (!isHoseConnected && fuelHoseConnected)
                             {
                                 _logger.Log(LogLevel.Information, "GSXFuelCoordinator:StartRefuelingAsync", 
-                                    "Fuel hose disconnected - pausing fuel transfer");
+                                    "Fuel hose disconnected");
+                                
+                                // Only stop the fuel transfer if the fuel loading is complete
+                                if (fuelLoadingComplete)
+                                {
+                                    _logger.Log(LogLevel.Information, "GSXFuelCoordinator:StartRefuelingAsync", 
+                                        "Fuel loading complete and hose disconnected - stopping fuel transfer");
+                                    _prosimFuelService.RefuelStop();
+                                }
+                                else
+                                {
+                                    _logger.Log(LogLevel.Information, "GSXFuelCoordinator:StartRefuelingAsync", 
+                                        "Fuel loading not complete - keeping refueling power active");
+                                }
                                 
                                 fuelHoseConnected = false;
+                                fuelTransferStarted = false;
                                 OnFuelStateChanged("FuelHoseDisconnected", _fuelCurrent, _fuelPlanned);
                             }
                             
                             // Only pump fuel when hose is connected and we're in Refueling state
-                            if (_refuelingState == RefuelingState.Refueling && fuelHoseConnected)
+                            // and fuel transfer has been started
+                            if (_refuelingState == RefuelingState.Refueling && fuelHoseConnected && fuelTransferStarted)
                             {
                                 // Update current fuel amount
                                 _fuelCurrent = _prosimFuelService.GetFuelAmount();
@@ -432,15 +454,30 @@ namespace Prosim2GSX.Services
                                 bool isComplete = _prosimFuelService.Refuel();
                                 if (isComplete)
                                 {
+                                    _logger.Log(LogLevel.Information, "GSXFuelCoordinator:StartRefuelingAsync", 
+                                        "Fuel loading complete - waiting for hose disconnection");
+                                    
                                     lock (_stateLock)
                                     {
                                         _refuelingState = RefuelingState.Complete;
                                         _refuelingProgressPercentage = 100;
                                     }
                                     
+                                    fuelLoadingComplete = true;
                                     OnFuelStateChanged("RefuelingComplete", _fuelCurrent, _fuelPlanned);
-                                    break;
+                                    
+                                    // Don't break the loop yet - wait for the hose to be disconnected
+                                    // before stopping the refueling power
                                 }
+                            }
+                            
+                            // If fuel loading is complete but hose is still connected, wait for disconnection
+                            if (fuelLoadingComplete && !isHoseConnected)
+                            {
+                                _logger.Log(LogLevel.Information, "GSXFuelCoordinator:StartRefuelingAsync", 
+                                    "Fuel loading complete and hose disconnected - stopping fuel transfer");
+                                _prosimFuelService.RefuelStop();
+                                break;
                             }
                             
                             // Wait before checking again

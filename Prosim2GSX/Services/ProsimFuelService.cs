@@ -220,10 +220,19 @@ namespace Prosim2GSX.Services
         {
             try
             {
-                Logger.Log(LogLevel.Debug, "ProsimFuelService:StartFuelTransfer", 
-                    $"Starting fuel transfer with refuelingPower=true");
+                // Get current fuel amount before starting transfer
+                _fuelCurrent = _prosimService.ReadDataRef("aircraft.fuel.total.amount.kg");
                 
+                Logger.Log(LogLevel.Information, "ProsimFuelService:StartFuelTransfer", 
+                    $"Starting fuel transfer with refuelingPower=true. Current: {_fuelCurrent} kg, Target: {_fuelPlanned} kg");
+                
+                // Set refueling power to true to start the actual fuel transfer
                 _prosimService.SetVariable("aircraft.refuel.refuelingPower", true);
+                
+                // Verify the refueling power was set
+                bool refuelingPower = Convert.ToBoolean(_prosimService.ReadDataRef("aircraft.refuel.refuelingPower"));
+                Logger.Log(LogLevel.Debug, "ProsimFuelService:StartFuelTransfer", 
+                    $"Refueling power state after setting: {refuelingPower}");
                 
                 OnFuelStateChanged("StartFuelTransfer", _fuelCurrent, _fuelPlanned);
             }
@@ -236,15 +245,18 @@ namespace Prosim2GSX.Services
         }
         
         /// <summary>
-        /// Starts the refueling process (combines PrepareRefueling and StartFuelTransfer)
+        /// Starts the refueling process (only prepares for refueling, doesn't start fuel transfer)
         /// </summary>
         public void RefuelStart()
         {
             try
             {
-                // For backward compatibility, call both methods
+                // Only prepare for refueling, don't start fuel transfer yet
+                // The fuel transfer will be started by StartFuelTransfer() when the hose is connected
                 PrepareRefueling();
-                StartFuelTransfer();
+                
+                Logger.Log(LogLevel.Information, "ProsimFuelService:RefuelStart", 
+                    $"Prepared for refueling. Target: {_fuelPlanned} {_fuelUnits}, Current: {_fuelCurrent} {_fuelUnits}");
                 
                 OnFuelStateChanged("RefuelStart", _fuelCurrent, _fuelPlanned);
             }
@@ -264,18 +276,49 @@ namespace Prosim2GSX.Services
         {
             try
             {
+                // Check if refueling power is active
+                bool refuelingPower = Convert.ToBoolean(_prosimService.ReadDataRef("aircraft.refuel.refuelingPower"));
+                
+                if (!refuelingPower)
+                {
+                    Logger.Log(LogLevel.Warning, "ProsimFuelService:Refuel", 
+                        "Refueling power is not active, cannot transfer fuel");
+                    return false;
+                }
+                
+                // Get current fuel amount
+                _fuelCurrent = _prosimService.ReadDataRef("aircraft.fuel.total.amount.kg");
+                
+                // Calculate fuel step based on rate
                 float step = GetFuelRateKGS();
                 
+                // Calculate new fuel amount
+                double newFuelAmount;
                 if (_fuelCurrent + step < _fuelPlanned)
-                    _fuelCurrent += step;
+                    newFuelAmount = _fuelCurrent + step;
                 else
-                    _fuelCurrent = _fuelPlanned;
+                    newFuelAmount = _fuelPlanned;
                 
-                _prosimService.SetVariable("aircraft.fuel.total.amount.kg", _fuelCurrent);
+                // Only update if there's a meaningful change
+                if (Math.Abs(newFuelAmount - _fuelCurrent) > 0.1)
+                {
+                    _fuelCurrent = newFuelAmount;
+                    _prosimService.SetVariable("aircraft.fuel.total.amount.kg", _fuelCurrent);
+                    
+                    Logger.Log(LogLevel.Debug, "ProsimFuelService:Refuel", 
+                        $"Transferred fuel: Current: {_fuelCurrent} kg, Target: {_fuelPlanned} kg");
+                    
+                    OnFuelStateChanged("Refuel", _fuelCurrent, _fuelPlanned);
+                }
                 
+                // Check if refueling is complete
                 bool isComplete = Math.Abs(_fuelCurrent - _fuelPlanned) < 1.0; // Allow for small floating point differences
                 
-                OnFuelStateChanged("Refuel", _fuelCurrent, _fuelPlanned);
+                if (isComplete)
+                {
+                    Logger.Log(LogLevel.Information, "ProsimFuelService:Refuel", 
+                        $"Refueling complete. Final amount: {_fuelCurrent} kg");
+                }
                 
                 return isComplete;
             }
@@ -294,9 +337,41 @@ namespace Prosim2GSX.Services
         {
             try
             {
-                Logger.Log(LogLevel.Information, "ProsimFuelService:RefuelStop", $"RefuelStop Requested");
+                // Get current fuel amount
+                _fuelCurrent = _prosimService.ReadDataRef("aircraft.fuel.total.amount.kg");
                 
+                // Calculate completion percentage
+                double completionPercentage = 0;
+                if (_fuelPlanned > 0)
+                {
+                    completionPercentage = (_fuelCurrent / _fuelPlanned) * 100;
+                    completionPercentage = Math.Min(100, completionPercentage);
+                }
+                
+                Logger.Log(LogLevel.Information, "ProsimFuelService:RefuelStop", 
+                    $"Stopping refueling. Current: {_fuelCurrent} kg, Target: {_fuelPlanned} kg, Completion: {completionPercentage:F1}%");
+                
+                // Check if refueling is complete (within 1% of target)
+                bool isComplete = Math.Abs(_fuelCurrent - _fuelPlanned) < (_fuelPlanned * 0.01);
+                
+                if (isComplete)
+                {
+                    Logger.Log(LogLevel.Information, "ProsimFuelService:RefuelStop", 
+                        "Refueling is complete - setting refueling power to false");
+                }
+                else
+                {
+                    Logger.Log(LogLevel.Warning, "ProsimFuelService:RefuelStop", 
+                        "Refueling is not complete but stopping anyway - setting refueling power to false");
+                }
+                
+                // Set refueling power to false to stop the fuel transfer
                 _prosimService.SetVariable("aircraft.refuel.refuelingPower", false);
+                
+                // Verify the refueling power was set to false
+                bool refuelingPower = Convert.ToBoolean(_prosimService.ReadDataRef("aircraft.refuel.refuelingPower"));
+                Logger.Log(LogLevel.Debug, "ProsimFuelService:RefuelStop", 
+                    $"Refueling power state after stopping: {refuelingPower}");
                 
                 OnFuelStateChanged("RefuelStop", _fuelCurrent, _fuelPlanned);
             }
