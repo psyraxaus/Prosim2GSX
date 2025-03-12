@@ -15,7 +15,7 @@ namespace Prosim2GSX.Services
         private readonly ILogger _logger;
         private readonly MobiSimConnect _simConnect;
         private IGSXStateManager _stateManager;
-        private readonly IEventAggregator _eventAggregator;
+        private IEventAggregator _eventAggregator;
         private bool _disposed;
         
         // New components

@@ -2,7 +2,7 @@ using System;
 
 namespace Prosim2GSX.Services
 {
-    public class ProsimConnectionEventArgs : EventArgs
+    public class ProsimConnectionEventArgs : BaseEventArgs
     {
         public bool IsConnected { get; }
         public string Message { get; }
@@ -14,7 +14,7 @@ namespace Prosim2GSX.Services
         }
     }
 
-    public class ProsimDataChangedEventArgs : EventArgs
+    public class ProsimDataChangedEventArgs : BaseEventArgs
     {
         public string DataRef { get; }
         public object Value { get; }
@@ -29,6 +29,8 @@ namespace Prosim2GSX.Services
     public interface IProsimService
     {
         bool IsConnected { get; }
+        
+        object Connection { get; }
         
         void Connect(string hostname);
         

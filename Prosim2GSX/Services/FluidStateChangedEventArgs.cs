@@ -5,7 +5,7 @@ namespace Prosim2GSX.Services
     /// <summary>
     /// Event arguments for fluid state changes
     /// </summary>
-    public class FluidStateChangedEventArgs : EventArgs
+    public class FluidStateChangedEventArgs : BaseEventArgs
     {
         /// <summary>
         /// Gets the type of operation that caused the state change
@@ -43,11 +43,6 @@ namespace Prosim2GSX.Services
         public double YellowAmount { get; }
         
         /// <summary>
-        /// Gets the timestamp of the state change
-        /// </summary>
-        public DateTime Timestamp { get; }
-        
-        /// <summary>
         /// Initializes a new instance of the <see cref="FluidStateChangedEventArgs"/> class
         /// </summary>
         /// <param name="operationType">The type of operation that caused the state change</param>
@@ -63,7 +58,6 @@ namespace Prosim2GSX.Services
             BlueAmount = 0;
             GreenAmount = 0;
             YellowAmount = 0;
-            Timestamp = DateTime.Now;
         }
         
         /// <summary>
@@ -82,7 +76,6 @@ namespace Prosim2GSX.Services
             BlueAmount = blueAmount;
             GreenAmount = greenAmount;
             YellowAmount = yellowAmount;
-            Timestamp = DateTime.Now;
         }
     }
 }

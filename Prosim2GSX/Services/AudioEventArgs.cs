@@ -6,7 +6,7 @@ namespace Prosim2GSX.Services
     /// <summary>
     /// Event arguments for audio session events
     /// </summary>
-    public class AudioSessionEventArgs : EventArgs
+    public class AudioSessionEventArgs : BaseEventArgs
     {
         /// <summary>
         /// The process name
@@ -31,7 +31,7 @@ namespace Prosim2GSX.Services
     /// <summary>
     /// Event arguments for volume changed events
     /// </summary>
-    public class AudioVolumeChangedEventArgs : EventArgs
+    public class AudioVolumeChangedEventArgs : BaseEventArgs
     {
         /// <summary>
         /// The process name
@@ -56,7 +56,7 @@ namespace Prosim2GSX.Services
     /// <summary>
     /// Event arguments for mute changed events
     /// </summary>
-    public class AudioMuteChangedEventArgs : EventArgs
+    public class AudioMuteChangedEventArgs : BaseEventArgs
     {
         /// <summary>
         /// The process name

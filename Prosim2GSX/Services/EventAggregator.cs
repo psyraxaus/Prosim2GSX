@@ -28,7 +28,7 @@ namespace Prosim2GSX.Services
         /// </summary>
         /// <typeparam name="T">The event type</typeparam>
         /// <param name="action">The action to execute when the event is published</param>
-        public void Subscribe<T>(Action<T> action) where T : EventArgs
+        public void Subscribe<T>(Action<T> action) where T : BaseEventArgs
         {
             if (action == null)
                 throw new ArgumentNullException(nameof(action));
@@ -53,7 +53,7 @@ namespace Prosim2GSX.Services
         /// </summary>
         /// <typeparam name="T">The event type</typeparam>
         /// <param name="action">The action to unsubscribe</param>
-        public void Unsubscribe<T>(Action<T> action) where T : EventArgs
+        public void Unsubscribe<T>(Action<T> action) where T : BaseEventArgs
         {
             if (action == null)
                 throw new ArgumentNullException(nameof(action));
@@ -84,7 +84,7 @@ namespace Prosim2GSX.Services
         /// </summary>
         /// <typeparam name="T">The event type</typeparam>
         /// <param name="eventArgs">The event arguments</param>
-        public void Publish<T>(T eventArgs) where T : EventArgs
+        public void Publish<T>(T eventArgs) where T : BaseEventArgs
         {
             if (eventArgs == null)
                 throw new ArgumentNullException(nameof(eventArgs));

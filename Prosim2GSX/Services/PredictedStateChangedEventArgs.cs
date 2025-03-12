@@ -5,7 +5,7 @@ namespace Prosim2GSX.Services
     /// <summary>
     /// Event arguments for predicted state changes
     /// </summary>
-    public class PredictedStateChangedEventArgs : EventArgs
+public class PredictedStateChangedEventArgs : BaseEventArgs
     {
         /// <summary>
         /// Gets the previous predicted state
@@ -23,11 +23,6 @@ namespace Prosim2GSX.Services
         public float Confidence { get; }
         
         /// <summary>
-        /// Gets the timestamp of the prediction
-        /// </summary>
-        public DateTime Timestamp { get; }
-        
-        /// <summary>
         /// Initializes a new instance of the PredictedStateChangedEventArgs class
         /// </summary>
         public PredictedStateChangedEventArgs(FlightState? previousPrediction, FlightState newPrediction, float confidence)
@@ -35,7 +30,6 @@ namespace Prosim2GSX.Services
             PreviousPrediction = previousPrediction;
             NewPrediction = newPrediction;
             Confidence = confidence;
-            Timestamp = DateTime.Now;
         }
     }
 }

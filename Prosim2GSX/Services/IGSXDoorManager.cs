@@ -18,7 +18,7 @@ namespace Prosim2GSX.Services
     /// <summary>
     /// Event arguments for door state changes
     /// </summary>
-    public class DoorStateChangedEventArgs : EventArgs
+    public class DoorStateChangedEventArgs : BaseEventArgs
     {
         /// <summary>
         /// Gets the type of door that changed state
@@ -35,10 +35,6 @@ namespace Prosim2GSX.Services
         /// </summary>
         public string DoorName { get; }
 
-        /// <summary>
-        /// Gets the timestamp when the state change occurred
-        /// </summary>
-        public DateTime Timestamp { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DoorStateChangedEventArgs"/> class
@@ -50,7 +46,6 @@ namespace Prosim2GSX.Services
             DoorType = doorType;
             IsOpen = isOpen;
             DoorName = doorType.ToString();
-            Timestamp = DateTime.Now;
         }
 
         /// <summary>
@@ -73,7 +68,6 @@ namespace Prosim2GSX.Services
                 _ => throw new ArgumentException($"Unknown door name: {doorName}", nameof(doorName))
             };
             
-            Timestamp = DateTime.Now;
         }
     }
 

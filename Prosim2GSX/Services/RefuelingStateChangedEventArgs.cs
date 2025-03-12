@@ -5,7 +5,7 @@ namespace Prosim2GSX.Services
     /// <summary>
     /// Event arguments for refueling state changes
     /// </summary>
-    public class RefuelingStateChangedEventArgs : EventArgs
+public class RefuelingStateChangedEventArgs : BaseEventArgs
     {
         /// <summary>
         /// Gets the new refueling state

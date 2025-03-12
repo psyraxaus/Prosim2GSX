@@ -5,7 +5,7 @@ namespace Prosim2GSX.Services
     /// <summary>
     /// Event arguments for refueling progress changes
     /// </summary>
-    public class RefuelingProgressChangedEventArgs : EventArgs
+public class RefuelingProgressChangedEventArgs : BaseEventArgs
     {
         /// <summary>
         /// Gets the progress percentage (0-100)
@@ -28,11 +28,6 @@ namespace Prosim2GSX.Services
         public string FuelUnits { get; }
         
         /// <summary>
-        /// Gets the timestamp of the progress change
-        /// </summary>
-        public DateTime Timestamp { get; }
-        
-        /// <summary>
         /// Initializes a new instance of the <see cref="RefuelingProgressChangedEventArgs"/> class
         /// </summary>
         /// <param name="progressPercentage">The progress percentage (0-100)</param>
@@ -45,7 +40,6 @@ namespace Prosim2GSX.Services
             CurrentAmount = currentAmount;
             TargetAmount = targetAmount;
             FuelUnits = fuelUnits;
-            Timestamp = DateTime.Now;
         }
     }
 }

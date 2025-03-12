@@ -36,7 +36,7 @@ namespace Prosim2GSX.Services
     /// <summary>
     /// Event arguments for flight plan events
     /// </summary>
-    public class FlightPlanEventArgs : EventArgs
+    public class FlightPlanEventArgs : BaseEventArgs
     {
         /// <summary>
         /// Gets the ID of the flight plan

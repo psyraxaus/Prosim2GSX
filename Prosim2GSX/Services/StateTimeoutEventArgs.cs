@@ -5,7 +5,7 @@ namespace Prosim2GSX.Services
     /// <summary>
     /// Event arguments for state timeouts
     /// </summary>
-    public class StateTimeoutEventArgs : EventArgs
+    public class StateTimeoutEventArgs : BaseEventArgs
     {
         /// <summary>
         /// Gets the state that timed out

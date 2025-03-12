@@ -5,7 +5,7 @@ namespace Prosim2GSX.Services
     /// <summary>
     /// Event arguments for flight plan loaded events
     /// </summary>
-    public class FlightPlanLoadedEventArgs : EventArgs
+    public class FlightPlanLoadedEventArgs : BaseEventArgs
     {
         /// <summary>
         /// Gets the flight plan ID
@@ -28,11 +28,6 @@ namespace Prosim2GSX.Services
         public string ArrivalAirport { get; }
         
         /// <summary>
-        /// Gets the timestamp when the flight plan was loaded
-        /// </summary>
-        public DateTime Timestamp { get; }
-        
-        /// <summary>
         /// Initializes a new instance of the <see cref="FlightPlanLoadedEventArgs"/> class
         /// </summary>
         /// <param name="flightPlanID">The flight plan ID</param>
@@ -45,7 +40,6 @@ namespace Prosim2GSX.Services
             FlightNumber = flightNumber;
             DepartureAirport = departureAirport;
             ArrivalAirport = arrivalAirport;
-            Timestamp = DateTime.UtcNow;
         }
     }
 }

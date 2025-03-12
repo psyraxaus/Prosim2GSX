@@ -132,6 +132,52 @@ namespace Prosim2GSX.Services
         }
         
         /// <summary>
+        /// Updates passenger data from EFB
+        /// </summary>
+        /// <param name="paxPlanned">The passenger seating arrangement from EFB</param>
+        /// <param name="forceCurrentUpdate">Whether to update current passenger state to match planned</param>
+        public void UpdateFromEFB(bool[] paxPlanned, bool forceCurrentUpdate = false)
+        {
+            try
+            {
+                if (paxPlanned == null)
+                {
+                    throw new ArgumentNullException(nameof(paxPlanned));
+                }
+                
+                // Copy the seating arrangement
+                _paxPlanned = (bool[])paxPlanned.Clone();
+                
+                // Log the updated seating arrangement
+                int passengerCount = _paxPlanned.Count(i => i);
+                Logger.Log(LogLevel.Debug, "ProsimPassengerService:UpdateFromEFB", 
+                    $"Updated passenger seating for {passengerCount} passengers from EFB");
+                    
+                // Update ProSim with the new seating arrangement
+                _prosimService.SetVariable("aircraft.passengers.seatOccupation", _paxPlanned);
+                
+                // Update passenger zone counts
+                UpdatePassengerZones();
+                
+                // Set the flag to indicate seating has been randomized
+                _hasRandomizedSeating = true;
+                
+                // If requested, also update current passenger state to match planned
+                if (forceCurrentUpdate)
+                {
+                    _paxCurrent = (bool[])_paxPlanned.Clone();
+                    OnPassengerStateChanged("UpdatedFromEFB", GetPaxCurrent(), GetPaxPlanned());
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "ProsimPassengerService:UpdateFromEFB", 
+                    $"Error updating from EFB: {ex.Message}");
+                throw;
+            }
+        }
+        
+        /// <summary>
         /// Starts the boarding process
         /// </summary>
         public void BoardingStart()

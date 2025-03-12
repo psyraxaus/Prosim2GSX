@@ -47,6 +47,13 @@ namespace Prosim2GSX.Services
         void UpdateFromFlightPlan(int passengerCount, bool forceCurrentUpdate = false);
         
         /// <summary>
+        /// Updates passenger data from EFB
+        /// </summary>
+        /// <param name="paxPlanned">The passenger seating arrangement from EFB</param>
+        /// <param name="forceCurrentUpdate">Whether to update current passenger state to match planned</param>
+        void UpdateFromEFB(bool[] paxPlanned, bool forceCurrentUpdate = false);
+        
+        /// <summary>
         /// Starts the boarding process
         /// </summary>
         void BoardingStart();

@@ -10,7 +10,7 @@ namespace Prosim2GSX.Services
     public class GSXPassengerCoordinator : IGSXPassengerCoordinator
     {
         private readonly IProsimPassengerService _prosimPassengerService;
-        private readonly IGSXServiceOrchestrator _serviceOrchestrator;
+        private IGSXServiceOrchestrator _serviceOrchestrator;
         private readonly ILogger _logger;
         private IGSXStateManager _stateManager;
         private bool _disposed;

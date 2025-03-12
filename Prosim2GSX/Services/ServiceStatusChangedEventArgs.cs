@@ -5,7 +5,7 @@ namespace Prosim2GSX.Services
     /// <summary>
     /// Event arguments for service status changes
     /// </summary>
-    public class ServiceStatusChangedEventArgs : EventArgs
+public class ServiceStatusChangedEventArgs : BaseEventArgs
     {
         /// <summary>
         /// Gets the type of service
@@ -23,11 +23,6 @@ namespace Prosim2GSX.Services
         public bool IsCompleted { get; }
         
         /// <summary>
-        /// Gets the timestamp of the status change
-        /// </summary>
-        public DateTime Timestamp { get; }
-        
-        /// <summary>
         /// Creates a new instance of ServiceStatusChangedEventArgs
         /// </summary>
         /// <param name="serviceType">The type of service</param>
@@ -38,7 +33,6 @@ namespace Prosim2GSX.Services
             ServiceType = serviceType;
             Status = status;
             IsCompleted = isCompleted;
-            Timestamp = DateTime.Now;
         }
     }
 }

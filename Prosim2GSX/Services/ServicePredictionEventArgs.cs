@@ -6,7 +6,7 @@ namespace Prosim2GSX.Services
     /// <summary>
     /// Event arguments for service prediction events
     /// </summary>
-    public class ServicePredictionEventArgs : EventArgs
+public class ServicePredictionEventArgs : BaseEventArgs
     {
         /// <summary>
         /// Gets the predicted services
@@ -19,18 +19,12 @@ namespace Prosim2GSX.Services
         public FlightState FlightState { get; }
         
         /// <summary>
-        /// Gets the timestamp of the prediction
-        /// </summary>
-        public DateTime Timestamp { get; }
-        
-        /// <summary>
         /// Creates a new instance of ServicePredictionEventArgs
         /// </summary>
         public ServicePredictionEventArgs(IReadOnlyCollection<ServicePrediction> predictedServices, FlightState flightState)
         {
             PredictedServices = predictedServices;
             FlightState = flightState;
-            Timestamp = DateTime.Now;
         }
     }
 }

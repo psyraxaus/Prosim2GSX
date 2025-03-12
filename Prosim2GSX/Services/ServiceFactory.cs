@@ -71,7 +71,7 @@ namespace Prosim2GSX.Services
                 _logger.Log(LogLevel.Information, "ServiceFactory:CreateProsimController", "Creating ProSim controller");
                 
                 // Create ProSim service
-                var prosimService = new ProsimService();
+                var prosimService = new ProsimService(_model);
                 RegisterService<IProsimService>(prosimService);
                 
                 // Create door service
@@ -103,7 +103,7 @@ namespace Prosim2GSX.Services
                 RegisterService<IFlightPlanService>(flightPlanService);
                 
                 // Create the controller
-                var controller = new ProsimControllerFacade(
+                IProsimController controller = new ProsimControllerFacade(
                     _model,
                     _logger,
                     _eventAggregator,
@@ -192,7 +192,7 @@ namespace Prosim2GSX.Services
                 var serviceOrchestrator = new GSXServiceOrchestrator(
                     _model, 
                     IPCManager.SimConnect, 
-                    prosimController, 
+                    (ProsimController)prosimController, 
                     menuService, 
                     loadsheetManager, 
                     doorManager, 
@@ -244,9 +244,9 @@ namespace Prosim2GSX.Services
                 fuelCoordinator.RegisterForStateChanges(stateManager);
                 
                 // Create GSX controller facade
-                var gsxControllerFacade = new GSXControllerFacade(
+                IGSXControllerFacade gsxControllerFacade = new GSXControllerFacade(
                     _model, 
-                    prosimController, 
+                    (ProsimController)prosimController, 
                     flightPlan, 
                     acarsService, 
                     menuService, 

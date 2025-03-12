@@ -5,7 +5,7 @@ namespace Prosim2GSX.Services
     /// <summary>
     /// Event arguments for flight data changes
     /// </summary>
-    public class FlightDataChangedEventArgs : EventArgs
+    public class FlightDataChangedEventArgs : BaseEventArgs
     {
         /// <summary>
         /// Gets the type of operation that caused the data change
@@ -23,18 +23,12 @@ namespace Prosim2GSX.Services
         public object CurrentValue { get; }
         
         /// <summary>
-        /// Gets the timestamp of the data change
-        /// </summary>
-        public DateTime Timestamp { get; }
-        
-        /// <summary>
         /// Initializes a new instance of the <see cref="FlightDataChangedEventArgs"/> class
         /// </summary>
         /// <param name="operationType">The type of operation that caused the data change</param>
         public FlightDataChangedEventArgs(string operationType)
         {
             OperationType = operationType;
-            Timestamp = DateTime.Now;
         }
         
         /// <summary>
@@ -48,7 +42,6 @@ namespace Prosim2GSX.Services
             OperationType = operationType;
             DataType = dataType;
             CurrentValue = currentValue;
-            Timestamp = DateTime.Now;
         }
     }
 }

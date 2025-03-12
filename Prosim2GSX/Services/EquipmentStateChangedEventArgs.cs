@@ -31,7 +31,7 @@ namespace Prosim2GSX.Services
     /// <summary>
     /// Event arguments for equipment state changes
     /// </summary>
-    public class EquipmentStateChangedEventArgs : EventArgs
+    public class EquipmentStateChangedEventArgs : BaseEventArgs
     {
         /// <summary>
         /// Gets the type of equipment that changed state
@@ -53,10 +53,6 @@ namespace Prosim2GSX.Services
         /// </summary>
         public bool IsEnabled { get; }
 
-        /// <summary>
-        /// Gets the timestamp when the state change occurred
-        /// </summary>
-        public DateTime Timestamp { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EquipmentStateChangedEventArgs"/> class
@@ -69,7 +65,6 @@ namespace Prosim2GSX.Services
             IsConnected = isConnected;
             EquipmentName = equipmentType.ToString();
             IsEnabled = isConnected;
-            Timestamp = DateTime.Now;
         }
 
         /// <summary>
@@ -90,7 +85,6 @@ namespace Prosim2GSX.Services
             IsConnected = isEnabled;
             EquipmentName = equipmentName;
             IsEnabled = isEnabled;
-            Timestamp = DateTime.Now;
         }
     }
 }

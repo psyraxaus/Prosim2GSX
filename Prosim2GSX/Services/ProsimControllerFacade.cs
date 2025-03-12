@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using Newtonsoft.Json.Linq;
 using Prosim2GSX.Models;
 using ProSimSDK;
 
@@ -90,7 +91,7 @@ namespace Prosim2GSX.Services
             _fluidService = fluidService ?? throw new ArgumentNullException(nameof(fluidService));
             _flightPlanService = flightPlanService ?? throw new ArgumentNullException(nameof(flightPlanService));
             
-            _interface = new ProsimInterface(model, _prosimService.Connection);
+            _interface = new ProsimInterface(model, (ProSimSDK.ProSimConnect)_prosimService.Connection);
             
             // Subscribe to service events
             _doorService.DoorStateChanged += (sender, args) => {
@@ -219,7 +220,7 @@ namespace Prosim2GSX.Services
                             FlightPlanLoaded?.Invoke(this, new FlightPlanLoadedEventArgs(
                                 FlightPlanID, 
                                 FlightNumber, 
-                                _flightPlan.Departure, 
+                                _flightPlan.Origin, 
                                 _flightPlan.Destination));
                         }
                     }

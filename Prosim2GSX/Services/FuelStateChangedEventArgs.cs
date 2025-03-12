@@ -5,7 +5,7 @@ namespace Prosim2GSX.Services
     /// <summary>
     /// Event arguments for fuel state changes
     /// </summary>
-    public class FuelStateChangedEventArgs : EventArgs
+public class FuelStateChangedEventArgs : BaseEventArgs
     {
         /// <summary>
         /// Gets the type of operation that caused the state change
@@ -28,11 +28,6 @@ namespace Prosim2GSX.Services
         public string FuelUnits { get; }
         
         /// <summary>
-        /// Gets the timestamp of the state change
-        /// </summary>
-        public DateTime Timestamp { get; }
-        
-        /// <summary>
         /// Initializes a new instance of the <see cref="FuelStateChangedEventArgs"/> class
         /// </summary>
         /// <param name="operationType">The type of operation that caused the state change</param>
@@ -45,7 +40,6 @@ namespace Prosim2GSX.Services
             CurrentAmount = currentAmount;
             PlannedAmount = plannedAmount;
             FuelUnits = fuelUnits;
-            Timestamp = DateTime.Now;
         }
     }
 }

@@ -5,7 +5,7 @@ namespace Prosim2GSX.Services
     /// <summary>
     /// Event arguments for loadsheet generation events
     /// </summary>
-    public class LoadsheetGeneratedEventArgs : EventArgs
+    public class LoadsheetGeneratedEventArgs : BaseEventArgs
     {
         /// <summary>
         /// Gets the type of loadsheet that was generated
@@ -16,11 +16,6 @@ namespace Prosim2GSX.Services
         /// Gets the flight number for the loadsheet
         /// </summary>
         public string FlightNumber { get; }
-        
-        /// <summary>
-        /// Gets the timestamp when the loadsheet was generated
-        /// </summary>
-        public DateTime Timestamp { get; }
         
         /// <summary>
         /// Gets whether the loadsheet generation was successful
@@ -37,7 +32,6 @@ namespace Prosim2GSX.Services
         {
             LoadsheetType = loadsheetType;
             FlightNumber = flightNumber;
-            Timestamp = DateTime.Now;
             Success = success;
         }
     }

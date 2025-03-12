@@ -5,7 +5,7 @@ namespace Prosim2GSX.Services
     /// <summary>
     /// Event arguments for passenger state changes
     /// </summary>
-    public class PassengerStateChangedEventArgs : EventArgs
+public class PassengerStateChangedEventArgs : BaseEventArgs
     {
         /// <summary>
         /// Gets the type of operation that caused the state change
@@ -23,11 +23,6 @@ namespace Prosim2GSX.Services
         public int PlannedCount { get; }
         
         /// <summary>
-        /// Gets the timestamp of the state change
-        /// </summary>
-        public DateTime Timestamp { get; }
-        
-        /// <summary>
         /// Initializes a new instance of the <see cref="PassengerStateChangedEventArgs"/> class
         /// </summary>
         /// <param name="operationType">The type of operation that caused the state change</param>
@@ -38,7 +33,6 @@ namespace Prosim2GSX.Services
             OperationType = operationType;
             CurrentCount = currentCount;
             PlannedCount = plannedCount;
-            Timestamp = DateTime.Now;
         }
     }
 }

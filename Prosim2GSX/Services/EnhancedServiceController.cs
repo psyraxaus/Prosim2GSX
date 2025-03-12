@@ -301,7 +301,7 @@ namespace Prosim2GSX.Services
         {
             ExecuteSafely(() => {
                 Logger.Log(LogLevel.Information, "EnhancedServiceController:OnGsxStateChanged", 
-                    $"GSX state changed: {e.OldState} -> {e.NewState}");
+                    $"GSX state changed: {e.PreviousState} -> {e.NewState}");
                 
                 // Publish event to event aggregator
                 EventAggregator.Publish(e);
@@ -315,7 +315,7 @@ namespace Prosim2GSX.Services
         {
             ExecuteSafely(() => {
                 Logger.Log(LogLevel.Information, "EnhancedServiceController:OnGsxServiceStatusChanged", 
-                    $"GSX service status changed: {e.ServiceName} - {e.Status}");
+                    $"GSX service status changed: {e.ServiceType} - {e.Status}");
                 
                 // Publish event to event aggregator
                 EventAggregator.Publish(e);

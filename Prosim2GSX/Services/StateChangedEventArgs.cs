@@ -5,7 +5,7 @@ namespace Prosim2GSX.Services
     /// <summary>
     /// Event arguments for state changes
     /// </summary>
-    public class StateChangedEventArgs : EventArgs
+public class StateChangedEventArgs : BaseEventArgs
     {
         /// <summary>
         /// Gets the previous state
@@ -18,11 +18,6 @@ namespace Prosim2GSX.Services
         public FlightState NewState { get; }
         
         /// <summary>
-        /// Gets the timestamp of the state change
-        /// </summary>
-        public DateTime Timestamp { get; }
-        
-        /// <summary>
         /// Initializes a new instance of the StateChangedEventArgs class
         /// </summary>
         /// <param name="previousState">The previous state</param>
@@ -31,7 +26,6 @@ namespace Prosim2GSX.Services
         {
             PreviousState = previousState;
             NewState = newState;
-            Timestamp = DateTime.Now;
         }
     }
     

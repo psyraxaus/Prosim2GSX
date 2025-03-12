@@ -10,6 +10,8 @@ namespace Prosim2GSX.Services
         private readonly ServiceModel _model;
 
         public bool IsConnected => _connection.isConnected;
+        
+        public object Connection => _connection;
 
         public event EventHandler<ProsimConnectionEventArgs> ConnectionChanged;
 
