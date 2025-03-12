@@ -1,0 +1,273 @@
+<Page x:Class="Prosim2GSX.UI.EFB.Views.Aircraft.AircraftPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:Prosim2GSX.UI.EFB.Views.Aircraft"
+      xmlns:aircraft="clr-namespace:Prosim2GSX.UI.EFB.Controls.Aircraft"
+      xmlns:controls="clr-namespace:Prosim2GSX.UI.EFB.Controls"
+      mc:Ignorable="d" 
+      d:DesignHeight="600" d:DesignWidth="800"
+      Title="Aircraft">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <Border Grid.Row="0" 
+                Background="{DynamicResource EFBPrimaryBackgroundBrush}" 
+                BorderBrush="{DynamicResource EFBPrimaryBorderBrush}" 
+                BorderThickness="0,0,0,1"
+                Padding="10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Grid.Column="0" 
+                           Text="Aircraft Status" 
+                           FontSize="20" 
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource EFBPrimaryTextBrush}"
+                           VerticalAlignment="Center"/>
+                
+                <controls:FlightPhaseIndicator Grid.Column="1" 
+                                              Width="150" 
+                                              Height="40"
+                                              FlightPhase="{Binding CurrentFlightPhase}"/>
+            </Grid>
+        </Border>
+        
+        <!-- Aircraft Diagram -->
+        <aircraft:AircraftDiagram Grid.Row="1" 
+                                 x:Name="AircraftDiagramControl"
+                                 DataContext="{Binding}"/>
+        
+        <!-- Status Bar -->
+        <Border Grid.Row="2" 
+                Background="{DynamicResource EFBPrimaryBackgroundBrush}" 
+                BorderBrush="{DynamicResource EFBPrimaryBorderBrush}" 
+                BorderThickness="0,1,0,0"
+                Padding="10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Grid.Column="0" 
+                           Text="{Binding StatusMessage}" 
+                           Foreground="{DynamicResource EFBPrimaryTextBrush}"
+                           VerticalAlignment="Center"/>
+                
+                <controls:StatusIndicator Grid.Column="1" 
+                                         Width="20" 
+                                         Height="20"
+                                         Margin="10,0"
+                                         Status="{Binding ConnectionStatus}"/>
+                
+                <TextBlock Grid.Column="2" 
+                           Text="{Binding ConnectionStatusText}" 
+                           Foreground="{DynamicResource EFBPrimaryTextBrush}"
+                           VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+        
+        <!-- Service Controls Panel -->
+        <Border Grid.Row="1" 
+                HorizontalAlignment="Right" 
+                VerticalAlignment="Top"
+                Background="{DynamicResource EFBSecondaryBackgroundBrush}" 
+                BorderBrush="{DynamicResource EFBPrimaryBorderBrush}" 
+                BorderThickness="1"
+                CornerRadius="5"
+                Margin="0,10,10,0"
+                Padding="10">
+            <StackPanel>
+                <TextBlock Text="Services" 
+                           FontSize="16" 
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource EFBPrimaryTextBrush}"
+                           Margin="0,0,0,10"/>
+                
+                <Button Content="Request Refueling" 
+                        Margin="0,5"
+                        Command="{Binding RequestServiceCommand}"
+                        CommandParameter="Refueling"
+                        IsEnabled="{Binding RefuelingInProgress, Converter={StaticResource InverseBooleanConverter}}"/>
+                
+                <Button Content="Cancel Refueling" 
+                        Margin="0,5"
+                        Command="{Binding CancelServiceCommand}"
+                        CommandParameter="Refueling"
+                        IsEnabled="{Binding RefuelingInProgress}"/>
+                
+                <Button Content="Request Catering" 
+                        Margin="0,5"
+                        Command="{Binding RequestServiceCommand}"
+                        CommandParameter="Catering"
+                        IsEnabled="{Binding CateringInProgress, Converter={StaticResource InverseBooleanConverter}}"/>
+                
+                <Button Content="Cancel Catering" 
+                        Margin="0,5"
+                        Command="{Binding CancelServiceCommand}"
+                        CommandParameter="Catering"
+                        IsEnabled="{Binding CateringInProgress}"/>
+                
+                <Button Content="Request Boarding" 
+                        Margin="0,5"
+                        Command="{Binding RequestServiceCommand}"
+                        CommandParameter="Boarding"
+                        IsEnabled="{Binding BoardingInProgress, Converter={StaticResource InverseBooleanConverter}}"/>
+                
+                <Button Content="Cancel Boarding" 
+                        Margin="0,5"
+                        Command="{Binding CancelServiceCommand}"
+                        CommandParameter="Boarding"
+                        IsEnabled="{Binding BoardingInProgress}"/>
+                
+                <Button Content="Request Deboarding" 
+                        Margin="0,5"
+                        Command="{Binding RequestServiceCommand}"
+                        CommandParameter="DeBoarding"
+                        IsEnabled="{Binding DeBoardingInProgress, Converter={StaticResource InverseBooleanConverter}}"/>
+                
+                <Button Content="Cancel Deboarding" 
+                        Margin="0,5"
+                        Command="{Binding CancelServiceCommand}"
+                        CommandParameter="DeBoarding"
+                        IsEnabled="{Binding DeBoardingInProgress}"/>
+                
+                <Button Content="Request Cargo Loading" 
+                        Margin="0,5"
+                        Command="{Binding RequestServiceCommand}"
+                        CommandParameter="CargoLoading"
+                        IsEnabled="{Binding CargoLoadingInProgress, Converter={StaticResource InverseBooleanConverter}}"/>
+                
+                <Button Content="Cancel Cargo Loading" 
+                        Margin="0,5"
+                        Command="{Binding CancelServiceCommand}"
+                        CommandParameter="CargoLoading"
+                        IsEnabled="{Binding CargoLoadingInProgress}"/>
+                
+                <Button Content="Request Cargo Unloading" 
+                        Margin="0,5"
+                        Command="{Binding RequestServiceCommand}"
+                        CommandParameter="CargoUnloading"
+                        IsEnabled="{Binding CargoUnloadingInProgress, Converter={StaticResource InverseBooleanConverter}}"/>
+                
+                <Button Content="Cancel Cargo Unloading" 
+                        Margin="0,5"
+                        Command="{Binding CancelServiceCommand}"
+                        CommandParameter="CargoUnloading"
+                        IsEnabled="{Binding CargoUnloadingInProgress}"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- Progress Panel -->
+        <Border Grid.Row="1" 
+                HorizontalAlignment="Left" 
+                VerticalAlignment="Top"
+                Background="{DynamicResource EFBSecondaryBackgroundBrush}" 
+                BorderBrush="{DynamicResource EFBPrimaryBorderBrush}" 
+                BorderThickness="1"
+                CornerRadius="5"
+                Margin="10,10,0,0"
+                Padding="10">
+            <StackPanel Width="200">
+                <TextBlock Text="Service Progress" 
+                           FontSize="16" 
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource EFBPrimaryTextBrush}"
+                           Margin="0,0,0,10"/>
+                
+                <Grid Margin="0,5" Visibility="{Binding RefuelingInProgress, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" 
+                               Text="Refueling" 
+                               Foreground="{DynamicResource EFBPrimaryTextBrush}"/>
+                    
+                    <controls:LinearProgressIndicator Grid.Row="1" 
+                                                    Height="20"
+                                                    Progress="{Binding RefuelingProgress}"/>
+                </Grid>
+                
+                <Grid Margin="0,5" Visibility="{Binding BoardingInProgress, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" 
+                               Text="Boarding" 
+                               Foreground="{DynamicResource EFBPrimaryTextBrush}"/>
+                    
+                    <controls:LinearProgressIndicator Grid.Row="1" 
+                                                    Height="20"
+                                                    Progress="{Binding BoardingProgress}"/>
+                </Grid>
+                
+                <Grid Margin="0,5" Visibility="{Binding DeBoardingInProgress, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" 
+                               Text="Deboarding" 
+                               Foreground="{DynamicResource EFBPrimaryTextBrush}"/>
+                    
+                    <controls:LinearProgressIndicator Grid.Row="1" 
+                                                    Height="20"
+                                                    Progress="{Binding DeBoardingProgress}"/>
+                </Grid>
+                
+                <Grid Margin="0,5" Visibility="{Binding CargoLoadingInProgress, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" 
+                               Text="Cargo Loading" 
+                               Foreground="{DynamicResource EFBPrimaryTextBrush}"/>
+                    
+                    <controls:LinearProgressIndicator Grid.Row="1" 
+                                                    Height="20"
+                                                    Progress="{Binding CargoLoadingProgress}"/>
+                </Grid>
+                
+                <Grid Margin="0,5" Visibility="{Binding CargoUnloadingInProgress, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" 
+                               Text="Cargo Unloading" 
+                               Foreground="{DynamicResource EFBPrimaryTextBrush}"/>
+                    
+                    <controls:LinearProgressIndicator Grid.Row="1" 
+                                                    Height="20"
+                                                    Progress="{Binding CargoUnloadingProgress}"/>
+                </Grid>
+                
+                <TextBlock Text="No services in progress" 
+                           Foreground="{DynamicResource EFBSecondaryTextBrush}"
+                           TextAlignment="Center"
+                           Margin="0,10"
+                           Visibility="{Binding AnyServiceInProgress, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Page>

@@ -164,6 +164,13 @@ namespace Prosim2GSX.UI.EFB
                 "Home",
                 "\uE80F"); // Home icon
             
+            // Aircraft page
+            _windowManager.RegisterPage(
+                "Aircraft",
+                typeof(Views.Aircraft.AircraftPage), // Actual page type
+                "Aircraft",
+                "\uE709"); // Aircraft icon
+            
             // Services page
             _windowManager.RegisterPage(
                 "Services",

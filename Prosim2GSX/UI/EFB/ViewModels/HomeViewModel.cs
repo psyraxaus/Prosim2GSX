@@ -25,6 +25,7 @@ namespace Prosim2GSX.UI.EFB.ViewModels
             _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
             
             // Initialize commands
+            NavigateToAircraftCommand = new RelayCommand(NavigateToAircraft);
             NavigateToFuelCommand = new RelayCommand(NavigateToFuel);
             NavigateToDoorsCommand = new RelayCommand(NavigateToDoors);
             NavigateToPassengersCommand = new RelayCommand(NavigateToPassengers);
@@ -38,6 +39,11 @@ namespace Prosim2GSX.UI.EFB.ViewModels
             // Subscribe to property changes
             SubscribeToPropertyChanges();
         }
+        
+        /// <summary>
+        /// Gets the command to navigate to the Aircraft page.
+        /// </summary>
+        public ICommand NavigateToAircraftCommand { get; }
         
         /// <summary>
         /// Gets the command to navigate to the Fuel page.
@@ -269,6 +275,11 @@ namespace Prosim2GSX.UI.EFB.ViewModels
             CargoLoadingProgress = _dataBindingService.GetValue<double>("CargoLoadingProgress");
             CargoUnloadingProgress = _dataBindingService.GetValue<double>("CargoUnloadingProgress");
             CurrentFlightPhase = _dataBindingService.GetValue<FlightPhaseIndicator.FlightPhase>("CurrentFlightPhase");
+        }
+        
+        private void NavigateToAircraft()
+        {
+            _navigationService.NavigateTo("Aircraft");
         }
         
         private void NavigateToFuel()

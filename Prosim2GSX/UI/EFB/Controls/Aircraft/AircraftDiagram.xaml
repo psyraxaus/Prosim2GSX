@@ -1,0 +1,283 @@
+<UserControl x:Class="Prosim2GSX.UI.EFB.Controls.Aircraft.AircraftDiagram"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Prosim2GSX.UI.EFB.Controls.Aircraft"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.Resources>
+        <!-- Icons for service points -->
+        <Path x:Key="FuelIcon" 
+              Data="M 5,0 L 15,0 L 15,10 L 18,10 L 18,15 L 2,15 L 2,10 L 5,10 Z" 
+              Fill="{DynamicResource EFBPrimaryTextBrush}" 
+              Stretch="Uniform"/>
+        
+        <Path x:Key="WaterIcon" 
+              Data="M 10,0 C 7,5 0,10 0,15 C 0,20 5,20 10,20 C 15,20 20,20 20,15 C 20,10 13,5 10,0 Z" 
+              Fill="{DynamicResource EFBPrimaryTextBrush}" 
+              Stretch="Uniform"/>
+        
+        <Path x:Key="LavatoryIcon" 
+              Data="M 0,0 L 20,0 L 20,15 L 15,15 L 15,20 L 5,20 L 5,15 L 0,15 Z" 
+              Fill="{DynamicResource EFBPrimaryTextBrush}" 
+              Stretch="Uniform"/>
+        
+        <Path x:Key="CateringIcon" 
+              Data="M 0,5 L 5,0 L 15,0 L 20,5 L 20,15 L 0,15 Z" 
+              Fill="{DynamicResource EFBPrimaryTextBrush}" 
+              Stretch="Uniform"/>
+    </UserControl.Resources>
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Controls Panel -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,10">
+            <Button x:Name="ZoomInButton" Content="+" Width="30" Height="30" Margin="5,0" Click="ZoomInButton_Click"/>
+            <Button x:Name="ZoomOutButton" Content="-" Width="30" Height="30" Margin="5,0" Click="ZoomOutButton_Click"/>
+            <Button x:Name="ResetViewButton" Content="Reset" Width="60" Height="30" Margin="5,0" Click="ResetViewButton_Click"/>
+        </StackPanel>
+        
+        <!-- Aircraft Diagram -->
+        <ScrollViewer Grid.Row="1" 
+                      HorizontalScrollBarVisibility="Auto" 
+                      VerticalScrollBarVisibility="Auto"
+                      PanningMode="Both">
+            <Grid x:Name="DiagramContainer">
+                <Grid.LayoutTransform>
+                    <ScaleTransform x:Name="DiagramScale" ScaleX="1" ScaleY="1"/>
+                </Grid.LayoutTransform>
+                
+                <!-- Aircraft Outline -->
+                <Canvas Width="800" Height="400">
+                    <!-- Aircraft Body -->
+                    <Path x:Name="AircraftBody" 
+                          Data="M 200,200 C 200,150 600,150 600,200 L 600,250 C 600,300 200,300 200,250 Z" 
+                          Fill="{DynamicResource EFBSecondaryBackgroundBrush}" 
+                          Stroke="{DynamicResource EFBPrimaryBorderBrush}" 
+                          StrokeThickness="2"/>
+                    
+                    <!-- Aircraft Nose -->
+                    <Path x:Name="AircraftNose" 
+                          Data="M 100,225 C 100,175 200,150 200,200 L 200,250 C 200,300 100,275 100,225 Z" 
+                          Fill="{DynamicResource EFBSecondaryBackgroundBrush}" 
+                          Stroke="{DynamicResource EFBPrimaryBorderBrush}" 
+                          StrokeThickness="2"/>
+                    
+                    <!-- Aircraft Tail -->
+                    <Path x:Name="AircraftTail" 
+                          Data="M 600,200 C 600,150 700,175 700,225 L 700,225 C 700,275 600,300 600,250 Z" 
+                          Fill="{DynamicResource EFBSecondaryBackgroundBrush}" 
+                          Stroke="{DynamicResource EFBPrimaryBorderBrush}" 
+                          StrokeThickness="2"/>
+                    
+                    <!-- Wings -->
+                    <Path x:Name="LeftWing" 
+                          Data="M 300,200 L 200,100 L 250,100 L 400,200 Z" 
+                          Fill="{DynamicResource EFBSecondaryBackgroundBrush}" 
+                          Stroke="{DynamicResource EFBPrimaryBorderBrush}" 
+                          StrokeThickness="2"/>
+                    
+                    <Path x:Name="RightWing" 
+                          Data="M 300,250 L 200,350 L 250,350 L 400,250 Z" 
+                          Fill="{DynamicResource EFBSecondaryBackgroundBrush}" 
+                          Stroke="{DynamicResource EFBPrimaryBorderBrush}" 
+                          StrokeThickness="2"/>
+                    
+                    <!-- Tail Wing -->
+                    <Path x:Name="TailWing" 
+                          Data="M 650,225 L 700,125 L 700,225 Z" 
+                          Fill="{DynamicResource EFBSecondaryBackgroundBrush}" 
+                          Stroke="{DynamicResource EFBPrimaryBorderBrush}" 
+                          StrokeThickness="2"/>
+                    
+                    <!-- Cockpit Windows -->
+                    <Path x:Name="CockpitWindows" 
+                          Data="M 120,225 C 120,190 180,170 180,190 L 180,210 C 180,230 120,260 120,225 Z" 
+                          Fill="{DynamicResource EFBAccentBrush}" 
+                          Opacity="0.5"/>
+                    
+                    <!-- Passenger Windows -->
+                    <Rectangle x:Name="PassengerWindows" 
+                               Width="350" Height="10" 
+                               Canvas.Left="225" Canvas.Top="185" 
+                               Fill="{DynamicResource EFBAccentBrush}" 
+                               Opacity="0.5"/>
+                    
+                    <Rectangle x:Name="PassengerWindows2" 
+                               Width="350" Height="10" 
+                               Canvas.Left="225" Canvas.Top="255" 
+                               Fill="{DynamicResource EFBAccentBrush}" 
+                               Opacity="0.5"/>
+                    
+                    <!-- Doors -->
+                    <local:DoorControl x:Name="ForwardLeftDoor" 
+                                      Canvas.Left="220" Canvas.Top="150" 
+                                      DoorName="FWD L" 
+                                      DoorType="ForwardLeft"
+                                      DoorOrientation="Left"
+                                      IsOpen="{Binding ForwardLeftDoorOpen}"
+                                      DoorCommand="{Binding ToggleDoorCommand}"/>
+                    
+                    <local:DoorControl x:Name="ForwardRightDoor" 
+                                      Canvas.Left="220" Canvas.Top="250" 
+                                      DoorName="FWD R" 
+                                      DoorType="ForwardRight"
+                                      DoorOrientation="Right"
+                                      IsOpen="{Binding ForwardRightDoorOpen}"
+                                      DoorCommand="{Binding ToggleDoorCommand}"/>
+                    
+                    <local:DoorControl x:Name="AftLeftDoor" 
+                                      Canvas.Left="500" Canvas.Top="150" 
+                                      DoorName="AFT L" 
+                                      DoorType="AftLeft"
+                                      DoorOrientation="Left"
+                                      IsOpen="{Binding AftLeftDoorOpen}"
+                                      DoorCommand="{Binding ToggleDoorCommand}"/>
+                    
+                    <local:DoorControl x:Name="AftRightDoor" 
+                                      Canvas.Left="500" Canvas.Top="250" 
+                                      DoorName="AFT R" 
+                                      DoorType="AftRight"
+                                      DoorOrientation="Right"
+                                      IsOpen="{Binding AftRightDoorOpen}"
+                                      DoorCommand="{Binding ToggleDoorCommand}"/>
+                    
+                    <local:DoorControl x:Name="ForwardCargoDoor" 
+                                      Canvas.Left="300" Canvas.Top="275" 
+                                      DoorName="FWD CARGO" 
+                                      DoorType="ForwardCargo"
+                                      DoorOrientation="Bottom"
+                                      IsOpen="{Binding ForwardCargoDoorOpen}"
+                                      DoorCommand="{Binding ToggleDoorCommand}"/>
+                    
+                    <local:DoorControl x:Name="AftCargoDoor" 
+                                      Canvas.Left="450" Canvas.Top="275" 
+                                      DoorName="AFT CARGO" 
+                                      DoorType="AftCargo"
+                                      DoorOrientation="Bottom"
+                                      IsOpen="{Binding AftCargoDoorOpen}"
+                                      DoorCommand="{Binding ToggleDoorCommand}"/>
+                    
+                    <!-- Service Points -->
+                    <local:ServicePointControl x:Name="FuelServicePoint" 
+                                              Canvas.Left="350" Canvas.Top="100" 
+                                              ServicePointName="FUEL" 
+                                              ServiceType="Refueling"
+                                              Icon="{StaticResource FuelIcon}"
+                                              ConnectedColor="Green"
+                                              DisconnectedColor="Gray"
+                                              IsConnected="{Binding RefuelingInProgress}"
+                                              Progress="{Binding RefuelingProgress}"
+                                              ServiceCommand="{Binding RequestServiceCommand}"/>
+                    
+                    <local:ServicePointControl x:Name="WaterServicePoint" 
+                                              Canvas.Left="400" Canvas.Top="150" 
+                                              ServicePointName="WATER" 
+                                              ServiceType="Water"
+                                              Icon="{StaticResource WaterIcon}"
+                                              ConnectedColor="Blue"
+                                              DisconnectedColor="Gray"
+                                              IsConnected="{Binding CateringInProgress}"
+                                              ServiceCommand="{Binding RequestServiceCommand}"/>
+                    
+                    <local:ServicePointControl x:Name="LavatoryServicePoint" 
+                                              Canvas.Left="450" Canvas.Top="275" 
+                                              ServicePointName="LAVATORY" 
+                                              ServiceType="Lavatory"
+                                              Icon="{StaticResource LavatoryIcon}"
+                                              ConnectedColor="Purple"
+                                              DisconnectedColor="Gray"
+                                              IsConnected="{Binding CateringInProgress}"
+                                              ServiceCommand="{Binding RequestServiceCommand}"/>
+                    
+                    <local:ServicePointControl x:Name="CateringServicePoint" 
+                                              Canvas.Left="300" Canvas.Top="150" 
+                                              ServicePointName="CATERING" 
+                                              ServiceType="Catering"
+                                              Icon="{StaticResource CateringIcon}"
+                                              ConnectedColor="Orange"
+                                              DisconnectedColor="Gray"
+                                              IsConnected="{Binding CateringInProgress}"
+                                              ServiceCommand="{Binding RequestServiceCommand}"/>
+                    
+                    <!-- Ground Equipment -->
+                    <Rectangle x:Name="Jetway" 
+                               Width="100" Height="20" 
+                               Canvas.Left="220" Canvas.Top="130" 
+                               Fill="{DynamicResource EFBPrimaryBackgroundBrush}" 
+                               Stroke="{DynamicResource EFBPrimaryBorderBrush}" 
+                               StrokeThickness="2"
+                               Visibility="{Binding JetwayConnected, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    
+                    <Rectangle x:Name="Stairs" 
+                               Width="60" Height="40" 
+                               Canvas.Left="500" Canvas.Top="290" 
+                               Fill="{DynamicResource EFBPrimaryBackgroundBrush}" 
+                               Stroke="{DynamicResource EFBPrimaryBorderBrush}" 
+                               StrokeThickness="2"
+                               Visibility="{Binding StairsConnected, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    
+                    <Rectangle x:Name="Gpu" 
+                               Width="40" Height="30" 
+                               Canvas.Left="180" Canvas.Top="290" 
+                               Fill="{DynamicResource EFBPrimaryBackgroundBrush}" 
+                               Stroke="{DynamicResource EFBPrimaryBorderBrush}" 
+                               StrokeThickness="2"
+                               Visibility="{Binding GpuConnected, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    
+                    <Rectangle x:Name="Pca" 
+                               Width="40" Height="30" 
+                               Canvas.Left="230" Canvas.Top="290" 
+                               Fill="{DynamicResource EFBPrimaryBackgroundBrush}" 
+                               Stroke="{DynamicResource EFBPrimaryBorderBrush}" 
+                               StrokeThickness="2"
+                               Visibility="{Binding PcaConnected, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    
+                    <Path x:Name="Chocks" 
+                          Data="M 0,0 L 10,0 L 10,10 L 0,10 Z M 20,0 L 30,0 L 30,10 L 20,10 Z" 
+                          Fill="{DynamicResource EFBAccentBrush}" 
+                          Canvas.Left="385" Canvas.Top="350"
+                          Visibility="{Binding ChocksPlaced, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    
+                    <!-- Service Vehicles -->
+                    <Rectangle x:Name="FuelTruck" 
+                               Width="60" Height="40" 
+                               Canvas.Left="350" Canvas.Top="50" 
+                               Fill="Green" 
+                               Stroke="{DynamicResource EFBPrimaryBorderBrush}" 
+                               StrokeThickness="2"
+                               Visibility="{Binding FuelTruckPresent, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    
+                    <Rectangle x:Name="CateringTruck" 
+                               Width="50" Height="30" 
+                               Canvas.Left="250" Canvas.Top="120" 
+                               Fill="Orange" 
+                               Stroke="{DynamicResource EFBPrimaryBorderBrush}" 
+                               StrokeThickness="2"
+                               Visibility="{Binding CateringTruckPresent, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    
+                    <Rectangle x:Name="PassengerBus" 
+                               Width="70" Height="30" 
+                               Canvas.Left="150" Canvas.Top="290" 
+                               Fill="Blue" 
+                               Stroke="{DynamicResource EFBPrimaryBorderBrush}" 
+                               StrokeThickness="2"
+                               Visibility="{Binding PassengerBusPresent, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    
+                    <Rectangle x:Name="BaggageTruck" 
+                               Width="50" Height="30" 
+                               Canvas.Left="400" Canvas.Top="320" 
+                               Fill="Purple" 
+                               Stroke="{DynamicResource EFBPrimaryBorderBrush}" 
+                               StrokeThickness="2"
+                               Visibility="{Binding BaggageTruckPresent, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                </Canvas>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

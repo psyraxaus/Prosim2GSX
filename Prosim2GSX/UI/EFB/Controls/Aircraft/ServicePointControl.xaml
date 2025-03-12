@@ -1,0 +1,91 @@
+<UserControl x:Class="Prosim2GSX.UI.EFB.Controls.Aircraft.ServicePointControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Prosim2GSX.UI.EFB.Controls.Aircraft"
+             mc:Ignorable="d" 
+             d:DesignHeight="80" d:DesignWidth="80">
+    <UserControl.Resources>
+        <Storyboard x:Key="ConnectAnimation">
+            <DoubleAnimation Storyboard.TargetName="ConnectorPath" 
+                             Storyboard.TargetProperty="Opacity"
+                             From="0" To="1" Duration="0:0:0.3"/>
+            <ColorAnimation Storyboard.TargetName="ServicePointCircle" 
+                            Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
+                            To="{Binding ConnectedColor, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                            Duration="0:0:0.3"/>
+            <DoubleAnimation Storyboard.TargetName="PulseCircle" 
+                             Storyboard.TargetProperty="Opacity"
+                             From="0" To="0.7" Duration="0:0:0.3"
+                             AutoReverse="True" RepeatBehavior="Forever"/>
+        </Storyboard>
+        <Storyboard x:Key="DisconnectAnimation">
+            <DoubleAnimation Storyboard.TargetName="ConnectorPath" 
+                             Storyboard.TargetProperty="Opacity"
+                             From="1" To="0" Duration="0:0:0.3"/>
+            <ColorAnimation Storyboard.TargetName="ServicePointCircle" 
+                            Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
+                            To="{Binding DisconnectedColor, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                            Duration="0:0:0.3"/>
+            <DoubleAnimation Storyboard.TargetName="PulseCircle" 
+                             Storyboard.TargetProperty="Opacity"
+                             To="0" Duration="0:0:0.1"/>
+        </Storyboard>
+    </UserControl.Resources>
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Service Point Visualization -->
+        <Canvas Grid.Row="0" Width="80" Height="60">
+            <!-- Pulse Circle (for active state) -->
+            <Ellipse x:Name="PulseCircle" 
+                     Width="40" Height="40" 
+                     Canvas.Left="20" Canvas.Top="10"
+                     Fill="{DynamicResource EFBAccentBrush}" 
+                     Opacity="0"/>
+            
+            <!-- Service Point Circle -->
+            <Ellipse x:Name="ServicePointCircle" 
+                     Width="30" Height="30" 
+                     Canvas.Left="25" Canvas.Top="15"
+                     Fill="{DynamicResource EFBSecondaryBackgroundBrush}"
+                     Stroke="{DynamicResource EFBPrimaryBorderBrush}" 
+                     StrokeThickness="2"/>
+            
+            <!-- Service Point Icon -->
+            <ContentPresenter x:Name="IconPresenter" 
+                              Width="20" Height="20" 
+                              Canvas.Left="30" Canvas.Top="20"
+                              Content="{Binding Icon, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+            
+            <!-- Connector Path (visible when connected) -->
+            <Path x:Name="ConnectorPath" 
+                  Data="M 40,45 L 40,60" 
+                  Stroke="{DynamicResource EFBAccentBrush}" 
+                  StrokeThickness="3"
+                  StrokeDashArray="2,1"
+                  Opacity="0"/>
+            
+            <!-- Highlight when mouse is over -->
+            <Ellipse x:Name="HighlightOverlay" 
+                     Width="30" Height="30" 
+                     Canvas.Left="25" Canvas.Top="15"
+                     Fill="{DynamicResource EFBHighlightBrush}" 
+                     Opacity="0"/>
+        </Canvas>
+        
+        <!-- Service Point Label -->
+        <TextBlock Grid.Row="1" 
+                   x:Name="ServicePointLabel" 
+                   Text="{Binding ServicePointName, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                   HorizontalAlignment="Center" 
+                   Margin="0,5,0,0"
+                   Foreground="{DynamicResource EFBPrimaryTextBrush}"
+                   FontSize="12"/>
+    </Grid>
+</UserControl>
