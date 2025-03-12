@@ -80,6 +80,14 @@ Additionally, a critical issue with the catering door opening prematurely has be
 
 ## Recent Changes
 
+### Development Environment Updates (March 2025)
+
+1. **Terminal Change: PowerShell to Git CMD**
+   - ✅ Updated shell preferences from PowerShell to Git CMD
+   - ✅ Created git-cmd-commands.md reference document
+   - ✅ Updated .clinerules to reflect the change
+   - ✅ Standardized command syntax to use Windows/CMD conventions
+
 ### EFB UI Implementation (March 2025)
 
 1. **Phase 6: Optimization and Polish Implementation**

@@ -100,13 +100,13 @@
    - Version control system
    - Used for source code management
 
-3. **PowerShell**
+3. **Git CMD**
    - Preferred shell for terminal commands
    - Used for build scripts and automation
-   - Commands prefixed with "powershell -Command" when executing
-   - All commands use Windows/PowerShell syntax (not Linux/Mac)
+   - All commands use Windows command prompt syntax
    - File paths use Windows conventions with backslashes (C:\path\to\file)
-   - PowerShell cmdlets preferred over legacy cmd.exe commands
+   - Batch file commands and syntax used for scripts
+   - Environment variables use %VARIABLE% syntax
 
 4. **Blend for Visual Studio (Planned)**
    - Advanced XAML design

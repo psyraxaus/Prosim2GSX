@@ -113,10 +113,10 @@
 ## Development Environment
 
 1. **Shell Preferences**
-   - Use PowerShell for all terminal commands
-   - Prefix commands with "powershell -Command" when executing
-   - Use PowerShell conventions for path handling and command syntax
-   - Prefer PowerShell cmdlets over legacy cmd.exe commands
+   - Use Git CMD for all terminal commands
+   - Use Windows command prompt syntax for commands
+   - Use Windows conventions for path handling and command syntax
+   - Use batch file commands and syntax for scripts
 
 ## Version Control
 
