@@ -6,7 +6,7 @@ namespace Prosim2GSX.Services.EventArgs
     /// <summary>
     /// Event arguments for flight phase changes.
     /// </summary>
-    public class FlightPhaseChangedEventArgs : System.EventArgs
+    public class FlightPhaseChangedEventArgs : BaseEventArgs
     {
         /// <summary>
         /// Gets the previous flight phase.
@@ -17,11 +17,6 @@ namespace Prosim2GSX.Services.EventArgs
         /// Gets the new flight phase.
         /// </summary>
         public FlightPhaseIndicator.FlightPhase NewPhase { get; }
-
-        /// <summary>
-        /// Gets the timestamp when the phase change occurred.
-        /// </summary>
-        public DateTime Timestamp { get; }
 
         /// <summary>
         /// Gets the duration spent in the previous phase.
@@ -47,10 +42,10 @@ namespace Prosim2GSX.Services.EventArgs
             DateTime timestamp,
             TimeSpan previousPhaseDuration,
             string reason = null)
+            : base() // Call the base constructor
         {
             PreviousPhase = previousPhase;
             NewPhase = newPhase;
-            Timestamp = timestamp;
             PreviousPhaseDuration = previousPhaseDuration;
             Reason = reason;
         }

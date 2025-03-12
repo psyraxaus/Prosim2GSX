@@ -12,6 +12,26 @@ namespace Prosim2GSX.UI.EFB.Controls
     /// </summary>
     public partial class FlightPhaseIndicator : UserControl, INotifyPropertyChanged
     {
+        /// <summary>
+        /// Identifies the CurrentPhase dependency property.
+        /// </summary>
+        public static readonly DependencyProperty CurrentPhaseProperty =
+            DependencyProperty.Register(
+                nameof(CurrentPhase),
+                typeof(FlightPhase),
+                typeof(FlightPhaseIndicator),
+                new PropertyMetadata(FlightPhase.Preflight, OnCurrentPhaseChanged));
+
+        private static void OnCurrentPhaseChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is FlightPhaseIndicator control)
+            {
+                control._currentPhase = (FlightPhase)e.NewValue;
+                control.UpdatePhaseIndicator();
+                control.OnPropertyChanged(nameof(CurrentPhaseText));
+            }
+        }
+
         private readonly IFlightPhaseService _flightPhaseService;
         private readonly IEventAggregator _eventAggregator;
         
@@ -26,6 +46,15 @@ namespace Prosim2GSX.UI.EFB.Controls
         /// </summary>
         public event PropertyChangedEventHandler PropertyChanged;
         
+        /// <summary>
+        /// Gets or sets the current flight phase.
+        /// </summary>
+        public FlightPhase CurrentPhase
+        {
+            get => (FlightPhase)GetValue(CurrentPhaseProperty);
+            set => SetValue(CurrentPhaseProperty, value);
+        }
+
         /// <summary>
         /// Gets the current phase text.
         /// </summary>
@@ -56,6 +85,15 @@ namespace Prosim2GSX.UI.EFB.Controls
         /// <summary>
         /// Initializes a new instance of the <see cref="FlightPhaseIndicator"/> class.
         /// </summary>
+        public FlightPhaseIndicator()
+        {
+            InitializeComponent();
+            DataContext = this;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FlightPhaseIndicator"/> class.
+        /// </summary>
         /// <param name="flightPhaseService">The flight phase service.</param>
         /// <param name="eventAggregator">The event aggregator.</param>
         public FlightPhaseIndicator(IFlightPhaseService flightPhaseService, IEventAggregator eventAggregator)
@@ -73,6 +111,7 @@ namespace Prosim2GSX.UI.EFB.Controls
             
             // Initialize with current phase
             _currentPhase = _flightPhaseService.CurrentPhase;
+            CurrentPhase = _currentPhase;
             _predictedNextPhase = _flightPhaseService.PredictedNextPhase;
             _timeInPhase = _flightPhaseService.TimeInCurrentPhase;
             _predictionConfidence = _flightPhaseService.PredictionConfidence;
@@ -93,6 +132,7 @@ namespace Prosim2GSX.UI.EFB.Controls
         {
             // Update current phase
             _currentPhase = e.NewPhase;
+            CurrentPhase = e.NewPhase;
             _timeInPhase = TimeSpan.Zero;
             
             // Update UI

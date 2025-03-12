@@ -16,7 +16,9 @@ namespace Prosim2GSX.Services
         private readonly ServiceModel _model;
         private readonly MobiSimConnect _simConnect;
 
+        private bool _isForwardLeftDoorOpen;
         private bool _isForwardRightDoorOpen;
+        private bool _isAftLeftDoorOpen;
         private bool _isAftRightDoorOpen;
         private bool _isForwardCargoDoorOpen;
         private bool _isAftCargoDoorOpen;
@@ -36,10 +38,20 @@ namespace Prosim2GSX.Services
             new Dictionary<DoorType, (DateTime, int)>();
 
         /// <summary>
+        /// Gets a value indicating whether the forward left door is open
+        /// </summary>
+        public bool IsForwardLeftDoorOpen => _isForwardLeftDoorOpen;
+        
+        /// <summary>
         /// Gets a value indicating whether the forward right door is open
         /// </summary>
         public bool IsForwardRightDoorOpen => _isForwardRightDoorOpen;
 
+        /// <summary>
+        /// Gets a value indicating whether the aft left door is open
+        /// </summary>
+        public bool IsAftLeftDoorOpen => _isAftLeftDoorOpen;
+        
         /// <summary>
         /// Gets a value indicating whether the aft right door is open
         /// </summary>
@@ -123,7 +135,9 @@ namespace Prosim2GSX.Services
                 _simConnect.SubscribeLvar("FSDT_GSX_DEBOARDING_CARGO_PERCENT");
 
                 // Initialize door states to closed
+                _isForwardLeftDoorOpen = false;
                 _isForwardRightDoorOpen = false;
+                _isAftLeftDoorOpen = false;
                 _isAftRightDoorOpen = false;
                 _isForwardCargoDoorOpen = false;
                 _isAftCargoDoorOpen = false;
@@ -135,13 +149,17 @@ namespace Prosim2GSX.Services
                 _isAftCargoServiceActive = false;
 
                 // Ensure ProSim knows the doors are closed
+                _prosimDoorService.SetForwardLeftDoor(false);
                 _prosimDoorService.SetForwardRightDoor(false);
+                _prosimDoorService.SetAftLeftDoor(false);
                 _prosimDoorService.SetAftRightDoor(false);
                 _prosimDoorService.SetForwardCargoDoor(false);
                 _prosimDoorService.SetAftCargoDoor(false);
 
                 Logger.Log(LogLevel.Information, "GSXDoorManager:Initialize", 
-                    $"Initial door states - ForwardRight: {_isForwardRightDoorOpen}, " +
+                    $"Initial door states - ForwardLeft: {_isForwardLeftDoorOpen}, " +
+                    $"ForwardRight: {_isForwardRightDoorOpen}, " +
+                    $"AftLeft: {_isAftLeftDoorOpen}, " +
                     $"AftRight: {_isAftRightDoorOpen}, " +
                     $"ForwardCargo: {_isForwardCargoDoorOpen}, " +
                     $"AftCargo: {_isAftCargoDoorOpen}");
@@ -723,9 +741,17 @@ namespace Prosim2GSX.Services
             {
                 switch (doorType)
                 {
+                    case DoorType.ForwardLeft:
+                        stateChanged = _isForwardLeftDoorOpen != isOpen;
+                        _isForwardLeftDoorOpen = isOpen;
+                        break;
                     case DoorType.ForwardRight:
                         stateChanged = _isForwardRightDoorOpen != isOpen;
                         _isForwardRightDoorOpen = isOpen;
+                        break;
+                    case DoorType.AftLeft:
+                        stateChanged = _isAftLeftDoorOpen != isOpen;
+                        _isAftLeftDoorOpen = isOpen;
                         break;
                     case DoorType.AftRight:
                         stateChanged = _isAftRightDoorOpen != isOpen;

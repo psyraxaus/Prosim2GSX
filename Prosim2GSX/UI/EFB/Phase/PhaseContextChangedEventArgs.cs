@@ -1,4 +1,5 @@
 using System;
+using Prosim2GSX.Services;
 using Prosim2GSX.UI.EFB.Controls;
 
 namespace Prosim2GSX.UI.EFB.Phase
@@ -6,7 +7,7 @@ namespace Prosim2GSX.UI.EFB.Phase
     /// <summary>
     /// Event arguments for phase context changes.
     /// </summary>
-    public class PhaseContextChangedEventArgs : EventArgs
+    public class PhaseContextChangedEventArgs : BaseEventArgs
     {
         /// <summary>
         /// Gets the previous phase.
@@ -29,11 +30,6 @@ namespace Prosim2GSX.UI.EFB.Phase
         public PhaseContext NewContext { get; }
         
         /// <summary>
-        /// Gets the timestamp when the context change occurred.
-        /// </summary>
-        public DateTime Timestamp { get; }
-        
-        /// <summary>
         /// Initializes a new instance of the <see cref="PhaseContextChangedEventArgs"/> class.
         /// </summary>
         /// <param name="previousPhase">The previous phase.</param>
@@ -47,12 +43,13 @@ namespace Prosim2GSX.UI.EFB.Phase
             PhaseContext previousContext,
             PhaseContext newContext,
             DateTime timestamp)
+            : base() // Call the base constructor
         {
             PreviousPhase = previousPhase;
             NewPhase = newPhase;
             PreviousContext = previousContext;
             NewContext = newContext;
-            Timestamp = timestamp;
+            // Timestamp is already set by the base constructor
         }
     }
 }

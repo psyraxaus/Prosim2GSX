@@ -275,25 +275,47 @@ namespace Prosim2GSX.UI.EFB.Notifications
                 throw new ArgumentNullException(nameof(context));
                 
             // Show notifications for the phase context
-            foreach (var notification in context.Notifications)
+            foreach (var phaseNotification in context.Notifications)
             {
+                // Map the Phase.NotificationType to Notifications.NotificationType
+                Phase.NotificationType phaseType = phaseNotification.Type;
+                NotificationType notificationType = MapNotificationType(phaseType);
+                
                 // Register the notification if it doesn't exist
-                if (!_notifications.ContainsKey(notification.Id))
+                if (!_notifications.ContainsKey(phaseNotification.Id))
                 {
-                    RegisterNotification(notification.Id, notification.Type, notification.Message, notification.Action);
+                    RegisterNotification(phaseNotification.Id, notificationType, phaseNotification.Message, phaseNotification.Action);
                 }
                 
                 // Show the notification
-                ShowNotification(notification.Id);
+                ShowNotification(phaseNotification.Id);
                 
                 // Set auto-dismiss if specified
-                if (notification.DismissAfter.HasValue)
+                if (phaseNotification.DismissAfter.HasValue)
                 {
-                    var autoDismissAt = DateTime.Now.Add(notification.DismissAfter.Value);
-                    var registeredNotification = _notifications[notification.Id];
+                    var autoDismissAt = DateTime.Now.Add(phaseNotification.DismissAfter.Value);
+                    var registeredNotification = _notifications[phaseNotification.Id];
                     registeredNotification.AutoDismissAt = autoDismissAt;
                 }
             }
+        }
+        
+        /// <summary>
+        /// Maps a Phase.NotificationType to a Notifications.NotificationType
+        /// </summary>
+        /// <param name="phaseType">The Phase.NotificationType to map</param>
+        /// <returns>The corresponding Notifications.NotificationType</returns>
+        private NotificationType MapNotificationType(Phase.NotificationType phaseType)
+        {
+            return phaseType switch
+            {
+                Phase.NotificationType.Info => NotificationType.Information,
+                Phase.NotificationType.Warning => NotificationType.Warning,
+                Phase.NotificationType.Action => NotificationType.Information, // Map Action to Information
+                Phase.NotificationType.Success => NotificationType.Success,
+                Phase.NotificationType.Error => NotificationType.Error,
+                _ => NotificationType.Information
+            };
         }
         
         private void OnPhaseContextChanged(object sender, PhaseContextChangedEventArgs e)

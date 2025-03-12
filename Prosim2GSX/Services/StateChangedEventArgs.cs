@@ -18,14 +18,21 @@ public class StateChangedEventArgs : BaseEventArgs
         public FlightState NewState { get; }
         
         /// <summary>
+        /// Gets the reason for the state change
+        /// </summary>
+        public string Reason { get; }
+        
+        /// <summary>
         /// Initializes a new instance of the StateChangedEventArgs class
         /// </summary>
         /// <param name="previousState">The previous state</param>
         /// <param name="newState">The new state</param>
-        public StateChangedEventArgs(FlightState previousState, FlightState newState)
+        /// <param name="reason">The reason for the state change</param>
+        public StateChangedEventArgs(FlightState previousState, FlightState newState, string reason = null)
         {
             PreviousState = previousState;
             NewState = newState;
+            Reason = reason ?? "State changed";
         }
     }
     

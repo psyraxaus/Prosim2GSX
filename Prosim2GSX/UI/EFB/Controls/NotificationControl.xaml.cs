@@ -4,6 +4,8 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 using Prosim2GSX.UI.EFB.Notifications;
+// Using alias to avoid ambiguity
+using PhaseNS = Prosim2GSX.UI.EFB.Phase;
 
 namespace Prosim2GSX.UI.EFB.Controls
 {
@@ -69,19 +71,19 @@ namespace Prosim2GSX.UI.EFB.Controls
         /// <returns>A background brush for the specified NotificationType.</returns>
         public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
         {
-            if (value is NotificationType type)
+            if (value is Notifications.NotificationType type)
             {
                 switch (type)
                 {
-                    case NotificationType.Info:
+                    case Notifications.NotificationType.Info:
                         return new SolidColorBrush(Color.FromRgb(0x1E, 0x88, 0xE5)); // Blue
-                    case NotificationType.Warning:
+                    case Notifications.NotificationType.Warning:
                         return new SolidColorBrush(Color.FromRgb(0xFF, 0xA0, 0x00)); // Amber
-                    case NotificationType.Action:
+                    case Notifications.NotificationType.Action:
                         return new SolidColorBrush(Color.FromRgb(0x7C, 0xB3, 0x42)); // Green
-                    case NotificationType.Success:
+                    case Notifications.NotificationType.Success:
                         return new SolidColorBrush(Color.FromRgb(0x43, 0xA0, 0x47)); // Green
-                    case NotificationType.Error:
+                    case Notifications.NotificationType.Error:
                         return new SolidColorBrush(Color.FromRgb(0xE5, 0x39, 0x35)); // Red
                     default:
                         return new SolidColorBrush(Color.FromRgb(0x42, 0x42, 0x42)); // Grey
@@ -120,19 +122,19 @@ namespace Prosim2GSX.UI.EFB.Controls
         /// <returns>An icon for the specified NotificationType.</returns>
         public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
         {
-            if (value is NotificationType type)
+            if (value is Notifications.NotificationType type)
             {
                 switch (type)
                 {
-                    case NotificationType.Info:
+                    case Notifications.NotificationType.Info:
                         return "\uE946"; // Info
-                    case NotificationType.Warning:
+                    case Notifications.NotificationType.Warning:
                         return "\uE7BA"; // Warning
-                    case NotificationType.Action:
+                    case Notifications.NotificationType.Action:
                         return "\uE8FB"; // Action
-                    case NotificationType.Success:
+                    case Notifications.NotificationType.Success:
                         return "\uE930"; // Success
-                    case NotificationType.Error:
+                    case Notifications.NotificationType.Error:
                         return "\uE783"; // Error
                     default:
                         return "\uE946"; // Info

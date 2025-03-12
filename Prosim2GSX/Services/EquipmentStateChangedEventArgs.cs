@@ -23,9 +23,14 @@ namespace Prosim2GSX.Services
         Chocks,
         
         /// <summary>
-        /// Jetway/Stairs
+        /// Jetway
         /// </summary>
-        Jetway
+        Jetway,
+        
+        /// <summary>
+        /// Stairs
+        /// </summary>
+        Stairs
     }
 
     /// <summary>
@@ -80,6 +85,8 @@ namespace Prosim2GSX.Services
                 "GPU" => EquipmentType.GPU,
                 "PCA" => EquipmentType.PCA,
                 "Chocks" => EquipmentType.Chocks,
+                "Jetway" => EquipmentType.Jetway,
+                "Stairs" => EquipmentType.Stairs,
                 _ => throw new ArgumentException($"Unknown equipment name: {equipmentName}", nameof(equipmentName))
             };
             IsConnected = isEnabled;

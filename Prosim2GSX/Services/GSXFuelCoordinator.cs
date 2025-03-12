@@ -64,6 +64,11 @@ namespace Prosim2GSX.Services
         public int RefuelingProgressPercentage => _progressTracker.ProgressPercentage;
         
         /// <summary>
+        /// Gets a value indicating whether refueling is in progress
+        /// </summary>
+        public bool IsRefuelingInProgress => _refuelingStateManager.State == RefuelingState.Refueling;
+        
+        /// <summary>
         /// Gets the fuel rate in kg/s
         /// </summary>
         public float FuelRateKGS => _prosimFuelService.GetFuelRateKGS();
@@ -244,6 +249,15 @@ namespace Prosim2GSX.Services
                 _refuelingStateManager.TransitionTo(RefuelingState.Error);
                 return false;
             }
+        }
+        
+        /// <summary>
+        /// Gets the current refueling progress
+        /// </summary>
+        /// <returns>The refueling progress percentage (0-100)</returns>
+        public int GetRefuelingProgress()
+        {
+            return RefuelingProgressPercentage;
         }
         
         /// <summary>

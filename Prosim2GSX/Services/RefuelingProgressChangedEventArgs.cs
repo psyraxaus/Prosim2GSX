@@ -13,6 +13,11 @@ public class RefuelingProgressChangedEventArgs : BaseEventArgs
         public int ProgressPercentage { get; }
         
         /// <summary>
+        /// Gets the progress (0-100) - Alias for ProgressPercentage
+        /// </summary>
+        public int Progress => ProgressPercentage;
+        
+        /// <summary>
         /// Gets the current fuel amount
         /// </summary>
         public double CurrentAmount { get; }

@@ -2,7 +2,6 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using Prosim2GSX.UI.EFB.ViewModels.Aircraft;
-using Prosim2GSX.UI.EFB.Navigation;
 using Prosim2GSX.Services;
 
 namespace Prosim2GSX.UI.EFB.Views.Aircraft
@@ -10,7 +9,7 @@ namespace Prosim2GSX.UI.EFB.Views.Aircraft
     /// <summary>
     /// Interaction logic for AircraftPage.xaml
     /// </summary>
-    public partial class AircraftPage : Page, IEFBPage
+    public partial class AircraftPage : Page
     {
         private readonly AircraftViewModel _viewModel;
         private readonly IEventAggregator _eventAggregator;
@@ -42,23 +41,50 @@ namespace Prosim2GSX.UI.EFB.Views.Aircraft
             _eventAggregator.Subscribe<FuelStateChangedEventArgs>(OnFuelStateChanged);
         }
 
-        #region IEFBPage Implementation
-
-        public string PageTitle => "Aircraft";
-
-        public void OnNavigatedTo(object parameter)
+        /// <summary>
+        /// Called when the page is navigated to.
+        /// </summary>
+        public void OnNavigatedTo()
         {
             // Update the view model when navigated to
             _viewModel.InitializeState();
         }
 
+        /// <summary>
+        /// Called when the page is navigated from.
+        /// </summary>
         public void OnNavigatedFrom()
         {
             // Clean up when navigated away from
             _viewModel.Cleanup();
         }
-
-        #endregion
+        
+        /// <summary>
+        /// Called when the page is activated.
+        /// </summary>
+        public void OnActivated()
+        {
+            // Handle activation
+            _viewModel.InitializeState();
+        }
+        
+        /// <summary>
+        /// Called when the page is deactivated.
+        /// </summary>
+        public void OnDeactivated()
+        {
+            // Handle deactivation
+            _viewModel.Cleanup();
+        }
+        
+        /// <summary>
+        /// Called when the page is refreshed.
+        /// </summary>
+        public void OnRefresh()
+        {
+            // Refresh the page
+            _viewModel.InitializeState();
+        }
 
         #region Event Handlers
 

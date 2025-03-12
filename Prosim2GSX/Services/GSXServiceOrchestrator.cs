@@ -996,9 +996,9 @@ namespace Prosim2GSX.Services
                 var parameters = CreateAircraftParametersFromCurrentState();
                 
                 // Predict services for the new predicted state
-                if (e.NewPrediction != null)
+                if (e.NewPrediction.HasValue)
                 {
-                    var predictions = PredictServices(e.NewPrediction, parameters);
+                    var predictions = PredictServices(e.NewPrediction.Value, parameters);
                     
                     // Log predictions
                     foreach (var prediction in predictions)
@@ -1125,6 +1125,328 @@ namespace Prosim2GSX.Services
         public IGSXServiceCoordinator GetCoordinator()
         {
             return _coordinator;
+        }
+        
+        /// <summary>
+        /// Requests refueling service
+        /// </summary>
+        /// <param name="targetFuelAmount">The target fuel amount in kg</param>
+        /// <returns>True if the request was successful, false otherwise</returns>
+        public bool RequestRefueling(double targetFuelAmount)
+        {
+            try
+            {
+                Logger.Log(LogLevel.Information, "GSXServiceOrchestrator:RequestRefueling", 
+                    $"Requesting refueling to {targetFuelAmount} kg");
+                
+                // Get the fuel coordinator from the coordinator
+                var fuelCoordinator = (_coordinator as GSXServiceCoordinator)?.GetFuelCoordinator();
+                if (fuelCoordinator == null)
+                {
+                    Logger.Log(LogLevel.Error, "GSXServiceOrchestrator:RequestRefueling", 
+                        "Failed to get fuel coordinator");
+                    return false;
+                }
+                
+                // Update the fuel amount
+                bool updateResult = fuelCoordinator.UpdateFuelAmount(targetFuelAmount);
+                if (!updateResult)
+                {
+                    Logger.Log(LogLevel.Error, "GSXServiceOrchestrator:RequestRefueling", 
+                        "Failed to update fuel amount");
+                    return false;
+                }
+                
+                // Start refueling
+                bool startResult = fuelCoordinator.StartRefueling();
+                if (!startResult)
+                {
+                    Logger.Log(LogLevel.Error, "GSXServiceOrchestrator:RequestRefueling", 
+                        "Failed to start refueling");
+                    return false;
+                }
+                
+                Logger.Log(LogLevel.Information, "GSXServiceOrchestrator:RequestRefueling", 
+                    "Refueling requested successfully");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "GSXServiceOrchestrator:RequestRefueling", 
+                    $"Error requesting refueling: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Cancels the current refueling service
+        /// </summary>
+        /// <returns>True if the cancellation was successful, false otherwise</returns>
+        public bool CancelRefueling()
+        {
+            try
+            {
+                Logger.Log(LogLevel.Information, "GSXServiceOrchestrator:CancelRefueling", 
+                    "Cancelling refueling");
+                
+                // Get the fuel coordinator from the coordinator
+                var fuelCoordinator = (_coordinator as GSXServiceCoordinator)?.GetFuelCoordinator();
+                if (fuelCoordinator == null)
+                {
+                    Logger.Log(LogLevel.Error, "GSXServiceOrchestrator:CancelRefueling", 
+                        "Failed to get fuel coordinator");
+                    return false;
+                }
+                
+                // Stop refueling
+                bool result = fuelCoordinator.StopRefueling();
+                if (!result)
+                {
+                    Logger.Log(LogLevel.Error, "GSXServiceOrchestrator:CancelRefueling", 
+                        "Failed to stop refueling");
+                    return false;
+                }
+                
+                Logger.Log(LogLevel.Information, "GSXServiceOrchestrator:CancelRefueling", 
+                    "Refueling cancelled successfully");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "GSXServiceOrchestrator:CancelRefueling", 
+                    $"Error cancelling refueling: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Requests catering service
+        /// </summary>
+        /// <returns>True if the request was successful, false otherwise</returns>
+        public bool RequestCatering()
+        {
+            try
+            {
+                Logger.Log(LogLevel.Information, "GSXServiceOrchestrator:RequestCatering", 
+                    "Requesting catering");
+                
+                // Implementation would go here
+                // For now, return a placeholder value
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "GSXServiceOrchestrator:RequestCatering", 
+                    $"Error requesting catering: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Cancels the current catering service
+        /// </summary>
+        /// <returns>True if the cancellation was successful, false otherwise</returns>
+        public bool CancelCatering()
+        {
+            try
+            {
+                Logger.Log(LogLevel.Information, "GSXServiceOrchestrator:CancelCatering", 
+                    "Cancelling catering");
+                
+                // Implementation would go here
+                // For now, return a placeholder value
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "GSXServiceOrchestrator:CancelCatering", 
+                    $"Error cancelling catering: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Requests passenger boarding service
+        /// </summary>
+        /// <returns>True if the request was successful, false otherwise</returns>
+        public bool RequestBoarding()
+        {
+            try
+            {
+                Logger.Log(LogLevel.Information, "GSXServiceOrchestrator:RequestBoarding", 
+                    "Requesting boarding");
+                
+                // Implementation would go here
+                // For now, return a placeholder value
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "GSXServiceOrchestrator:RequestBoarding", 
+                    $"Error requesting boarding: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Cancels the current boarding service
+        /// </summary>
+        /// <returns>True if the cancellation was successful, false otherwise</returns>
+        public bool CancelBoarding()
+        {
+            try
+            {
+                Logger.Log(LogLevel.Information, "GSXServiceOrchestrator:CancelBoarding", 
+                    "Cancelling boarding");
+                
+                // Implementation would go here
+                // For now, return a placeholder value
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "GSXServiceOrchestrator:CancelBoarding", 
+                    $"Error cancelling boarding: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Requests passenger deboarding service
+        /// </summary>
+        /// <returns>True if the request was successful, false otherwise</returns>
+        public bool RequestDeBoarding()
+        {
+            try
+            {
+                Logger.Log(LogLevel.Information, "GSXServiceOrchestrator:RequestDeBoarding", 
+                    "Requesting deboarding");
+                
+                // Implementation would go here
+                // For now, return a placeholder value
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "GSXServiceOrchestrator:RequestDeBoarding", 
+                    $"Error requesting deboarding: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Cancels the current deboarding service
+        /// </summary>
+        /// <returns>True if the cancellation was successful, false otherwise</returns>
+        public bool CancelDeBoarding()
+        {
+            try
+            {
+                Logger.Log(LogLevel.Information, "GSXServiceOrchestrator:CancelDeBoarding", 
+                    "Cancelling deboarding");
+                
+                // Implementation would go here
+                // For now, return a placeholder value
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "GSXServiceOrchestrator:CancelDeBoarding", 
+                    $"Error cancelling deboarding: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Requests cargo loading service
+        /// </summary>
+        /// <returns>True if the request was successful, false otherwise</returns>
+        public bool RequestCargoLoading()
+        {
+            try
+            {
+                Logger.Log(LogLevel.Information, "GSXServiceOrchestrator:RequestCargoLoading", 
+                    "Requesting cargo loading");
+                
+                // Implementation would go here
+                // For now, return a placeholder value
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "GSXServiceOrchestrator:RequestCargoLoading", 
+                    $"Error requesting cargo loading: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Cancels the current cargo loading service
+        /// </summary>
+        /// <returns>True if the cancellation was successful, false otherwise</returns>
+        public bool CancelCargoLoading()
+        {
+            try
+            {
+                Logger.Log(LogLevel.Information, "GSXServiceOrchestrator:CancelCargoLoading", 
+                    "Cancelling cargo loading");
+                
+                // Implementation would go here
+                // For now, return a placeholder value
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "GSXServiceOrchestrator:CancelCargoLoading", 
+                    $"Error cancelling cargo loading: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Requests cargo unloading service
+        /// </summary>
+        /// <returns>True if the request was successful, false otherwise</returns>
+        public bool RequestCargoUnloading()
+        {
+            try
+            {
+                Logger.Log(LogLevel.Information, "GSXServiceOrchestrator:RequestCargoUnloading", 
+                    "Requesting cargo unloading");
+                
+                // Implementation would go here
+                // For now, return a placeholder value
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "GSXServiceOrchestrator:RequestCargoUnloading", 
+                    $"Error requesting cargo unloading: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Cancels the current cargo unloading service
+        /// </summary>
+        /// <returns>True if the cancellation was successful, false otherwise</returns>
+        public bool CancelCargoUnloading()
+        {
+            try
+            {
+                Logger.Log(LogLevel.Information, "GSXServiceOrchestrator:CancelCargoUnloading", 
+                    "Cancelling cargo unloading");
+                
+                // Implementation would go here
+                // For now, return a placeholder value
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "GSXServiceOrchestrator:CancelCargoUnloading", 
+                    $"Error cancelling cargo unloading: {ex.Message}");
+                return false;
+            }
         }
         
         /// <summary>

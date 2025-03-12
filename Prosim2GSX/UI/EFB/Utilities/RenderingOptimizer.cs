@@ -21,7 +21,22 @@ namespace Prosim2GSX.UI.EFB.Utilities
                 throw new ArgumentNullException(nameof(element));
 
             RenderOptions.SetBitmapScalingMode(element, BitmapScalingMode.HighQuality);
-            RenderOptions.SetCachingHint(element, cachingHint);
+            // Map our custom BitmapCachingHint to RenderOptions.CachingHint
+            CachingHint renderCachingHint;
+            switch (cachingHint)
+            {
+                case BitmapCachingHint.Speed:
+                    renderCachingHint = CachingHint.Unspecified; // Changed from Speed to Unspecified
+                    break;
+                case BitmapCachingHint.Quality:
+                    renderCachingHint = CachingHint.Unspecified; // Changed from Quality to Unspecified
+                    break;
+                default:
+                    renderCachingHint = CachingHint.Unspecified;
+                    break;
+            }
+            
+            RenderOptions.SetCachingHint(element, renderCachingHint);
             RenderOptions.SetCacheInvalidationThresholdMinimum(element, 0.5);
             RenderOptions.SetCacheInvalidationThresholdMaximum(element, 2.0);
             

@@ -167,7 +167,7 @@ namespace Prosim2GSX.UI.EFB
             // Aircraft page
             _windowManager.RegisterPage(
                 "Aircraft",
-                typeof(Views.Aircraft.AircraftPage), // Actual page type
+                typeof(Views.Aircraft.AircraftPageAdapter), // Use the adapter instead of the page directly
                 "Aircraft",
                 "\uE709"); // Aircraft icon
             

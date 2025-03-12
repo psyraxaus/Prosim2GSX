@@ -237,7 +237,7 @@ namespace Prosim2GSX.Services
             RecordPhaseDuration(previousPhase, previousPhaseDuration);
             
             // Raise event
-            OnPhaseChanged(previousPhase, newPhase, timestamp, previousPhaseDuration, e.Reason);
+            OnPhaseChanged(previousPhase, newPhase, timestamp, previousPhaseDuration, "State changed");
             
             // Update prediction
             PredictNextPhase();
@@ -248,7 +248,7 @@ namespace Prosim2GSX.Services
         
         private void OnPredictedStateChanged(object sender, PredictedStateChangedEventArgs e)
         {
-            if (!e.NewPrediction.HasValue)
+            if (e.NewPrediction == null)
                 return;
                 
             var previousPrediction = _predictedNextPhase;

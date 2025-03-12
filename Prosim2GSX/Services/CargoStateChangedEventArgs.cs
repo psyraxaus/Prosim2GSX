@@ -23,16 +23,51 @@ namespace Prosim2GSX.Services
         public int PlannedAmount { get; }
         
         /// <summary>
+        /// Gets a value indicating whether cargo loading is in progress
+        /// </summary>
+        public bool IsLoadingInProgress { get; }
+        
+        /// <summary>
+        /// Gets the loading progress percentage (0-100)
+        /// </summary>
+        public int LoadingProgress { get; }
+        
+        /// <summary>
+        /// Gets a value indicating whether cargo unloading is in progress
+        /// </summary>
+        public bool IsUnloadingInProgress { get; }
+        
+        /// <summary>
+        /// Gets the unloading progress percentage (0-100)
+        /// </summary>
+        public int UnloadingProgress { get; }
+        
+        /// <summary>
         /// Initializes a new instance of the <see cref="CargoStateChangedEventArgs"/> class
         /// </summary>
         /// <param name="operationType">The type of operation that caused the state change</param>
         /// <param name="currentPercentage">The current cargo percentage</param>
         /// <param name="plannedAmount">The planned cargo amount</param>
-        public CargoStateChangedEventArgs(string operationType, int currentPercentage, int plannedAmount)
+        /// <param name="isLoadingInProgress">Whether cargo loading is in progress</param>
+        /// <param name="loadingProgress">The loading progress percentage</param>
+        /// <param name="isUnloadingInProgress">Whether cargo unloading is in progress</param>
+        /// <param name="unloadingProgress">The unloading progress percentage</param>
+        public CargoStateChangedEventArgs(
+            string operationType, 
+            int currentPercentage, 
+            int plannedAmount, 
+            bool isLoadingInProgress = false, 
+            int loadingProgress = 0, 
+            bool isUnloadingInProgress = false, 
+            int unloadingProgress = 0)
         {
             OperationType = operationType;
             CurrentPercentage = currentPercentage;
             PlannedAmount = plannedAmount;
+            IsLoadingInProgress = isLoadingInProgress;
+            LoadingProgress = loadingProgress;
+            IsUnloadingInProgress = isUnloadingInProgress;
+            UnloadingProgress = unloadingProgress;
         }
     }
 }

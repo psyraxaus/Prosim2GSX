@@ -16,6 +16,7 @@ namespace Prosim2GSX.Services
         private readonly IGSXLoadsheetManager loadsheetManager;
         private readonly IGSXDoorManager doorManager;
         private IGSXCargoCoordinator cargoCoordinator;
+        private IGSXFuelCoordinator fuelCoordinator;
         private readonly IAcarsService acarsService;
         
         // Service state variables
@@ -897,6 +898,25 @@ namespace Prosim2GSX.Services
         {
             this.cargoCoordinator = cargoCoordinator ?? throw new ArgumentNullException(nameof(cargoCoordinator));
             Logger.Log(LogLevel.Information, "GSXServiceCoordinator:SetCargoCoordinator", "Cargo coordinator set");
+        }
+        
+        /// <summary>
+        /// Sets the fuel coordinator after construction
+        /// </summary>
+        /// <param name="fuelCoordinator">The fuel coordinator to set</param>
+        public void SetFuelCoordinator(IGSXFuelCoordinator fuelCoordinator)
+        {
+            this.fuelCoordinator = fuelCoordinator ?? throw new ArgumentNullException(nameof(fuelCoordinator));
+            Logger.Log(LogLevel.Information, "GSXServiceCoordinator:SetFuelCoordinator", "Fuel coordinator set");
+        }
+        
+        /// <summary>
+        /// Gets the fuel coordinator instance
+        /// </summary>
+        /// <returns>The fuel coordinator instance</returns>
+        public IGSXFuelCoordinator GetFuelCoordinator()
+        {
+            return fuelCoordinator;
         }
     }
 }

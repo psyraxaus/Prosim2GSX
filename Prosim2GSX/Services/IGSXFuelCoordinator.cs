@@ -45,6 +45,11 @@ namespace Prosim2GSX.Services
         int RefuelingProgressPercentage { get; }
         
         /// <summary>
+        /// Gets a value indicating whether refueling is in progress
+        /// </summary>
+        bool IsRefuelingInProgress { get; }
+        
+        /// <summary>
         /// Gets the fuel rate in kg/s
         /// </summary>
         float FuelRateKGS { get; }
@@ -84,6 +89,12 @@ namespace Prosim2GSX.Services
         /// <param name="fuelAmount">The new fuel amount in kg</param>
         /// <returns>True if the fuel amount was updated successfully, false otherwise</returns>
         bool UpdateFuelAmount(double fuelAmount);
+        
+        /// <summary>
+        /// Gets the current refueling progress
+        /// </summary>
+        /// <returns>The refueling progress percentage (0-100)</returns>
+        int GetRefuelingProgress();
         
         /// <summary>
         /// Starts the refueling process asynchronously

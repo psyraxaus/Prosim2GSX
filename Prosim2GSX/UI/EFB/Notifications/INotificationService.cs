@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Prosim2GSX.Services;
 using Prosim2GSX.UI.EFB.Phase;
 
 namespace Prosim2GSX.UI.EFB.Notifications
@@ -106,7 +107,7 @@ namespace Prosim2GSX.UI.EFB.Notifications
     /// <summary>
     /// Event arguments for notification events.
     /// </summary>
-    public class NotificationEventArgs : EventArgs
+    public class NotificationEventArgs : BaseEventArgs
     {
         /// <summary>
         /// Gets the notification.
@@ -114,19 +115,15 @@ namespace Prosim2GSX.UI.EFB.Notifications
         public Notification Notification { get; }
         
         /// <summary>
-        /// Gets the timestamp when the event occurred.
-        /// </summary>
-        public DateTime Timestamp { get; }
-        
-        /// <summary>
         /// Initializes a new instance of the <see cref="NotificationEventArgs"/> class.
         /// </summary>
         /// <param name="notification">The notification.</param>
         /// <param name="timestamp">The timestamp when the event occurred.</param>
         public NotificationEventArgs(Notification notification, DateTime timestamp)
+            : base() // Call the base constructor
         {
             Notification = notification ?? throw new ArgumentNullException(nameof(notification));
-            Timestamp = timestamp;
+            // Timestamp is already set by the base constructor
         }
     }
     

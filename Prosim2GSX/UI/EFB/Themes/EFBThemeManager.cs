@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using Newtonsoft.Json;
@@ -367,6 +368,40 @@ namespace Prosim2GSX.UI.EFB.Themes
             }
 
             return _themes.ContainsKey(themeName);
+        }
+
+        /// <summary>
+        /// Cycles through available themes.
+        /// </summary>
+        public void CycleThemes()
+        {
+            // Get all themes
+            var themes = _themes.Values.ToList();
+            
+            // If there are no themes, return
+            if (themes.Count == 0)
+            {
+                return;
+            }
+            
+            // Find the index of the current theme
+            var currentIndex = themes.IndexOf(CurrentTheme);
+            
+            // Calculate the index of the next theme
+            var nextIndex = (currentIndex + 1) % themes.Count;
+            
+            // Apply the next theme
+            ApplyTheme(themes[nextIndex]);
+        }
+
+        /// <summary>
+        /// Shows the theme selector.
+        /// </summary>
+        public void ShowThemeSelector()
+        {
+            // This would be implemented to show a theme selector dialog
+            // For now, just cycle themes
+            CycleThemes();
         }
     }
 }

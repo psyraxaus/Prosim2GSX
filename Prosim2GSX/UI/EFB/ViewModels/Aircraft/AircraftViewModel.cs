@@ -26,7 +26,7 @@ namespace Prosim2GSX.UI.EFB.ViewModels.Aircraft
         public string CurrentFlightPhase
         {
             get => _currentFlightPhase;
-            set => SetProperty(ref _currentFlightPhase, value);
+            set => SetProperty(value, nameof(CurrentFlightPhase));
         }
 
         // Status information
@@ -34,21 +34,21 @@ namespace Prosim2GSX.UI.EFB.ViewModels.Aircraft
         public string StatusMessage
         {
             get => _statusMessage;
-            set => SetProperty(ref _statusMessage, value);
+            set => SetProperty(value, nameof(StatusMessage));
         }
 
         private string _connectionStatus;
         public string ConnectionStatus
         {
             get => _connectionStatus;
-            set => SetProperty(ref _connectionStatus, value);
+            set => SetProperty(value, nameof(ConnectionStatus));
         }
 
         private string _connectionStatusText;
         public string ConnectionStatusText
         {
             get => _connectionStatusText;
-            set => SetProperty(ref _connectionStatusText, value);
+            set => SetProperty(value, nameof(ConnectionStatusText));
         }
 
         // Door states
@@ -56,42 +56,42 @@ namespace Prosim2GSX.UI.EFB.ViewModels.Aircraft
         public bool ForwardLeftDoorOpen
         {
             get => _forwardLeftDoorOpen;
-            set => SetProperty(ref _forwardLeftDoorOpen, value);
+            set => SetProperty(value, nameof(ForwardLeftDoorOpen));
         }
 
         private bool _forwardRightDoorOpen;
         public bool ForwardRightDoorOpen
         {
             get => _forwardRightDoorOpen;
-            set => SetProperty(ref _forwardRightDoorOpen, value);
+            set => SetProperty(value, nameof(ForwardRightDoorOpen));
         }
 
         private bool _aftLeftDoorOpen;
         public bool AftLeftDoorOpen
         {
             get => _aftLeftDoorOpen;
-            set => SetProperty(ref _aftLeftDoorOpen, value);
+            set => SetProperty(value, nameof(AftLeftDoorOpen));
         }
 
         private bool _aftRightDoorOpen;
         public bool AftRightDoorOpen
         {
             get => _aftRightDoorOpen;
-            set => SetProperty(ref _aftRightDoorOpen, value);
+            set => SetProperty(value, nameof(AftRightDoorOpen));
         }
 
         private bool _forwardCargoDoorOpen;
         public bool ForwardCargoDoorOpen
         {
             get => _forwardCargoDoorOpen;
-            set => SetProperty(ref _forwardCargoDoorOpen, value);
+            set => SetProperty(value, nameof(ForwardCargoDoorOpen));
         }
 
         private bool _aftCargoDoorOpen;
         public bool AftCargoDoorOpen
         {
             get => _aftCargoDoorOpen;
-            set => SetProperty(ref _aftCargoDoorOpen, value);
+            set => SetProperty(value, nameof(AftCargoDoorOpen));
         }
 
         // Equipment states
@@ -99,35 +99,35 @@ namespace Prosim2GSX.UI.EFB.ViewModels.Aircraft
         public bool JetwayConnected
         {
             get => _jetwayConnected;
-            set => SetProperty(ref _jetwayConnected, value);
+            set => SetProperty(value, nameof(JetwayConnected));
         }
 
         private bool _stairsConnected;
         public bool StairsConnected
         {
             get => _stairsConnected;
-            set => SetProperty(ref _stairsConnected, value);
+            set => SetProperty(value, nameof(StairsConnected));
         }
 
         private bool _gpuConnected;
         public bool GpuConnected
         {
             get => _gpuConnected;
-            set => SetProperty(ref _gpuConnected, value);
+            set => SetProperty(value, nameof(GpuConnected));
         }
 
         private bool _pcaConnected;
         public bool PcaConnected
         {
             get => _pcaConnected;
-            set => SetProperty(ref _pcaConnected, value);
+            set => SetProperty(value, nameof(PcaConnected));
         }
 
         private bool _chocksPlaced;
         public bool ChocksPlaced
         {
             get => _chocksPlaced;
-            set => SetProperty(ref _chocksPlaced, value);
+            set => SetProperty(value, nameof(ChocksPlaced));
         }
 
         // Service states
@@ -135,77 +135,77 @@ namespace Prosim2GSX.UI.EFB.ViewModels.Aircraft
         public bool RefuelingInProgress
         {
             get => _refuelingInProgress;
-            set => SetProperty(ref _refuelingInProgress, value);
+            set => SetProperty(value, nameof(RefuelingInProgress));
         }
 
         private double _refuelingProgress;
         public double RefuelingProgress
         {
             get => _refuelingProgress;
-            set => SetProperty(ref _refuelingProgress, value);
+            set => SetProperty(value, nameof(RefuelingProgress));
         }
 
         private bool _cateringInProgress;
         public bool CateringInProgress
         {
             get => _cateringInProgress;
-            set => SetProperty(ref _cateringInProgress, value);
+            set => SetProperty(value, nameof(CateringInProgress));
         }
 
         private bool _boardingInProgress;
         public bool BoardingInProgress
         {
             get => _boardingInProgress;
-            set => SetProperty(ref _boardingInProgress, value);
+            set => SetProperty(value, nameof(BoardingInProgress));
         }
 
         private double _boardingProgress;
         public double BoardingProgress
         {
             get => _boardingProgress;
-            set => SetProperty(ref _boardingProgress, value);
+            set => SetProperty(value, nameof(BoardingProgress));
         }
 
         private bool _deBoardingInProgress;
         public bool DeBoardingInProgress
         {
             get => _deBoardingInProgress;
-            set => SetProperty(ref _deBoardingInProgress, value);
+            set => SetProperty(value, nameof(DeBoardingInProgress));
         }
 
         private double _deBoardingProgress;
         public double DeBoardingProgress
         {
             get => _deBoardingProgress;
-            set => SetProperty(ref _deBoardingProgress, value);
+            set => SetProperty(value, nameof(DeBoardingProgress));
         }
 
         private bool _cargoLoadingInProgress;
         public bool CargoLoadingInProgress
         {
             get => _cargoLoadingInProgress;
-            set => SetProperty(ref _cargoLoadingInProgress, value);
+            set => SetProperty(value, nameof(CargoLoadingInProgress));
         }
 
         private double _cargoLoadingProgress;
         public double CargoLoadingProgress
         {
             get => _cargoLoadingProgress;
-            set => SetProperty(ref _cargoLoadingProgress, value);
+            set => SetProperty(value, nameof(CargoLoadingProgress));
         }
 
         private bool _cargoUnloadingInProgress;
         public bool CargoUnloadingInProgress
         {
             get => _cargoUnloadingInProgress;
-            set => SetProperty(ref _cargoUnloadingInProgress, value);
+            set => SetProperty(value, nameof(CargoUnloadingInProgress));
         }
 
         private double _cargoUnloadingProgress;
         public double CargoUnloadingProgress
         {
             get => _cargoUnloadingProgress;
-            set => SetProperty(ref _cargoUnloadingProgress, value);
+            set => SetProperty(value, nameof(CargoUnloadingProgress));
         }
 
         // Service vehicle states
@@ -213,28 +213,28 @@ namespace Prosim2GSX.UI.EFB.ViewModels.Aircraft
         public bool FuelTruckPresent
         {
             get => _fuelTruckPresent;
-            set => SetProperty(ref _fuelTruckPresent, value);
+            set => SetProperty(value, nameof(FuelTruckPresent));
         }
 
         private bool _cateringTruckPresent;
         public bool CateringTruckPresent
         {
             get => _cateringTruckPresent;
-            set => SetProperty(ref _cateringTruckPresent, value);
+            set => SetProperty(value, nameof(CateringTruckPresent));
         }
 
         private bool _passengerBusPresent;
         public bool PassengerBusPresent
         {
             get => _passengerBusPresent;
-            set => SetProperty(ref _passengerBusPresent, value);
+            set => SetProperty(value, nameof(PassengerBusPresent));
         }
 
         private bool _baggageTruckPresent;
         public bool BaggageTruckPresent
         {
             get => _baggageTruckPresent;
-            set => SetProperty(ref _baggageTruckPresent, value);
+            set => SetProperty(value, nameof(BaggageTruckPresent));
         }
 
         // Computed properties
@@ -271,10 +271,10 @@ namespace Prosim2GSX.UI.EFB.ViewModels.Aircraft
             _eventAggregator = eventAggregator ?? throw new ArgumentNullException(nameof(eventAggregator));
 
             // Initialize commands
-            ToggleDoorCommand = new RelayCommand<string>(ToggleDoor);
-            ToggleEquipmentCommand = new RelayCommand<string>(ToggleEquipment);
-            RequestServiceCommand = new RelayCommand<string>(RequestService);
-            CancelServiceCommand = new RelayCommand<string>(CancelService);
+            ToggleDoorCommand = new RelayCommand<string>(doorType => ToggleDoor(doorType));
+            ToggleEquipmentCommand = new RelayCommand<string>(equipmentType => ToggleEquipment(equipmentType));
+            RequestServiceCommand = new RelayCommand<string>(serviceType => RequestService(serviceType));
+            CancelServiceCommand = new RelayCommand<string>(serviceType => CancelService(serviceType));
 
             // Subscribe to events
             SubscribeToEvents();
@@ -322,7 +322,7 @@ namespace Prosim2GSX.UI.EFB.ViewModels.Aircraft
             ChocksPlaced = _equipmentService.AreChocksPlaced();
 
             // Initialize service states
-            RefuelingInProgress = _fuelCoordinator.IsRefuelingInProgress();
+            RefuelingInProgress = _fuelCoordinator.IsRefuelingInProgress;
             RefuelingProgress = _fuelCoordinator.GetRefuelingProgress();
             
             // Initialize service vehicle states based on service states
@@ -375,10 +375,10 @@ namespace Prosim2GSX.UI.EFB.ViewModels.Aircraft
                 case EquipmentType.Stairs:
                     StairsConnected = args.IsConnected;
                     break;
-                case EquipmentType.Gpu:
+                case EquipmentType.GPU:
                     GpuConnected = args.IsConnected;
                     break;
-                case EquipmentType.Pca:
+                case EquipmentType.PCA:
                     PcaConnected = args.IsConnected;
                     break;
                 case EquipmentType.Chocks:
@@ -452,7 +452,7 @@ namespace Prosim2GSX.UI.EFB.ViewModels.Aircraft
             catch (Exception ex)
             {
                 // Log the error
-                Logger.LogError($"Error toggling door {doorType}: {ex.Message}");
+                Logger.Log(LogLevel.Error, "AircraftViewModel", ex, $"Error toggling door {doorType}");
             }
         }
 
@@ -485,7 +485,7 @@ namespace Prosim2GSX.UI.EFB.ViewModels.Aircraft
             catch (Exception ex)
             {
                 // Log the error
-                Logger.LogError($"Error toggling equipment {equipmentType}: {ex.Message}");
+                Logger.Log(LogLevel.Error, "AircraftViewModel", ex, $"Error toggling equipment {equipmentType}");
             }
         }
 
@@ -499,7 +499,7 @@ namespace Prosim2GSX.UI.EFB.ViewModels.Aircraft
                 switch (serviceType)
                 {
                     case "Refueling":
-                        _serviceOrchestrator.RequestRefueling();
+                        _serviceOrchestrator.RequestRefueling(0.0); // Pass default value, will be calculated internally
                         break;
                     case "Catering":
                         _serviceOrchestrator.RequestCatering();
@@ -521,7 +521,7 @@ namespace Prosim2GSX.UI.EFB.ViewModels.Aircraft
             catch (Exception ex)
             {
                 // Log the error
-                Logger.LogError($"Error requesting service {serviceType}: {ex.Message}");
+                Logger.Log(LogLevel.Error, "AircraftViewModel", ex, $"Error requesting service {serviceType}");
             }
         }
 
@@ -557,7 +557,7 @@ namespace Prosim2GSX.UI.EFB.ViewModels.Aircraft
             catch (Exception ex)
             {
                 // Log the error
-                Logger.LogError($"Error canceling service {serviceType}: {ex.Message}");
+                Logger.Log(LogLevel.Error, "AircraftViewModel", ex, $"Error canceling service {serviceType}");
             }
         }
 

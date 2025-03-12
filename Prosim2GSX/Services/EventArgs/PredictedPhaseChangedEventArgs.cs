@@ -6,7 +6,7 @@ namespace Prosim2GSX.Services.EventArgs
     /// <summary>
     /// Event arguments for predicted flight phase changes.
     /// </summary>
-    public class PredictedPhaseChangedEventArgs : System.EventArgs
+    public class PredictedPhaseChangedEventArgs : BaseEventArgs
     {
         /// <summary>
         /// Gets the previous predicted flight phase, if any.
@@ -40,6 +40,7 @@ namespace Prosim2GSX.Services.EventArgs
             FlightPhaseIndicator.FlightPhase predictedPhase,
             float confidence,
             TimeSpan? estimatedTimeToChange = null)
+            : base() // Call the base constructor
         {
             PreviousPredictedPhase = previousPredictedPhase;
             PredictedPhase = predictedPhase;

@@ -35,7 +35,6 @@
                                Style="{DynamicResource EFBPanelHeaderStyle}" />
                     
                     <controls:FlightPhaseIndicator Grid.Row="1" 
-                                                  CurrentPhase="{Binding CurrentFlightPhase}" 
                                                   Margin="10" />
                 </Grid>
             </Border>

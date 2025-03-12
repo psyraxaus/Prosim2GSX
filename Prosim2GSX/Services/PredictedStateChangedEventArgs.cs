@@ -15,7 +15,7 @@ public class PredictedStateChangedEventArgs : BaseEventArgs
         /// <summary>
         /// Gets the new predicted state
         /// </summary>
-        public FlightState NewPrediction { get; }
+        public FlightState? NewPrediction { get; }
         
         /// <summary>
         /// Gets the confidence level of the prediction (0.0 to 1.0)

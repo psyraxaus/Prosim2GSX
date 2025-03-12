@@ -459,6 +459,7 @@ namespace Prosim2GSX.UI.EFB.Notifications
                 NotificationType.Success => new SolidColorBrush(Color.FromArgb(255, 223, 240, 216)),
                 NotificationType.Warning => new SolidColorBrush(Color.FromArgb(255, 252, 248, 227)),
                 NotificationType.Error => new SolidColorBrush(Color.FromArgb(255, 242, 222, 222)),
+                NotificationType.Action => new SolidColorBrush(Color.FromArgb(255, 230, 237, 200)),
                 _ => new SolidColorBrush(Color.FromArgb(255, 217, 237, 247))
             };
         }
@@ -475,6 +476,7 @@ namespace Prosim2GSX.UI.EFB.Notifications
                 NotificationType.Success => new SolidColorBrush(Color.FromArgb(255, 214, 233, 198)),
                 NotificationType.Warning => new SolidColorBrush(Color.FromArgb(255, 250, 235, 204)),
                 NotificationType.Error => new SolidColorBrush(Color.FromArgb(255, 235, 204, 209)),
+                NotificationType.Action => new SolidColorBrush(Color.FromArgb(255, 210, 220, 180)),
                 _ => new SolidColorBrush(Color.FromArgb(255, 188, 232, 241))
             };
         }
@@ -491,6 +493,7 @@ namespace Prosim2GSX.UI.EFB.Notifications
                 NotificationType.Success => new SolidColorBrush(Color.FromArgb(255, 60, 118, 61)),
                 NotificationType.Warning => new SolidColorBrush(Color.FromArgb(255, 138, 109, 59)),
                 NotificationType.Error => new SolidColorBrush(Color.FromArgb(255, 169, 68, 66)),
+                NotificationType.Action => new SolidColorBrush(Color.FromArgb(255, 124, 179, 66)),
                 _ => new SolidColorBrush(Color.FromArgb(255, 49, 112, 143))
             };
         }
@@ -507,6 +510,7 @@ namespace Prosim2GSX.UI.EFB.Notifications
                 NotificationType.Success => Geometry.Parse("M0,8 L3,5 L7,9 L14,2 L16,4 L7,13 L0,8 Z"),
                 NotificationType.Warning => Geometry.Parse("M8,0 L16,16 L0,16 L8,0 Z M8,4 L8,12 M8,13 L8,15"),
                 NotificationType.Error => Geometry.Parse("M0,0 L16,16 M16,0 L0,16"),
+                NotificationType.Action => Geometry.Parse("M8,0 L10,5 L16,6 L12,10 L13,16 L8,13 L3,16 L4,10 L0,6 L6,5 Z"),
                 _ => Geometry.Parse("M8,0 C3.6,0 0,3.6 0,8 C0,12.4 3.6,16 8,16 C12.4,16 16,12.4 16,8 C16,3.6 12.4,0 8,0 Z M8,4 L8,12 M8,13 L8,15")
             };
         }
@@ -557,6 +561,11 @@ namespace Prosim2GSX.UI.EFB.Notifications
         /// Information notification.
         /// </summary>
         Information,
+        
+        /// <summary>
+        /// Info notification (alias for Information).
+        /// </summary>
+        Info = Information,
 
         /// <summary>
         /// Success notification.
@@ -571,6 +580,11 @@ namespace Prosim2GSX.UI.EFB.Notifications
         /// <summary>
         /// Error notification.
         /// </summary>
-        Error
+        Error,
+        
+        /// <summary>
+        /// Action notification.
+        /// </summary>
+        Action
     }
 }

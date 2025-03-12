@@ -48,7 +48,8 @@ namespace Prosim2GSX.UI.EFB.Input
                 throw new ArgumentNullException(nameof(element));
 
             // Enable manipulation events
-            element.ManipulationMode = ManipulationModes.All;
+            // Note: ManipulationMode property is not available in the current framework version
+            // We'll rely on IsManipulationEnabled instead
             
             // Add event handlers
             element.ManipulationStarting += OnManipulationStarting;

@@ -9,7 +9,9 @@ namespace Prosim2GSX.Services
     /// </summary>
     public enum DoorType
     {
+        ForwardLeft,
         ForwardRight,
+        AftLeft,
         AftRight,
         ForwardCargo,
         AftCargo
@@ -61,7 +63,9 @@ namespace Prosim2GSX.Services
             // Map string identifiers to enum values
             DoorType = doorName switch
             {
+                "ForwardLeftDoor" => DoorType.ForwardLeft,
                 "ForwardRightDoor" => DoorType.ForwardRight,
+                "AftLeftDoor" => DoorType.AftLeft,
                 "AftRightDoor" => DoorType.AftRight,
                 "ForwardCargoDoor" => DoorType.ForwardCargo,
                 "AftCargoDoor" => DoorType.AftCargo,
@@ -77,10 +81,20 @@ namespace Prosim2GSX.Services
     public interface IGSXDoorManager
     {
         /// <summary>
+        /// Gets a value indicating whether the forward left door is open
+        /// </summary>
+        bool IsForwardLeftDoorOpen { get; }
+        
+        /// <summary>
         /// Gets a value indicating whether the forward right door is open
         /// </summary>
         bool IsForwardRightDoorOpen { get; }
 
+        /// <summary>
+        /// Gets a value indicating whether the aft left door is open
+        /// </summary>
+        bool IsAftLeftDoorOpen { get; }
+        
         /// <summary>
         /// Gets a value indicating whether the aft right door is open
         /// </summary>

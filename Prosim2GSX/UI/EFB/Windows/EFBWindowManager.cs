@@ -121,6 +121,37 @@ namespace Prosim2GSX.UI.EFB.Windows
         /// </summary>
         public int WindowCount => _windows.Count;
 
+        /// <summary>
+        /// Detaches the current window.
+        /// </summary>
+        public void DetachCurrentWindow()
+        {
+            // This would be implemented to detach the current window
+            // For now, just create a new window
+            var window = CreateWindow();
+            window.Show();
+        }
+
+        /// <summary>
+        /// Toggles fullscreen mode for the current window.
+        /// </summary>
+        public void ToggleFullscreen()
+        {
+            // This would be implemented to toggle fullscreen mode for the current window
+            // For now, just log a message
+            System.Diagnostics.Debug.WriteLine("ToggleFullscreen called");
+        }
+
+        /// <summary>
+        /// Toggles compact mode for the current window.
+        /// </summary>
+        public void ToggleCompactMode()
+        {
+            // This would be implemented to toggle compact mode for the current window
+            // For now, just log a message
+            System.Diagnostics.Debug.WriteLine("ToggleCompactMode called");
+        }
+
         private void Window_Closed(object sender, EventArgs e)
         {
             if (sender is EFBWindow window)

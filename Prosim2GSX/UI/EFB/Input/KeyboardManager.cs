@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 
@@ -161,7 +162,7 @@ namespace Prosim2GSX.UI.EFB.Input
                 if (gesture.Key == e.Key && gesture.Modifiers == Keyboard.Modifiers)
                 {
                     // Execute the command
-                    shortcut.Value.Command.Execute(null, sender as IInputElement);
+                    shortcut.Value.Command.Execute(null);
                     
                     // Mark the event as handled
                     e.Handled = true;
@@ -172,47 +173,90 @@ namespace Prosim2GSX.UI.EFB.Input
 
         #region Navigation Actions
 
+        private Prosim2GSX.UI.EFB.Navigation.EFBNavigationService _navigationService;
+        private Prosim2GSX.UI.EFB.Windows.EFBWindowManager _windowManager;
+        private Prosim2GSX.UI.EFB.Themes.EFBThemeManager _themeManager;
+
+        /// <summary>
+        /// Sets the navigation service.
+        /// </summary>
+        /// <param name="navigationService">The navigation service.</param>
+        public void SetNavigationService(Prosim2GSX.UI.EFB.Navigation.EFBNavigationService navigationService)
+        {
+            _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
+        }
+
+        /// <summary>
+        /// Sets the window manager.
+        /// </summary>
+        /// <param name="windowManager">The window manager.</param>
+        public void SetWindowManager(Prosim2GSX.UI.EFB.Windows.EFBWindowManager windowManager)
+        {
+            _windowManager = windowManager ?? throw new ArgumentNullException(nameof(windowManager));
+        }
+
+        /// <summary>
+        /// Sets the theme manager.
+        /// </summary>
+        /// <param name="themeManager">The theme manager.</param>
+        public void SetThemeManager(Prosim2GSX.UI.EFB.Themes.EFBThemeManager themeManager)
+        {
+            _themeManager = themeManager ?? throw new ArgumentNullException(nameof(themeManager));
+        }
+
         private void NavigateToHome()
         {
             // Navigate to the home page
             // This will be implemented by the navigation service
-            var navigationService = Prosim2GSX.UI.EFB.Navigation.EFBNavigationService.Instance;
-            navigationService.NavigateTo("HomePage");
+            if (_navigationService != null)
+            {
+                _navigationService.NavigateTo("HomePage");
+            }
         }
 
         private void NavigateToAircraft()
         {
             // Navigate to the aircraft page
-            var navigationService = Prosim2GSX.UI.EFB.Navigation.EFBNavigationService.Instance;
-            navigationService.NavigateTo("AircraftPage");
+            if (_navigationService != null)
+            {
+                _navigationService.NavigateTo("AircraftPage");
+            }
         }
 
         private void NavigateToServices()
         {
             // Navigate to the services page
-            var navigationService = Prosim2GSX.UI.EFB.Navigation.EFBNavigationService.Instance;
-            navigationService.NavigateTo("ServicesPage");
+            if (_navigationService != null)
+            {
+                _navigationService.NavigateTo("ServicesPage");
+            }
         }
 
         private void NavigateToPlan()
         {
             // Navigate to the plan page
-            var navigationService = Prosim2GSX.UI.EFB.Navigation.EFBNavigationService.Instance;
-            navigationService.NavigateTo("PlanPage");
+            if (_navigationService != null)
+            {
+                _navigationService.NavigateTo("PlanPage");
+            }
         }
 
         private void NavigateToGround()
         {
             // Navigate to the ground page
-            var navigationService = Prosim2GSX.UI.EFB.Navigation.EFBNavigationService.Instance;
-            navigationService.NavigateTo("GroundPage");
+            if (_navigationService != null)
+            {
+                _navigationService.NavigateTo("GroundPage");
+            }
         }
 
         private void NavigateToLogs()
         {
             // Navigate to the logs page
-            var navigationService = Prosim2GSX.UI.EFB.Navigation.EFBNavigationService.Instance;
-            navigationService.NavigateTo("LogsPage");
+            if (_navigationService != null)
+            {
+                _navigationService.NavigateTo("LogsPage");
+            }
         }
 
         #endregion
@@ -222,22 +266,28 @@ namespace Prosim2GSX.UI.EFB.Input
         private void DetachWindow()
         {
             // Detach the current window
-            var windowManager = Prosim2GSX.UI.EFB.Windows.EFBWindowManager.Instance;
-            windowManager.DetachCurrentWindow();
+            if (_windowManager != null)
+            {
+                _windowManager.DetachCurrentWindow();
+            }
         }
 
         private void ToggleFullscreen()
         {
             // Toggle fullscreen mode
-            var windowManager = Prosim2GSX.UI.EFB.Windows.EFBWindowManager.Instance;
-            windowManager.ToggleFullscreen();
+            if (_windowManager != null)
+            {
+                _windowManager.ToggleFullscreen();
+            }
         }
 
         private void ToggleCompactMode()
         {
             // Toggle compact mode
-            var windowManager = Prosim2GSX.UI.EFB.Windows.EFBWindowManager.Instance;
-            windowManager.ToggleCompactMode();
+            if (_windowManager != null)
+            {
+                _windowManager.ToggleCompactMode();
+            }
         }
 
         #endregion
@@ -247,15 +297,28 @@ namespace Prosim2GSX.UI.EFB.Input
         private void CycleThemes()
         {
             // Cycle through available themes
-            var themeManager = Prosim2GSX.UI.EFB.Themes.EFBThemeManager.Instance;
-            themeManager.CycleThemes();
+            if (_themeManager != null)
+            {
+                // Cycle through available themes
+                var themes = _themeManager.Themes.Values.ToList();
+                if (themes.Count > 0)
+                {
+                    var currentIndex = themes.IndexOf(_themeManager.CurrentTheme);
+                    var nextIndex = (currentIndex + 1) % themes.Count;
+                    _themeManager.ApplyTheme(themes[nextIndex]);
+                }
+            }
         }
 
         private void OpenThemeSelector()
         {
             // Open the theme selector
-            var themeManager = Prosim2GSX.UI.EFB.Themes.EFBThemeManager.Instance;
-            themeManager.ShowThemeSelector();
+            if (_themeManager != null)
+            {
+                // This would be implemented by showing a theme selector dialog
+                // For now, just cycle themes
+                CycleThemes();
+            }
         }
 
         #endregion

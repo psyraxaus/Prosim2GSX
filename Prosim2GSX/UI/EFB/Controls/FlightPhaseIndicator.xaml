@@ -46,7 +46,7 @@
             <Setter Property="Background" Value="{DynamicResource PredictedPhaseItemBackground}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource PredictedPhaseItemBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderDashArray" Value="2,2"/>
+            <!-- BorderDashArray is not a standard property for Border, removing it -->
         </Style>
         
         <!-- Predicted Phase Item Text Style -->
