@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿﻿using System;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Media;
@@ -62,6 +62,7 @@ namespace Prosim2GSX
             chkVhf1LatchMute.IsChecked = serviceModel.Vhf1LatchMute;
             chkVhf1VolumeControl.IsChecked = serviceModel.Vhf1VolumeControl;
             chkZeroFuel.IsChecked = serviceModel.SetZeroFuel;
+            chkUseEfbUi.IsChecked = serviceModel.UseEfbUi;
 
             txtRefuelRate.Text = serviceModel.RefuelRate.ToString(CultureInfo.InvariantCulture);
             txtRepositionDelay.Text = serviceModel.RepositionDelay.ToString(CultureInfo.InvariantCulture);
@@ -261,6 +262,18 @@ namespace Prosim2GSX
         private void chkVhf1LatchMute_Click(object sender, RoutedEventArgs e)
         {
             serviceModel.SetSetting("vhf1LatchMute", chkVhf1LatchMute.IsChecked.ToString().ToLower());
+        }
+        
+        private void chkUseEfbUi_Click(object sender, RoutedEventArgs e)
+        {
+            serviceModel.SetSetting("useEfbUi", chkUseEfbUi.IsChecked.ToString().ToLower());
+            
+            // Show a message to inform the user that the change will take effect after restart
+            MessageBox.Show(
+                "The UI change will take effect after restarting the application.",
+                "UI Change",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
         }
 
         private void chkUseActualPaxValue_Click(object sender, RoutedEventArgs e)

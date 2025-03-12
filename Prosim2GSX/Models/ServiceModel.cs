@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using Prosim2GSX.Behaviours;
+﻿﻿﻿﻿﻿﻿using Prosim2GSX.Behaviours;
 using System;
 
 namespace Prosim2GSX.Models
@@ -52,6 +52,7 @@ namespace Prosim2GSX.Models
         public bool Vhf1LatchMute { get; set; }
         public string Vhf1VolumeApp { get; set; }
         public bool Vhf1VolumeControl { get; set; }
+        public bool UseEfbUi { get; set; }
 
         protected ConfigurationFile ConfigurationFile = new();
 
@@ -110,6 +111,7 @@ namespace Prosim2GSX.Models
             Vhf1VolumeControl = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf1VolumeControl", "false"));
             Vhf1LatchMute = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf1LatchMute", "true"));
             WaitForConnect = Convert.ToBoolean(ConfigurationFile.GetSetting("waitForConnect", "true"));
+            UseEfbUi = Convert.ToBoolean(ConfigurationFile.GetSetting("useEfbUi", "true"));
 
         }
 

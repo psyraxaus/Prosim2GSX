@@ -1,8 +1,9 @@
-﻿﻿using CefSharp;
+﻿﻿﻿﻿﻿﻿using CefSharp;
 using CefSharp.OffScreen;
 using H.NotifyIcon;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
+using Prosim2GSX.UI.EFB;
 using Serilog;
 using System;
 using System.Diagnostics;
@@ -20,8 +21,10 @@ namespace Prosim2GSX
     {
         private ServiceModel Model;
         private EnhancedServiceController Controller;
+        private EFBApplication EfbApp;
 
         private TaskbarIcon notifyIcon;
+        // UseEfbUi is now controlled by the ServiceModel
 
         public static string ConfigFile = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\Prosim2GSX\Prosim2GSX.config";
         public static string AppDir = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\Prosim2GSX\bin";
@@ -92,8 +95,16 @@ namespace Prosim2GSX
                 timer.Tick += OnTick;
                 timer.Start();
 
-                // Create main window
+            // Initialize EFB UI if enabled in settings
+            if (Model.UseEfbUi)
+            {
+                InitEfbUi();
+            }
+            else
+            {
+                // Create legacy main window
                 MainWindow = new MainWindow(notifyIcon?.DataContext as NotifyIconViewModel, Model);
+            }
             }
             catch (Exception ex)
             {
@@ -106,10 +117,57 @@ namespace Prosim2GSX
         {
             Model.CancellationRequested = true;
             notifyIcon?.Dispose();
+            
+            // Stop EFB UI if it was initialized
+            EfbApp?.Stop();
+            
             Cef.Shutdown();
             base.OnExit(e);
 
             Logger.Log(LogLevel.Information, "App:OnExit", "Prosim2GSX exiting ...");
+        }
+        
+        private async void InitEfbUi()
+        {
+            try
+            {
+                Logger.Log(LogLevel.Information, "App:InitEfbUi", "Initializing EFB UI...");
+                
+                // Create and initialize the EFB application
+                EfbApp = new EFBApplication(Model);
+                bool initialized = await EfbApp.InitializeAsync();
+                
+                if (initialized)
+                {
+                    // Start the EFB application
+                    bool started = EfbApp.Start();
+                    
+                    if (started)
+                    {
+                        // Set the main window to the EFB main window
+                        MainWindow = EfbApp.MainWindow as Window;
+                        Logger.Log(LogLevel.Information, "App:InitEfbUi", "EFB UI initialized and started successfully");
+                    }
+                    else
+                    {
+                        Logger.Log(LogLevel.Error, "App:InitEfbUi", "Failed to start EFB UI");
+                        // Fall back to legacy UI
+                        MainWindow = new MainWindow(notifyIcon?.DataContext as NotifyIconViewModel, Model);
+                    }
+                }
+                else
+                {
+                    Logger.Log(LogLevel.Error, "App:InitEfbUi", "Failed to initialize EFB UI");
+                    // Fall back to legacy UI
+                    MainWindow = new MainWindow(notifyIcon?.DataContext as NotifyIconViewModel, Model);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "App:InitEfbUi", $"Error initializing EFB UI: {ex.Message}");
+                // Fall back to legacy UI
+                MainWindow = new MainWindow(notifyIcon?.DataContext as NotifyIconViewModel, Model);
+            }
         }
 
         protected void OnTick(object sender, EventArgs e)

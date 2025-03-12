@@ -147,8 +147,12 @@
         </GroupBox>
 
         <GroupBox Grid.Row="3" BorderBrush="DarkGray" BorderThickness="1" Margin="10,124,10,170" Grid.ColumnSpan="2" Grid.RowSpan="2">
-            <GroupBox.Header>Volume Control</GroupBox.Header>
+            <GroupBox.Header>Volume Control and UI Settings</GroupBox.Header>
             <StackPanel Orientation="Vertical">
+                <CheckBox Name="chkUseEfbUi" Margin="8,8,8,0" VerticalContentAlignment="Center" Click="chkUseEfbUi_Click" ToolTip="Use the new Electronic Flight Bag (EFB) style user interface. This change will take effect after restarting the application.">
+                    <TextBlock>Use <Underline>EFB-Style UI</Underline> (requires restart)</TextBlock>
+                </CheckBox>
+                <Separator Margin="8,8,8,8"/>
                 <CheckBox Name="chkGsxVolumeControl" Margin="8,8,8,0" VerticalContentAlignment="Center" Click="chkGsxVolumeControl_Click" ToolTip="The Volume of the GSX (Couatl) Application will be controlled on the OS-Level.&#x0a;The Volume-Level is controlled with the INT Knob on ACP1. Pushing/Pulling the Knob will mute/unmute the whole Application.&#x0a;Volume Control will only start after the Plane is powered (that is FCU Displays are On).&#x0a;Be aware that the default Position in the Fenix is 50%!">
                     <TextBlock>Control <Underline>GSX App Audio</Underline> Volume via the INT Knob on ACP1 (Record Latch does mute)</TextBlock>
                 </CheckBox>
