@@ -64,6 +64,23 @@ namespace Prosim2GSX.Services
         {
             _logger.Log(LogLevel.Information, "GSXDoorCoordinator:Initialize", "Initializing door coordinator");
             _gsxDoorManager.Initialize();
+            
+            // Explicitly synchronize door states at initialization
+            try
+            {
+                _logger.Log(LogLevel.Information, "GSXDoorCoordinator:Initialize", "Explicitly synchronizing door states");
+                
+                // Initialize all door states in ProSim
+                _prosimDoorService.InitializeDoorStates();
+                
+                _logger.Log(LogLevel.Information, "GSXDoorCoordinator:Initialize", 
+                    "Door states explicitly synchronized at initialization");
+            }
+            catch (Exception ex)
+            {
+                _logger.Log(LogLevel.Error, "GSXDoorCoordinator:Initialize", 
+                    $"Error synchronizing door states at initialization: {ex.Message}");
+            }
         }
         
         /// <summary>
@@ -290,32 +307,81 @@ namespace Prosim2GSX.Services
         {
             try
             {
-                _logger.Log(LogLevel.Debug, "GSXDoorCoordinator:ManageDoorsForStateAsync", $"Managing doors for state: {state}");
+                // Log detailed door management decisions with service states
+                _logger.Log(LogLevel.Debug, "GSXDoorCoordinator:ManageDoorsForStateAsync", 
+                    $"Managing doors for state {state} - " +
+                    $"ForwardRightDoor: {(_gsxDoorManager.IsForwardRightDoorOpen ? "open" : "closed")}, " +
+                    $"AftRightDoor: {(_gsxDoorManager.IsAftRightDoorOpen ? "open" : "closed")}, " +
+                    $"ForwardCargoDoor: {(_gsxDoorManager.IsForwardCargoDoorOpen ? "open" : "closed")}, " +
+                    $"AftCargoDoor: {(_gsxDoorManager.IsAftCargoDoorOpen ? "open" : "closed")}");
+                
+                _logger.Log(LogLevel.Debug, "GSXDoorCoordinator:ManageDoorsForStateAsync", 
+                    $"Service states - " +
+                    $"ForwardRightServiceActive: {_gsxDoorManager.IsForwardRightServiceActive}, " +
+                    $"AftRightServiceActive: {_gsxDoorManager.IsAftRightServiceActive}, " +
+                    $"ForwardCargoServiceActive: {_gsxDoorManager.IsForwardCargoServiceActive}, " +
+                    $"AftCargoServiceActive: {_gsxDoorManager.IsAftCargoServiceActive}");
                 
                 switch (state)
                 {
                     case FlightState.PREFLIGHT:
+                        _logger.Log(LogLevel.Information, "GSXDoorCoordinator:ManageDoorsForStateAsync", 
+                            "PREFLIGHT state: Ensuring passenger doors are closed initially");
+                        
                         // In preflight, ensure passenger doors are closed initially
                         await CloseDoorAsync(DoorType.ForwardRight, cancellationToken);
                         await CloseDoorAsync(DoorType.AftRight, cancellationToken);
                         break;
                         
 case FlightState.DEPARTURE:
+    _logger.Log(LogLevel.Information, "GSXDoorCoordinator:ManageDoorsForStateAsync", 
+        "DEPARTURE state: Ensuring doors are closed unless service is active");
+    
     // Do NOT automatically open doors
     // Instead, ensure doors are closed initially and wait for GSX requests
     // Only close doors if no service is active
-    if (!_gsxDoorManager.IsForwardRightServiceActive)
+    if (!_gsxDoorManager.IsForwardRightServiceActive) {
+        _logger.Log(LogLevel.Debug, "GSXDoorCoordinator:ManageDoorsForStateAsync", 
+            "Closing forward right door (no active service)");
         await CloseDoorAsync(DoorType.ForwardRight, cancellationToken);
-    if (!_gsxDoorManager.IsAftRightServiceActive)
+    } else {
+        _logger.Log(LogLevel.Debug, "GSXDoorCoordinator:ManageDoorsForStateAsync", 
+            "Skipping forward right door (service active)");
+    }
+    
+    if (!_gsxDoorManager.IsAftRightServiceActive) {
+        _logger.Log(LogLevel.Debug, "GSXDoorCoordinator:ManageDoorsForStateAsync", 
+            "Closing aft right door (no active service)");
         await CloseDoorAsync(DoorType.AftRight, cancellationToken);
+    } else {
+        _logger.Log(LogLevel.Debug, "GSXDoorCoordinator:ManageDoorsForStateAsync", 
+            "Skipping aft right door (service active)");
+    }
+    
     // Cargo doors should also remain closed until explicitly requested
-    if (!_gsxDoorManager.IsForwardCargoServiceActive)
+    if (!_gsxDoorManager.IsForwardCargoServiceActive) {
+        _logger.Log(LogLevel.Debug, "GSXDoorCoordinator:ManageDoorsForStateAsync", 
+            "Closing forward cargo door (no active service)");
         await CloseDoorAsync(DoorType.ForwardCargo, cancellationToken);
-    if (!_gsxDoorManager.IsAftCargoServiceActive)
+    } else {
+        _logger.Log(LogLevel.Debug, "GSXDoorCoordinator:ManageDoorsForStateAsync", 
+            "Skipping forward cargo door (service active)");
+    }
+    
+    if (!_gsxDoorManager.IsAftCargoServiceActive) {
+        _logger.Log(LogLevel.Debug, "GSXDoorCoordinator:ManageDoorsForStateAsync", 
+            "Closing aft cargo door (no active service)");
         await CloseDoorAsync(DoorType.AftCargo, cancellationToken);
+    } else {
+        _logger.Log(LogLevel.Debug, "GSXDoorCoordinator:ManageDoorsForStateAsync", 
+            "Skipping aft cargo door (service active)");
+    }
     break;
                         
                     case FlightState.TAXIOUT:
+                        _logger.Log(LogLevel.Information, "GSXDoorCoordinator:ManageDoorsForStateAsync", 
+                            "TAXIOUT state: Ensuring all doors are closed");
+                        
                         // In taxiout, all doors should be closed
                         await CloseDoorAsync(DoorType.ForwardRight, cancellationToken);
                         await CloseDoorAsync(DoorType.AftRight, cancellationToken);
@@ -324,6 +390,9 @@ case FlightState.DEPARTURE:
                         break;
                         
                     case FlightState.FLIGHT:
+                        _logger.Log(LogLevel.Information, "GSXDoorCoordinator:ManageDoorsForStateAsync", 
+                            "FLIGHT state: Ensuring all doors remain closed");
+                        
                         // In flight, all doors should remain closed
                         await CloseDoorAsync(DoorType.ForwardRight, cancellationToken);
                         await CloseDoorAsync(DoorType.AftRight, cancellationToken);
@@ -332,6 +401,9 @@ case FlightState.DEPARTURE:
                         break;
                         
                     case FlightState.TAXIIN:
+                        _logger.Log(LogLevel.Information, "GSXDoorCoordinator:ManageDoorsForStateAsync", 
+                            "TAXIIN state: Ensuring all doors remain closed");
+                        
                         // In taxiin, all doors should remain closed
                         await CloseDoorAsync(DoorType.ForwardRight, cancellationToken);
                         await CloseDoorAsync(DoorType.AftRight, cancellationToken);
@@ -340,6 +412,9 @@ case FlightState.DEPARTURE:
                         break;
                         
                     case FlightState.ARRIVAL:
+                        _logger.Log(LogLevel.Information, "GSXDoorCoordinator:ManageDoorsForStateAsync", 
+                            "ARRIVAL state: Opening passenger and cargo doors for deboarding/unloading");
+                        
                         // In arrival, passenger doors should be open for deboarding
                         await OpenDoorAsync(DoorType.ForwardRight, cancellationToken);
                         await OpenDoorAsync(DoorType.AftRight, cancellationToken);
@@ -350,6 +425,9 @@ case FlightState.DEPARTURE:
                         break;
                         
                     case FlightState.TURNAROUND:
+                        _logger.Log(LogLevel.Information, "GSXDoorCoordinator:ManageDoorsForStateAsync", 
+                            "TURNAROUND state: Opening passenger and cargo doors for servicing");
+                        
                         // In turnaround, passenger doors should be open
                         await OpenDoorAsync(DoorType.ForwardRight, cancellationToken);
                         await OpenDoorAsync(DoorType.AftRight, cancellationToken);

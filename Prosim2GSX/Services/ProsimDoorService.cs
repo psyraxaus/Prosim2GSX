@@ -13,6 +13,48 @@ namespace Prosim2GSX.Services
             _prosimService = prosimService ?? throw new ArgumentNullException(nameof(prosimService));
         }
         
+        /// <summary>
+        /// Initializes all door states to a known state (closed)
+        /// </summary>
+        public void InitializeDoorStates()
+        {
+            try
+            {
+                // Read current states from ProSim
+                var forwardRightState = (bool)_prosimService.ReadDataRef("doors.entry.right.fwd");
+                var aftRightState = (bool)_prosimService.ReadDataRef("doors.entry.right.aft");
+                var forwardCargoState = (bool)_prosimService.ReadDataRef("doors.cargo.forward");
+                var aftCargoState = (bool)_prosimService.ReadDataRef("doors.cargo.aft");
+                
+                Logger.Log(LogLevel.Information, "ProsimDoorService:InitializeDoorStates", 
+                    $"Current door states - ForwardRight: {forwardRightState}, " +
+                    $"AftRight: {aftRightState}, " +
+                    $"ForwardCargo: {forwardCargoState}, " +
+                    $"AftCargo: {aftCargoState}");
+                
+                // Set all doors to closed state
+                if (forwardRightState)
+                    SetForwardRightDoor(false);
+                
+                if (aftRightState)
+                    SetAftRightDoor(false);
+                
+                if (forwardCargoState)
+                    SetForwardCargoDoor(false);
+                
+                if (aftCargoState)
+                    SetAftCargoDoor(false);
+                
+                Logger.Log(LogLevel.Information, "ProsimDoorService:InitializeDoorStates", 
+                    "All doors explicitly initialized to closed state");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "ProsimDoorService:InitializeDoorStates", 
+                    $"Error initializing door states: {ex.Message}");
+            }
+        }
+        
         public void SetAftRightDoor(bool open)
         {
             // Check current state before changing

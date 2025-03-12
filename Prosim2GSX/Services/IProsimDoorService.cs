@@ -31,9 +31,14 @@ namespace Prosim2GSX.Services
         /// <param name="open">True to open the door, false to close it</param>
         void SetAftCargoDoor(bool open);
         
-        /// <summary>
-        /// Event that fires when a door state changes
-        /// </summary>
-        event EventHandler<DoorStateChangedEventArgs> DoorStateChanged;
-    }
+    /// <summary>
+    /// Event that fires when a door state changes
+    /// </summary>
+    event EventHandler<DoorStateChangedEventArgs> DoorStateChanged;
+    
+    /// <summary>
+    /// Initializes all door states to a known state (closed)
+    /// </summary>
+    void InitializeDoorStates();
+}
 }

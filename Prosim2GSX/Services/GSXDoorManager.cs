@@ -134,8 +134,27 @@ namespace Prosim2GSX.Services
                 _isForwardCargoServiceActive = false;
                 _isAftCargoServiceActive = false;
 
+                // Ensure ProSim knows the doors are closed
+                _prosimDoorService.SetForwardRightDoor(false);
+                _prosimDoorService.SetAftRightDoor(false);
+                _prosimDoorService.SetForwardCargoDoor(false);
+                _prosimDoorService.SetAftCargoDoor(false);
+
+                Logger.Log(LogLevel.Information, "GSXDoorManager:Initialize", 
+                    $"Initial door states - ForwardRight: {_isForwardRightDoorOpen}, " +
+                    $"AftRight: {_isAftRightDoorOpen}, " +
+                    $"ForwardCargo: {_isForwardCargoDoorOpen}, " +
+                    $"AftCargo: {_isAftCargoDoorOpen}");
+                
+                // Clear any existing toggle-to-door mappings
+                _toggleToDoorMapping.Clear();
+                
+                // Clear door change tracking
+                _doorChangeTracking.Clear();
+
                 _isInitialized = true;
-                Logger.Log(LogLevel.Information, "GSXDoorManager:Initialize", "GSX Door Manager initialized");
+                Logger.Log(LogLevel.Information, "GSXDoorManager:Initialize", 
+                    "GSX Door Manager initialized with explicit door states");
             }
         }
 
