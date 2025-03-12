@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using System.Windows.Media;
+using Prosim2GSX.Services;
 
 namespace Prosim2GSX.UI.EFB.Themes
 {
@@ -38,7 +39,8 @@ namespace Prosim2GSX.UI.EFB.Themes
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error converting color {colorString}: {ex.Message}");
+                Logger.Log(LogLevel.Warning, "ThemeColorConverter:ConvertToResource", 
+                    $"Error converting color '{colorString}' for key '{key}': {ex.Message}");
                 return null;
             }
         }

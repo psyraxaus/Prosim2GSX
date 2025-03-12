@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿using CefSharp;
+﻿﻿﻿﻿﻿﻿﻿﻿using CefSharp;
 using CefSharp.OffScreen;
 using H.NotifyIcon;
 using Prosim2GSX.Models;
@@ -133,12 +133,21 @@ namespace Prosim2GSX
             {
                 Logger.Log(LogLevel.Information, "App:InitEfbUi", "Initializing EFB UI...");
                 
-                // Create and initialize the EFB application
-                EfbApp = new EFBApplication(Model);
+                // Log diagnostic information before initialization
+                LogEfbDiagnosticInfo("Pre-initialization");
+                
+                // Create and initialize the EFB application with logger
+                Logger.Log(LogLevel.Debug, "App:InitEfbUi", "Creating EFBApplication instance");
+                EfbApp = new EFBApplication(Model, Logger.Instance);
+                
+                // Initialize the EFB application
+                Logger.Log(LogLevel.Debug, "App:InitEfbUi", "Calling EFBApplication.InitializeAsync()");
                 bool initialized = await EfbApp.InitializeAsync();
                 
                 if (initialized)
                 {
+                    Logger.Log(LogLevel.Debug, "App:InitEfbUi", "EFB UI initialization successful, starting application");
+                    
                     // Start the EFB application
                     bool started = EfbApp.Start();
                     
@@ -150,23 +159,119 @@ namespace Prosim2GSX
                     }
                     else
                     {
-                        Logger.Log(LogLevel.Error, "App:InitEfbUi", "Failed to start EFB UI");
+                        // Log detailed information about the failure
+                        Logger.Log(LogLevel.Error, "App:InitEfbUi", 
+                            $"Failed to start EFB UI. Initialization state: {EfbApp.InitializationState}");
+                        
+                        // Log diagnostic information after failure
+                        LogEfbDiagnosticInfo("Post-start-failure");
+                        
                         // Fall back to legacy UI
+                        Logger.Log(LogLevel.Information, "App:InitEfbUi", "Falling back to legacy UI");
                         MainWindow = new MainWindow(notifyIcon?.DataContext as NotifyIconViewModel, Model);
                     }
                 }
                 else
                 {
-                    Logger.Log(LogLevel.Error, "App:InitEfbUi", "Failed to initialize EFB UI");
+                    // Log detailed information about the failure
+                    Logger.Log(LogLevel.Error, "App:InitEfbUi", 
+                        $"Failed to initialize EFB UI. Initialization state: {EfbApp.InitializationState}");
+                    
+                    // Log diagnostic information after failure
+                    LogEfbDiagnosticInfo("Post-initialization-failure");
+                    
                     // Fall back to legacy UI
+                    Logger.Log(LogLevel.Information, "App:InitEfbUi", "Falling back to legacy UI");
                     MainWindow = new MainWindow(notifyIcon?.DataContext as NotifyIconViewModel, Model);
                 }
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, "App:InitEfbUi", $"Error initializing EFB UI: {ex.Message}");
+                // Log the full exception details
+                Logger.Log(LogLevel.Error, "App:InitEfbUi", ex, "Error initializing EFB UI");
+                
+                // Log additional diagnostic information
+                LogEfbDiagnosticInfo("Post-exception");
+                
                 // Fall back to legacy UI
+                Logger.Log(LogLevel.Information, "App:InitEfbUi", "Falling back to legacy UI due to exception");
                 MainWindow = new MainWindow(notifyIcon?.DataContext as NotifyIconViewModel, Model);
+            }
+        }
+        
+        /// <summary>
+        /// Logs diagnostic information about the EFB UI environment
+        /// </summary>
+        /// <param name="stage">The stage at which diagnostics are being logged</param>
+        private void LogEfbDiagnosticInfo(string stage)
+        {
+            try
+            {
+                Logger.Log(LogLevel.Debug, "App:EfbDiagnostics", $"--- EFB Diagnostics ({stage}) ---");
+                
+                // Application directory information
+                Logger.Log(LogLevel.Debug, "App:EfbDiagnostics", $"AppDir: {AppDir}");
+                Logger.Log(LogLevel.Debug, "App:EfbDiagnostics", $"Current directory: {Directory.GetCurrentDirectory()}");
+                
+                // EFB UI configuration
+                Logger.Log(LogLevel.Debug, "App:EfbDiagnostics", $"UseEfbUi setting: {Model.UseEfbUi}");
+                
+                // EFB UI directories
+                var efbAssetsDir = Path.Combine(AppDir, "UI", "EFB", "Assets");
+                var efbThemesDir = Path.Combine(efbAssetsDir, "Themes");
+                
+                Logger.Log(LogLevel.Debug, "App:EfbDiagnostics", 
+                    $"EFB assets directory exists: {Directory.Exists(efbAssetsDir)}, Path: {efbAssetsDir}");
+                Logger.Log(LogLevel.Debug, "App:EfbDiagnostics", 
+                    $"EFB themes directory exists: {Directory.Exists(efbThemesDir)}, Path: {efbThemesDir}");
+                
+                // Check for theme files if the directory exists
+                if (Directory.Exists(efbThemesDir))
+                {
+                    try
+                    {
+                        var themeFiles = Directory.GetFiles(efbThemesDir, "*.json");
+                        Logger.Log(LogLevel.Debug, "App:EfbDiagnostics", $"Theme files found: {themeFiles.Length}");
+                        
+                        foreach (var file in themeFiles)
+                        {
+                            Logger.Log(LogLevel.Debug, "App:EfbDiagnostics", 
+                                $"Theme file: {Path.GetFileName(file)}, Size: {new FileInfo(file).Length} bytes");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log(LogLevel.Debug, "App:EfbDiagnostics", 
+                            $"Error enumerating theme files: {ex.Message}");
+                    }
+                }
+                
+                // EFB application state if available
+                if (EfbApp != null)
+                {
+                    Logger.Log(LogLevel.Debug, "App:EfbDiagnostics", 
+                        $"EFB application initialized: {EfbApp.IsInitialized}, " +
+                        $"State: {EfbApp.InitializationState}");
+                }
+                else
+                {
+                    Logger.Log(LogLevel.Debug, "App:EfbDiagnostics", "EFB application not created yet");
+                }
+                
+                // System information
+                Logger.Log(LogLevel.Debug, "App:EfbDiagnostics", 
+                    $"Available memory: {GC.GetTotalMemory(false) / 1024 / 1024}MB");
+                Logger.Log(LogLevel.Debug, "App:EfbDiagnostics", 
+                    $"OS version: {Environment.OSVersion.VersionString}");
+                Logger.Log(LogLevel.Debug, "App:EfbDiagnostics", 
+                    $".NET version: {Environment.Version}");
+                
+                Logger.Log(LogLevel.Debug, "App:EfbDiagnostics", "--- End EFB Diagnostics ---");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Debug, "App:EfbDiagnostics", 
+                    $"Error collecting diagnostic information: {ex.Message}");
             }
         }
 

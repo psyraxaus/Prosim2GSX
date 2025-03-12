@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using Newtonsoft.Json;
+using Prosim2GSX.Services;
 
 namespace Prosim2GSX.UI.EFB.Themes
 {
@@ -16,6 +17,7 @@ namespace Prosim2GSX.UI.EFB.Themes
         private readonly Dictionary<string, EFBThemeDefinition> _themes = new Dictionary<string, EFBThemeDefinition>();
         private EFBThemeDefinition _currentTheme;
         private EFBThemeDefinition _defaultTheme;
+        private readonly ILogger _logger;
 
         /// <summary>
         /// Event raised when the theme changes.
@@ -25,8 +27,11 @@ namespace Prosim2GSX.UI.EFB.Themes
         /// <summary>
         /// Initializes a new instance of the <see cref="EFBThemeManager"/> class.
         /// </summary>
-        public EFBThemeManager()
+        /// <param name="logger">Optional logger instance.</param>
+        public EFBThemeManager(ILogger logger = null)
         {
+            _logger = logger;
+            
             // Create a default theme
             _defaultTheme = new EFBThemeDefinition("Default")
             {
@@ -36,6 +41,9 @@ namespace Prosim2GSX.UI.EFB.Themes
 
             // Add the default theme to the themes dictionary
             _themes.Add(_defaultTheme.Name, _defaultTheme);
+            
+            _logger?.Log(LogLevel.Debug, "EFBThemeManager:Constructor", 
+                "EFBThemeManager initialized with default theme");
         }
 
         /// <summary>
@@ -86,7 +94,8 @@ namespace Prosim2GSX.UI.EFB.Themes
                     // Validate the theme
                     if (!ValidateTheme(themeJson))
                     {
-                        System.Diagnostics.Debug.WriteLine($"Theme validation failed for {themeFile}");
+                    _logger?.Log(LogLevel.Warning, "EFBThemeManager:LoadThemesAsync", 
+                        $"Theme validation failed for {themeFile}");
                         continue;
                     }
                     
@@ -96,12 +105,14 @@ namespace Prosim2GSX.UI.EFB.Themes
                     // Add to themes dictionary
                     AddTheme(themeDefinition);
                     
-                    System.Diagnostics.Debug.WriteLine($"Loaded theme: {themeDefinition.Name}");
+                    _logger?.Log(LogLevel.Debug, "EFBThemeManager:LoadThemesAsync", 
+                        $"Loaded theme: {themeDefinition.Name}");
                 }
                 catch (Exception ex)
                 {
                     // Log the error but continue processing other themes
-                    System.Diagnostics.Debug.WriteLine($"Error loading theme from {themeFile}: {ex.Message}");
+                    _logger?.Log(LogLevel.Error, "EFBThemeManager:LoadThemesAsync", ex,
+                        $"Error loading theme from {themeFile}");
                 }
             }
         }
@@ -115,20 +126,23 @@ namespace Prosim2GSX.UI.EFB.Themes
         {
             if (theme == null)
             {
-                System.Diagnostics.Debug.WriteLine("Theme validation failed: Theme is null");
+                _logger?.Log(LogLevel.Warning, "EFBThemeManager:ValidateTheme", 
+                    "Theme validation failed: Theme is null");
                 return false;
             }
             
             // Check required properties
             if (string.IsNullOrEmpty(theme.Name))
             {
-                System.Diagnostics.Debug.WriteLine("Theme validation failed: Name is required");
+                _logger?.Log(LogLevel.Warning, "EFBThemeManager:ValidateTheme", 
+                    "Theme validation failed: Name is required");
                 return false;
             }
             
             if (theme.Colors == null || theme.Colors.Count == 0)
             {
-                System.Diagnostics.Debug.WriteLine("Theme validation failed: Colors are required");
+                _logger?.Log(LogLevel.Warning, "EFBThemeManager:ValidateTheme", 
+                    "Theme validation failed: Colors are required");
                 return false;
             }
             
@@ -146,14 +160,16 @@ namespace Prosim2GSX.UI.EFB.Themes
             {
                 if (!theme.Colors.ContainsKey(color))
                 {
-                    System.Diagnostics.Debug.WriteLine($"Theme validation failed: Required color {color} is missing");
+                    _logger?.Log(LogLevel.Warning, "EFBThemeManager:ValidateTheme", 
+                        $"Theme validation failed: Required color {color} is missing");
                     return false;
                 }
                 
                 // Validate color format
                 if (!ThemeColorConverter.IsValidColor(theme.Colors[color]))
                 {
-                    System.Diagnostics.Debug.WriteLine($"Theme validation failed: Color {color} has invalid format: {theme.Colors[color]}");
+                    _logger?.Log(LogLevel.Warning, "EFBThemeManager:ValidateTheme", 
+                        $"Theme validation failed: Color {color} has invalid format: {theme.Colors[color]}");
                     return false;
                 }
             }
@@ -266,7 +282,8 @@ namespace Prosim2GSX.UI.EFB.Themes
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Error loading theme resource dictionary: {ex.Message}");
+                    _logger?.Log(LogLevel.Error, "EFBThemeManager:ApplyTheme", ex,
+                        $"Error loading theme resource dictionary for theme '{theme.Name}'");
                 }
             }
 

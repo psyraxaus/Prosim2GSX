@@ -8,34 +8,63 @@ using Prosim2GSX.Models;
 using Prosim2GSX.UI.EFB.Themes;
 using Prosim2GSX.UI.EFB.ViewModels;
 using Prosim2GSX.UI.EFB.Windows;
+using Prosim2GSX.Services;
 
 namespace Prosim2GSX.UI.EFB
 {
+    /// <summary>
+    /// Tracks the state of EFB UI initialization for diagnostic purposes
+    /// </summary>
+    public enum EFBInitializationState
+    {
+        NotStarted,
+        ThemeManagerInitializing,
+        ThemeManagerInitialized,
+        WindowManagerInitializing,
+        WindowManagerInitialized,
+        DataBindingInitializing,
+        DataBindingInitialized,
+        PagesRegistering,
+        PagesRegistered,
+        Completed,
+        Failed
+    }
+
     /// <summary>
     /// Main application class for the EFB UI.
     /// </summary>
     public class EFBApplication
     {
         private readonly ServiceModel _serviceModel;
+        private readonly ILogger _logger;
         private EFBThemeManager _themeManager;
         private EFBWindowManager _windowManager;
         private EFBDataBindingService _dataBindingService;
         private EFBWindow _mainWindow;
         private bool _isInitialized;
+        private EFBInitializationState _initializationState = EFBInitializationState.NotStarted;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EFBApplication"/> class.
         /// </summary>
         /// <param name="serviceModel">The service model.</param>
-        public EFBApplication(ServiceModel serviceModel)
+        /// <param name="logger">The logger instance.</param>
+        public EFBApplication(ServiceModel serviceModel, ILogger logger = null)
         {
             _serviceModel = serviceModel ?? throw new ArgumentNullException(nameof(serviceModel));
+            _logger = logger;
+            _logger?.Log(LogLevel.Debug, "EFBApplication:Constructor", "EFBApplication instance created");
         }
 
         /// <summary>
         /// Gets a value indicating whether the application is initialized.
         /// </summary>
         public bool IsInitialized => _isInitialized;
+
+        /// <summary>
+        /// Gets the current initialization state.
+        /// </summary>
+        public EFBInitializationState InitializationState => _initializationState;
 
         /// <summary>
         /// Gets the theme manager.
@@ -65,34 +94,78 @@ namespace Prosim2GSX.UI.EFB
         {
             if (_isInitialized)
             {
+                _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", "Application already initialized, skipping initialization");
                 return true;
             }
 
             try
             {
+                _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", "Starting EFB application initialization");
+                
                 // Initialize the theme manager
-                _themeManager = new EFBThemeManager();
+                UpdateInitializationState(EFBInitializationState.ThemeManagerInitializing);
+                _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", "Initializing theme manager");
+                _themeManager = new EFBThemeManager(_logger);
                 
                 // Load themes from the themes directory
                 var themesDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "UI", "EFB", "Assets", "Themes");
-                Directory.CreateDirectory(themesDirectory); // Ensure the directory exists
+                bool themesDirectoryExists = Directory.Exists(themesDirectory);
+                _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", 
+                    $"Themes directory exists: {themesDirectoryExists}, Path: {themesDirectory}");
+                
+                // Ensure the directory exists
+                Directory.CreateDirectory(themesDirectory);
+                
+                // Load themes
+                _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", "Loading themes from directory");
                 await _themeManager.LoadThemesAsync(themesDirectory);
+                
+                // Check if themes were loaded
+                int themeCount = _themeManager.Themes?.Count ?? 0;
+                _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", $"Loaded {themeCount} themes");
+                
+                // Apply default theme if no themes were loaded
+                if (themeCount == 0)
+                {
+                    _logger?.Log(LogLevel.Warning, "EFBApplication:InitializeAsync", 
+                        "No themes found, applying default theme");
+                    _themeManager.ApplyDefaultTheme();
+                }
+                
+                UpdateInitializationState(EFBInitializationState.ThemeManagerInitialized);
 
                 // Initialize the window manager
-                _windowManager = new EFBWindowManager(_themeManager);
+                UpdateInitializationState(EFBInitializationState.WindowManagerInitializing);
+                _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", "Initializing window manager");
+                _windowManager = new EFBWindowManager(_themeManager, _logger);
+                UpdateInitializationState(EFBInitializationState.WindowManagerInitialized);
 
                 // Initialize the data binding service
-                _dataBindingService = new EFBDataBindingService(_serviceModel);
+                UpdateInitializationState(EFBInitializationState.DataBindingInitializing);
+                _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", "Initializing data binding service");
+                _dataBindingService = new EFBDataBindingService(_serviceModel, 500, _logger);
+                UpdateInitializationState(EFBInitializationState.DataBindingInitialized);
 
                 // Register pages with the window manager
+                UpdateInitializationState(EFBInitializationState.PagesRegistering);
+                _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", "Registering pages with window manager");
                 RegisterPages();
+                UpdateInitializationState(EFBInitializationState.PagesRegistered);
 
                 _isInitialized = true;
+                UpdateInitializationState(EFBInitializationState.Completed);
+                _logger?.Log(LogLevel.Information, "EFBApplication:InitializeAsync", "EFB application initialization completed successfully");
                 return true;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error initializing EFB application: {ex.Message}");
+                UpdateInitializationState(EFBInitializationState.Failed);
+                _logger?.Log(LogLevel.Error, "EFBApplication:InitializeAsync", ex, 
+                    $"Failed to initialize EFB application at state: {_initializationState}");
+                
+                // Log additional diagnostic information
+                LogDiagnosticInformation();
+                
                 return false;
             }
         }
@@ -105,25 +178,37 @@ namespace Prosim2GSX.UI.EFB
         {
             if (!_isInitialized)
             {
-                throw new InvalidOperationException("EFB application must be initialized before starting.");
+                string errorMessage = "EFB application must be initialized before starting.";
+                _logger?.Log(LogLevel.Error, "EFBApplication:Start", errorMessage);
+                throw new InvalidOperationException(errorMessage);
             }
 
             try
             {
+                _logger?.Log(LogLevel.Debug, "EFBApplication:Start", "Starting EFB application");
+                
                 // Create the main window
+                _logger?.Log(LogLevel.Debug, "EFBApplication:Start", "Creating main window");
                 _mainWindow = _windowManager.CreateWindow();
                 
                 // Show the main window
+                _logger?.Log(LogLevel.Debug, "EFBApplication:Start", "Showing main window");
                 _mainWindow.Show();
                 
                 // Navigate to the home page
+                _logger?.Log(LogLevel.Debug, "EFBApplication:Start", "Navigating to home page");
                 _mainWindow.NavigateTo("Home");
 
+                _logger?.Log(LogLevel.Information, "EFBApplication:Start", "EFB application started successfully");
                 return true;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error starting EFB application: {ex.Message}");
+                _logger?.Log(LogLevel.Error, "EFBApplication:Start", ex, "Failed to start EFB application");
+                
+                // Log additional diagnostic information
+                LogDiagnosticInformation();
+                
                 return false;
             }
         }
@@ -135,17 +220,105 @@ namespace Prosim2GSX.UI.EFB
         {
             try
             {
+                _logger?.Log(LogLevel.Debug, "EFBApplication:Stop", "Stopping EFB application");
+                
                 // Close all windows
+                _logger?.Log(LogLevel.Debug, "EFBApplication:Stop", "Closing all windows");
                 _windowManager?.CloseAllWindows();
                 
                 // Clean up the data binding service
+                _logger?.Log(LogLevel.Debug, "EFBApplication:Stop", "Cleaning up data binding service");
                 _dataBindingService?.Cleanup();
                 
                 _isInitialized = false;
+                _logger?.Log(LogLevel.Information, "EFBApplication:Stop", "EFB application stopped successfully");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error stopping EFB application: {ex.Message}");
+                _logger?.Log(LogLevel.Error, "EFBApplication:Stop", ex, "Error stopping EFB application");
+            }
+        }
+
+        /// <summary>
+        /// Updates the initialization state and logs the change.
+        /// </summary>
+        /// <param name="newState">The new initialization state.</param>
+        private void UpdateInitializationState(EFBInitializationState newState)
+        {
+            _initializationState = newState;
+            _logger?.Log(LogLevel.Debug, "EFBApplication:Initialize", $"Initialization state changed to: {newState}");
+        }
+        
+        /// <summary>
+        /// Logs diagnostic information about the EFB application state.
+        /// </summary>
+        private void LogDiagnosticInformation()
+        {
+            try
+            {
+                _logger?.Log(LogLevel.Debug, "EFBApplication:Diagnostics", 
+                    $"Initialization state: {_initializationState}");
+                
+                // Theme manager diagnostics
+                if (_themeManager != null)
+                {
+                    _logger?.Log(LogLevel.Debug, "EFBApplication:Diagnostics", 
+                        $"Theme manager initialized: {_themeManager != null}, " +
+                        $"Theme count: {_themeManager.Themes?.Count ?? 0}");
+                }
+                else
+                {
+                    _logger?.Log(LogLevel.Debug, "EFBApplication:Diagnostics", 
+                        "Theme manager not initialized");
+                }
+                
+                // Window manager diagnostics
+                _logger?.Log(LogLevel.Debug, "EFBApplication:Diagnostics", 
+                    $"Window manager initialized: {_windowManager != null}");
+                
+                // Data binding service diagnostics
+                _logger?.Log(LogLevel.Debug, "EFBApplication:Diagnostics", 
+                    $"Data binding service initialized: {_dataBindingService != null}");
+                
+                // Main window diagnostics
+                _logger?.Log(LogLevel.Debug, "EFBApplication:Diagnostics", 
+                    $"Main window created: {_mainWindow != null}");
+                
+                // Directory diagnostics
+                var themesDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "UI", "EFB", "Assets", "Themes");
+                bool themesDirectoryExists = Directory.Exists(themesDirectory);
+                _logger?.Log(LogLevel.Debug, "EFBApplication:Diagnostics", 
+                    $"Themes directory exists: {themesDirectoryExists}, Path: {themesDirectory}");
+                
+                if (themesDirectoryExists)
+                {
+                    try
+                    {
+                        var themeFiles = Directory.GetFiles(themesDirectory, "*.json");
+                        _logger?.Log(LogLevel.Debug, "EFBApplication:Diagnostics", 
+                            $"Theme files found: {themeFiles.Length}");
+                        
+                        foreach (var file in themeFiles)
+                        {
+                            _logger?.Log(LogLevel.Debug, "EFBApplication:Diagnostics", 
+                                $"Theme file: {Path.GetFileName(file)}, Size: {new FileInfo(file).Length} bytes");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.Log(LogLevel.Debug, "EFBApplication:Diagnostics", 
+                            $"Error enumerating theme files: {ex.Message}");
+                    }
+                }
+                
+                // System diagnostics
+                _logger?.Log(LogLevel.Debug, "EFBApplication:Diagnostics", 
+                    $"Available memory: {GC.GetTotalMemory(false) / 1024 / 1024}MB");
+            }
+            catch (Exception ex)
+            {
+                _logger?.Log(LogLevel.Debug, "EFBApplication:Diagnostics", 
+                    $"Error collecting diagnostic information: {ex.Message}");
             }
         }
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Prosim2GSX.UI.EFB.Themes;
+using Prosim2GSX.Services;
 
 namespace Prosim2GSX.UI.EFB.Windows
 {
@@ -14,14 +15,18 @@ namespace Prosim2GSX.UI.EFB.Windows
         private readonly Dictionary<string, Type> _pageTypes = new Dictionary<string, Type>();
         private readonly Dictionary<string, (string Title, string Icon)> _pageInfo = new Dictionary<string, (string Title, string Icon)>();
         private readonly EFBThemeManager _themeManager;
+        private readonly ILogger _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EFBWindowManager"/> class.
         /// </summary>
         /// <param name="themeManager">The theme manager.</param>
-        public EFBWindowManager(EFBThemeManager themeManager)
+        /// <param name="logger">Optional logger instance.</param>
+        public EFBWindowManager(EFBThemeManager themeManager, ILogger logger = null)
         {
             _themeManager = themeManager ?? throw new ArgumentNullException(nameof(themeManager));
+            _logger = logger;
+            _logger?.Log(LogLevel.Debug, "EFBWindowManager:Constructor", "EFBWindowManager initialized");
         }
 
         /// <summary>
@@ -35,20 +40,34 @@ namespace Prosim2GSX.UI.EFB.Windows
         /// <returns>The created window.</returns>
         public EFBWindow CreateWindow()
         {
-            var window = new EFBWindow();
-            window.SetThemeManager(_themeManager);
+            _logger?.Log(LogLevel.Debug, "EFBWindowManager:CreateWindow", "Creating new EFB window");
             
-            // Register pages with the window
-            foreach (var pageKey in _pageTypes.Keys)
+            try
             {
-                var (title, icon) = _pageInfo[pageKey];
-                window.RegisterPage(pageKey, _pageTypes[pageKey], title, icon);
+                var window = new EFBWindow();
+                
+                _logger?.Log(LogLevel.Debug, "EFBWindowManager:CreateWindow", "Setting theme manager");
+                window.SetThemeManager(_themeManager);
+                
+                // Register pages with the window
+                _logger?.Log(LogLevel.Debug, "EFBWindowManager:CreateWindow", $"Registering {_pageTypes.Count} pages with window");
+                foreach (var pageKey in _pageTypes.Keys)
+                {
+                    var (title, icon) = _pageInfo[pageKey];
+                    window.RegisterPage(pageKey, _pageTypes[pageKey], title, icon);
+                }
+                
+                _windows.Add(window);
+                window.Closed += Window_Closed;
+                
+                _logger?.Log(LogLevel.Debug, "EFBWindowManager:CreateWindow", "Window created successfully");
+                return window;
             }
-            
-            _windows.Add(window);
-            window.Closed += Window_Closed;
-            
-            return window;
+            catch (Exception ex)
+            {
+                _logger?.Log(LogLevel.Error, "EFBWindowManager:CreateWindow", ex, "Failed to create EFB window");
+                throw; // Re-throw the exception to be handled by the caller
+            }
         }
 
         /// <summary>
@@ -56,9 +75,20 @@ namespace Prosim2GSX.UI.EFB.Windows
         /// </summary>
         public void CloseAllWindows()
         {
-            foreach (var window in _windows.ToList())
+            _logger?.Log(LogLevel.Debug, "EFBWindowManager:CloseAllWindows", $"Closing {_windows.Count} windows");
+            
+            try
             {
-                window.Close();
+                foreach (var window in _windows.ToList())
+                {
+                    window.Close();
+                }
+                
+                _logger?.Log(LogLevel.Debug, "EFBWindowManager:CloseAllWindows", "All windows closed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger?.Log(LogLevel.Error, "EFBWindowManager:CloseAllWindows", ex, "Error closing windows");
             }
         }
 
@@ -71,33 +101,64 @@ namespace Prosim2GSX.UI.EFB.Windows
         /// <param name="icon">The page icon.</param>
         public void RegisterPage(string pageKey, Type pageType, string title, string icon)
         {
-            if (string.IsNullOrEmpty(pageKey))
+            _logger?.Log(LogLevel.Debug, "EFBWindowManager:RegisterPage", 
+                $"Registering page '{pageKey}' with type '{pageType.FullName}', title '{title}', icon '{icon}'");
+            
+            try
             {
-                throw new ArgumentException("Page key cannot be null or empty.", nameof(pageKey));
+                if (string.IsNullOrEmpty(pageKey))
+                {
+                    var errorMessage = "Page key cannot be null or empty.";
+                    _logger?.Log(LogLevel.Error, "EFBWindowManager:RegisterPage", errorMessage);
+                    throw new ArgumentException(errorMessage, nameof(pageKey));
+                }
+
+                if (pageType == null)
+                {
+                    var errorMessage = "Page type cannot be null.";
+                    _logger?.Log(LogLevel.Error, "EFBWindowManager:RegisterPage", errorMessage);
+                    throw new ArgumentNullException(nameof(pageType), errorMessage);
+                }
+
+                if (string.IsNullOrEmpty(title))
+                {
+                    var errorMessage = "Page title cannot be null or empty.";
+                    _logger?.Log(LogLevel.Error, "EFBWindowManager:RegisterPage", errorMessage);
+                    throw new ArgumentException(errorMessage, nameof(title));
+                }
+
+                if (string.IsNullOrEmpty(icon))
+                {
+                    var errorMessage = "Page icon cannot be null or empty.";
+                    _logger?.Log(LogLevel.Error, "EFBWindowManager:RegisterPage", errorMessage);
+                    throw new ArgumentException(errorMessage, nameof(icon));
+                }
+
+                _pageTypes[pageKey] = pageType;
+                _pageInfo[pageKey] = (title, icon);
+                _logger?.Log(LogLevel.Debug, "EFBWindowManager:RegisterPage", 
+                    $"Page '{pageKey}' registered with window manager");
+
+                // Register the page with all existing windows
+                if (_windows.Count > 0)
+                {
+                    _logger?.Log(LogLevel.Debug, "EFBWindowManager:RegisterPage", 
+                        $"Registering page '{pageKey}' with {_windows.Count} existing windows");
+                    
+                    foreach (var window in _windows)
+                    {
+                        window.RegisterPage(pageKey, pageType, title, icon);
+                    }
+                }
+                
+                _logger?.Log(LogLevel.Debug, "EFBWindowManager:RegisterPage", 
+                    $"Page '{pageKey}' registration completed successfully");
             }
-
-            if (pageType == null)
+            catch (Exception ex)
             {
-                throw new ArgumentNullException(nameof(pageType));
-            }
-
-            if (string.IsNullOrEmpty(title))
-            {
-                throw new ArgumentException("Page title cannot be null or empty.", nameof(title));
-            }
-
-            if (string.IsNullOrEmpty(icon))
-            {
-                throw new ArgumentException("Page icon cannot be null or empty.", nameof(icon));
-            }
-
-            _pageTypes[pageKey] = pageType;
-            _pageInfo[pageKey] = (title, icon);
-
-            // Register the page with all existing windows
-            foreach (var window in _windows)
-            {
-                window.RegisterPage(pageKey, pageType, title, icon);
+                _logger?.Log(LogLevel.Error, "EFBWindowManager:RegisterPage", ex, 
+                    $"Error registering page '{pageKey}'");
+                throw; // Re-throw the exception to be handled by the caller
             }
         }
 
@@ -108,12 +169,25 @@ namespace Prosim2GSX.UI.EFB.Windows
         /// <returns>The window at the specified index.</returns>
         public EFBWindow GetWindow(int index)
         {
-            if (index < 0 || index >= _windows.Count)
+            _logger?.Log(LogLevel.Debug, "EFBWindowManager:GetWindow", $"Getting window at index {index}");
+            
+            try
             {
-                throw new ArgumentOutOfRangeException(nameof(index));
-            }
+                if (index < 0 || index >= _windows.Count)
+                {
+                    var errorMessage = $"Window index {index} is out of range. Valid range: 0-{_windows.Count - 1}";
+                    _logger?.Log(LogLevel.Error, "EFBWindowManager:GetWindow", errorMessage);
+                    throw new ArgumentOutOfRangeException(nameof(index), errorMessage);
+                }
 
-            return _windows[index];
+                _logger?.Log(LogLevel.Debug, "EFBWindowManager:GetWindow", $"Successfully retrieved window at index {index}");
+                return _windows[index];
+            }
+            catch (Exception ex) when (!(ex is ArgumentOutOfRangeException))
+            {
+                _logger?.Log(LogLevel.Error, "EFBWindowManager:GetWindow", ex, $"Error getting window at index {index}");
+                throw;
+            }
         }
 
         /// <summary>
@@ -126,10 +200,23 @@ namespace Prosim2GSX.UI.EFB.Windows
         /// </summary>
         public void DetachCurrentWindow()
         {
-            // This would be implemented to detach the current window
-            // For now, just create a new window
-            var window = CreateWindow();
-            window.Show();
+            _logger?.Log(LogLevel.Debug, "EFBWindowManager:DetachCurrentWindow", "Detaching current window");
+            
+            try
+            {
+                // This would be implemented to detach the current window
+                // For now, just create a new window
+                _logger?.Log(LogLevel.Debug, "EFBWindowManager:DetachCurrentWindow", "Creating new window for detachment");
+                var window = CreateWindow();
+                window.Show();
+                
+                _logger?.Log(LogLevel.Debug, "EFBWindowManager:DetachCurrentWindow", "Window detached successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger?.Log(LogLevel.Error, "EFBWindowManager:DetachCurrentWindow", ex, "Error detaching window");
+                throw;
+            }
         }
 
         /// <summary>
@@ -139,7 +226,7 @@ namespace Prosim2GSX.UI.EFB.Windows
         {
             // This would be implemented to toggle fullscreen mode for the current window
             // For now, just log a message
-            System.Diagnostics.Debug.WriteLine("ToggleFullscreen called");
+            _logger?.Log(LogLevel.Debug, "EFBWindowManager:ToggleFullscreen", "ToggleFullscreen called");
         }
 
         /// <summary>
@@ -149,15 +236,20 @@ namespace Prosim2GSX.UI.EFB.Windows
         {
             // This would be implemented to toggle compact mode for the current window
             // For now, just log a message
-            System.Diagnostics.Debug.WriteLine("ToggleCompactMode called");
+            _logger?.Log(LogLevel.Debug, "EFBWindowManager:ToggleCompactMode", "ToggleCompactMode called");
         }
 
         private void Window_Closed(object sender, EventArgs e)
         {
             if (sender is EFBWindow window)
             {
+                _logger?.Log(LogLevel.Debug, "EFBWindowManager:Window_Closed", "Window closed event received");
+                
                 window.Closed -= Window_Closed;
                 _windows.Remove(window);
+                
+                _logger?.Log(LogLevel.Debug, "EFBWindowManager:Window_Closed", 
+                    $"Window removed from window list. Remaining windows: {_windows.Count}");
             }
         }
     }

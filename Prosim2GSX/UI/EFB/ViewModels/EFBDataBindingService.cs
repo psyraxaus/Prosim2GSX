@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
+using Prosim2GSX.Services;
 
 namespace Prosim2GSX.UI.EFB.ViewModels
 {
@@ -20,17 +21,23 @@ namespace Prosim2GSX.UI.EFB.ViewModels
         private readonly Timer _pollingTimer;
         private readonly Dictionary<string, object> _lastValues = new Dictionary<string, object>();
         private readonly int _pollingIntervalMilliseconds;
+        private readonly ILogger _logger;
         
         /// <summary>
         /// Initializes a new instance of the <see cref="EFBDataBindingService"/> class.
         /// </summary>
         /// <param name="serviceModel">The service model to bind to.</param>
         /// <param name="pollingIntervalMilliseconds">The polling interval in milliseconds.</param>
-        public EFBDataBindingService(object serviceModel, int pollingIntervalMilliseconds = 500)
+        /// <param name="logger">Optional logger instance.</param>
+        public EFBDataBindingService(object serviceModel, int pollingIntervalMilliseconds = 500, ILogger logger = null)
         {
             _serviceModel = serviceModel ?? throw new ArgumentNullException(nameof(serviceModel));
             _dispatcher = Dispatcher.CurrentDispatcher;
             _pollingIntervalMilliseconds = pollingIntervalMilliseconds;
+            _logger = logger;
+            
+            _logger?.Log(LogLevel.Debug, "EFBDataBindingService:Constructor", 
+                $"Initializing data binding service with polling interval: {pollingIntervalMilliseconds}ms");
             
             // Start polling timer
             _pollingTimer = new Timer(PollProperties, null, _pollingIntervalMilliseconds, _pollingIntervalMilliseconds);
@@ -39,6 +46,13 @@ namespace Prosim2GSX.UI.EFB.ViewModels
             if (_serviceModel is INotifyPropertyChanged notifyPropertyChanged)
             {
                 notifyPropertyChanged.PropertyChanged += OnServiceModelPropertyChanged;
+                _logger?.Log(LogLevel.Debug, "EFBDataBindingService:Constructor", 
+                    "Service model implements INotifyPropertyChanged, subscribing to events");
+            }
+            else
+            {
+                _logger?.Log(LogLevel.Debug, "EFBDataBindingService:Constructor", 
+                    "Service model does not implement INotifyPropertyChanged, using polling");
             }
         }
         
@@ -58,7 +72,9 @@ namespace Prosim2GSX.UI.EFB.ViewModels
             var property = GetPropertyInfo(propertyName);
             if (property == null)
             {
-                throw new ArgumentException($"Property '{propertyName}' not found on service model.", nameof(propertyName));
+                var errorMessage = $"Property '{propertyName}' not found on service model.";
+                _logger?.Log(LogLevel.Error, "EFBDataBindingService:GetValue", errorMessage);
+                throw new ArgumentException(errorMessage, nameof(propertyName));
             }
             
             return (T)property.GetValue(_serviceModel);
@@ -80,12 +96,16 @@ namespace Prosim2GSX.UI.EFB.ViewModels
             var property = GetPropertyInfo(propertyName);
             if (property == null)
             {
-                throw new ArgumentException($"Property '{propertyName}' not found on service model.", nameof(propertyName));
+                var errorMessage = $"Property '{propertyName}' not found on service model.";
+                _logger?.Log(LogLevel.Error, "EFBDataBindingService:SetValue", errorMessage);
+                throw new ArgumentException(errorMessage, nameof(propertyName));
             }
             
             if (!property.CanWrite)
             {
-                throw new InvalidOperationException($"Property '{propertyName}' is read-only.");
+                var errorMessage = $"Property '{propertyName}' is read-only.";
+                _logger?.Log(LogLevel.Error, "EFBDataBindingService:SetValue", errorMessage);
+                throw new InvalidOperationException(errorMessage);
             }
             
             property.SetValue(_serviceModel, value);
@@ -115,6 +135,8 @@ namespace Prosim2GSX.UI.EFB.ViewModels
             }
             
             callbacks.Add(callback);
+            _logger?.Log(LogLevel.Debug, "EFBDataBindingService:Subscribe", 
+                $"Subscribed to property '{propertyName}'");
             
             // Initialize with current value
             var property = GetPropertyInfo(propertyName);
@@ -123,6 +145,8 @@ namespace Prosim2GSX.UI.EFB.ViewModels
                 var value = property.GetValue(_serviceModel);
                 _lastValues[propertyName] = value;
                 callback(value);
+                _logger?.Log(LogLevel.Debug, "EFBDataBindingService:Subscribe", 
+                    $"Initialized property '{propertyName}' with current value");
             }
         }
         
@@ -146,10 +170,14 @@ namespace Prosim2GSX.UI.EFB.ViewModels
             if (_propertyChangedCallbacks.TryGetValue(propertyName, out var callbacks))
             {
                 callbacks.Remove(callback);
+                _logger?.Log(LogLevel.Debug, "EFBDataBindingService:Unsubscribe", 
+                    $"Unsubscribed from property '{propertyName}'");
                 
                 if (callbacks.Count == 0)
                 {
                     _propertyChangedCallbacks.Remove(propertyName);
+                    _logger?.Log(LogLevel.Debug, "EFBDataBindingService:Unsubscribe", 
+                        $"Removed all callbacks for property '{propertyName}'");
                 }
             }
         }
@@ -159,16 +187,22 @@ namespace Prosim2GSX.UI.EFB.ViewModels
         /// </summary>
         public void Cleanup()
         {
+            _logger?.Log(LogLevel.Debug, "EFBDataBindingService:Cleanup", "Cleaning up data binding service");
+            
             _pollingTimer?.Dispose();
             
             if (_serviceModel is INotifyPropertyChanged notifyPropertyChanged)
             {
                 notifyPropertyChanged.PropertyChanged -= OnServiceModelPropertyChanged;
+                _logger?.Log(LogLevel.Debug, "EFBDataBindingService:Cleanup", 
+                    "Unsubscribed from service model property changed events");
             }
             
             _propertyChangedCallbacks.Clear();
             _lastValues.Clear();
             _propertyCache.Clear();
+            
+            _logger?.Log(LogLevel.Debug, "EFBDataBindingService:Cleanup", "Data binding service cleanup completed");
         }
         
         private PropertyInfo GetPropertyInfo(string propertyName)

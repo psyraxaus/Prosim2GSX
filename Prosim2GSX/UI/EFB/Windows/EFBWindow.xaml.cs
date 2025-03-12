@@ -159,6 +159,7 @@ namespace Prosim2GSX.UI.EFB.Windows
             button.Click += NavigationButton_Click;
             _navigationButtons[key] = button;
             NavigationPanel.Children.Add(button);
+            
         }
 
         /// <summary>
@@ -274,8 +275,12 @@ namespace Prosim2GSX.UI.EFB.Windows
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            
             // Apply the default theme if a theme manager is set
-            _themeManager?.ApplyDefaultTheme();
+            if (_themeManager != null)
+            {
+                _themeManager.ApplyDefaultTheme();
+            }
 
             // Update the time display
             UpdateTimeDisplay();
@@ -283,6 +288,7 @@ namespace Prosim2GSX.UI.EFB.Windows
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            
             // Clean up resources
             _timer.Stop();
             _navigationService.Navigating -= NavigationService_Navigating;
@@ -298,6 +304,7 @@ namespace Prosim2GSX.UI.EFB.Windows
             {
                 button.Click -= NavigationButton_Click;
             }
+            
         }
 
         private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
