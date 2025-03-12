@@ -32,7 +32,7 @@ namespace Prosim2GSX.Services
         /// <param name="processName">The name of the process</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>The audio session, or null if not found</returns>
-        Task<AudioSessionControl2> GetSessionForProcessAsync(string processName, CancellationToken cancellationToken = default);
+        ValueTask<AudioSessionControl2> GetSessionForProcessAsync(string processName, CancellationToken cancellationToken = default);
         
         /// <summary>
         /// Sets the volume for an audio session

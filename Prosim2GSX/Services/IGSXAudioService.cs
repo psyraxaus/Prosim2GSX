@@ -18,7 +18,7 @@ namespace Prosim2GSX.Services
         /// Gets audio sessions for GSX and VHF1 asynchronously
         /// </summary>
         /// <param name="cancellationToken">Cancellation token</param>
-        Task GetAudioSessionsAsync(CancellationToken cancellationToken = default);
+        ValueTask GetAudioSessionsAsync(CancellationToken cancellationToken = default);
         
         /// <summary>
         /// Resets audio settings to default
@@ -29,7 +29,7 @@ namespace Prosim2GSX.Services
         /// Resets audio settings to default asynchronously
         /// </summary>
         /// <param name="cancellationToken">Cancellation token</param>
-        Task ResetAudioAsync(CancellationToken cancellationToken = default);
+        ValueTask ResetAudioAsync(CancellationToken cancellationToken = default);
         
         /// <summary>
         /// Controls audio based on cockpit controls
@@ -40,7 +40,7 @@ namespace Prosim2GSX.Services
         /// Controls audio based on cockpit controls asynchronously
         /// </summary>
         /// <param name="cancellationToken">Cancellation token</param>
-        Task ControlAudioAsync(CancellationToken cancellationToken = default);
+        ValueTask ControlAudioAsync(CancellationToken cancellationToken = default);
         
         /// <summary>
         /// Number of retry attempts for getting audio sessions

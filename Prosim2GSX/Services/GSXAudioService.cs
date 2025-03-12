@@ -86,10 +86,11 @@ namespace Prosim2GSX.Services
         /// <summary>
         /// Gets audio sessions for GSX and VHF1 asynchronously
         /// </summary>
-        public async Task GetAudioSessionsAsync(CancellationToken cancellationToken = default)
+        public async ValueTask GetAudioSessionsAsync(CancellationToken cancellationToken = default)
         {
             try
             {
+                // Use Task.Run internally but return ValueTask for better performance
                 await Task.Run(() => 
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -178,10 +179,11 @@ namespace Prosim2GSX.Services
         /// <summary>
         /// Resets audio settings to default asynchronously
         /// </summary>
-        public async Task ResetAudioAsync(CancellationToken cancellationToken = default)
+        public async ValueTask ResetAudioAsync(CancellationToken cancellationToken = default)
         {
             try
             {
+                // Use Task.Run internally but return ValueTask for better performance
                 await Task.Run(() => 
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -240,10 +242,11 @@ namespace Prosim2GSX.Services
         /// <summary>
         /// Controls audio based on cockpit controls asynchronously
         /// </summary>
-        public async Task ControlAudioAsync(CancellationToken cancellationToken = default)
+        public async ValueTask ControlAudioAsync(CancellationToken cancellationToken = default)
         {
             try
             {
+                // Use Task.Run internally but return ValueTask for better performance
                 await Task.Run(() => 
                 {
                     cancellationToken.ThrowIfCancellationRequested();

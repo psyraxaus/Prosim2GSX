@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -69,12 +69,43 @@ namespace Prosim2GSX
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = (int)MobiSimConnect.MOBIFLIGHT_MESSAGE_SIZE)]
         public byte[] data;
 
-        public ClientDataString(string strData)
+        public ClientDataString()
         {
-            byte[] txtBytes = Encoding.ASCII.GetBytes(strData);
-            var ret = new byte[1024];
-            Array.Copy(txtBytes, ret, txtBytes.Length);
-            data = ret;
+            data = new byte[MobiSimConnect.MOBIFLIGHT_MESSAGE_SIZE];
+        }
+
+        public ClientDataString(string strData) : this()
+        {
+            SetData(strData);
+        }
+        
+        // Add constructor that accepts ReadOnlySpan<char> for better performance
+        public ClientDataString(ReadOnlySpan<char> strData) : this()
+        {
+            SetData(strData);
+        }
+        
+        // Add method to set data from string
+        public void SetData(string strData)
+        {
+            SetData(strData.AsSpan());
+        }
+        
+        // Add method to set data from ReadOnlySpan<char>
+        public void SetData(ReadOnlySpan<char> strData)
+        {
+            // Clear existing data
+            Array.Clear(data, 0, data.Length);
+            
+            // Check if the input data will fit in the destination buffer
+            if (strData.Length >= MobiSimConnect.MOBIFLIGHT_MESSAGE_SIZE)
+            {
+                // If input is too large, truncate it to fit
+                strData = strData.Slice(0, (int)MobiSimConnect.MOBIFLIGHT_MESSAGE_SIZE - 1);
+            }
+            
+            // Convert directly from Span<char> to avoid string allocation
+            Encoding.ASCII.GetBytes(strData, data);
         }
     }
 

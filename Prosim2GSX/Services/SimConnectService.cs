@@ -1,6 +1,7 @@
 using Microsoft.FlightSimulator.SimConnect;
 using System;
 using System.Collections.Generic;
+using System.Collections.Frozen;
 using System.Globalization;
 using System.Threading;
 
@@ -37,10 +38,23 @@ namespace Prosim2GSX.Services
         protected const int reorderTreshold = 150;
         protected Dictionary<string, uint> addressToIndex = new();
         protected Dictionary<uint, float> simVars = new();
+        
+        // Frozen dictionaries for read operations
+        protected FrozenDictionary<string, uint> frozenAddressToIndex;
+        protected FrozenDictionary<uint, float> frozenSimVars;
 
         public SimConnectService()
         {
             
+        }
+
+        // Add a method to freeze collections after all variables are loaded
+        protected void FreezeCollections()
+        {
+            frozenAddressToIndex = addressToIndex.ToFrozenDictionary();
+            frozenSimVars = simVars.ToFrozenDictionary();
+            Logger.Log(LogLevel.Debug, "SimConnectService:FreezeCollections", 
+                $"Collections frozen: {addressToIndex.Count} addresses, {simVars.Count} variables");
         }
 
         public bool Connect()
@@ -64,6 +78,11 @@ namespace Prosim2GSX.Services
                 simConnectThread.Start();
 
                 Logger.Log(LogLevel.Information, "SimConnectService:Connect", $"SimConnect Connection open");
+                
+                // After all variables are loaded, freeze collections
+                // This will be called again when variables are added or updated
+                FreezeCollections();
+                
                 return true;
             }
             catch (Exception ex)
@@ -207,6 +226,14 @@ namespace Prosim2GSX.Services
                     if (simVars.ContainsKey(data.dwRequestID))
                     {
                         simVars[data.dwRequestID] = simData.data;
+                        
+                        // If we're using frozen dictionaries, we need to refreeze after updates
+                        // Note: This is a simple approach that recreates the entire frozen dictionary
+                        // For better performance, you might want to batch updates and refreeze less frequently
+                        if (frozenSimVars != null)
+                        {
+                            frozenSimVars = simVars.ToFrozenDictionary();
+                        }
                     }
                     else
                         Logger.Log(LogLevel.Warning, "SimConnectService:SimConnect_OnClientData", $"The received ID '{data.dwRequestID}' is not subscribed! (Data: {data})");
@@ -251,6 +278,11 @@ namespace Prosim2GSX.Services
                 nextID = 1;
                 simVars.Clear();
                 addressToIndex.Clear();
+                
+                // Clear frozen dictionaries
+                frozenAddressToIndex = null;
+                frozenSimVars = null;
+                
                 Logger.Log(LogLevel.Information, "SimConnectService:Disconnect", $"SimConnect Connection closed");
             }
             catch (Exception ex)
@@ -275,6 +307,12 @@ namespace Prosim2GSX.Services
         {
             SendWasmCmd(PILOTSDECK_CLIENT_DATA_ID.MOBIFLIGHT_CMD, (MOBIFLIGHT_CLIENT_DATA_ID)0, command);
         }
+        
+        // Add overload that accepts ReadOnlySpan<char>
+        private void SendClientWasmCmd(ReadOnlySpan<char> command)
+        {
+            SendWasmCmd(PILOTSDECK_CLIENT_DATA_ID.MOBIFLIGHT_CMD, (MOBIFLIGHT_CLIENT_DATA_ID)0, command);
+        }
 
         private void SendClientWasmDummyCmd()
         {
@@ -285,8 +323,20 @@ namespace Prosim2GSX.Services
         {
             SendWasmCmd(MOBIFLIGHT_CLIENT_DATA_ID.MOBIFLIGHT_CMD, (MOBIFLIGHT_CLIENT_DATA_ID)0, command);
         }
+        
+        // Add overload that accepts ReadOnlySpan<char>
+        private void SendMobiWasmCmd(ReadOnlySpan<char> command)
+        {
+            SendWasmCmd(MOBIFLIGHT_CLIENT_DATA_ID.MOBIFLIGHT_CMD, (MOBIFLIGHT_CLIENT_DATA_ID)0, command);
+        }
 
         private void SendWasmCmd(Enum cmdChannelId, Enum cmdId, string command)
+        {
+            simConnect.SetClientData(cmdChannelId, cmdId, SIMCONNECT_CLIENT_DATA_SET_FLAG.DEFAULT, 0, new ClientDataString(command));
+        }
+        
+        // Add overload that accepts ReadOnlySpan<char>
+        private void SendWasmCmd(Enum cmdChannelId, Enum cmdId, ReadOnlySpan<char> command)
         {
             simConnect.SetClientData(cmdChannelId, cmdId, SIMCONNECT_CLIENT_DATA_SET_FLAG.DEFAULT, 0, new ClientDataString(command));
         }
@@ -323,6 +373,13 @@ namespace Prosim2GSX.Services
                     addressToIndex.Add(address, nextID);
 
                     nextID++;
+                    
+                    // If we're using frozen dictionaries, we need to refreeze after adding variables
+                    if (frozenAddressToIndex != null)
+                    {
+                        frozenAddressToIndex = addressToIndex.ToFrozenDictionary();
+                        frozenSimVars = simVars.ToFrozenDictionary();
+                    }
                 }
                 else
                     Logger.Log(LogLevel.Warning, "SimConnectService:SubscribeAddress", $"The Address '{address}' is already subscribed");
@@ -366,6 +423,10 @@ namespace Prosim2GSX.Services
                 nextID = 1;
                 simVars.Clear();
                 addressToIndex.Clear();
+                
+                // Clear frozen dictionaries
+                frozenAddressToIndex = null;
+                frozenSimVars = null;
             }
             catch (Exception ex)
             {
@@ -375,40 +436,148 @@ namespace Prosim2GSX.Services
 
         public float ReadLvar(string address)
         {
-            if (addressToIndex.TryGetValue($"(L:{address})", out uint index) && simVars.TryGetValue(index, out float value))
-                return value;
+            string lookupAddress = $"(L:{address})";
+            
+            // Use frozen dictionaries if available
+            if (frozenAddressToIndex != null)
+            {
+                if (frozenAddressToIndex.TryGetValue(lookupAddress, out uint index) && 
+                    frozenSimVars.TryGetValue(index, out float value))
+                    return value;
+            }
             else
-                return 0;
+            {
+                if (addressToIndex.TryGetValue(lookupAddress, out uint index) && 
+                    simVars.TryGetValue(index, out float value))
+                    return value;
+            }
+            
+            return 0;
         }
 
         public float ReadSimVar(string name, string unit)
         {
-            string address = $"(A:{name}, {unit})";
-            if (addressToIndex.TryGetValue(address, out uint index) && simVars.TryGetValue(index, out float value))
-                return value;
+            string lookupAddress = $"(A:{name}, {unit})";
+            
+            if (frozenAddressToIndex != null)
+            {
+                if (frozenAddressToIndex.TryGetValue(lookupAddress, out uint index) && 
+                    frozenSimVars.TryGetValue(index, out float value))
+                    return value;
+            }
             else
-                return 0;
+            {
+                if (addressToIndex.TryGetValue(lookupAddress, out uint index) && 
+                    simVars.TryGetValue(index, out float value))
+                    return value;
+            }
+            
+            return 0;
         }
 
         public float ReadEnvVar(string name, string unit)
         {
-            string address = $"(E:{name}, {unit})";
-            if (addressToIndex.TryGetValue(address, out uint index) && simVars.TryGetValue(index, out float value))
-                return value;
+            string lookupAddress = $"(E:{name}, {unit})";
+            
+            if (frozenAddressToIndex != null)
+            {
+                if (frozenAddressToIndex.TryGetValue(lookupAddress, out uint index) && 
+                    frozenSimVars.TryGetValue(index, out float value))
+                    return value;
+            }
             else
-                return 0;
+            {
+                if (addressToIndex.TryGetValue(lookupAddress, out uint index) && 
+                    simVars.TryGetValue(index, out float value))
+                    return value;
+            }
+            
+            return 0;
         }
 
         public void WriteLvar(string address, float value)
         {
-            SendClientWasmCmd($"MF.SimVars.Set.{string.Format(new CultureInfo("en-US").NumberFormat, "{0:G}", value)} (>L:{address})");
-            SendClientWasmDummyCmd();
+            try
+            {
+                // Format value using invariant culture
+                Span<char> valueBuffer = stackalloc char[32]; // Enough for any float value
+                if (!value.TryFormat(valueBuffer, out int valueCharsWritten, provider: CultureInfo.InvariantCulture))
+                {
+                    // Fallback if formatting fails
+                    SendClientWasmCmd($"MF.SimVars.Set.{string.Format(CultureInfo.InvariantCulture, "{0:G}", value)} (>L:{address})");
+                    SendClientWasmDummyCmd();
+                    return;
+                }
+                
+                // Calculate total buffer size with extra padding
+                const string prefix = "MF.SimVars.Set.";
+                const string middle = " (>L:";
+                const string suffix = ")";
+                int totalLength = prefix.Length + valueCharsWritten + middle.Length + address.Length + suffix.Length + 10; // Add padding
+                
+                // Allocate buffer
+                Span<char> buffer = stackalloc char[totalLength];
+                int position = 0;
+                
+                // Copy prefix
+                prefix.AsSpan().CopyTo(buffer.Slice(position));
+                position += prefix.Length;
+                
+                // Copy formatted value
+                valueBuffer.Slice(0, valueCharsWritten).CopyTo(buffer.Slice(position));
+                position += valueCharsWritten;
+                
+                // Copy middle part
+                middle.AsSpan().CopyTo(buffer.Slice(position));
+                position += middle.Length;
+                
+                // Copy address
+                address.AsSpan().CopyTo(buffer.Slice(position));
+                position += address.Length;
+                
+                // Copy suffix
+                suffix.AsSpan().CopyTo(buffer.Slice(position));
+                
+                // Send command
+                SendClientWasmCmd(buffer);
+                SendClientWasmDummyCmd();
+            }
+            catch (Exception ex)
+            {
+                // Fallback to string concatenation if Span operations fail
+                Logger.Log(LogLevel.Warning, "SimConnectService:WriteLvar", 
+                    $"Span operation failed, using string fallback: {ex.Message}");
+                SendClientWasmCmd($"MF.SimVars.Set.{string.Format(CultureInfo.InvariantCulture, "{0:G}", value)} (>L:{address})");
+                SendClientWasmDummyCmd();
+            }
         }
 
         public void ExecuteCode(string code)
         {
-            SendClientWasmCmd($"MF.SimVars.Set.{code}");
-            SendClientWasmDummyCmd();
+            try
+            {
+                const string prefix = "MF.SimVars.Set.";
+                
+                // Use stackalloc for small buffers to avoid heap allocations
+                // Add extra padding to ensure buffer is large enough
+                Span<char> buffer = stackalloc char[prefix.Length + code.Length + 10];
+                
+                // Copy strings to buffer without allocations
+                prefix.AsSpan().CopyTo(buffer);
+                code.AsSpan().CopyTo(buffer.Slice(prefix.Length));
+                
+                // Send command
+                SendClientWasmCmd(buffer.Slice(0, prefix.Length + code.Length));
+                SendClientWasmDummyCmd();
+            }
+            catch (Exception ex)
+            {
+                // Fallback to string concatenation if Span operations fail
+                Logger.Log(LogLevel.Warning, "SimConnectService:ExecuteCode", 
+                    $"Span operation failed, using string fallback: {ex.Message}");
+                SendClientWasmCmd($"MF.SimVars.Set.{code}");
+                SendClientWasmDummyCmd();
+            }
         }
     }
 }

@@ -86,9 +86,10 @@ namespace Prosim2GSX.Services
         /// <summary>
         /// Gets an audio session for a specific process asynchronously
         /// </summary>
-        public async Task<AudioSessionControl2> GetSessionForProcessAsync(string processName, CancellationToken cancellationToken = default)
+        public async ValueTask<AudioSessionControl2> GetSessionForProcessAsync(string processName, CancellationToken cancellationToken = default)
         {
-            return await Task.Run(() => GetSessionForProcess(processName), cancellationToken);
+            // Use Task.Run internally but wrap in ValueTask for better performance
+            return await new ValueTask<AudioSessionControl2>(Task.Run(() => GetSessionForProcess(processName), cancellationToken));
         }
         
         /// <summary>
