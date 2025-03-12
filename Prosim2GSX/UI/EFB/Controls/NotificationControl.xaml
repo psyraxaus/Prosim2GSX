@@ -1,0 +1,105 @@
+<UserControl x:Class="Prosim2GSX.UI.EFB.Controls.NotificationControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Prosim2GSX.UI.EFB.Controls"
+             xmlns:notifications="clr-namespace:Prosim2GSX.UI.EFB.Notifications"
+             mc:Ignorable="d" 
+             d:DesignHeight="80" d:DesignWidth="300">
+    <UserControl.Resources>
+        <!-- Notification Type to Background Converter -->
+        <local:NotificationTypeToBackgroundConverter x:Key="NotificationTypeToBackgroundConverter"/>
+        
+        <!-- Notification Type to Icon Converter -->
+        <local:NotificationTypeToIconConverter x:Key="NotificationTypeToIconConverter"/>
+        
+        <!-- Notification Type to Foreground Converter -->
+        <local:NotificationTypeToForegroundConverter x:Key="NotificationTypeToForegroundConverter"/>
+        
+        <!-- Notification Style -->
+        <Style x:Key="NotificationStyle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="Margin" Value="0,0,0,5"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect ShadowDepth="2" BlurRadius="5" Opacity="0.3"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <!-- Icon Style -->
+        <Style x:Key="IconStyle" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+        </Style>
+        
+        <!-- Message Style -->
+        <Style x:Key="MessageStyle" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+        </Style>
+        
+        <!-- Close Button Style -->
+        <Style x:Key="CloseButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid Background="Transparent">
+                            <TextBlock Text="&#xE711;" 
+                                       FontFamily="Segoe MDL2 Assets" 
+                                       FontSize="12" 
+                                       HorizontalAlignment="Center" 
+                                       VerticalAlignment="Center"
+                                       Foreground="{TemplateBinding Foreground}"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+    
+    <Border Style="{StaticResource NotificationStyle}"
+            Background="{Binding Notification.Type, Converter={StaticResource NotificationTypeToBackgroundConverter}, RelativeSource={RelativeSource AncestorType=local:NotificationControl}}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- Icon -->
+            <TextBlock Grid.Column="0" 
+                       Text="{Binding Notification.Type, Converter={StaticResource NotificationTypeToIconConverter}, RelativeSource={RelativeSource AncestorType=local:NotificationControl}}" 
+                       Style="{StaticResource IconStyle}"
+                       Foreground="{Binding Notification.Type, Converter={StaticResource NotificationTypeToForegroundConverter}, RelativeSource={RelativeSource AncestorType=local:NotificationControl}}"/>
+            
+            <!-- Message -->
+            <TextBlock Grid.Column="1" 
+                       Text="{Binding Notification.Message, RelativeSource={RelativeSource AncestorType=local:NotificationControl}}" 
+                       Style="{StaticResource MessageStyle}"
+                       Foreground="{Binding Notification.Type, Converter={StaticResource NotificationTypeToForegroundConverter}, RelativeSource={RelativeSource AncestorType=local:NotificationControl}}"/>
+            
+            <!-- Close Button -->
+            <Button Grid.Column="2" 
+                    Style="{StaticResource CloseButtonStyle}" 
+                    Click="CloseButton_Click"
+                    Foreground="{Binding Notification.Type, Converter={StaticResource NotificationTypeToForegroundConverter}, RelativeSource={RelativeSource AncestorType=local:NotificationControl}}"/>
+        </Grid>
+    </Border>
+</UserControl>

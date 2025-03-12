@@ -7,126 +7,185 @@
              mc:Ignorable="d" 
              d:DesignHeight="100" d:DesignWidth="600">
     <UserControl.Resources>
-        <Style x:Key="PhaseTextStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="{DynamicResource EFBForegroundBrush}" />
-            <Setter Property="HorizontalAlignment" Value="Center" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="TextAlignment" Value="Center" />
+        <!-- Phase Item Style -->
+        <Style x:Key="PhaseItemStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource PhaseItemBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource PhaseItemBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="MinWidth" Value="80"/>
         </Style>
         
-        <Style x:Key="ActivePhaseTextStyle" TargetType="TextBlock" BasedOn="{StaticResource PhaseTextStyle}">
-            <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Foreground" Value="{DynamicResource EFBPrimaryBrush}" />
+        <!-- Phase Item Text Style -->
+        <Style x:Key="PhaseItemTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource PhaseItemForeground}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
         
-        <Style x:Key="PhaseCircleStyle" TargetType="Ellipse">
-            <Setter Property="Width" Value="20" />
-            <Setter Property="Height" Value="20" />
-            <Setter Property="Fill" Value="{DynamicResource EFBSecondaryBrush}" />
-            <Setter Property="Stroke" Value="{DynamicResource EFBBorderBrush}" />
-            <Setter Property="StrokeThickness" Value="1" />
-            <Setter Property="HorizontalAlignment" Value="Center" />
-            <Setter Property="VerticalAlignment" Value="Center" />
+        <!-- Active Phase Item Style -->
+        <Style x:Key="ActivePhaseItemStyle" TargetType="Border" BasedOn="{StaticResource PhaseItemStyle}">
+            <Setter Property="Background" Value="{DynamicResource ActivePhaseItemBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ActivePhaseItemBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="2"/>
         </Style>
         
-        <Style x:Key="ActivePhaseCircleStyle" TargetType="Ellipse" BasedOn="{StaticResource PhaseCircleStyle}">
-            <Setter Property="Fill" Value="{DynamicResource EFBPrimaryBrush}" />
-            <Setter Property="Stroke" Value="{DynamicResource EFBPrimaryBrush}" />
+        <!-- Active Phase Item Text Style -->
+        <Style x:Key="ActivePhaseItemTextStyle" TargetType="TextBlock" BasedOn="{StaticResource PhaseItemTextStyle}">
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource ActivePhaseItemForeground}"/>
         </Style>
         
-        <Style x:Key="CompletedPhaseCircleStyle" TargetType="Ellipse" BasedOn="{StaticResource PhaseCircleStyle}">
-            <Setter Property="Fill" Value="{DynamicResource EFBSuccessBrush}" />
-            <Setter Property="Stroke" Value="{DynamicResource EFBSuccessBrush}" />
+        <!-- Predicted Phase Item Style -->
+        <Style x:Key="PredictedPhaseItemStyle" TargetType="Border" BasedOn="{StaticResource PhaseItemStyle}">
+            <Setter Property="Background" Value="{DynamicResource PredictedPhaseItemBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource PredictedPhaseItemBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderDashArray" Value="2,2"/>
         </Style>
         
-        <Style x:Key="PhaseLineStyle" TargetType="Line">
-            <Setter Property="Stroke" Value="{DynamicResource EFBBorderBrush}" />
-            <Setter Property="StrokeThickness" Value="2" />
-            <Setter Property="X1" Value="0" />
-            <Setter Property="Y1" Value="0" />
-            <Setter Property="X2" Value="100" />
-            <Setter Property="Y2" Value="0" />
-            <Setter Property="HorizontalAlignment" Value="Stretch" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Stretch" Value="Fill" />
+        <!-- Predicted Phase Item Text Style -->
+        <Style x:Key="PredictedPhaseItemTextStyle" TargetType="TextBlock" BasedOn="{StaticResource PhaseItemTextStyle}">
+            <Setter Property="Foreground" Value="{DynamicResource PredictedPhaseItemForeground}"/>
+            <Setter Property="FontStyle" Value="Italic"/>
         </Style>
         
-        <Style x:Key="CompletedPhaseLineStyle" TargetType="Line" BasedOn="{StaticResource PhaseLineStyle}">
-            <Setter Property="Stroke" Value="{DynamicResource EFBSuccessBrush}" />
+        <!-- Connector Style -->
+        <Style x:Key="ConnectorStyle" TargetType="Line">
+            <Setter Property="Stroke" Value="{DynamicResource PhaseConnectorStroke}"/>
+            <Setter Property="StrokeThickness" Value="2"/>
+            <Setter Property="X1" Value="0"/>
+            <Setter Property="Y1" Value="0"/>
+            <Setter Property="X2" Value="20"/>
+            <Setter Property="Y2" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        
+        <!-- Active Connector Style -->
+        <Style x:Key="ActiveConnectorStyle" TargetType="Line" BasedOn="{StaticResource ConnectorStyle}">
+            <Setter Property="Stroke" Value="{DynamicResource ActivePhaseConnectorStroke}"/>
+            <Setter Property="StrokeThickness" Value="3"/>
+        </Style>
+        
+        <!-- Predicted Connector Style -->
+        <Style x:Key="PredictedConnectorStyle" TargetType="Line" BasedOn="{StaticResource ConnectorStyle}">
+            <Setter Property="Stroke" Value="{DynamicResource PredictedPhaseConnectorStroke}"/>
+            <Setter Property="StrokeDashArray" Value="2,2"/>
         </Style>
     </UserControl.Resources>
+    
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         
-        <!-- Phase Circles and Lines -->
-        <Grid Grid.Row="0" Height="30">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+        <!-- Phase Items -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center">
+            <!-- Preflight -->
+            <Border x:Name="PreflightBorder" Style="{StaticResource PhaseItemStyle}">
+                <TextBlock x:Name="PreflightText" Text="Preflight" Style="{StaticResource PhaseItemTextStyle}"/>
+            </Border>
             
-            <!-- Lines -->
-            <Line x:Name="Line1" Grid.Column="0" Style="{StaticResource PhaseLineStyle}" Margin="10,0,0,0" />
-            <Line x:Name="Line2" Grid.Column="1" Style="{StaticResource PhaseLineStyle}" />
-            <Line x:Name="Line3" Grid.Column="2" Style="{StaticResource PhaseLineStyle}" />
-            <Line x:Name="Line4" Grid.Column="3" Style="{StaticResource PhaseLineStyle}" />
-            <Line x:Name="Line5" Grid.Column="4" Style="{StaticResource PhaseLineStyle}" />
-            <Line x:Name="Line6" Grid.Column="5" Style="{StaticResource PhaseLineStyle}" Margin="0,0,10,0" />
+            <!-- Connector -->
+            <Line x:Name="PreflightToDepartureConnector" Style="{StaticResource ConnectorStyle}"/>
             
-            <!-- Circles -->
-            <Ellipse x:Name="Circle1" Grid.Column="0" Style="{StaticResource PhaseCircleStyle}" />
-            <Ellipse x:Name="Circle2" Grid.Column="1" Style="{StaticResource PhaseCircleStyle}" />
-            <Ellipse x:Name="Circle3" Grid.Column="2" Style="{StaticResource PhaseCircleStyle}" />
-            <Ellipse x:Name="Circle4" Grid.Column="3" Style="{StaticResource PhaseCircleStyle}" />
-            <Ellipse x:Name="Circle5" Grid.Column="4" Style="{StaticResource PhaseCircleStyle}" />
-            <Ellipse x:Name="Circle6" Grid.Column="5" Style="{StaticResource PhaseCircleStyle}" />
-            <Ellipse x:Name="Circle7" Grid.Column="6" Style="{StaticResource PhaseCircleStyle}" />
-        </Grid>
+            <!-- Departure -->
+            <Border x:Name="DepartureBorder" Style="{StaticResource PhaseItemStyle}">
+                <TextBlock x:Name="DepartureText" Text="Departure" Style="{StaticResource PhaseItemTextStyle}"/>
+            </Border>
+            
+            <!-- Connector -->
+            <Line x:Name="DepartureToTaxiOutConnector" Style="{StaticResource ConnectorStyle}"/>
+            
+            <!-- Taxi Out -->
+            <Border x:Name="TaxiOutBorder" Style="{StaticResource PhaseItemStyle}">
+                <TextBlock x:Name="TaxiOutText" Text="Taxi Out" Style="{StaticResource PhaseItemTextStyle}"/>
+            </Border>
+            
+            <!-- Connector -->
+            <Line x:Name="TaxiOutToFlightConnector" Style="{StaticResource ConnectorStyle}"/>
+            
+            <!-- Flight -->
+            <Border x:Name="FlightBorder" Style="{StaticResource PhaseItemStyle}">
+                <TextBlock x:Name="FlightText" Text="Flight" Style="{StaticResource PhaseItemTextStyle}"/>
+            </Border>
+            
+            <!-- Connector -->
+            <Line x:Name="FlightToTaxiInConnector" Style="{StaticResource ConnectorStyle}"/>
+            
+            <!-- Taxi In -->
+            <Border x:Name="TaxiInBorder" Style="{StaticResource PhaseItemStyle}">
+                <TextBlock x:Name="TaxiInText" Text="Taxi In" Style="{StaticResource PhaseItemTextStyle}"/>
+            </Border>
+            
+            <!-- Connector -->
+            <Line x:Name="TaxiInToArrivalConnector" Style="{StaticResource ConnectorStyle}"/>
+            
+            <!-- Arrival -->
+            <Border x:Name="ArrivalBorder" Style="{StaticResource PhaseItemStyle}">
+                <TextBlock x:Name="ArrivalText" Text="Arrival" Style="{StaticResource PhaseItemTextStyle}"/>
+            </Border>
+            
+            <!-- Connector -->
+            <Line x:Name="ArrivalToTurnaroundConnector" Style="{StaticResource ConnectorStyle}"/>
+            
+            <!-- Turnaround -->
+            <Border x:Name="TurnaroundBorder" Style="{StaticResource PhaseItemStyle}">
+                <TextBlock x:Name="TurnaroundText" Text="Turnaround" Style="{StaticResource PhaseItemTextStyle}"/>
+            </Border>
+        </StackPanel>
         
-        <!-- Phase Labels -->
-        <Grid Grid.Row="1" Margin="0,5,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            
-            <TextBlock x:Name="Label1" Grid.Column="0" Text="PREFLIGHT" Style="{StaticResource PhaseTextStyle}" />
-            <TextBlock x:Name="Label2" Grid.Column="1" Text="DEPARTURE" Style="{StaticResource PhaseTextStyle}" />
-            <TextBlock x:Name="Label3" Grid.Column="2" Text="TAXIOUT" Style="{StaticResource PhaseTextStyle}" />
-            <TextBlock x:Name="Label4" Grid.Column="3" Text="FLIGHT" Style="{StaticResource PhaseTextStyle}" />
-            <TextBlock x:Name="Label5" Grid.Column="4" Text="TAXIIN" Style="{StaticResource PhaseTextStyle}" />
-            <TextBlock x:Name="Label6" Grid.Column="5" Text="ARRIVAL" Style="{StaticResource PhaseTextStyle}" />
-            <TextBlock x:Name="Label7" Grid.Column="6" Text="TURNAROUND" Style="{StaticResource PhaseTextStyle}" />
-        </Grid>
-        
-        <!-- Current Phase -->
-        <Border Grid.Row="2" 
-                Background="{DynamicResource EFBPrimaryBrush}" 
-                CornerRadius="4" 
+        <!-- Phase Details -->
+        <Border Grid.Row="1" 
                 Margin="0,10,0,0" 
-                Padding="10,5" 
-                HorizontalAlignment="Center">
-            <TextBlock x:Name="CurrentPhaseText" 
-                       Text="PREFLIGHT" 
-                       Foreground="White" 
-                       FontSize="14" 
-                       FontWeight="Bold" />
+                Padding="10" 
+                Background="{DynamicResource PhaseDetailsBackground}" 
+                BorderBrush="{DynamicResource PhaseDetailsBorderBrush}" 
+                BorderThickness="1" 
+                CornerRadius="5">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <!-- Phase Details -->
+                <StackPanel Grid.Column="0" Orientation="Vertical">
+                    <!-- Current Phase -->
+                    <TextBlock Text="{Binding CurrentPhaseText, RelativeSource={RelativeSource AncestorType=local:FlightPhaseIndicator}}" 
+                               FontSize="14" 
+                               FontWeight="Bold" 
+                               Foreground="{DynamicResource PhaseDetailsForeground}"/>
+                    
+                    <!-- Time in Phase -->
+                    <TextBlock Text="{Binding TimeInPhaseText, RelativeSource={RelativeSource AncestorType=local:FlightPhaseIndicator}}" 
+                               FontSize="12" 
+                               Foreground="{DynamicResource PhaseDetailsForeground}" 
+                               Margin="0,5,0,0"/>
+                    
+                    <!-- Predicted Next Phase -->
+                    <TextBlock Text="{Binding PredictedNextPhaseText, RelativeSource={RelativeSource AncestorType=local:FlightPhaseIndicator}}" 
+                               FontSize="12" 
+                               FontStyle="Italic" 
+                               Foreground="{DynamicResource PhaseDetailsForeground}" 
+                               Margin="0,5,0,0" 
+                               Visibility="{Binding HasPredictedNextPhase, Converter={StaticResource BooleanToVisibilityConverter}, RelativeSource={RelativeSource AncestorType=local:FlightPhaseIndicator}}"/>
+                </StackPanel>
+                
+                <!-- Countdown Timer -->
+                <local:CountdownTimer Grid.Column="1" 
+                                      x:Name="PredictionCountdown" 
+                                      Label="Estimated Time to Next Phase" 
+                                      Visibility="{Binding HasEstimatedTimeToNextPhase, Converter={StaticResource BooleanToVisibilityConverter}, RelativeSource={RelativeSource AncestorType=local:FlightPhaseIndicator}}" 
+                                      Margin="10,0,0,0"/>
+            </Grid>
         </Border>
     </Grid>
 </UserControl>
