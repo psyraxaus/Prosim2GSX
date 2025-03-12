@@ -1,0 +1,108 @@
+<Window x:Class="Prosim2GSX.UI.EFB.EFBMainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Prosim2GSX.UI.EFB"
+        mc:Ignorable="d"
+        Title="Prosim2GSX EFB" 
+        Height="768" 
+        Width="1024" 
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource EFBBackgroundBrush}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <Border Grid.Row="0" 
+                Background="{DynamicResource EFBPrimaryBrush}" 
+                Height="60">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                
+                <!-- Logo and Title -->
+                <StackPanel Grid.Column="0" 
+                            Orientation="Horizontal" 
+                            VerticalAlignment="Center" 
+                            Margin="20,0,0,0">
+                    <Image x:Name="LogoImage" 
+                           Width="32" 
+                           Height="32" 
+                           Margin="0,0,10,0" />
+                    <TextBlock Text="Prosim2GSX EFB" 
+                               Foreground="White" 
+                               FontSize="24" 
+                               FontWeight="Bold" 
+                               VerticalAlignment="Center" />
+                </StackPanel>
+                
+                <!-- Current Page Title -->
+                <TextBlock x:Name="CurrentPageTitle" 
+                           Grid.Column="1" 
+                           Text="Home" 
+                           Foreground="White" 
+                           FontSize="18" 
+                           FontWeight="SemiBold" 
+                           HorizontalAlignment="Center" 
+                           VerticalAlignment="Center" />
+                
+                <!-- Navigation Buttons -->
+                <StackPanel Grid.Column="2" 
+                            Orientation="Horizontal" 
+                            VerticalAlignment="Center" 
+                            Margin="0,0,20,0">
+                    <Button x:Name="BackButton" 
+                            Style="{DynamicResource EFBIconButtonStyle}" 
+                            Content="&#xE72B;" 
+                            ToolTip="Back" 
+                            Margin="0,0,10,0" 
+                            Click="BackButton_Click" />
+                    <Button x:Name="HomeButton" 
+                            Style="{DynamicResource EFBIconButtonStyle}" 
+                            Content="&#xE80F;" 
+                            ToolTip="Home" 
+                            Margin="0,0,10,0" 
+                            Click="HomeButton_Click" />
+                    <Button x:Name="RefreshButton" 
+                            Style="{DynamicResource EFBIconButtonStyle}" 
+                            Content="&#xE72C;" 
+                            ToolTip="Refresh" 
+                            Click="RefreshButton_Click" />
+                </StackPanel>
+            </Grid>
+        </Border>
+        
+        <!-- Content -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            
+            <!-- Navigation Menu -->
+            <Border Grid.Column="0" 
+                    Background="{DynamicResource EFBSecondaryBrush}" 
+                    BorderBrush="{DynamicResource EFBBorderBrush}" 
+                    BorderThickness="0,0,1,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" 
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel x:Name="NavigationMenu" 
+                                Margin="10" />
+                </ScrollViewer>
+            </Border>
+            
+            <!-- Page Content -->
+            <Border Grid.Column="1" 
+                    Padding="20">
+                <ContentControl x:Name="PageContent" />
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

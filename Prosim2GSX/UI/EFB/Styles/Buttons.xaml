@@ -1,0 +1,310 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- Base Button Style -->
+    <Style x:Key="EFBBaseButtonStyle" TargetType="Button">
+        <Setter Property="Foreground" Value="{DynamicResource EFBForegroundBrush}" />
+        <Setter Property="Background" Value="{DynamicResource EFBSecondaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource EFBBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="15,8" />
+        <Setter Property="Margin" Value="5" />
+        <Setter Property="FontSize" Value="{DynamicResource EFBNormalFontSize}" />
+        <Setter Property="FontFamily" Value="Segoe UI" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border" 
+                            Background="{TemplateBinding Background}" 
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            BorderThickness="{TemplateBinding BorderThickness}" 
+                            CornerRadius="{DynamicResource EFBButtonCornerRadius}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter x:Name="contentPresenter" 
+                                          Margin="{TemplateBinding Padding}" 
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" 
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" TargetName="border" Value="{DynamicResource EFBPrimaryBrush}" />
+                            <Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource EFBPrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Background" TargetName="border" Value="{DynamicResource EFBAccentBrush}" />
+                            <Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource EFBAccentBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <!-- Primary Button Style -->
+    <Style x:Key="EFBPrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource EFBBaseButtonStyle}">
+        <Setter Property="Background" Value="{DynamicResource EFBPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource EFBPrimaryBrush}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    
+    <!-- Secondary Button Style -->
+    <Style x:Key="EFBSecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource EFBBaseButtonStyle}">
+        <Setter Property="Background" Value="{DynamicResource EFBSecondaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource EFBBorderBrush}" />
+    </Style>
+    
+    <!-- Action Button Style -->
+    <Style x:Key="EFBActionButtonStyle" TargetType="Button" BasedOn="{StaticResource EFBBaseButtonStyle}">
+        <Setter Property="Background" Value="{DynamicResource EFBAccentBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource EFBAccentBrush}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    
+    <!-- Success Button Style -->
+    <Style x:Key="EFBSuccessButtonStyle" TargetType="Button" BasedOn="{StaticResource EFBBaseButtonStyle}">
+        <Setter Property="Background" Value="{DynamicResource EFBSuccessBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource EFBSuccessBrush}" />
+    </Style>
+    
+    <!-- Warning Button Style -->
+    <Style x:Key="EFBWarningButtonStyle" TargetType="Button" BasedOn="{StaticResource EFBBaseButtonStyle}">
+        <Setter Property="Background" Value="{DynamicResource EFBWarningBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource EFBWarningBrush}" />
+        <Setter Property="Foreground" Value="#333333" />
+    </Style>
+    
+    <!-- Error Button Style -->
+    <Style x:Key="EFBErrorButtonStyle" TargetType="Button" BasedOn="{StaticResource EFBBaseButtonStyle}">
+        <Setter Property="Background" Value="{DynamicResource EFBErrorBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource EFBErrorBrush}" />
+    </Style>
+    
+    <!-- Info Button Style -->
+    <Style x:Key="EFBInfoButtonStyle" TargetType="Button" BasedOn="{StaticResource EFBBaseButtonStyle}">
+        <Setter Property="Background" Value="{DynamicResource EFBInfoBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource EFBInfoBrush}" />
+    </Style>
+    
+    <!-- Icon Button Style -->
+    <Style x:Key="EFBIconButtonStyle" TargetType="Button" BasedOn="{StaticResource EFBBaseButtonStyle}">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="8" />
+        <Setter Property="Width" Value="40" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border" 
+                            Background="{TemplateBinding Background}" 
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            BorderThickness="{TemplateBinding BorderThickness}" 
+                            CornerRadius="{DynamicResource EFBButtonCornerRadius}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter x:Name="contentPresenter" 
+                                          Margin="{TemplateBinding Padding}" 
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" 
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" TargetName="border" Value="{DynamicResource EFBSecondaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Background" TargetName="border" Value="{DynamicResource EFBPrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <!-- Toggle Button Style -->
+    <Style x:Key="EFBToggleButtonStyle" TargetType="ToggleButton">
+        <Setter Property="Foreground" Value="{DynamicResource EFBForegroundBrush}" />
+        <Setter Property="Background" Value="{DynamicResource EFBSecondaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource EFBBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="15,8" />
+        <Setter Property="Margin" Value="5" />
+        <Setter Property="FontSize" Value="{DynamicResource EFBNormalFontSize}" />
+        <Setter Property="FontFamily" Value="Segoe UI" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="border" 
+                            Background="{TemplateBinding Background}" 
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            BorderThickness="{TemplateBinding BorderThickness}" 
+                            CornerRadius="{DynamicResource EFBButtonCornerRadius}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter x:Name="contentPresenter" 
+                                          Margin="{TemplateBinding Padding}" 
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" 
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" TargetName="border" Value="{DynamicResource EFBPrimaryBrush}" />
+                            <Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource EFBPrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Background" TargetName="border" Value="{DynamicResource EFBAccentBrush}" />
+                            <Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource EFBAccentBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter Property="Background" TargetName="border" Value="{DynamicResource EFBPrimaryBrush}" />
+                            <Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource EFBPrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <!-- Tab Button Style -->
+    <Style x:Key="EFBTabButtonStyle" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{DynamicResource EFBForegroundBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0,0,0,3" />
+        <Setter Property="Padding" Value="15,10" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="FontSize" Value="{DynamicResource EFBNormalFontSize}" />
+        <Setter Property="FontFamily" Value="Segoe UI" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="border" 
+                            Background="{TemplateBinding Background}" 
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            BorderThickness="{TemplateBinding BorderThickness}" 
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter x:Name="contentPresenter" 
+                                          Margin="{TemplateBinding Padding}" 
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" 
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource EFBAccentBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource EFBPrimaryBrush}" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <!-- Service Button Style (for refueling, boarding, etc.) -->
+    <Style x:Key="EFBServiceButtonStyle" TargetType="Button" BasedOn="{StaticResource EFBBaseButtonStyle}">
+        <Setter Property="Height" Value="80" />
+        <Setter Property="Width" Value="120" />
+        <Setter Property="Padding" Value="10" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border" 
+                            Background="{TemplateBinding Background}" 
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            BorderThickness="{TemplateBinding BorderThickness}" 
+                            CornerRadius="{DynamicResource EFBButtonCornerRadius}"
+                            SnapsToDevicePixels="True">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <ContentPresenter x:Name="contentPresenter" 
+                                              Grid.Row="1"
+                                              Margin="{TemplateBinding Padding}" 
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" 
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" TargetName="border" Value="{DynamicResource EFBPrimaryBrush}" />
+                            <Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource EFBPrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Background" TargetName="border" Value="{DynamicResource EFBAccentBrush}" />
+                            <Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource EFBAccentBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <!-- Circular Button Style -->
+    <Style x:Key="EFBCircularButtonStyle" TargetType="Button" BasedOn="{StaticResource EFBBaseButtonStyle}">
+        <Setter Property="Width" Value="50" />
+        <Setter Property="Height" Value="50" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border" 
+                            Background="{TemplateBinding Background}" 
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            BorderThickness="{TemplateBinding BorderThickness}" 
+                            CornerRadius="25"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter x:Name="contentPresenter" 
+                                          Margin="{TemplateBinding Padding}" 
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" 
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" TargetName="border" Value="{DynamicResource EFBPrimaryBrush}" />
+                            <Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource EFBPrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Background" TargetName="border" Value="{DynamicResource EFBAccentBrush}" />
+                            <Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource EFBAccentBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

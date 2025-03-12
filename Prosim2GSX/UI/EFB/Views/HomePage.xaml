@@ -1,0 +1,305 @@
+<local:BasePage x:Class="Prosim2GSX.UI.EFB.Views.HomePage"
+             x:TypeArguments="viewmodels:HomeViewModel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Prosim2GSX.UI.EFB.Views"
+             xmlns:controls="clr-namespace:Prosim2GSX.UI.EFB.Controls"
+             xmlns:viewmodels="clr-namespace:Prosim2GSX.UI.EFB.ViewModels"
+             d:DataContext="{d:DesignInstance Type=viewmodels:HomeViewModel}"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            
+            <!-- Flight Phase Indicator -->
+            <Border Grid.Row="0" 
+                    Style="{DynamicResource EFBPanelStyle}" 
+                    Margin="0,0,0,20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" 
+                               Text="FLIGHT PHASE" 
+                               Style="{DynamicResource EFBPanelHeaderStyle}" />
+                    
+                    <controls:FlightPhaseIndicator Grid.Row="1" 
+                                                  CurrentPhase="{Binding CurrentFlightPhase}" 
+                                                  Margin="10" />
+                </Grid>
+            </Border>
+            
+            <!-- Status Indicators -->
+            <Border Grid.Row="1" 
+                    Style="{DynamicResource EFBPanelStyle}" 
+                    Margin="0,0,0,20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" 
+                               Text="SYSTEM STATUS" 
+                               Style="{DynamicResource EFBPanelHeaderStyle}" />
+                    
+                    <Grid Grid.Row="1" Margin="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        
+                        <controls:StatusIndicator Grid.Row="0" 
+                                                Label="ProsimA320" 
+                                                Status="{Binding IsProsimConnected, Converter={StaticResource BooleanToStatusConverter}}" 
+                                                StatusMessage="{Binding IsProsimConnected, Converter={StaticResource BooleanToStatusMessageConverter}}" 
+                                                Margin="0,0,0,10" />
+                        
+                        <controls:StatusIndicator Grid.Row="1" 
+                                                Label="MSFS2020" 
+                                                Status="{Binding IsSimConnected, Converter={StaticResource BooleanToStatusConverter}}" 
+                                                StatusMessage="{Binding IsSimConnected, Converter={StaticResource BooleanToStatusMessageConverter}}" 
+                                                Margin="0,0,0,10" />
+                        
+                        <controls:StatusIndicator Grid.Row="2" 
+                                                Label="GSX Service" 
+                                                Status="{Binding IsGSXActive, Converter={StaticResource BooleanToStatusConverter}}" 
+                                                StatusMessage="{Binding IsGSXActive, Converter={StaticResource BooleanToStatusMessageConverter}}" />
+                    </Grid>
+                </Grid>
+            </Border>
+            
+            <!-- Quick Actions -->
+            <Border Grid.Row="2" 
+                    Style="{DynamicResource EFBPanelStyle}" 
+                    Margin="0,0,0,20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" 
+                               Text="QUICK ACTIONS" 
+                               Style="{DynamicResource EFBPanelHeaderStyle}" />
+                    
+                    <Grid Grid.Row="1" Margin="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        
+                        <Button Grid.Row="0" Grid.Column="0" 
+                                Content="FUEL" 
+                                Style="{DynamicResource EFBActionButtonStyle}" 
+                                Command="{Binding NavigateToFuelCommand}" 
+                                Margin="0,0,10,10" />
+                        
+                        <Button Grid.Row="0" Grid.Column="1" 
+                                Content="DOORS" 
+                                Style="{DynamicResource EFBActionButtonStyle}" 
+                                Command="{Binding NavigateToDoorsCommand}" 
+                                Margin="0,0,10,10" />
+                        
+                        <Button Grid.Row="0" Grid.Column="2" 
+                                Content="PASSENGERS" 
+                                Style="{DynamicResource EFBActionButtonStyle}" 
+                                Command="{Binding NavigateToPassengersCommand}" 
+                                Margin="0,0,0,10" />
+                        
+                        <Button Grid.Row="1" Grid.Column="0" 
+                                Content="CARGO" 
+                                Style="{DynamicResource EFBActionButtonStyle}" 
+                                Command="{Binding NavigateToCargoCommand}" 
+                                Margin="0,0,10,0" />
+                        
+                        <Button Grid.Row="1" Grid.Column="1" 
+                                Content="EQUIPMENT" 
+                                Style="{DynamicResource EFBActionButtonStyle}" 
+                                Command="{Binding NavigateToEquipmentCommand}" 
+                                Margin="0,0,10,0" />
+                        
+                        <Button Grid.Row="1" Grid.Column="2" 
+                                Content="SETTINGS" 
+                                Style="{DynamicResource EFBActionButtonStyle}" 
+                                Command="{Binding NavigateToSettingsCommand}" 
+                                Margin="0,0,0,0" />
+                    </Grid>
+                </Grid>
+            </Border>
+            
+            <!-- Fuel Status -->
+            <Border Grid.Row="3" 
+                    Style="{DynamicResource EFBPanelStyle}" 
+                    Margin="0,0,0,20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" 
+                               Text="FUEL STATUS" 
+                               Style="{DynamicResource EFBPanelHeaderStyle}" />
+                    
+                    <Grid Grid.Row="1" Margin="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Grid.Row="0" Grid.Column="0" 
+                                   Text="LEFT TANK" 
+                                   Style="{DynamicResource EFBLabelStyle}" 
+                                   HorizontalAlignment="Center" 
+                                   Margin="0,0,0,5" />
+                        
+                        <TextBlock Grid.Row="0" Grid.Column="1" 
+                                   Text="CENTER TANK" 
+                                   Style="{DynamicResource EFBLabelStyle}" 
+                                   HorizontalAlignment="Center" 
+                                   Margin="0,0,0,5" />
+                        
+                        <TextBlock Grid.Row="0" Grid.Column="2" 
+                                   Text="RIGHT TANK" 
+                                   Style="{DynamicResource EFBLabelStyle}" 
+                                   HorizontalAlignment="Center" 
+                                   Margin="0,0,0,5" />
+                        
+                        <TextBlock Grid.Row="1" Grid.Column="0" 
+                                   Text="{Binding LeftTankFuel, StringFormat='{}{0:N0} KG'}" 
+                                   Style="{DynamicResource EFBValueStyle}" 
+                                   HorizontalAlignment="Center" 
+                                   Margin="0,0,0,10" />
+                        
+                        <TextBlock Grid.Row="1" Grid.Column="1" 
+                                   Text="{Binding CenterTankFuel, StringFormat='{}{0:N0} KG'}" 
+                                   Style="{DynamicResource EFBValueStyle}" 
+                                   HorizontalAlignment="Center" 
+                                   Margin="0,0,0,10" />
+                        
+                        <TextBlock Grid.Row="1" Grid.Column="2" 
+                                   Text="{Binding RightTankFuel, StringFormat='{}{0:N0} KG'}" 
+                                   Style="{DynamicResource EFBValueStyle}" 
+                                   HorizontalAlignment="Center" 
+                                   Margin="0,0,0,10" />
+                        
+                        <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" 
+                                   Text="TOTAL FUEL" 
+                                   Style="{DynamicResource EFBLabelStyle}" 
+                                   HorizontalAlignment="Center" 
+                                   Margin="0,0,0,5" />
+                        
+                        <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" 
+                                   Text="{Binding TotalFuel, StringFormat='{}{0:N0} KG'}" 
+                                   Style="{DynamicResource EFBValueStyle}" 
+                                   HorizontalAlignment="Center" 
+                                   FontSize="24" />
+                        
+                        <controls:CircularProgressIndicator Grid.Row="1" Grid.Column="0" 
+                                                          Progress="{Binding RefuelingProgress}" 
+                                                          Width="80" 
+                                                          Height="80" 
+                                                          HorizontalAlignment="Center" 
+                                                          VerticalAlignment="Center" 
+                                                          Visibility="{Binding RefuelingProgress, Converter={StaticResource ProgressToVisibilityConverter}}" />
+                    </Grid>
+                </Grid>
+            </Border>
+            
+            <!-- Service Status -->
+            <Border Grid.Row="4" 
+                    Style="{DynamicResource EFBPanelStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" 
+                               Text="SERVICE STATUS" 
+                               Style="{DynamicResource EFBPanelHeaderStyle}" />
+                    
+                    <Grid Grid.Row="1" Margin="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Grid.Row="0" Grid.Column="0" 
+                                   Text="PASSENGERS" 
+                                   Style="{DynamicResource EFBLabelStyle}" 
+                                   Margin="0,0,0,5" />
+                        
+                        <TextBlock Grid.Row="0" Grid.Column="1" 
+                                   Text="{Binding PassengerCount}" 
+                                   Style="{DynamicResource EFBValueStyle}" 
+                                   HorizontalAlignment="Right" />
+                        
+                        <controls:LinearProgressIndicator Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" 
+                                                        Progress="{Binding BoardingProgress}" 
+                                                        Label="BOARDING" 
+                                                        Margin="0,0,0,10" 
+                                                        Visibility="{Binding BoardingProgress, Converter={StaticResource ProgressToVisibilityConverter}}" />
+                        
+                        <controls:LinearProgressIndicator Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" 
+                                                        Progress="{Binding DeboardingProgress}" 
+                                                        Label="DEBOARDING" 
+                                                        Margin="0,0,0,10" 
+                                                        Visibility="{Binding DeboardingProgress, Converter={StaticResource ProgressToVisibilityConverter}}" />
+                        
+                        <TextBlock Grid.Row="3" Grid.Column="0" 
+                                   Text="CARGO" 
+                                   Style="{DynamicResource EFBLabelStyle}" 
+                                   Margin="0,0,0,5" />
+                        
+                        <TextBlock Grid.Row="3" Grid.Column="1" 
+                                   Text="{Binding CargoWeight, StringFormat='{}{0:N0} KG'}" 
+                                   Style="{DynamicResource EFBValueStyle}" 
+                                   HorizontalAlignment="Right" />
+                        
+                        <controls:LinearProgressIndicator Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" 
+                                                        Progress="{Binding CargoLoadingProgress}" 
+                                                        Label="CARGO LOADING" 
+                                                        Margin="0,0,0,10" 
+                                                        Visibility="{Binding CargoLoadingProgress, Converter={StaticResource ProgressToVisibilityConverter}}" />
+                        
+                        <controls:LinearProgressIndicator Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" 
+                                                        Progress="{Binding CargoUnloadingProgress}" 
+                                                        Label="CARGO UNLOADING" 
+                                                        Visibility="{Binding CargoUnloadingProgress, Converter={StaticResource ProgressToVisibilityConverter}}" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </ScrollViewer>
+</local:BasePage>

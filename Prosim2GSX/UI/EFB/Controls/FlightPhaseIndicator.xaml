@@ -1,0 +1,132 @@
+<UserControl x:Class="Prosim2GSX.UI.EFB.Controls.FlightPhaseIndicator"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Prosim2GSX.UI.EFB.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="100" d:DesignWidth="600">
+    <UserControl.Resources>
+        <Style x:Key="PhaseTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource EFBForegroundBrush}" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Center" />
+        </Style>
+        
+        <Style x:Key="ActivePhaseTextStyle" TargetType="TextBlock" BasedOn="{StaticResource PhaseTextStyle}">
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{DynamicResource EFBPrimaryBrush}" />
+        </Style>
+        
+        <Style x:Key="PhaseCircleStyle" TargetType="Ellipse">
+            <Setter Property="Width" Value="20" />
+            <Setter Property="Height" Value="20" />
+            <Setter Property="Fill" Value="{DynamicResource EFBSecondaryBrush}" />
+            <Setter Property="Stroke" Value="{DynamicResource EFBBorderBrush}" />
+            <Setter Property="StrokeThickness" Value="1" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        
+        <Style x:Key="ActivePhaseCircleStyle" TargetType="Ellipse" BasedOn="{StaticResource PhaseCircleStyle}">
+            <Setter Property="Fill" Value="{DynamicResource EFBPrimaryBrush}" />
+            <Setter Property="Stroke" Value="{DynamicResource EFBPrimaryBrush}" />
+        </Style>
+        
+        <Style x:Key="CompletedPhaseCircleStyle" TargetType="Ellipse" BasedOn="{StaticResource PhaseCircleStyle}">
+            <Setter Property="Fill" Value="{DynamicResource EFBSuccessBrush}" />
+            <Setter Property="Stroke" Value="{DynamicResource EFBSuccessBrush}" />
+        </Style>
+        
+        <Style x:Key="PhaseLineStyle" TargetType="Line">
+            <Setter Property="Stroke" Value="{DynamicResource EFBBorderBrush}" />
+            <Setter Property="StrokeThickness" Value="2" />
+            <Setter Property="X1" Value="0" />
+            <Setter Property="Y1" Value="0" />
+            <Setter Property="X2" Value="100" />
+            <Setter Property="Y2" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Stretch" Value="Fill" />
+        </Style>
+        
+        <Style x:Key="CompletedPhaseLineStyle" TargetType="Line" BasedOn="{StaticResource PhaseLineStyle}">
+            <Setter Property="Stroke" Value="{DynamicResource EFBSuccessBrush}" />
+        </Style>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        
+        <!-- Phase Circles and Lines -->
+        <Grid Grid.Row="0" Height="30">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            
+            <!-- Lines -->
+            <Line x:Name="Line1" Grid.Column="0" Style="{StaticResource PhaseLineStyle}" Margin="10,0,0,0" />
+            <Line x:Name="Line2" Grid.Column="1" Style="{StaticResource PhaseLineStyle}" />
+            <Line x:Name="Line3" Grid.Column="2" Style="{StaticResource PhaseLineStyle}" />
+            <Line x:Name="Line4" Grid.Column="3" Style="{StaticResource PhaseLineStyle}" />
+            <Line x:Name="Line5" Grid.Column="4" Style="{StaticResource PhaseLineStyle}" />
+            <Line x:Name="Line6" Grid.Column="5" Style="{StaticResource PhaseLineStyle}" Margin="0,0,10,0" />
+            
+            <!-- Circles -->
+            <Ellipse x:Name="Circle1" Grid.Column="0" Style="{StaticResource PhaseCircleStyle}" />
+            <Ellipse x:Name="Circle2" Grid.Column="1" Style="{StaticResource PhaseCircleStyle}" />
+            <Ellipse x:Name="Circle3" Grid.Column="2" Style="{StaticResource PhaseCircleStyle}" />
+            <Ellipse x:Name="Circle4" Grid.Column="3" Style="{StaticResource PhaseCircleStyle}" />
+            <Ellipse x:Name="Circle5" Grid.Column="4" Style="{StaticResource PhaseCircleStyle}" />
+            <Ellipse x:Name="Circle6" Grid.Column="5" Style="{StaticResource PhaseCircleStyle}" />
+            <Ellipse x:Name="Circle7" Grid.Column="6" Style="{StaticResource PhaseCircleStyle}" />
+        </Grid>
+        
+        <!-- Phase Labels -->
+        <Grid Grid.Row="1" Margin="0,5,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            
+            <TextBlock x:Name="Label1" Grid.Column="0" Text="PREFLIGHT" Style="{StaticResource PhaseTextStyle}" />
+            <TextBlock x:Name="Label2" Grid.Column="1" Text="DEPARTURE" Style="{StaticResource PhaseTextStyle}" />
+            <TextBlock x:Name="Label3" Grid.Column="2" Text="TAXIOUT" Style="{StaticResource PhaseTextStyle}" />
+            <TextBlock x:Name="Label4" Grid.Column="3" Text="FLIGHT" Style="{StaticResource PhaseTextStyle}" />
+            <TextBlock x:Name="Label5" Grid.Column="4" Text="TAXIIN" Style="{StaticResource PhaseTextStyle}" />
+            <TextBlock x:Name="Label6" Grid.Column="5" Text="ARRIVAL" Style="{StaticResource PhaseTextStyle}" />
+            <TextBlock x:Name="Label7" Grid.Column="6" Text="TURNAROUND" Style="{StaticResource PhaseTextStyle}" />
+        </Grid>
+        
+        <!-- Current Phase -->
+        <Border Grid.Row="2" 
+                Background="{DynamicResource EFBPrimaryBrush}" 
+                CornerRadius="4" 
+                Margin="0,10,0,0" 
+                Padding="10,5" 
+                HorizontalAlignment="Center">
+            <TextBlock x:Name="CurrentPhaseText" 
+                       Text="PREFLIGHT" 
+                       Foreground="White" 
+                       FontSize="14" 
+                       FontWeight="Bold" />
+        </Border>
+    </Grid>
+</UserControl>

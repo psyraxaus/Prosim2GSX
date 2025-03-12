@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+using Prosim2GSX.UI.EFB.Navigation;
 using Prosim2GSX.Models;
 using Prosim2GSX.UI.EFB.Themes;
 using Prosim2GSX.UI.EFB.ViewModels;
@@ -80,8 +82,7 @@ namespace Prosim2GSX.UI.EFB
                 _windowManager = new EFBWindowManager(_themeManager);
 
                 // Initialize the data binding service
-                _dataBindingService = new EFBDataBindingService();
-                _dataBindingService.Initialize(_serviceModel);
+                _dataBindingService = new EFBDataBindingService(_serviceModel);
 
                 // Register pages with the window manager
                 RegisterPages();
@@ -203,7 +204,7 @@ namespace Prosim2GSX.UI.EFB
     /// <summary>
     /// Dummy page for placeholder purposes.
     /// </summary>
-    public class DummyPage : System.Windows.Controls.UserControl, Navigation.IEFBPage
+    public class DummyPage : UserControl, IEFBPage
     {
         /// <summary>
         /// Gets the title of the page.
@@ -211,29 +212,61 @@ namespace Prosim2GSX.UI.EFB
         public string Title => "Dummy Page";
 
         /// <summary>
-        /// Gets the icon source for the page.
+        /// Gets the icon of the page.
         /// </summary>
-        public string IconSource => "\uE8A5";
+        public string Icon => "\uE8A5";
 
         /// <summary>
-        /// Gets a value indicating whether this page can be navigated away from.
+        /// Gets the page content.
         /// </summary>
-        /// <returns>True if the page can be navigated away from, false otherwise.</returns>
-        public bool CanNavigateAway() => true;
+        public UserControl Content => this;
+
+        /// <summary>
+        /// Gets a value indicating whether the page is visible in the navigation menu.
+        /// </summary>
+        public bool IsVisibleInMenu => true;
+
+        /// <summary>
+        /// Gets a value indicating whether the page can be navigated to.
+        /// </summary>
+        public bool CanNavigateTo => true;
 
         /// <summary>
         /// Called when the page is navigated to.
         /// </summary>
-        /// <param name="parameter">The navigation parameter.</param>
-        public void OnNavigatedTo(object parameter)
+        public void OnNavigatedTo()
         {
             // Do nothing
         }
 
         /// <summary>
-        /// Called when the page is navigated away from.
+        /// Called when the page is navigated from.
         /// </summary>
         public void OnNavigatedFrom()
+        {
+            // Do nothing
+        }
+
+        /// <summary>
+        /// Called when the page is activated.
+        /// </summary>
+        public void OnActivated()
+        {
+            // Do nothing
+        }
+
+        /// <summary>
+        /// Called when the page is deactivated.
+        /// </summary>
+        public void OnDeactivated()
+        {
+            // Do nothing
+        }
+
+        /// <summary>
+        /// Called when the page is refreshed.
+        /// </summary>
+        public void OnRefresh()
         {
             // Do nothing
         }

@@ -1,249 +1,253 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
-using Prosim2GSX.Models;
 
 namespace Prosim2GSX.UI.EFB.ViewModels
 {
     /// <summary>
-    /// Service for data binding between the EFB UI and the ServiceModel.
+    /// Service for binding data between the EFB UI and the ServiceModel.
     /// </summary>
     public class EFBDataBindingService
     {
-        private readonly List<BaseViewModel> _viewModels = new();
-        private readonly DispatcherTimer _updateTimer = new();
-        private readonly object _syncLock = new();
-        private ServiceModel _serviceModel;
-        private bool _isPaused;
-        private CancellationTokenSource _cancellationTokenSource;
-
+        private readonly object _serviceModel;
+        private readonly Dictionary<string, PropertyInfo> _propertyCache = new Dictionary<string, PropertyInfo>();
+        private readonly Dictionary<string, List<Action<object>>> _propertyChangedCallbacks = new Dictionary<string, List<Action<object>>>();
+        private readonly Dispatcher _dispatcher;
+        private readonly Timer _pollingTimer;
+        private readonly Dictionary<string, object> _lastValues = new Dictionary<string, object>();
+        private readonly int _pollingIntervalMilliseconds;
+        
         /// <summary>
         /// Initializes a new instance of the <see cref="EFBDataBindingService"/> class.
         /// </summary>
-        public EFBDataBindingService()
-        {
-            // Initialize the update timer
-            _updateTimer.Interval = TimeSpan.FromSeconds(1);
-            _updateTimer.Tick += UpdateTimer_Tick;
-        }
-
-        /// <summary>
-        /// Gets a value indicating whether updates are paused.
-        /// </summary>
-        public bool IsPaused => _isPaused;
-
-        /// <summary>
-        /// Initializes the data binding service with a ServiceModel.
-        /// </summary>
-        /// <param name="serviceModel">The ServiceModel to bind to.</param>
-        public void Initialize(ServiceModel serviceModel)
+        /// <param name="serviceModel">The service model to bind to.</param>
+        /// <param name="pollingIntervalMilliseconds">The polling interval in milliseconds.</param>
+        public EFBDataBindingService(object serviceModel, int pollingIntervalMilliseconds = 500)
         {
             _serviceModel = serviceModel ?? throw new ArgumentNullException(nameof(serviceModel));
-            _updateTimer.Start();
-        }
-
-        /// <summary>
-        /// Registers a view model with the data binding service.
-        /// </summary>
-        /// <param name="viewModel">The view model to register.</param>
-        public void RegisterViewModel(BaseViewModel viewModel)
-        {
-            if (viewModel == null)
+            _dispatcher = Dispatcher.CurrentDispatcher;
+            _pollingIntervalMilliseconds = pollingIntervalMilliseconds;
+            
+            // Start polling timer
+            _pollingTimer = new Timer(PollProperties, null, _pollingIntervalMilliseconds, _pollingIntervalMilliseconds);
+            
+            // Subscribe to property changed events if the service model implements INotifyPropertyChanged
+            if (_serviceModel is INotifyPropertyChanged notifyPropertyChanged)
             {
-                throw new ArgumentNullException(nameof(viewModel));
+                notifyPropertyChanged.PropertyChanged += OnServiceModelPropertyChanged;
             }
-
-            lock (_syncLock)
+        }
+        
+        /// <summary>
+        /// Gets a property value from the service model.
+        /// </summary>
+        /// <typeparam name="T">The type of the property.</typeparam>
+        /// <param name="propertyName">The name of the property.</param>
+        /// <returns>The property value.</returns>
+        public T GetValue<T>(string propertyName)
+        {
+            if (string.IsNullOrEmpty(propertyName))
             {
-                if (!_viewModels.Contains(viewModel))
+                throw new ArgumentNullException(nameof(propertyName));
+            }
+            
+            var property = GetPropertyInfo(propertyName);
+            if (property == null)
+            {
+                throw new ArgumentException($"Property '{propertyName}' not found on service model.", nameof(propertyName));
+            }
+            
+            return (T)property.GetValue(_serviceModel);
+        }
+        
+        /// <summary>
+        /// Sets a property value on the service model.
+        /// </summary>
+        /// <typeparam name="T">The type of the property.</typeparam>
+        /// <param name="propertyName">The name of the property.</param>
+        /// <param name="value">The property value.</param>
+        public void SetValue<T>(string propertyName, T value)
+        {
+            if (string.IsNullOrEmpty(propertyName))
+            {
+                throw new ArgumentNullException(nameof(propertyName));
+            }
+            
+            var property = GetPropertyInfo(propertyName);
+            if (property == null)
+            {
+                throw new ArgumentException($"Property '{propertyName}' not found on service model.", nameof(propertyName));
+            }
+            
+            if (!property.CanWrite)
+            {
+                throw new InvalidOperationException($"Property '{propertyName}' is read-only.");
+            }
+            
+            property.SetValue(_serviceModel, value);
+        }
+        
+        /// <summary>
+        /// Subscribes to property changes.
+        /// </summary>
+        /// <param name="propertyName">The name of the property.</param>
+        /// <param name="callback">The callback to invoke when the property changes.</param>
+        public void Subscribe(string propertyName, Action<object> callback)
+        {
+            if (string.IsNullOrEmpty(propertyName))
+            {
+                throw new ArgumentNullException(nameof(propertyName));
+            }
+            
+            if (callback == null)
+            {
+                throw new ArgumentNullException(nameof(callback));
+            }
+            
+            if (!_propertyChangedCallbacks.TryGetValue(propertyName, out var callbacks))
+            {
+                callbacks = new List<Action<object>>();
+                _propertyChangedCallbacks[propertyName] = callbacks;
+            }
+            
+            callbacks.Add(callback);
+            
+            // Initialize with current value
+            var property = GetPropertyInfo(propertyName);
+            if (property != null)
+            {
+                var value = property.GetValue(_serviceModel);
+                _lastValues[propertyName] = value;
+                callback(value);
+            }
+        }
+        
+        /// <summary>
+        /// Unsubscribes from property changes.
+        /// </summary>
+        /// <param name="propertyName">The name of the property.</param>
+        /// <param name="callback">The callback to remove.</param>
+        public void Unsubscribe(string propertyName, Action<object> callback)
+        {
+            if (string.IsNullOrEmpty(propertyName))
+            {
+                throw new ArgumentNullException(nameof(propertyName));
+            }
+            
+            if (callback == null)
+            {
+                throw new ArgumentNullException(nameof(callback));
+            }
+            
+            if (_propertyChangedCallbacks.TryGetValue(propertyName, out var callbacks))
+            {
+                callbacks.Remove(callback);
+                
+                if (callbacks.Count == 0)
                 {
-                    _viewModels.Add(viewModel);
-                    viewModel.Initialize();
+                    _propertyChangedCallbacks.Remove(propertyName);
                 }
             }
         }
-
+        
         /// <summary>
-        /// Unregisters a view model from the data binding service.
-        /// </summary>
-        /// <param name="viewModel">The view model to unregister.</param>
-        public void UnregisterViewModel(BaseViewModel viewModel)
-        {
-            if (viewModel == null)
-            {
-                throw new ArgumentNullException(nameof(viewModel));
-            }
-
-            lock (_syncLock)
-            {
-                if (_viewModels.Contains(viewModel))
-                {
-                    _viewModels.Remove(viewModel);
-                    viewModel.Cleanup();
-                }
-            }
-        }
-
-        /// <summary>
-        /// Synchronizes data between the ServiceModel and the registered view models.
-        /// </summary>
-        public void SynchronizeData()
-        {
-            if (_serviceModel == null || _isPaused)
-            {
-                return;
-            }
-
-            lock (_syncLock)
-            {
-                foreach (var viewModel in _viewModels)
-                {
-                    try
-                    {
-                        // Call the view model's update method if it has one
-                        if (viewModel is IUpdatableViewModel updatableViewModel)
-                        {
-                            updatableViewModel.Update(_serviceModel);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        // Log the error but continue updating other view models
-                        System.Diagnostics.Debug.WriteLine($"Error updating view model {viewModel.GetType().Name}: {ex.Message}");
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Sets the update frequency for data synchronization.
-        /// </summary>
-        /// <param name="interval">The update interval.</param>
-        public void SetUpdateFrequency(TimeSpan interval)
-        {
-            if (interval <= TimeSpan.Zero)
-            {
-                throw new ArgumentException("Update interval must be greater than zero.", nameof(interval));
-            }
-
-            _updateTimer.Interval = interval;
-        }
-
-        /// <summary>
-        /// Pauses data updates.
-        /// </summary>
-        public void PauseUpdates()
-        {
-            _isPaused = true;
-        }
-
-        /// <summary>
-        /// Resumes data updates.
-        /// </summary>
-        public void ResumeUpdates()
-        {
-            _isPaused = false;
-        }
-
-        /// <summary>
-        /// Starts a background task to update data asynchronously.
-        /// </summary>
-        /// <param name="updateAction">The update action to perform.</param>
-        /// <param name="interval">The update interval.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        public async Task StartBackgroundUpdateAsync(Func<Task> updateAction, TimeSpan interval)
-        {
-            if (updateAction == null)
-            {
-                throw new ArgumentNullException(nameof(updateAction));
-            }
-
-            if (interval <= TimeSpan.Zero)
-            {
-                throw new ArgumentException("Update interval must be greater than zero.", nameof(interval));
-            }
-
-            // Cancel any existing background update task
-            StopBackgroundUpdate();
-
-            // Create a new cancellation token source
-            _cancellationTokenSource = new CancellationTokenSource();
-            var token = _cancellationTokenSource.Token;
-
-            // Start the background update task
-            await Task.Run(async () =>
-            {
-                while (!token.IsCancellationRequested)
-                {
-                    try
-                    {
-                        await updateAction();
-                    }
-                    catch (Exception ex)
-                    {
-                        // Log the error but continue updating
-                        System.Diagnostics.Debug.WriteLine($"Error in background update: {ex.Message}");
-                    }
-
-                    try
-                    {
-                        await Task.Delay(interval, token);
-                    }
-                    catch (TaskCanceledException)
-                    {
-                        // Task was canceled, exit the loop
-                        break;
-                    }
-                }
-            }, token);
-        }
-
-        /// <summary>
-        /// Stops the background update task.
-        /// </summary>
-        public void StopBackgroundUpdate()
-        {
-            _cancellationTokenSource?.Cancel();
-            _cancellationTokenSource?.Dispose();
-            _cancellationTokenSource = null;
-        }
-
-        /// <summary>
-        /// Cleans up resources used by the data binding service.
+        /// Cleans up the service.
         /// </summary>
         public void Cleanup()
         {
-            _updateTimer.Stop();
-            StopBackgroundUpdate();
-
-            lock (_syncLock)
+            _pollingTimer?.Dispose();
+            
+            if (_serviceModel is INotifyPropertyChanged notifyPropertyChanged)
             {
-                foreach (var viewModel in _viewModels)
+                notifyPropertyChanged.PropertyChanged -= OnServiceModelPropertyChanged;
+            }
+            
+            _propertyChangedCallbacks.Clear();
+            _lastValues.Clear();
+            _propertyCache.Clear();
+        }
+        
+        private PropertyInfo GetPropertyInfo(string propertyName)
+        {
+            if (_propertyCache.TryGetValue(propertyName, out var property))
+            {
+                return property;
+            }
+            
+            property = _serviceModel.GetType().GetProperty(propertyName);
+            _propertyCache[propertyName] = property;
+            
+            return property;
+        }
+        
+        private void OnServiceModelPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(e.PropertyName))
+            {
+                return;
+            }
+            
+            if (_propertyChangedCallbacks.TryGetValue(e.PropertyName, out var callbacks))
+            {
+                var property = GetPropertyInfo(e.PropertyName);
+                if (property != null)
                 {
-                    viewModel.Cleanup();
+                    var value = property.GetValue(_serviceModel);
+                    
+                    _dispatcher.Invoke(() =>
+                    {
+                        foreach (var callback in callbacks)
+                        {
+                            callback(value);
+                        }
+                    });
                 }
-
-                _viewModels.Clear();
             }
         }
-
-        private void UpdateTimer_Tick(object sender, EventArgs e)
+        
+        private void PollProperties(object state)
         {
-            SynchronizeData();
+            if (_serviceModel is INotifyPropertyChanged)
+            {
+                // No need to poll if the service model implements INotifyPropertyChanged
+                return;
+            }
+            
+            foreach (var propertyName in _propertyChangedCallbacks.Keys)
+            {
+                var property = GetPropertyInfo(propertyName);
+                if (property != null)
+                {
+                    var value = property.GetValue(_serviceModel);
+                    
+                    if (_lastValues.TryGetValue(propertyName, out var lastValue))
+                    {
+                        if (!Equals(value, lastValue))
+                        {
+                            _lastValues[propertyName] = value;
+                            
+                            if (_propertyChangedCallbacks.TryGetValue(propertyName, out var callbacks))
+                            {
+                                _dispatcher.Invoke(() =>
+                                {
+                                    foreach (var callback in callbacks)
+                                    {
+                                        callback(value);
+                                    }
+                                });
+                            }
+                        }
+                    }
+                    else
+                    {
+                        _lastValues[propertyName] = value;
+                    }
+                }
+            }
         }
-    }
-
-    /// <summary>
-    /// Interface for view models that can be updated with a ServiceModel.
-    /// </summary>
-    public interface IUpdatableViewModel
-    {
-        /// <summary>
-        /// Updates the view model with data from the ServiceModel.
-        /// </summary>
-        /// <param name="serviceModel">The ServiceModel to update from.</param>
-        void Update(ServiceModel serviceModel);
     }
 }

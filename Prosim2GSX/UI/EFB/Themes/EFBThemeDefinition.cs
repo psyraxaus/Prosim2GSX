@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
+using System.Windows;
 
 namespace Prosim2GSX.UI.EFB.Themes
 {
@@ -9,180 +9,126 @@ namespace Prosim2GSX.UI.EFB.Themes
     /// </summary>
     public class EFBThemeDefinition
     {
-        /// <summary>
-        /// Gets or sets the name of the theme.
-        /// </summary>
-        [JsonPropertyName("name")]
-        public string Name { get; set; }
+        private readonly Dictionary<string, object> _resources = new Dictionary<string, object>();
 
         /// <summary>
-        /// Gets or sets the description of the theme.
+        /// Initializes a new instance of the <see cref="EFBThemeDefinition"/> class.
         /// </summary>
-        [JsonPropertyName("description")]
+        /// <param name="name">The theme name.</param>
+        public EFBThemeDefinition(string name)
+        {
+            Name = name ?? throw new ArgumentNullException(nameof(name));
+        }
+
+        /// <summary>
+        /// Gets the theme name.
+        /// </summary>
+        public string Name { get; }
+
+        /// <summary>
+        /// Gets or sets the theme description.
+        /// </summary>
         public string Description { get; set; }
 
         /// <summary>
-        /// Gets or sets the author of the theme.
+        /// Gets or sets the path to the theme logo.
         /// </summary>
-        [JsonPropertyName("author")]
-        public string Author { get; set; }
-
-        /// <summary>
-        /// Gets or sets the version of the theme.
-        /// </summary>
-        [JsonPropertyName("version")]
-        public string Version { get; set; }
-
-        /// <summary>
-        /// Gets or sets the airline code associated with the theme.
-        /// </summary>
-        [JsonPropertyName("airlineCode")]
-        public string AirlineCode { get; set; }
-
-        /// <summary>
-        /// Gets or sets the colors for the theme.
-        /// </summary>
-        [JsonPropertyName("colors")]
-        public Dictionary<string, string> Colors { get; set; } = new Dictionary<string, string>();
-
-        /// <summary>
-        /// Gets or sets the fonts for the theme.
-        /// </summary>
-        [JsonPropertyName("fonts")]
-        public Dictionary<string, string> Fonts { get; set; } = new Dictionary<string, string>();
-
-        /// <summary>
-        /// Gets or sets the resources for the theme.
-        /// These are additional resources that can be used by the theme.
-        /// </summary>
-        [JsonPropertyName("resources")]
-        public Dictionary<string, object> Resources { get; set; } = new Dictionary<string, object>();
-
-        /// <summary>
-        /// Gets or sets the path to the logo for the theme.
-        /// </summary>
-        [JsonPropertyName("logoPath")]
         public string LogoPath { get; set; }
 
         /// <summary>
-        /// Gets or sets the path to the background image for the theme.
+        /// Gets or sets the path to the theme resource dictionary.
         /// </summary>
-        [JsonPropertyName("backgroundPath")]
-        public string BackgroundPath { get; set; }
+        public string ResourceDictionaryPath { get; set; }
 
         /// <summary>
-        /// Gets or sets the base theme that this theme extends.
+        /// Gets or sets the theme resource dictionary.
         /// </summary>
-        [JsonPropertyName("baseTheme")]
-        public string BaseTheme { get; set; }
+        public ResourceDictionary ResourceDictionary { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether this theme is a dark theme.
+        /// Gets or sets a resource value.
         /// </summary>
-        [JsonPropertyName("isDarkTheme")]
-        public bool IsDarkTheme { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether this theme is the default theme.
-        /// </summary>
-        [JsonPropertyName("isDefault")]
-        public bool IsDefault { get; set; }
-
-        /// <summary>
-        /// Gets or sets the creation date of the theme.
-        /// </summary>
-        [JsonPropertyName("creationDate")]
-        public DateTime CreationDate { get; set; } = DateTime.Now;
-
-        /// <summary>
-        /// Gets or sets the last modified date of the theme.
-        /// </summary>
-        [JsonPropertyName("lastModifiedDate")]
-        public DateTime LastModifiedDate { get; set; } = DateTime.Now;
-
-        /// <summary>
-        /// Gets or sets the path to the theme file.
-        /// </summary>
-        [JsonIgnore]
-        public string FilePath { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether this theme has been loaded.
-        /// </summary>
-        [JsonIgnore]
-        public bool IsLoaded { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether this theme has validation errors.
-        /// </summary>
-        [JsonIgnore]
-        public bool HasValidationErrors { get; set; }
-
-        /// <summary>
-        /// Gets or sets the validation errors for this theme.
-        /// </summary>
-        [JsonIgnore]
-        public List<string> ValidationErrors { get; set; } = new List<string>();
-
-        /// <summary>
-        /// Validates the theme definition.
-        /// </summary>
-        /// <returns>True if the theme is valid, false otherwise.</returns>
-        public bool Validate()
+        /// <param name="key">The resource key.</param>
+        /// <returns>The resource value.</returns>
+        public object this[string key]
         {
-            ValidationErrors.Clear();
-            HasValidationErrors = false;
+            get => _resources.TryGetValue(key, out var value) ? value : null;
+            set => _resources[key] = value;
+        }
 
-            // Check required properties
-            if (string.IsNullOrWhiteSpace(Name))
-            {
-                ValidationErrors.Add("Theme name is required.");
-                HasValidationErrors = true;
-            }
+        /// <summary>
+        /// Gets a resource value.
+        /// </summary>
+        /// <param name="key">The resource key.</param>
+        /// <returns>The resource value.</returns>
+        public object GetResource(string key)
+        {
+            return this[key];
+        }
 
-            if (string.IsNullOrWhiteSpace(Version))
-            {
-                ValidationErrors.Add("Theme version is required.");
-                HasValidationErrors = true;
-            }
+        /// <summary>
+        /// Sets a resource value.
+        /// </summary>
+        /// <param name="key">The resource key.</param>
+        /// <param name="value">The resource value.</param>
+        public void SetResource(string key, object value)
+        {
+            this[key] = value;
+        }
 
-            // Check required colors
-            var requiredColors = new[]
-            {
-                "PrimaryColor",
-                "SecondaryColor",
-                "AccentColor",
-                "BackgroundColor",
-                "ForegroundColor",
-                "BorderColor"
-            };
+        /// <summary>
+        /// Determines whether the theme contains a resource with the specified key.
+        /// </summary>
+        /// <param name="key">The resource key.</param>
+        /// <returns>True if the theme contains a resource with the specified key, false otherwise.</returns>
+        public bool ContainsResource(string key)
+        {
+            return _resources.ContainsKey(key);
+        }
 
-            foreach (var color in requiredColors)
-            {
-                if (!Colors.ContainsKey(color))
-                {
-                    ValidationErrors.Add($"Required color '{color}' is missing.");
-                    HasValidationErrors = true;
-                }
-            }
+        /// <summary>
+        /// Removes a resource with the specified key.
+        /// </summary>
+        /// <param name="key">The resource key.</param>
+        /// <returns>True if the resource was removed, false otherwise.</returns>
+        public bool RemoveResource(string key)
+        {
+            return _resources.Remove(key);
+        }
 
-            // Check required fonts
-            var requiredFonts = new[]
-            {
-                "PrimaryFont",
-                "SecondaryFont"
-            };
+        /// <summary>
+        /// Clears all resources.
+        /// </summary>
+        public void ClearResources()
+        {
+            _resources.Clear();
+        }
 
-            foreach (var font in requiredFonts)
-            {
-                if (!Fonts.ContainsKey(font))
-                {
-                    ValidationErrors.Add($"Required font '{font}' is missing.");
-                    HasValidationErrors = true;
-                }
-            }
+        /// <summary>
+        /// Gets all resource keys.
+        /// </summary>
+        /// <returns>A collection of all resource keys.</returns>
+        public IEnumerable<string> GetResourceKeys()
+        {
+            return _resources.Keys;
+        }
 
-            return !HasValidationErrors;
+        /// <summary>
+        /// Gets all resource values.
+        /// </summary>
+        /// <returns>A collection of all resource values.</returns>
+        public IEnumerable<object> GetResourceValues()
+        {
+            return _resources.Values;
+        }
+
+        /// <summary>
+        /// Gets all resources.
+        /// </summary>
+        /// <returns>A collection of all resources.</returns>
+        public IEnumerable<KeyValuePair<string, object>> GetResources()
+        {
+            return _resources;
         }
     }
 }

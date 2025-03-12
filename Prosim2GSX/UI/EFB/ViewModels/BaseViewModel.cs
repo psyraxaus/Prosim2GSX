@@ -4,160 +4,160 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using CommunityToolkit.Mvvm.ComponentModel;
+using System.Windows.Threading;
 
 namespace Prosim2GSX.UI.EFB.ViewModels
 {
     /// <summary>
-    /// Base view model class for all EFB UI view models.
-    /// Provides common functionality for property change notification,
-    /// initialization, cleanup, and throttled property updates.
+    /// Base class for view models.
     /// </summary>
-    public class BaseViewModel : ObservableObject
+    public abstract class BaseViewModel : INotifyPropertyChanged
     {
-        private bool _isInitialized;
-        private bool _isBusy;
-        private string _statusMessage;
-        private readonly Dictionary<string, CancellationTokenSource> _throttleCancellationTokens = new();
-        private readonly Dictionary<string, object> _pendingUpdates = new();
-
+        private readonly Dictionary<string, object> _propertyValues = new Dictionary<string, object>();
+        private readonly Dictionary<string, CancellationTokenSource> _throttleCancellationTokens = new Dictionary<string, CancellationTokenSource>();
+        private readonly Dispatcher _dispatcher;
+        
         /// <summary>
-        /// Gets or sets a value indicating whether this view model is busy.
+        /// Initializes a new instance of the <see cref="BaseViewModel"/> class.
         /// </summary>
-        public bool IsBusy
+        protected BaseViewModel()
         {
-            get => _isBusy;
-            set => SetProperty(ref _isBusy, value);
+            _dispatcher = Dispatcher.CurrentDispatcher;
         }
-
+        
         /// <summary>
-        /// Gets or sets the status message for this view model.
+        /// Event raised when a property value changes.
         /// </summary>
-        public string StatusMessage
-        {
-            get => _statusMessage;
-            set => SetProperty(ref _statusMessage, value);
-        }
-
+        public event PropertyChangedEventHandler PropertyChanged;
+        
         /// <summary>
-        /// Gets a value indicating whether this view model has been initialized.
-        /// </summary>
-        public bool IsInitialized => _isInitialized;
-
-        /// <summary>
-        /// Initializes this view model.
-        /// </summary>
-        public virtual void Initialize()
-        {
-            if (_isInitialized)
-            {
-                return;
-            }
-
-            _isInitialized = true;
-        }
-
-        /// <summary>
-        /// Cleans up this view model.
-        /// </summary>
-        public virtual void Cleanup()
-        {
-            // Cancel all throttled operations
-            foreach (var cts in _throttleCancellationTokens.Values)
-            {
-                cts.Cancel();
-                cts.Dispose();
-            }
-
-            _throttleCancellationTokens.Clear();
-            _pendingUpdates.Clear();
-            _isInitialized = false;
-        }
-
-        /// <summary>
-        /// Updates a property with throttling to prevent rapid updates.
+        /// Gets or sets a property value.
         /// </summary>
         /// <typeparam name="T">The type of the property.</typeparam>
-        /// <param name="field">The field to update.</param>
-        /// <param name="value">The new value.</param>
-        /// <param name="throttleInterval">The throttle interval.</param>
         /// <param name="propertyName">The name of the property.</param>
-        protected void UpdatePropertyThrottled<T>(
-            ref T field,
-            T value,
-            TimeSpan throttleInterval,
-            [CallerMemberName] string propertyName = null)
+        /// <returns>The property value.</returns>
+        protected T GetProperty<T>([CallerMemberName] string propertyName = null)
         {
-            if (propertyName == null)
+            if (string.IsNullOrEmpty(propertyName))
             {
                 throw new ArgumentNullException(nameof(propertyName));
             }
-
-            // If the value hasn't changed, don't update
-            if (EqualityComparer<T>.Default.Equals(field, value))
+            
+            if (_propertyValues.TryGetValue(propertyName, out var value))
             {
-                return;
+                return (T)value;
             }
-
-            // Update the property immediately
-            bool updated = SetProperty(ref field, value, propertyName);
-
-            // If the property was updated, schedule a throttled update
-            if (updated)
-            {
-                ScheduleThrottledUpdate<T>(propertyName, throttleInterval);
-            }
+            
+            return default;
         }
-
+        
         /// <summary>
-        /// Schedules a throttled update for a property.
+        /// Sets a property value.
         /// </summary>
         /// <typeparam name="T">The type of the property.</typeparam>
+        /// <param name="value">The property value.</param>
         /// <param name="propertyName">The name of the property.</param>
-        /// <param name="throttleInterval">The throttle interval.</param>
-        private void ScheduleThrottledUpdate<T>(string propertyName, TimeSpan throttleInterval)
+        /// <returns>True if the property value changed, false otherwise.</returns>
+        protected bool SetProperty<T>(T value, [CallerMemberName] string propertyName = null)
         {
-            // Cancel any existing throttle operation for this property
+            if (string.IsNullOrEmpty(propertyName))
+            {
+                throw new ArgumentNullException(nameof(propertyName));
+            }
+            
+            if (_propertyValues.TryGetValue(propertyName, out var existingValue))
+            {
+                if (EqualityComparer<T>.Default.Equals((T)existingValue, value))
+                {
+                    return false;
+                }
+            }
+            
+            _propertyValues[propertyName] = value;
+            OnPropertyChanged(propertyName);
+            
+            return true;
+        }
+        
+        /// <summary>
+        /// Sets a property value with throttling.
+        /// </summary>
+        /// <typeparam name="T">The type of the property.</typeparam>
+        /// <param name="value">The property value.</param>
+        /// <param name="throttleMilliseconds">The throttle time in milliseconds.</param>
+        /// <param name="propertyName">The name of the property.</param>
+        /// <returns>True if the property value changed, false otherwise.</returns>
+        protected bool SetPropertyThrottled<T>(T value, int throttleMilliseconds, [CallerMemberName] string propertyName = null)
+        {
+            if (string.IsNullOrEmpty(propertyName))
+            {
+                throw new ArgumentNullException(nameof(propertyName));
+            }
+            
+            if (_propertyValues.TryGetValue(propertyName, out var existingValue))
+            {
+                if (EqualityComparer<T>.Default.Equals((T)existingValue, value))
+                {
+                    return false;
+                }
+            }
+            
+            _propertyValues[propertyName] = value;
+            
             if (_throttleCancellationTokens.TryGetValue(propertyName, out var existingCts))
             {
                 existingCts.Cancel();
-                existingCts.Dispose();
+                _throttleCancellationTokens.Remove(propertyName);
             }
-
-            // Create a new cancellation token source for this throttle operation
+            
             var cts = new CancellationTokenSource();
             _throttleCancellationTokens[propertyName] = cts;
-
-            // Start a task to update the property after the throttle interval
-            Task.Run(async () =>
-            {
-                try
+            
+            Task.Delay(throttleMilliseconds, cts.Token)
+                .ContinueWith(t =>
                 {
-                    // Wait for the throttle interval
-                    await Task.Delay(throttleInterval, cts.Token);
-
-                    // Notify that the throttled update is complete
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                    if (t.IsCanceled)
                     {
-                        // Raise the PropertyChanged event for the property
-                        OnPropertyChanged(propertyName);
-                    });
-                }
-                catch (TaskCanceledException)
-                {
-                    // The operation was cancelled
-                }
-                finally
-                {
-                    // Remove the cancellation token source from the dictionary
-                    if (_throttleCancellationTokens.TryGetValue(propertyName, out var currentCts) && currentCts == cts)
+                        return;
+                    }
+                    
+                    _dispatcher.Invoke(() =>
                     {
                         _throttleCancellationTokens.Remove(propertyName);
-                    }
-
-                    cts.Dispose();
-                }
-            });
+                        OnPropertyChanged(propertyName);
+                    });
+                }, TaskScheduler.Default);
+            
+            return true;
+        }
+        
+        /// <summary>
+        /// Raises the PropertyChanged event.
+        /// </summary>
+        /// <param name="propertyName">The name of the property that changed.</param>
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+        
+        /// <summary>
+        /// Initializes the view model.
+        /// </summary>
+        public virtual void Initialize()
+        {
+        }
+        
+        /// <summary>
+        /// Cleans up the view model.
+        /// </summary>
+        public virtual void Cleanup()
+        {
+            foreach (var cts in _throttleCancellationTokens.Values)
+            {
+                cts.Cancel();
+            }
+            
+            _throttleCancellationTokens.Clear();
         }
     }
 }

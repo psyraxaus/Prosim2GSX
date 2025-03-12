@@ -1,0 +1,224 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- Base Text Block Style -->
+    <Style x:Key="EFBBaseTextBlockStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource EFBForegroundBrush}" />
+        <Setter Property="FontFamily" Value="Segoe UI" />
+        <Setter Property="FontSize" Value="{DynamicResource EFBNormalFontSize}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Margin" Value="0,0,0,5" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    
+    <!-- Header Text Style -->
+    <Style x:Key="EFBHeaderTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
+        <Setter Property="FontSize" Value="{DynamicResource EFBHeaderFontSize}" />
+        <Setter Property="FontWeight" Value="{DynamicResource EFBHeaderFontWeight}" />
+        <Setter Property="Margin" Value="0,0,0,10" />
+    </Style>
+    
+    <!-- Sub Header Text Style -->
+    <Style x:Key="EFBSubHeaderTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
+        <Setter Property="FontSize" Value="{DynamicResource EFBSubHeaderFontSize}" />
+        <Setter Property="FontWeight" Value="{DynamicResource EFBHeaderFontWeight}" />
+        <Setter Property="Margin" Value="0,0,0,8" />
+    </Style>
+    
+    <!-- Body Text Style -->
+    <Style x:Key="EFBBodyTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
+        <Setter Property="FontSize" Value="{DynamicResource EFBNormalFontSize}" />
+        <Setter Property="FontWeight" Value="{DynamicResource EFBNormalFontWeight}" />
+        <Setter Property="LineHeight" Value="20" />
+    </Style>
+    
+    <!-- Caption Text Style -->
+    <Style x:Key="EFBCaptionTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
+        <Setter Property="FontSize" Value="{DynamicResource EFBSmallFontSize}" />
+        <Setter Property="Opacity" Value="0.8" />
+    </Style>
+    
+    <!-- Label Text Style -->
+    <Style x:Key="EFBLabelTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
+        <Setter Property="FontSize" Value="{DynamicResource EFBSmallFontSize}" />
+        <Setter Property="FontWeight" Value="{DynamicResource EFBBoldFontWeight}" />
+        <Setter Property="Margin" Value="0,0,0,2" />
+    </Style>
+    
+    <!-- Value Text Style -->
+    <Style x:Key="EFBValueTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
+        <Setter Property="FontSize" Value="{DynamicResource EFBNormalFontSize}" />
+        <Setter Property="FontWeight" Value="{DynamicResource EFBBoldFontWeight}" />
+    </Style>
+    
+    <!-- Status Text Style -->
+    <Style x:Key="EFBStatusTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
+        <Setter Property="FontSize" Value="{DynamicResource EFBNormalFontSize}" />
+        <Setter Property="FontWeight" Value="{DynamicResource EFBBoldFontWeight}" />
+    </Style>
+    
+    <!-- Success Text Style -->
+    <Style x:Key="EFBSuccessTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
+        <Setter Property="Foreground" Value="{DynamicResource EFBSuccessBrush}" />
+        <Setter Property="FontWeight" Value="{DynamicResource EFBBoldFontWeight}" />
+    </Style>
+    
+    <!-- Warning Text Style -->
+    <Style x:Key="EFBWarningTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
+        <Setter Property="Foreground" Value="{DynamicResource EFBWarningBrush}" />
+        <Setter Property="FontWeight" Value="{DynamicResource EFBBoldFontWeight}" />
+    </Style>
+    
+    <!-- Error Text Style -->
+    <Style x:Key="EFBErrorTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
+        <Setter Property="Foreground" Value="{DynamicResource EFBErrorBrush}" />
+        <Setter Property="FontWeight" Value="{DynamicResource EFBBoldFontWeight}" />
+    </Style>
+    
+    <!-- Info Text Style -->
+    <Style x:Key="EFBInfoTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
+        <Setter Property="Foreground" Value="{DynamicResource EFBInfoBrush}" />
+        <Setter Property="FontWeight" Value="{DynamicResource EFBBoldFontWeight}" />
+    </Style>
+    
+    <!-- Accent Text Style -->
+    <Style x:Key="EFBAccentTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
+        <Setter Property="Foreground" Value="{DynamicResource EFBAccentBrush}" />
+    </Style>
+    
+    <!-- Primary Text Style -->
+    <Style x:Key="EFBPrimaryTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
+        <Setter Property="Foreground" Value="{DynamicResource EFBPrimaryBrush}" />
+    </Style>
+    
+    <!-- Monospace Text Style -->
+    <Style x:Key="EFBMonospaceTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
+        <Setter Property="FontFamily" Value="Consolas, Courier New, monospace" />
+    </Style>
+    
+    <!-- Flight Phase Text Style -->
+    <Style x:Key="EFBFlightPhaseTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
+        <Setter Property="FontSize" Value="{DynamicResource EFBSubHeaderFontSize}" />
+        <Setter Property="FontWeight" Value="{DynamicResource EFBBoldFontWeight}" />
+        <Setter Property="Foreground" Value="{DynamicResource EFBPrimaryBrush}" />
+    </Style>
+    
+    <!-- Service Status Text Style -->
+    <Style x:Key="EFBServiceStatusTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
+        <Setter Property="FontSize" Value="{DynamicResource EFBNormalFontSize}" />
+        <Setter Property="FontWeight" Value="{DynamicResource EFBBoldFontWeight}" />
+    </Style>
+    
+    <!-- Numeric Value Text Style -->
+    <Style x:Key="EFBNumericValueTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
+        <Setter Property="FontSize" Value="{DynamicResource EFBNormalFontSize}" />
+        <Setter Property="FontWeight" Value="{DynamicResource EFBBoldFontWeight}" />
+        <Setter Property="FontFamily" Value="Consolas, Courier New, monospace" />
+        <Setter Property="TextAlignment" Value="Right" />
+    </Style>
+    
+    <!-- Unit Text Style -->
+    <Style x:Key="EFBUnitTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
+        <Setter Property="FontSize" Value="{DynamicResource EFBSmallFontSize}" />
+        <Setter Property="Opacity" Value="0.8" />
+        <Setter Property="Margin" Value="2,0,0,0" />
+        <Setter Property="VerticalAlignment" Value="Bottom" />
+    </Style>
+    
+    <!-- Hyperlink Text Style -->
+    <Style x:Key="EFBHyperlinkTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
+        <Setter Property="Foreground" Value="{DynamicResource EFBInfoBrush}" />
+        <Setter Property="TextDecorations" Value="Underline" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    
+    <!-- TextBox Style -->
+    <Style x:Key="EFBTextBoxStyle" TargetType="TextBox">
+        <Setter Property="Foreground" Value="{DynamicResource EFBForegroundBrush}" />
+        <Setter Property="Background" Value="{DynamicResource EFBSecondaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource EFBBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="8,5" />
+        <Setter Property="Margin" Value="0,0,0,10" />
+        <Setter Property="FontSize" Value="{DynamicResource EFBNormalFontSize}" />
+        <Setter Property="FontFamily" Value="Segoe UI" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="border" 
+                            Background="{TemplateBinding Background}" 
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            BorderThickness="{TemplateBinding BorderThickness}" 
+                            CornerRadius="{DynamicResource EFBDefaultCornerRadius}"
+                            SnapsToDevicePixels="True">
+                        <ScrollViewer x:Name="PART_ContentHost" 
+                                      Focusable="False" 
+                                      HorizontalScrollBarVisibility="Hidden" 
+                                      VerticalScrollBarVisibility="Hidden"
+                                      Margin="{TemplateBinding Padding}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource EFBPrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource EFBPrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <!-- Numeric TextBox Style -->
+    <Style x:Key="EFBNumericTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource EFBTextBoxStyle}">
+        <Setter Property="FontFamily" Value="Consolas, Courier New, monospace" />
+        <Setter Property="TextAlignment" Value="Right" />
+    </Style>
+    
+    <!-- Password Box Style -->
+    <Style x:Key="EFBPasswordBoxStyle" TargetType="PasswordBox">
+        <Setter Property="Foreground" Value="{DynamicResource EFBForegroundBrush}" />
+        <Setter Property="Background" Value="{DynamicResource EFBSecondaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource EFBBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="8,5" />
+        <Setter Property="Margin" Value="0,0,0,10" />
+        <Setter Property="FontSize" Value="{DynamicResource EFBNormalFontSize}" />
+        <Setter Property="FontFamily" Value="Segoe UI" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="PasswordBox">
+                    <Border x:Name="border" 
+                            Background="{TemplateBinding Background}" 
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            BorderThickness="{TemplateBinding BorderThickness}" 
+                            CornerRadius="{DynamicResource EFBDefaultCornerRadius}"
+                            SnapsToDevicePixels="True">
+                        <ScrollViewer x:Name="PART_ContentHost" 
+                                      Focusable="False" 
+                                      HorizontalScrollBarVisibility="Hidden" 
+                                      VerticalScrollBarVisibility="Hidden"
+                                      Margin="{TemplateBinding Padding}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource EFBPrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource EFBPrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

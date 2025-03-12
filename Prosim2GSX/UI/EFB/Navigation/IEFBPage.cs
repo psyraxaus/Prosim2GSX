@@ -1,38 +1,61 @@
 using System;
+using System.Windows.Controls;
 
 namespace Prosim2GSX.UI.EFB.Navigation
 {
     /// <summary>
     /// Interface for EFB pages.
-    /// Defines the common properties and methods that all EFB pages must implement.
     /// </summary>
     public interface IEFBPage
     {
         /// <summary>
-        /// Gets the title of the page.
+        /// Gets the page title.
         /// </summary>
         string Title { get; }
-
+        
         /// <summary>
-        /// Gets the icon source for the page.
+        /// Gets the page icon.
         /// </summary>
-        string IconSource { get; }
-
+        string Icon { get; }
+        
         /// <summary>
-        /// Gets a value indicating whether this page can be navigated away from.
+        /// Gets the page content.
         /// </summary>
-        /// <returns>True if the page can be navigated away from, false otherwise.</returns>
-        bool CanNavigateAway();
-
+        UserControl Content { get; }
+        
+        /// <summary>
+        /// Gets a value indicating whether the page is visible in the navigation menu.
+        /// </summary>
+        bool IsVisibleInMenu { get; }
+        
+        /// <summary>
+        /// Gets a value indicating whether the page can be navigated to.
+        /// </summary>
+        bool CanNavigateTo { get; }
+        
         /// <summary>
         /// Called when the page is navigated to.
         /// </summary>
-        /// <param name="parameter">The navigation parameter.</param>
-        void OnNavigatedTo(object parameter);
-
+        void OnNavigatedTo();
+        
         /// <summary>
-        /// Called when the page is navigated away from.
+        /// Called when the page is navigated from.
         /// </summary>
         void OnNavigatedFrom();
+        
+        /// <summary>
+        /// Called when the page is activated.
+        /// </summary>
+        void OnActivated();
+        
+        /// <summary>
+        /// Called when the page is deactivated.
+        /// </summary>
+        void OnDeactivated();
+        
+        /// <summary>
+        /// Called when the page is refreshed.
+        /// </summary>
+        void OnRefresh();
     }
 }

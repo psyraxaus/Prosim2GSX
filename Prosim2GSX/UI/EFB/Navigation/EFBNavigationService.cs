@@ -1,49 +1,40 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Controls;
 
 namespace Prosim2GSX.UI.EFB.Navigation
 {
     /// <summary>
-    /// Navigation event arguments.
-    /// </summary>
-    public class NavigationEventArgs : EventArgs
-    {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="NavigationEventArgs"/> class.
-        /// </summary>
-        /// <param name="pageKey">The page key.</param>
-        /// <param name="parameter">The navigation parameter.</param>
-        public NavigationEventArgs(string pageKey, object parameter)
-        {
-            PageKey = pageKey;
-            Parameter = parameter;
-        }
-
-        /// <summary>
-        /// Gets the page key.
-        /// </summary>
-        public string PageKey { get; }
-
-        /// <summary>
-        /// Gets the navigation parameter.
-        /// </summary>
-        public object Parameter { get; }
-    }
-
-    /// <summary>
-    /// Service for navigating between EFB pages.
+    /// Navigation service for EFB pages.
     /// </summary>
     public class EFBNavigationService
     {
-        private readonly Dictionary<string, Type> _pageTypes = new();
-        private readonly Stack<(string PageKey, object Parameter)> _navigationHistory = new();
-        private readonly Stack<(string PageKey, object Parameter)> _forwardStack = new();
-        private readonly ContentControl _contentControl;
+        private readonly Dictionary<string, IEFBPage> _pages = new Dictionary<string, IEFBPage>();
+        private readonly Stack<IEFBPage> _navigationHistory = new Stack<IEFBPage>();
         private IEFBPage _currentPage;
-
+        private readonly ContentControl _contentControl;
+        
+        /// <summary>
+        /// Event raised when the current page changes.
+        /// </summary>
+        public event EventHandler<IEFBPage> CurrentPageChanged;
+        
+        /// <summary>
+        /// Event raised when the navigation history changes.
+        /// </summary>
+        public event EventHandler<IReadOnlyCollection<IEFBPage>> NavigationHistoryChanged;
+        
+        /// <summary>
+        /// Event raised when navigation is about to occur.
+        /// </summary>
+        public event EventHandler<NavigationEventArgs> Navigating;
+        
+        /// <summary>
+        /// Event raised when navigation has completed.
+        /// </summary>
+        public event EventHandler<NavigationEventArgs> Navigated;
+        
         /// <summary>
         /// Initializes a new instance of the <see cref="EFBNavigationService"/> class.
         /// </summary>
@@ -52,219 +43,195 @@ namespace Prosim2GSX.UI.EFB.Navigation
         {
             _contentControl = contentControl ?? throw new ArgumentNullException(nameof(contentControl));
         }
-
+        
         /// <summary>
-        /// Event raised when navigating to a page.
+        /// Gets the current page.
         /// </summary>
-        public event EventHandler<NavigationEventArgs> Navigating;
-
+        public IEFBPage CurrentPage => _currentPage;
+        
         /// <summary>
-        /// Event raised when navigated to a page.
+        /// Gets the navigation history.
         /// </summary>
-        public event EventHandler<NavigationEventArgs> Navigated;
-
+        public IReadOnlyCollection<IEFBPage> NavigationHistory => _navigationHistory.ToList().AsReadOnly();
+        
         /// <summary>
-        /// Gets the current page key.
+        /// Gets a value indicating whether navigation back is possible.
         /// </summary>
-        public string CurrentPageKey { get; private set; }
-
+        public bool CanGoBack => _navigationHistory.Count > 0;
+        
         /// <summary>
-        /// Registers a page type with the navigation service.
+        /// Registers a page with the navigation service.
         /// </summary>
-        /// <param name="key">The page key.</param>
-        /// <param name="pageType">The page type.</param>
+        /// <param name="page">The page to register.</param>
+        public void RegisterPage(IEFBPage page)
+        {
+            if (page == null)
+            {
+                throw new ArgumentNullException(nameof(page));
+            }
+            
+            _pages[page.Title] = page;
+        }
+        
+        /// <summary>
+        /// Registers a page with the navigation service.
+        /// </summary>
+        /// <param name="key">The key to register the page with.</param>
+        /// <param name="pageType">The type of the page to register.</param>
         public void RegisterPage(string key, Type pageType)
         {
-            if (string.IsNullOrWhiteSpace(key))
+            if (string.IsNullOrEmpty(key))
             {
-                throw new ArgumentException("Page key cannot be null or empty.", nameof(key));
+                throw new ArgumentNullException(nameof(key));
             }
-
+            
             if (pageType == null)
             {
                 throw new ArgumentNullException(nameof(pageType));
             }
-
+            
             if (!typeof(IEFBPage).IsAssignableFrom(pageType))
             {
-                throw new ArgumentException($"Page type must implement {nameof(IEFBPage)}.", nameof(pageType));
+                throw new ArgumentException($"Type {pageType.Name} does not implement IEFBPage", nameof(pageType));
             }
-
-            _pageTypes[key] = pageType;
+            
+            // Create an instance of the page
+            var page = (IEFBPage)Activator.CreateInstance(pageType);
+            
+            // Register the page
+            _pages[key] = page;
         }
-
+        
         /// <summary>
-        /// Navigates to a page.
+        /// Navigates to a page by title.
         /// </summary>
-        /// <param name="pageKey">The page key.</param>
-        /// <param name="parameter">The navigation parameter.</param>
+        /// <param name="pageTitle">The title of the page to navigate to.</param>
+        /// <param name="parameter">Optional navigation parameter.</param>
         /// <returns>True if navigation was successful, false otherwise.</returns>
-        public bool NavigateTo(string pageKey, object parameter = null)
+        public bool NavigateTo(string pageTitle, object parameter = null)
         {
-            if (string.IsNullOrWhiteSpace(pageKey))
+            if (string.IsNullOrEmpty(pageTitle))
             {
-                throw new ArgumentException("Page key cannot be null or empty.", nameof(pageKey));
+                throw new ArgumentNullException(nameof(pageTitle));
             }
-
-            if (!_pageTypes.TryGetValue(pageKey, out var pageType))
-            {
-                throw new ArgumentException($"No page registered with key '{pageKey}'.", nameof(pageKey));
-            }
-
-            // Check if the current page allows navigation away
-            if (_currentPage != null && !_currentPage.CanNavigateAway())
+            
+            if (!_pages.TryGetValue(pageTitle, out var page))
             {
                 return false;
             }
-
+            
             // Raise the Navigating event
-            Navigating?.Invoke(this, new NavigationEventArgs(pageKey, parameter));
-
-            // Create the new page
-            var page = (IEFBPage)Activator.CreateInstance(pageType);
-
-            // Call OnNavigatedFrom on the current page
-            _currentPage?.OnNavigatedFrom();
-
-            // Update the navigation history
+            Navigating?.Invoke(this, new NavigationEventArgs(pageTitle, parameter));
+            
+            bool result = NavigateTo(page);
+            
+            if (result)
+            {
+                // Raise the Navigated event
+                Navigated?.Invoke(this, new NavigationEventArgs(pageTitle, parameter));
+            }
+            
+            return result;
+        }
+        
+        /// <summary>
+        /// Navigates to a page.
+        /// </summary>
+        /// <param name="page">The page to navigate to.</param>
+        /// <returns>True if navigation was successful, false otherwise.</returns>
+        public bool NavigateTo(IEFBPage page)
+        {
+            if (page == null)
+            {
+                throw new ArgumentNullException(nameof(page));
+            }
+            
+            if (!page.CanNavigateTo)
+            {
+                return false;
+            }
+            
             if (_currentPage != null)
             {
-                _navigationHistory.Push((CurrentPageKey, null));
-                _forwardStack.Clear();
+                _currentPage.OnNavigatedFrom();
+                _navigationHistory.Push(_currentPage);
+                _currentPage.OnDeactivated();
             }
-
-            // Update the current page
+            
             _currentPage = page;
-            CurrentPageKey = pageKey;
-
-            // Set the content control's content
-            _contentControl.Content = page;
-
-            // Call OnNavigatedTo on the new page
-            _currentPage.OnNavigatedTo(parameter);
-
-            // Raise the Navigated event
-            Navigated?.Invoke(this, new NavigationEventArgs(pageKey, parameter));
-
+            _contentControl.Content = page.Content;
+            
+            _currentPage.OnNavigatedTo();
+            _currentPage.OnActivated();
+            
+            CurrentPageChanged?.Invoke(this, _currentPage);
+            NavigationHistoryChanged?.Invoke(this, NavigationHistory);
+            
             return true;
         }
-
-        /// <summary>
-        /// Determines whether navigation back is possible.
-        /// </summary>
-        /// <returns>True if navigation back is possible, false otherwise.</returns>
-        public bool CanGoBack()
-        {
-            return _navigationHistory.Count > 0;
-        }
-
+        
         /// <summary>
         /// Navigates back to the previous page.
         /// </summary>
         /// <returns>True if navigation was successful, false otherwise.</returns>
         public bool GoBack()
         {
-            if (!CanGoBack())
+            if (!CanGoBack)
             {
                 return false;
             }
-
-            // Check if the current page allows navigation away
-            if (_currentPage != null && !_currentPage.CanNavigateAway())
+            
+            if (_currentPage != null)
             {
-                return false;
+                _currentPage.OnNavigatedFrom();
+                _currentPage.OnDeactivated();
             }
-
-            // Get the previous page from the history
-            var (pageKey, parameter) = _navigationHistory.Pop();
-
-            // Add the current page to the forward stack
-            _forwardStack.Push((CurrentPageKey, null));
-
-            // Navigate to the previous page
-            return NavigateToWithoutHistory(pageKey, parameter);
+            
+            _currentPage = _navigationHistory.Pop();
+            _contentControl.Content = _currentPage.Content;
+            
+            _currentPage.OnNavigatedTo();
+            _currentPage.OnActivated();
+            
+            CurrentPageChanged?.Invoke(this, _currentPage);
+            NavigationHistoryChanged?.Invoke(this, NavigationHistory);
+            
+            return true;
         }
-
-        /// <summary>
-        /// Determines whether navigation forward is possible.
-        /// </summary>
-        /// <returns>True if navigation forward is possible, false otherwise.</returns>
-        public bool CanGoForward()
-        {
-            return _forwardStack.Count > 0;
-        }
-
-        /// <summary>
-        /// Navigates forward to the next page.
-        /// </summary>
-        /// <returns>True if navigation was successful, false otherwise.</returns>
-        public bool GoForward()
-        {
-            if (!CanGoForward())
-            {
-                return false;
-            }
-
-            // Check if the current page allows navigation away
-            if (_currentPage != null && !_currentPage.CanNavigateAway())
-            {
-                return false;
-            }
-
-            // Get the next page from the forward stack
-            var (pageKey, parameter) = _forwardStack.Pop();
-
-            // Add the current page to the history
-            _navigationHistory.Push((CurrentPageKey, null));
-
-            // Navigate to the next page
-            return NavigateToWithoutHistory(pageKey, parameter);
-        }
-
+        
         /// <summary>
         /// Clears the navigation history.
         /// </summary>
         public void ClearHistory()
         {
             _navigationHistory.Clear();
-            _forwardStack.Clear();
+            NavigationHistoryChanged?.Invoke(this, NavigationHistory);
         }
-
-        private bool NavigateToWithoutHistory(string pageKey, object parameter)
+        
+        /// <summary>
+        /// Refreshes the current page.
+        /// </summary>
+        public void RefreshCurrentPage()
         {
-            if (string.IsNullOrWhiteSpace(pageKey))
-            {
-                throw new ArgumentException("Page key cannot be null or empty.", nameof(pageKey));
-            }
-
-            if (!_pageTypes.TryGetValue(pageKey, out var pageType))
-            {
-                throw new ArgumentException($"No page registered with key '{pageKey}'.", nameof(pageKey));
-            }
-
-            // Raise the Navigating event
-            Navigating?.Invoke(this, new NavigationEventArgs(pageKey, parameter));
-
-            // Create the new page
-            var page = (IEFBPage)Activator.CreateInstance(pageType);
-
-            // Call OnNavigatedFrom on the current page
-            _currentPage?.OnNavigatedFrom();
-
-            // Update the current page
-            _currentPage = page;
-            CurrentPageKey = pageKey;
-
-            // Set the content control's content
-            _contentControl.Content = page;
-
-            // Call OnNavigatedTo on the new page
-            _currentPage.OnNavigatedTo(parameter);
-
-            // Raise the Navigated event
-            Navigated?.Invoke(this, new NavigationEventArgs(pageKey, parameter));
-
-            return true;
+            _currentPage?.OnRefresh();
+        }
+        
+        /// <summary>
+        /// Gets all registered pages.
+        /// </summary>
+        /// <returns>A collection of all registered pages.</returns>
+        public IReadOnlyCollection<IEFBPage> GetAllPages()
+        {
+            return _pages.Values.ToList().AsReadOnly();
+        }
+        
+        /// <summary>
+        /// Gets all pages that are visible in the navigation menu.
+        /// </summary>
+        /// <returns>A collection of pages that are visible in the navigation menu.</returns>
+        public IReadOnlyCollection<IEFBPage> GetMenuPages()
+        {
+            return _pages.Values.Where(p => p.IsVisibleInMenu).ToList().AsReadOnly();
         }
     }
 }

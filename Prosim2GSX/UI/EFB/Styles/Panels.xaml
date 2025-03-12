@@ -1,0 +1,355 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- Base Panel Style -->
+    <Style x:Key="EFBBasePanelStyle" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource EFBSecondaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource EFBBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{DynamicResource EFBPanelCornerRadius}" />
+        <Setter Property="Padding" Value="{DynamicResource EFBDefaultPadding}" />
+        <Setter Property="Margin" Value="{DynamicResource EFBDefaultMargin}" />
+    </Style>
+    
+    <!-- Card Panel Style -->
+    <Style x:Key="EFBCardPanelStyle" TargetType="Border" BasedOn="{StaticResource EFBBasePanelStyle}">
+        <Setter Property="Effect">
+            <Setter.Value>
+                <DropShadowEffect ShadowDepth="2" BlurRadius="5" Opacity="0.3" Color="Black" />
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <!-- Header Panel Style -->
+    <Style x:Key="EFBHeaderPanelStyle" TargetType="Border" BasedOn="{StaticResource EFBBasePanelStyle}">
+        <Setter Property="Background" Value="{DynamicResource EFBHeaderGradient}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="{DynamicResource EFBHeaderPadding}" />
+        <Setter Property="CornerRadius">
+            <Setter.Value>
+                <MultiBinding StringFormat="{}{0} {0} 0 0">
+                    <Binding Source="{DynamicResource EFBPanelCornerRadius}" />
+                </MultiBinding>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <!-- Content Panel Style -->
+    <Style x:Key="EFBContentPanelStyle" TargetType="Border" BasedOn="{StaticResource EFBBasePanelStyle}">
+        <Setter Property="BorderThickness" Value="1,0,1,1" />
+        <Setter Property="CornerRadius">
+            <Setter.Value>
+                <MultiBinding StringFormat="{}0 0 {0} {0}">
+                    <Binding Source="{DynamicResource EFBPanelCornerRadius}" />
+                </MultiBinding>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <!-- Status Panel Style -->
+    <Style x:Key="EFBStatusPanelStyle" TargetType="Border" BasedOn="{StaticResource EFBBasePanelStyle}">
+        <Setter Property="Background" Value="{DynamicResource EFBSecondaryBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="10,5" />
+    </Style>
+    
+    <!-- Success Panel Style -->
+    <Style x:Key="EFBSuccessPanelStyle" TargetType="Border" BasedOn="{StaticResource EFBBasePanelStyle}">
+        <Setter Property="Background">
+            <Setter.Value>
+                <SolidColorBrush Color="{DynamicResource EFBSuccessColor}" Opacity="0.2" />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="BorderBrush" Value="{DynamicResource EFBSuccessBrush}" />
+    </Style>
+    
+    <!-- Warning Panel Style -->
+    <Style x:Key="EFBWarningPanelStyle" TargetType="Border" BasedOn="{StaticResource EFBBasePanelStyle}">
+        <Setter Property="Background">
+            <Setter.Value>
+                <SolidColorBrush Color="{DynamicResource EFBWarningColor}" Opacity="0.2" />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="BorderBrush" Value="{DynamicResource EFBWarningBrush}" />
+    </Style>
+    
+    <!-- Error Panel Style -->
+    <Style x:Key="EFBErrorPanelStyle" TargetType="Border" BasedOn="{StaticResource EFBBasePanelStyle}">
+        <Setter Property="Background">
+            <Setter.Value>
+                <SolidColorBrush Color="{DynamicResource EFBErrorColor}" Opacity="0.2" />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="BorderBrush" Value="{DynamicResource EFBErrorBrush}" />
+    </Style>
+    
+    <!-- Info Panel Style -->
+    <Style x:Key="EFBInfoPanelStyle" TargetType="Border" BasedOn="{StaticResource EFBBasePanelStyle}">
+        <Setter Property="Background">
+            <Setter.Value>
+                <SolidColorBrush Color="{DynamicResource EFBInfoColor}" Opacity="0.2" />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="BorderBrush" Value="{DynamicResource EFBInfoBrush}" />
+    </Style>
+    
+    <!-- Primary Panel Style -->
+    <Style x:Key="EFBPrimaryPanelStyle" TargetType="Border" BasedOn="{StaticResource EFBBasePanelStyle}">
+        <Setter Property="Background">
+            <Setter.Value>
+                <SolidColorBrush Color="{DynamicResource EFBPrimaryColor}" Opacity="0.2" />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="BorderBrush" Value="{DynamicResource EFBPrimaryBrush}" />
+    </Style>
+    
+    <!-- Accent Panel Style -->
+    <Style x:Key="EFBAccentPanelStyle" TargetType="Border" BasedOn="{StaticResource EFBBasePanelStyle}">
+        <Setter Property="Background">
+            <Setter.Value>
+                <SolidColorBrush Color="{DynamicResource EFBAccentColor}" Opacity="0.2" />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="BorderBrush" Value="{DynamicResource EFBAccentBrush}" />
+    </Style>
+    
+    <!-- Transparent Panel Style -->
+    <Style x:Key="EFBTransparentPanelStyle" TargetType="Border" BasedOn="{StaticResource EFBBasePanelStyle}">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    
+    <!-- Service Panel Style -->
+    <Style x:Key="EFBServicePanelStyle" TargetType="Border" BasedOn="{StaticResource EFBBasePanelStyle}">
+        <Setter Property="Margin" Value="0,0,0,15" />
+    </Style>
+    
+    <!-- Flight Phase Panel Style -->
+    <Style x:Key="EFBFlightPhasePanelStyle" TargetType="Border" BasedOn="{StaticResource EFBBasePanelStyle}">
+        <Setter Property="Background" Value="{DynamicResource EFBPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource EFBPrimaryBrush}" />
+        <Setter Property="Padding" Value="15,10" />
+    </Style>
+    
+    <!-- Dashboard Panel Style -->
+    <Style x:Key="EFBDashboardPanelStyle" TargetType="Border" BasedOn="{StaticResource EFBBasePanelStyle}">
+        <Setter Property="Margin" Value="10" />
+        <Setter Property="MinHeight" Value="150" />
+    </Style>
+    
+    <!-- Form Panel Style -->
+    <Style x:Key="EFBFormPanelStyle" TargetType="Border" BasedOn="{StaticResource EFBBasePanelStyle}">
+        <Setter Property="Padding" Value="15" />
+    </Style>
+    
+    <!-- Separator Style -->
+    <Style x:Key="EFBSeparatorStyle" TargetType="Separator">
+        <Setter Property="Background" Value="{DynamicResource EFBBorderBrush}" />
+        <Setter Property="Margin" Value="0,10" />
+        <Setter Property="Height" Value="1" />
+    </Style>
+    
+    <!-- Vertical Separator Style -->
+    <Style x:Key="EFBVerticalSeparatorStyle" TargetType="Separator">
+        <Setter Property="Background" Value="{DynamicResource EFBBorderBrush}" />
+        <Setter Property="Margin" Value="10,0" />
+        <Setter Property="Width" Value="1" />
+        <Setter Property="LayoutTransform">
+            <Setter.Value>
+                <RotateTransform Angle="90" />
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <!-- GroupBox Style -->
+    <Style x:Key="EFBGroupBoxStyle" TargetType="GroupBox">
+        <Setter Property="Foreground" Value="{DynamicResource EFBForegroundBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{DynamicResource EFBBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="10" />
+        <Setter Property="Margin" Value="0,0,0,10" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="GroupBox">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Border Grid.Row="0" 
+                                Background="{DynamicResource EFBSecondaryBrush}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="1,1,1,0" 
+                                CornerRadius="{Binding Source={DynamicResource EFBPanelCornerRadius}, StringFormat='{}{0} {0} 0 0'}"
+                                Padding="10,5">
+                            <ContentPresenter ContentSource="Header" 
+                                              RecognizesAccessKey="True" 
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                        </Border>
+                        <Border Grid.Row="1" 
+                                Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="1,0,1,1" 
+                                CornerRadius="{Binding Source={DynamicResource EFBPanelCornerRadius}, StringFormat='{}0 0 {0} {0}'}">
+                            <ContentPresenter Margin="{TemplateBinding Padding}" 
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <!-- Expander Style -->
+    <Style x:Key="EFBExpanderStyle" TargetType="Expander">
+        <Setter Property="Foreground" Value="{DynamicResource EFBForegroundBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{DynamicResource EFBBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="10" />
+        <Setter Property="Margin" Value="0,0,0,10" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Expander">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Border Grid.Row="0" 
+                                Background="{DynamicResource EFBSecondaryBrush}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="1" 
+                                CornerRadius="{TemplateBinding IsExpanded, Converter={StaticResource BoolToCornerRadiusConverter}, ConverterParameter='4,4,0,0|4'}"
+                                Padding="10,5">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter Grid.Column="0" 
+                                                  ContentSource="Header" 
+                                                  RecognizesAccessKey="True" 
+                                                  VerticalAlignment="Center"
+                                                  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                <ToggleButton Grid.Column="1" 
+                                              IsChecked="{Binding IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" 
+                                              OverridesDefaultStyle="True" 
+                                              Template="{StaticResource ExpanderToggleButtonTemplate}" />
+                            </Grid>
+                        </Border>
+                        <Border Grid.Row="1" 
+                                Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="1,0,1,1" 
+                                CornerRadius="{Binding Source={DynamicResource EFBPanelCornerRadius}, StringFormat='{}0 0 {0} {0}'}"
+                                Visibility="{TemplateBinding IsExpanded, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <ContentPresenter Margin="{TemplateBinding Padding}" 
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <!-- ControlTemplate for Expander Toggle Button -->
+    <ControlTemplate x:Key="ExpanderToggleButtonTemplate" TargetType="ToggleButton">
+        <Border Background="Transparent" Padding="5">
+            <Path x:Name="arrow" 
+                  Fill="{DynamicResource EFBForegroundBrush}" 
+                  Data="M 0,0 L 8,0 L 4,4 Z" 
+                  HorizontalAlignment="Center" 
+                  VerticalAlignment="Center" 
+                  RenderTransformOrigin="0.5,0.5">
+                <Path.RenderTransform>
+                    <RotateTransform Angle="0" />
+                </Path.RenderTransform>
+            </Path>
+        </Border>
+        <ControlTemplate.Triggers>
+            <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="arrow" Property="RenderTransform">
+                    <Setter.Value>
+                        <RotateTransform Angle="180" />
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+    
+    <!-- Converters are defined in App.xaml and referenced here -->
+    
+    <!-- TabControl Style -->
+    <Style x:Key="EFBTabControlStyle" TargetType="TabControl">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{DynamicResource EFBBorderBrush}" />
+        <Setter Property="BorderThickness" Value="0,1,0,0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabControl">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Border Grid.Row="0" 
+                                Background="{DynamicResource EFBSecondaryBrush}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <TabPanel IsItemsHost="True" />
+                        </Border>
+                        <Border Grid.Row="1" 
+                                Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="0">
+                            <ContentPresenter ContentSource="SelectedContent" 
+                                              Margin="{TemplateBinding Padding}" 
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <!-- TabItem Style -->
+    <Style x:Key="EFBTabItemStyle" TargetType="TabItem">
+        <Setter Property="Foreground" Value="{DynamicResource EFBForegroundBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0,0,0,3" />
+        <Setter Property="Padding" Value="15,10" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabItem">
+                    <Border x:Name="border" 
+                            Background="{TemplateBinding Background}" 
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            BorderThickness="{TemplateBinding BorderThickness}" 
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter x:Name="contentPresenter" 
+                                          ContentSource="Header" 
+                                          Margin="{TemplateBinding Padding}" 
+                                          HorizontalAlignment="Center" 
+                                          VerticalAlignment="Center" 
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource EFBAccentBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource EFBPrimaryBrush}" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>
