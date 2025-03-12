@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Prosim2GSX.UI.EFB.Navigation;
 using Prosim2GSX.UI.EFB.Themes;
 using Prosim2GSX.Services;
 
@@ -13,6 +14,7 @@ namespace Prosim2GSX.UI.EFB.Windows
     {
         private readonly List<EFBWindow> _windows = new List<EFBWindow>();
         private readonly Dictionary<string, Type> _pageTypes = new Dictionary<string, Type>();
+        private readonly Dictionary<string, Func<IEFBPage>> _pageFactories = new Dictionary<string, Func<IEFBPage>>();
         private readonly Dictionary<string, (string Title, string Icon)> _pageInfo = new Dictionary<string, (string Title, string Icon)>();
         private readonly EFBThemeManager _themeManager;
         private readonly ILogger _logger;
@@ -50,11 +52,20 @@ namespace Prosim2GSX.UI.EFB.Windows
                 window.SetThemeManager(_themeManager);
                 
                 // Register pages with the window
-                _logger?.Log(LogLevel.Debug, "EFBWindowManager:CreateWindow", $"Registering {_pageTypes.Count} pages with window");
+                _logger?.Log(LogLevel.Debug, "EFBWindowManager:CreateWindow", $"Registering {_pageTypes.Count + _pageFactories.Count} pages with window");
+                
+                // Register pages with types
                 foreach (var pageKey in _pageTypes.Keys)
                 {
                     var (title, icon) = _pageInfo[pageKey];
                     window.RegisterPage(pageKey, _pageTypes[pageKey], title, icon);
+                }
+                
+                // Register pages with factories
+                foreach (var pageKey in _pageFactories.Keys)
+                {
+                    var (title, icon) = _pageInfo[pageKey];
+                    window.RegisterPage(pageKey, _pageFactories[pageKey], title, icon);
                 }
                 
                 _windows.Add(window);
@@ -89,6 +100,77 @@ namespace Prosim2GSX.UI.EFB.Windows
             catch (Exception ex)
             {
                 _logger?.Log(LogLevel.Error, "EFBWindowManager:CloseAllWindows", ex, "Error closing windows");
+            }
+        }
+
+        /// <summary>
+        /// Registers a page with the window manager using a factory function.
+        /// </summary>
+        /// <param name="pageKey">The page key.</param>
+        /// <param name="pageFactory">A factory function that creates the page.</param>
+        /// <param name="title">The page title.</param>
+        /// <param name="icon">The page icon.</param>
+        public void RegisterPage(string pageKey, Func<IEFBPage> pageFactory, string title, string icon)
+        {
+            _logger?.Log(LogLevel.Debug, "EFBWindowManager:RegisterPage", 
+                $"Registering page '{pageKey}' with factory, title '{title}', icon '{icon}'");
+            
+            try
+            {
+                if (string.IsNullOrEmpty(pageKey))
+                {
+                    var errorMessage = "Page key cannot be null or empty.";
+                    _logger?.Log(LogLevel.Error, "EFBWindowManager:RegisterPage", errorMessage);
+                    throw new ArgumentException(errorMessage, nameof(pageKey));
+                }
+
+                if (pageFactory == null)
+                {
+                    var errorMessage = "Page factory cannot be null.";
+                    _logger?.Log(LogLevel.Error, "EFBWindowManager:RegisterPage", errorMessage);
+                    throw new ArgumentNullException(nameof(pageFactory), errorMessage);
+                }
+
+                if (string.IsNullOrEmpty(title))
+                {
+                    var errorMessage = "Page title cannot be null or empty.";
+                    _logger?.Log(LogLevel.Error, "EFBWindowManager:RegisterPage", errorMessage);
+                    throw new ArgumentException(errorMessage, nameof(title));
+                }
+
+                if (string.IsNullOrEmpty(icon))
+                {
+                    var errorMessage = "Page icon cannot be null or empty.";
+                    _logger?.Log(LogLevel.Error, "EFBWindowManager:RegisterPage", errorMessage);
+                    throw new ArgumentException(errorMessage, nameof(icon));
+                }
+
+                // Store the factory in a dictionary
+                _pageFactories[pageKey] = pageFactory;
+                _pageInfo[pageKey] = (title, icon);
+                _logger?.Log(LogLevel.Debug, "EFBWindowManager:RegisterPage", 
+                    $"Page '{pageKey}' registered with window manager");
+
+                // Register the page with all existing windows
+                if (_windows.Count > 0)
+                {
+                    _logger?.Log(LogLevel.Debug, "EFBWindowManager:RegisterPage", 
+                        $"Registering page '{pageKey}' with {_windows.Count} existing windows");
+                    
+                    foreach (var window in _windows)
+                    {
+                        window.RegisterPage(pageKey, pageFactory, title, icon);
+                    }
+                }
+                
+                _logger?.Log(LogLevel.Debug, "EFBWindowManager:RegisterPage", 
+                    $"Page '{pageKey}' registration completed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger?.Log(LogLevel.Error, "EFBWindowManager:RegisterPage", ex, 
+                    $"Error registering page '{pageKey}'");
+                throw; // Re-throw the exception to be handled by the caller
             }
         }
 

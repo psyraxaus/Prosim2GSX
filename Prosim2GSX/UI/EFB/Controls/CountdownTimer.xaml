@@ -56,7 +56,7 @@
             
             <ProgressBar x:Name="ProgressBar" 
                          Grid.Row="2" 
-                         Value="{Binding Progress, RelativeSource={RelativeSource AncestorType=local:CountdownTimer}}" 
+                         Value="{Binding Progress, Mode=OneWay, RelativeSource={RelativeSource AncestorType=local:CountdownTimer}}" 
                          Maximum="100" 
                          Style="{StaticResource ProgressBarStyle}"/>
         </Grid>

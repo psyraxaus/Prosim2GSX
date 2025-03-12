@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using Microsoft.Extensions.DependencyInjection;
 using Prosim2GSX.UI.EFB.Navigation;
 using Prosim2GSX.Models;
 using Prosim2GSX.UI.EFB.Themes;
@@ -24,6 +25,8 @@ namespace Prosim2GSX.UI.EFB
         WindowManagerInitialized,
         DataBindingInitializing,
         DataBindingInitialized,
+        ServiceLocatorInitializing,
+        ServiceLocatorInitialized,
         PagesRegistering,
         PagesRegistered,
         Completed,
@@ -146,6 +149,12 @@ namespace Prosim2GSX.UI.EFB
                 _dataBindingService = new EFBDataBindingService(_serviceModel, 500, _logger);
                 UpdateInitializationState(EFBInitializationState.DataBindingInitialized);
 
+                // Initialize the service locator
+                UpdateInitializationState(EFBInitializationState.ServiceLocatorInitializing);
+                _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", "Initializing service locator");
+                InitializeServiceLocator();
+                UpdateInitializationState(EFBInitializationState.ServiceLocatorInitialized);
+
                 // Register pages with the window manager
                 UpdateInitializationState(EFBInitializationState.PagesRegistering);
                 _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", "Registering pages with window manager");
@@ -250,6 +259,56 @@ namespace Prosim2GSX.UI.EFB
         }
         
         /// <summary>
+        /// Initializes the service locator with all required services.
+        /// </summary>
+        private void InitializeServiceLocator()
+        {
+            _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeServiceLocator", "Initializing service locator");
+            
+            try
+            {
+                var services = new ServiceCollection();
+                
+                // Register services from the service model
+                services.AddSingleton(_serviceModel);
+                
+                // Get services from the service model
+                var doorService = _serviceModel.GetService<IProsimDoorService>();
+                var equipmentService = _serviceModel.GetService<IProsimEquipmentService>();
+                var fuelCoordinator = _serviceModel.GetService<IGSXFuelCoordinator>();
+                var serviceOrchestrator = _serviceModel.GetService<IGSXServiceOrchestrator>();
+                var eventAggregator = _serviceModel.GetService<IEventAggregator>();
+                
+                // Register services that AircraftPageAdapter depends on
+                if (doorService != null) services.AddSingleton(doorService);
+                if (equipmentService != null) services.AddSingleton(equipmentService);
+                if (fuelCoordinator != null) services.AddSingleton(fuelCoordinator);
+                if (serviceOrchestrator != null) services.AddSingleton(serviceOrchestrator);
+                if (eventAggregator != null) services.AddSingleton(eventAggregator);
+                
+                // Register logger
+                if (_logger != null)
+                {
+                    services.AddSingleton(_logger);
+                }
+                
+                // Register page types
+                services.AddTransient<Views.Aircraft.AircraftPageAdapter>();
+                services.AddTransient<DummyPage>();
+                
+                // Initialize the service locator
+                ServiceLocator.Initialize(services);
+                
+                _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeServiceLocator", "Service locator initialized successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger?.Log(LogLevel.Error, "EFBApplication:InitializeServiceLocator", ex, "Failed to initialize service locator");
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Logs diagnostic information about the EFB application state.
         /// </summary>
         private void LogDiagnosticInformation()
@@ -279,6 +338,10 @@ namespace Prosim2GSX.UI.EFB
                 // Data binding service diagnostics
                 _logger?.Log(LogLevel.Debug, "EFBApplication:Diagnostics", 
                     $"Data binding service initialized: {_dataBindingService != null}");
+                
+                // Service locator diagnostics
+                _logger?.Log(LogLevel.Debug, "EFBApplication:Diagnostics", 
+                    $"Service locator initialized: {_initializationState >= EFBInitializationState.ServiceLocatorInitialized}");
                 
                 // Main window diagnostics
                 _logger?.Log(LogLevel.Debug, "EFBApplication:Diagnostics", 
@@ -337,12 +400,115 @@ namespace Prosim2GSX.UI.EFB
                 "Home",
                 "\uE80F"); // Home icon
             
-            // Aircraft page
-            _windowManager.RegisterPage(
-                "Aircraft",
-                typeof(Views.Aircraft.AircraftPageAdapter), // Use the adapter instead of the page directly
-                "Aircraft",
-                "\uE709"); // Aircraft icon
+            // Aircraft page - Use factory method to provide dependencies
+            try
+            {
+                // Get required services with null checks
+                var doorService = _serviceModel.GetService<IProsimDoorService>();
+                var equipmentService = _serviceModel.GetService<IProsimEquipmentService>();
+                var fuelCoordinator = _serviceModel.GetService<IGSXFuelCoordinator>();
+                var serviceOrchestrator = _serviceModel.GetService<IGSXServiceOrchestrator>();
+                var eventAggregator = _serviceModel.GetService<IEventAggregator>();
+                
+                // Log service availability
+                _logger?.Log(LogLevel.Debug, "EFBApplication:RegisterPages", 
+                    $"Services for AircraftPage: DoorService={doorService != null}, " +
+                    $"EquipmentService={equipmentService != null}, " +
+                    $"FuelCoordinator={fuelCoordinator != null}, " +
+                    $"ServiceOrchestrator={serviceOrchestrator != null}, " +
+                    $"EventAggregator={eventAggregator != null}");
+                
+                // Create mock services if the real ones are not available
+                
+                // Check if EventAggregator is available
+                if (eventAggregator == null)
+                {
+                    _logger?.Log(LogLevel.Warning, "EFBApplication:RegisterPages", 
+                        "EventAggregator is null. Creating a new instance.");
+                    
+                    // Create a new EventAggregator if not available
+                    eventAggregator = new EventAggregator(_logger);
+                    
+                    // Register it with the ServiceModel
+                    _serviceModel.SetService<IEventAggregator>(eventAggregator);
+                }
+                
+                // Check if DoorService is available
+                if (doorService == null)
+                {
+                    _logger?.Log(LogLevel.Warning, "EFBApplication:RegisterPages", 
+                        "DoorService is null. Creating a mock instance.");
+                    
+                    // Create a mock door service if not available
+                    doorService = new MockProsimDoorService(_logger);
+                    
+                    // Register it with the ServiceModel
+                    _serviceModel.SetService<IProsimDoorService>(doorService);
+                }
+                
+                // Check if EquipmentService is available
+                if (equipmentService == null)
+                {
+                    _logger?.Log(LogLevel.Warning, "EFBApplication:RegisterPages", 
+                        "EquipmentService is null. Creating a mock instance.");
+                    
+                    // Create a mock equipment service if not available
+                    equipmentService = new MockProsimEquipmentService(_logger);
+                    
+                    // Register it with the ServiceModel
+                    _serviceModel.SetService<IProsimEquipmentService>(equipmentService);
+                }
+                
+                // Check if FuelCoordinator is available
+                if (fuelCoordinator == null)
+                {
+                    _logger?.Log(LogLevel.Warning, "EFBApplication:RegisterPages", 
+                        "FuelCoordinator is null. Creating a mock instance.");
+                    
+                    // Create a mock fuel coordinator if not available
+                    fuelCoordinator = new MockGSXFuelCoordinator(_logger);
+                    
+                    // Register it with the ServiceModel
+                    _serviceModel.SetService<IGSXFuelCoordinator>(fuelCoordinator);
+                }
+                
+                // Check if ServiceOrchestrator is available
+                if (serviceOrchestrator == null)
+                {
+                    _logger?.Log(LogLevel.Warning, "EFBApplication:RegisterPages", 
+                        "ServiceOrchestrator is null. Creating a mock instance.");
+                    
+                    // Create a mock service orchestrator if not available
+                    serviceOrchestrator = new MockGSXServiceOrchestrator(_logger);
+                    
+                    // Register it with the ServiceModel
+                    _serviceModel.SetService<IGSXServiceOrchestrator>(serviceOrchestrator);
+                }
+                
+                _windowManager.RegisterPage(
+                    "Aircraft",
+                    () => new Views.Aircraft.AircraftPageAdapter(
+                        doorService,
+                        equipmentService,
+                        fuelCoordinator,
+                        serviceOrchestrator,
+                        eventAggregator
+                    ),
+                    "Aircraft",
+                    "\uE709"); // Aircraft icon
+            }
+            catch (Exception ex)
+            {
+                _logger?.Log(LogLevel.Error, "EFBApplication:RegisterPages", ex, 
+                    "Error registering Aircraft page. Using DummyPage instead.");
+                
+                // Register a dummy page as fallback
+                _windowManager.RegisterPage(
+                    "Aircraft",
+                    typeof(DummyPage),
+                    "Aircraft (Unavailable)",
+                    "\uE709"); // Aircraft icon
+            }
             
             // Services page
             _windowManager.RegisterPage(

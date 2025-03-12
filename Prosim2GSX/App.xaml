@@ -1,4 +1,4 @@
-﻿<Application x:Class="Prosim2GSX.App"
+<Application x:Class="Prosim2GSX.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:Prosim2GSX"
@@ -9,11 +9,14 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="NotifyIconResources.xaml" />
+                <ResourceDictionary Source="/Prosim2GSX;component/UI/EFB/Styles/EFBStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
             
             <!-- EFB Converters -->
             <converters:BooleanToCornerRadiusConverter x:Key="BoolToCornerRadiusConverter" />
-            <converters:BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+            <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+            <converters:BooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" Invert="True" />
+            <converters:BooleanConverter x:Key="InverseBooleanConverter" Invert="True" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

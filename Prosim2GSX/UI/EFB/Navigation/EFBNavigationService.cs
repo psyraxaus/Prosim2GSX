@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Controls;
+using Prosim2GSX.Services;
 
 namespace Prosim2GSX.UI.EFB.Navigation
 {
@@ -74,6 +75,35 @@ namespace Prosim2GSX.UI.EFB.Navigation
         }
         
         /// <summary>
+        /// Registers a page with the navigation service using a factory function.
+        /// </summary>
+        /// <param name="key">The key to register the page with.</param>
+        /// <param name="pageFactory">A factory function that creates the page.</param>
+        public void RegisterPage(string key, Func<IEFBPage> pageFactory)
+        {
+            if (string.IsNullOrEmpty(key))
+            {
+                throw new ArgumentNullException(nameof(key));
+            }
+            
+            if (pageFactory == null)
+            {
+                throw new ArgumentNullException(nameof(pageFactory));
+            }
+            
+            // Create an instance of the page using the factory
+            var page = pageFactory();
+            
+            if (page == null)
+            {
+                throw new InvalidOperationException($"Page factory for key '{key}' returned null.");
+            }
+            
+            // Register the page
+            _pages[key] = page;
+        }
+        
+        /// <summary>
         /// Registers a page with the navigation service.
         /// </summary>
         /// <param name="key">The key to register the page with.</param>
@@ -95,8 +125,39 @@ namespace Prosim2GSX.UI.EFB.Navigation
                 throw new ArgumentException($"Type {pageType.Name} does not implement IEFBPage", nameof(pageType));
             }
             
-            // Create an instance of the page
-            var page = (IEFBPage)Activator.CreateInstance(pageType);
+            // Try to create an instance using the service locator first
+            IEFBPage page = null;
+            try
+            {
+                page = (IEFBPage)ServiceLocator.GetService(pageType);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                System.Diagnostics.Debug.WriteLine($"Error creating page using ServiceLocator: {ex.Message}");
+            }
+            
+            // If the service locator failed, try using Activator.CreateInstance
+            if (page == null)
+            {
+                try
+                {
+                    page = (IEFBPage)Activator.CreateInstance(pageType);
+                }
+                catch (MissingMethodException mmEx)
+                {
+                    throw new InvalidOperationException(
+                        $"Cannot create an instance of {pageType.Name}. " +
+                        $"Make sure it has a parameterless constructor or is registered with the service locator.", mmEx);
+                }
+            }
+            
+            if (page == null)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to create an instance of {pageType.Name}. " +
+                    $"Make sure it has a parameterless constructor or is registered with the service locator.");
+            }
             
             // Register the page
             _pages[key] = page;

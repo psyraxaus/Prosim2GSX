@@ -109,6 +109,59 @@ namespace Prosim2GSX.UI.EFB.Windows
         }
 
         /// <summary>
+        /// Registers a page with the navigation service using a factory function.
+        /// </summary>
+        /// <param name="key">The page key.</param>
+        /// <param name="pageFactory">A factory function that creates the page.</param>
+        /// <param name="title">The page title.</param>
+        /// <param name="icon">The page icon.</param>
+        public void RegisterPage(string key, Func<IEFBPage> pageFactory, string title, string icon)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new ArgumentException("Page key cannot be null or empty.", nameof(key));
+            }
+
+            if (pageFactory == null)
+            {
+                throw new ArgumentNullException(nameof(pageFactory));
+            }
+
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                throw new ArgumentException("Page title cannot be null or empty.", nameof(title));
+            }
+
+            if (string.IsNullOrWhiteSpace(icon))
+            {
+                throw new ArgumentException("Page icon cannot be null or empty.", nameof(icon));
+            }
+
+            // Register the page with the navigation service
+            _navigationService.RegisterPage(key, pageFactory);
+
+            // Create a navigation button for the page
+            var button = new Button
+            {
+                Content = icon,
+                ToolTip = title,
+                Width = 60,
+                Height = 60,
+                FontFamily = new FontFamily("Segoe MDL2 Assets"),
+                FontSize = 24,
+                Background = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Margin = new Thickness(0),
+                Padding = new Thickness(0),
+                Tag = key
+            };
+
+            button.Click += NavigationButton_Click;
+            _navigationButtons[key] = button;
+            NavigationPanel.Children.Add(button);
+        }
+
+        /// <summary>
         /// Registers a page with the navigation service.
         /// </summary>
         /// <param name="key">The page key.</param>

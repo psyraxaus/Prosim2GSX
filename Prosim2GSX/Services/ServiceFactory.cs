@@ -27,6 +27,10 @@ namespace Prosim2GSX.Services
             
             // Register the event aggregator
             RegisterService<IEventAggregator>(_eventAggregator);
+            
+            // Register the event aggregator with the service model
+            _model.SetService<IEventAggregator>(_eventAggregator);
+            
             RegisterService<ILogger>(logger);
         }
         

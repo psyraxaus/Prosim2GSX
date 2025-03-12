@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿using CefSharp;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using CefSharp;
 using CefSharp.OffScreen;
 using H.NotifyIcon;
 using Prosim2GSX.Models;
@@ -83,8 +83,14 @@ namespace Prosim2GSX
                 InitSystray();
                 InitCef();
 
+                // Create EventAggregator
+                var eventAggregator = new EventAggregator(Logger.Instance);
+                
+                // Register it with the ServiceModel
+                Model.SetService<IEventAggregator>(eventAggregator);
+                
                 // Start service controller
-                Controller = new EnhancedServiceController(Model, Logger.Instance, new EventAggregator(Logger.Instance));
+                Controller = new EnhancedServiceController(Model, Logger.Instance, eventAggregator);
                 Task.Run(Controller.Run);
 
                 // Set up timer for service monitoring
@@ -135,6 +141,28 @@ namespace Prosim2GSX
                 
                 // Log diagnostic information before initialization
                 LogEfbDiagnosticInfo("Pre-initialization");
+                
+                // Wait for services to be initialized
+                Logger.Log(LogLevel.Debug, "App:InitEfbUi", "Waiting for services to be initialized...");
+                await Task.Run(async () => {
+                    int attempts = 0;
+                    while (!Controller.AreServicesInitialized() && attempts < 30)
+                    {
+                        await Task.Delay(500);
+                        attempts++;
+                    }
+                    
+                    if (attempts >= 30)
+                    {
+                        Logger.Log(LogLevel.Warning, "App:InitEfbUi", 
+                            "Timed out waiting for services to initialize. EFB UI may not function correctly.");
+                    }
+                    else
+                    {
+                        Logger.Log(LogLevel.Debug, "App:InitEfbUi", 
+                            $"Services initialized after {attempts * 0.5} seconds.");
+                    }
+                });
                 
                 // Create and initialize the EFB application with logger
                 Logger.Log(LogLevel.Debug, "App:InitEfbUi", "Creating EFBApplication instance");

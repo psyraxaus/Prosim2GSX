@@ -1,4 +1,5 @@
-﻿﻿﻿﻿﻿﻿using Prosim2GSX.Behaviours;
+﻿﻿﻿﻿﻿﻿﻿﻿using Prosim2GSX.Behaviours;
+using Prosim2GSX.Services;
 using System;
 
 namespace Prosim2GSX.Models
@@ -53,6 +54,13 @@ namespace Prosim2GSX.Models
         public string Vhf1VolumeApp { get; set; }
         public bool Vhf1VolumeControl { get; set; }
         public bool UseEfbUi { get; set; }
+
+        // Services
+        private IProsimDoorService _doorService;
+        private IProsimEquipmentService _equipmentService;
+        private IGSXFuelCoordinator _fuelCoordinator;
+        private IGSXServiceOrchestrator _serviceOrchestrator;
+        private IEventAggregator _eventAggregator;
 
         protected ConfigurationFile ConfigurationFile = new();
 
@@ -125,6 +133,66 @@ namespace Prosim2GSX.Models
             ConfigurationFile[key] = value;
             if (!noLoad)
                 LoadConfiguration();
+        }
+
+        /// <summary>
+        /// Sets a service in the service model.
+        /// </summary>
+        /// <typeparam name="T">The type of service.</typeparam>
+        /// <param name="service">The service instance.</param>
+        public void SetService<T>(T service) where T : class
+        {
+            if (service is IProsimDoorService doorService)
+            {
+                _doorService = doorService;
+            }
+            else if (service is IProsimEquipmentService equipmentService)
+            {
+                _equipmentService = equipmentService;
+            }
+            else if (service is IGSXFuelCoordinator fuelCoordinator)
+            {
+                _fuelCoordinator = fuelCoordinator;
+            }
+            else if (service is IGSXServiceOrchestrator serviceOrchestrator)
+            {
+                _serviceOrchestrator = serviceOrchestrator;
+            }
+            else if (service is IEventAggregator eventAggregator)
+            {
+                _eventAggregator = eventAggregator;
+            }
+        }
+
+        /// <summary>
+        /// Gets a service from the service model.
+        /// </summary>
+        /// <typeparam name="T">The type of service to get.</typeparam>
+        /// <returns>The service instance, or null if not found.</returns>
+        public T GetService<T>() where T : class
+        {
+            if (typeof(T) == typeof(IProsimDoorService))
+            {
+                return _doorService as T;
+            }
+            else if (typeof(T) == typeof(IProsimEquipmentService))
+            {
+                return _equipmentService as T;
+            }
+            else if (typeof(T) == typeof(IGSXFuelCoordinator))
+            {
+                return _fuelCoordinator as T;
+            }
+            else if (typeof(T) == typeof(IGSXServiceOrchestrator))
+            {
+                return _serviceOrchestrator as T;
+            }
+            else if (typeof(T) == typeof(IEventAggregator))
+            {
+                return _eventAggregator as T;
+            }
+
+            return null;
         }
 
         // GetFuelRateKGS method moved to ProsimFuelService

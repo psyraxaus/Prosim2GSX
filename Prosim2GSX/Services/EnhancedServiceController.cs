@@ -24,6 +24,9 @@ namespace Prosim2GSX.Services
         public EnhancedServiceController(ServiceModel model, ILogger logger, IEventAggregator eventAggregator)
             : base(model, logger, eventAggregator)
         {
+            // Register the event aggregator with the model
+            model.SetService<IEventAggregator>(eventAggregator);
+            
             _serviceFactory = new ServiceFactory(model, logger);
         }
         
@@ -320,6 +323,19 @@ namespace Prosim2GSX.Services
                 // Publish event to event aggregator
                 EventAggregator.Publish(e);
             }, "OnGsxServiceStatusChanged");
+        }
+        
+        /// <summary>
+        /// Checks if the required services are initialized
+        /// </summary>
+        /// <returns>True if all required services are initialized, false otherwise</returns>
+        public bool AreServicesInitialized()
+        {
+            return _prosimController != null && 
+                   _serviceFactory.GetService<IProsimDoorService>() != null &&
+                   _serviceFactory.GetService<IProsimEquipmentService>() != null &&
+                   _serviceFactory.GetService<IGSXFuelCoordinator>() != null &&
+                   _serviceFactory.GetService<IGSXServiceOrchestrator>() != null;
         }
         
         /// <summary>
