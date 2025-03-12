@@ -1,0 +1,51 @@
+{
+  "name": "British Airways",
+  "description": "British Airways-themed EFB with airline colors",
+  "author": "Prosim2GSX",
+  "version": "1.0.0",
+  "airlineCode": "BAW",
+  "isDefault": false,
+  "isDarkTheme": true,
+  "creationDate": "2025-03-12T00:00:00Z",
+  "lastModifiedDate": "2025-03-12T00:00:00Z",
+  "colors": {
+    "PrimaryColor": "#01295C",
+    "SecondaryColor": "#001A3E",
+    "AccentColor": "#CE1A39",
+    "BackgroundColor": "#01295C",
+    "ForegroundColor": "#FFFFFF",
+    "BorderColor": "#001A3E",
+    "HeaderColor": "#001A3E",
+    "TabColor": "#001A3E",
+    "TabSelectedColor": "#CE1A39",
+    "ButtonColor": "#001A3E",
+    "ButtonHoverColor": "#003366",
+    "ButtonPressedColor": "#CE1A39",
+    "TextBoxColor": "#003366",
+    "TextBoxBorderColor": "#001A3E",
+    "TextBoxFocusedColor": "#CE1A39",
+    "ErrorColor": "#FF3333",
+    "WarningColor": "#FFCC00",
+    "SuccessColor": "#33CC33",
+    "InfoColor": "#3366FF"
+  },
+  "fonts": {
+    "PrimaryFont": "Segoe UI",
+    "SecondaryFont": "Consolas",
+    "HeaderFont": "Segoe UI Semibold",
+    "MonospaceFont": "Consolas"
+  },
+  "resources": {
+    "CornerRadius": 4,
+    "ButtonHeight": 32,
+    "TabHeight": 40,
+    "HeaderHeight": 48,
+    "DefaultMargin": 8,
+    "DefaultPadding": 8,
+    "SmallFontSize": 11,
+    "DefaultFontSize": 12,
+    "LargeFontSize": 14,
+    "HeaderFontSize": 16,
+    "TitleFontSize": 20
+  }
+}

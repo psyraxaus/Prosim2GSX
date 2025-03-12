@@ -1,0 +1,51 @@
+{
+  "name": "Light",
+  "description": "Light EFB theme with a clean, bright color scheme",
+  "author": "Prosim2GSX",
+  "version": "1.0.0",
+  "airlineCode": "DEFAULT",
+  "isDefault": false,
+  "isDarkTheme": false,
+  "creationDate": "2025-03-12T00:00:00Z",
+  "lastModifiedDate": "2025-03-12T00:00:00Z",
+  "colors": {
+    "PrimaryColor": "#F5F5F5",
+    "SecondaryColor": "#E5E5E5",
+    "AccentColor": "#0078D7",
+    "BackgroundColor": "#FFFFFF",
+    "ForegroundColor": "#000000",
+    "BorderColor": "#CCCCCC",
+    "HeaderColor": "#F0F0F0",
+    "TabColor": "#E5E5E5",
+    "TabSelectedColor": "#0078D7",
+    "ButtonColor": "#E1E1E1",
+    "ButtonHoverColor": "#D1D1D1",
+    "ButtonPressedColor": "#0078D7",
+    "TextBoxColor": "#FFFFFF",
+    "TextBoxBorderColor": "#CCCCCC",
+    "TextBoxFocusedColor": "#0078D7",
+    "ErrorColor": "#E81123",
+    "WarningColor": "#FF8C00",
+    "SuccessColor": "#107C10",
+    "InfoColor": "#0078D7"
+  },
+  "fonts": {
+    "PrimaryFont": "Segoe UI",
+    "SecondaryFont": "Consolas",
+    "HeaderFont": "Segoe UI Semibold",
+    "MonospaceFont": "Consolas"
+  },
+  "resources": {
+    "CornerRadius": 4,
+    "ButtonHeight": 32,
+    "TabHeight": 40,
+    "HeaderHeight": 48,
+    "DefaultMargin": 8,
+    "DefaultPadding": 8,
+    "SmallFontSize": 11,
+    "DefaultFontSize": 12,
+    "LargeFontSize": 14,
+    "HeaderFontSize": 16,
+    "TitleFontSize": 20
+  }
+}

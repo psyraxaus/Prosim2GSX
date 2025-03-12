@@ -1,0 +1,51 @@
+{
+  "name": "Finnair",
+  "description": "Finnair-themed EFB with airline colors",
+  "author": "Prosim2GSX",
+  "version": "1.0.0",
+  "airlineCode": "FIN",
+  "isDefault": false,
+  "isDarkTheme": false,
+  "creationDate": "2025-03-12T00:00:00Z",
+  "lastModifiedDate": "2025-03-12T00:00:00Z",
+  "colors": {
+    "PrimaryColor": "#FFFFFF",
+    "SecondaryColor": "#F2F2F2",
+    "AccentColor": "#0053A5",
+    "BackgroundColor": "#FFFFFF",
+    "ForegroundColor": "#333333",
+    "BorderColor": "#CCCCCC",
+    "HeaderColor": "#0053A5",
+    "TabColor": "#F2F2F2",
+    "TabSelectedColor": "#0053A5",
+    "ButtonColor": "#F2F2F2",
+    "ButtonHoverColor": "#E6E6E6",
+    "ButtonPressedColor": "#0053A5",
+    "TextBoxColor": "#FFFFFF",
+    "TextBoxBorderColor": "#CCCCCC",
+    "TextBoxFocusedColor": "#0053A5",
+    "ErrorColor": "#E81123",
+    "WarningColor": "#FF8C00",
+    "SuccessColor": "#107C10",
+    "InfoColor": "#0053A5"
+  },
+  "fonts": {
+    "PrimaryFont": "Segoe UI",
+    "SecondaryFont": "Consolas",
+    "HeaderFont": "Segoe UI Semibold",
+    "MonospaceFont": "Consolas"
+  },
+  "resources": {
+    "CornerRadius": 4,
+    "ButtonHeight": 32,
+    "TabHeight": 40,
+    "HeaderHeight": 48,
+    "DefaultMargin": 8,
+    "DefaultPadding": 8,
+    "SmallFontSize": 11,
+    "DefaultFontSize": 12,
+    "LargeFontSize": 14,
+    "HeaderFontSize": 16,
+    "TitleFontSize": 20
+  }
+}

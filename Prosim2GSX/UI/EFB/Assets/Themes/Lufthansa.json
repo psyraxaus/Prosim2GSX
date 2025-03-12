@@ -1,0 +1,51 @@
+{
+  "name": "Lufthansa",
+  "description": "Lufthansa-themed EFB with airline colors",
+  "author": "Prosim2GSX",
+  "version": "1.0.0",
+  "airlineCode": "DLH",
+  "isDefault": false,
+  "isDarkTheme": true,
+  "creationDate": "2025-03-12T00:00:00Z",
+  "lastModifiedDate": "2025-03-12T00:00:00Z",
+  "colors": {
+    "PrimaryColor": "#05164D",
+    "SecondaryColor": "#041033",
+    "AccentColor": "#FFAD00",
+    "BackgroundColor": "#05164D",
+    "ForegroundColor": "#FFFFFF",
+    "BorderColor": "#041033",
+    "HeaderColor": "#041033",
+    "TabColor": "#041033",
+    "TabSelectedColor": "#FFAD00",
+    "ButtonColor": "#041033",
+    "ButtonHoverColor": "#072169",
+    "ButtonPressedColor": "#FFAD00",
+    "TextBoxColor": "#072169",
+    "TextBoxBorderColor": "#041033",
+    "TextBoxFocusedColor": "#FFAD00",
+    "ErrorColor": "#FF3333",
+    "WarningColor": "#FFAD00",
+    "SuccessColor": "#33CC33",
+    "InfoColor": "#3366FF"
+  },
+  "fonts": {
+    "PrimaryFont": "Segoe UI",
+    "SecondaryFont": "Consolas",
+    "HeaderFont": "Segoe UI Semibold",
+    "MonospaceFont": "Consolas"
+  },
+  "resources": {
+    "CornerRadius": 4,
+    "ButtonHeight": 32,
+    "TabHeight": 40,
+    "HeaderHeight": 48,
+    "DefaultMargin": 8,
+    "DefaultPadding": 8,
+    "SmallFontSize": 11,
+    "DefaultFontSize": 12,
+    "LargeFontSize": 14,
+    "HeaderFontSize": 16,
+    "TitleFontSize": 20
+  }
+}
