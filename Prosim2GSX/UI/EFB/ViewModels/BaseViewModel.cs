@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -18,6 +19,7 @@ namespace Prosim2GSX.UI.EFB.ViewModels
         private bool _isBusy;
         private string _statusMessage;
         private readonly Dictionary<string, CancellationTokenSource> _throttleCancellationTokens = new();
+        private readonly Dictionary<string, object> _pendingUpdates = new();
 
         /// <summary>
         /// Gets or sets a value indicating whether this view model is busy.
@@ -68,69 +70,8 @@ namespace Prosim2GSX.UI.EFB.ViewModels
             }
 
             _throttleCancellationTokens.Clear();
+            _pendingUpdates.Clear();
             _isInitialized = false;
-        }
-
-        /// <summary>
-        /// Updates a property with throttling to prevent rapid updates.
-        /// </summary>
-        /// <typeparam name="T">The type of the property.</typeparam>
-        /// <param name="field">The field to update.</param>
-        /// <param name="value">The new value.</param>
-        /// <param name="throttleInterval">The throttle interval.</param>
-        /// <param name="propertyName">The name of the property.</param>
-        /// <returns>True if the property was updated, false otherwise.</returns>
-        protected async Task<bool> UpdatePropertyThrottledAsync<T>(
-            ref T field,
-            T value,
-            TimeSpan throttleInterval,
-            [CallerMemberName] string propertyName = null)
-        {
-            if (propertyName == null)
-            {
-                throw new ArgumentNullException(nameof(propertyName));
-            }
-
-            // If the value hasn't changed, don't update
-            if (EqualityComparer<T>.Default.Equals(field, value))
-            {
-                return false;
-            }
-
-            // Cancel any existing throttle operation for this property
-            if (_throttleCancellationTokens.TryGetValue(propertyName, out var existingCts))
-            {
-                existingCts.Cancel();
-                existingCts.Dispose();
-            }
-
-            // Create a new cancellation token source for this throttle operation
-            var cts = new CancellationTokenSource();
-            _throttleCancellationTokens[propertyName] = cts;
-
-            try
-            {
-                // Wait for the throttle interval
-                await Task.Delay(throttleInterval, cts.Token);
-
-                // Update the property
-                return SetProperty(ref field, value, propertyName);
-            }
-            catch (TaskCanceledException)
-            {
-                // The operation was cancelled, so don't update the property
-                return false;
-            }
-            finally
-            {
-                // Remove the cancellation token source from the dictionary
-                if (_throttleCancellationTokens.TryGetValue(propertyName, out var currentCts) && currentCts == cts)
-                {
-                    _throttleCancellationTokens.Remove(propertyName);
-                }
-
-                cts.Dispose();
-            }
         }
 
         /// <summary>
@@ -147,7 +88,76 @@ namespace Prosim2GSX.UI.EFB.ViewModels
             TimeSpan throttleInterval,
             [CallerMemberName] string propertyName = null)
         {
-            _ = UpdatePropertyThrottledAsync(ref field, value, throttleInterval, propertyName);
+            if (propertyName == null)
+            {
+                throw new ArgumentNullException(nameof(propertyName));
+            }
+
+            // If the value hasn't changed, don't update
+            if (EqualityComparer<T>.Default.Equals(field, value))
+            {
+                return;
+            }
+
+            // Update the property immediately
+            bool updated = SetProperty(ref field, value, propertyName);
+
+            // If the property was updated, schedule a throttled update
+            if (updated)
+            {
+                ScheduleThrottledUpdate<T>(propertyName, throttleInterval);
+            }
+        }
+
+        /// <summary>
+        /// Schedules a throttled update for a property.
+        /// </summary>
+        /// <typeparam name="T">The type of the property.</typeparam>
+        /// <param name="propertyName">The name of the property.</param>
+        /// <param name="throttleInterval">The throttle interval.</param>
+        private void ScheduleThrottledUpdate<T>(string propertyName, TimeSpan throttleInterval)
+        {
+            // Cancel any existing throttle operation for this property
+            if (_throttleCancellationTokens.TryGetValue(propertyName, out var existingCts))
+            {
+                existingCts.Cancel();
+                existingCts.Dispose();
+            }
+
+            // Create a new cancellation token source for this throttle operation
+            var cts = new CancellationTokenSource();
+            _throttleCancellationTokens[propertyName] = cts;
+
+            // Start a task to update the property after the throttle interval
+            Task.Run(async () =>
+            {
+                try
+                {
+                    // Wait for the throttle interval
+                    await Task.Delay(throttleInterval, cts.Token);
+
+                    // Notify that the throttled update is complete
+                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        // Raise the PropertyChanged event for the property
+                        OnPropertyChanged(propertyName);
+                    });
+                }
+                catch (TaskCanceledException)
+                {
+                    // The operation was cancelled
+                }
+                finally
+                {
+                    // Remove the cancellation token source from the dictionary
+                    if (_throttleCancellationTokens.TryGetValue(propertyName, out var currentCts) && currentCts == cts)
+                    {
+                        _throttleCancellationTokens.Remove(propertyName);
+                    }
+
+                    cts.Dispose();
+                }
+            });
         }
     }
 }

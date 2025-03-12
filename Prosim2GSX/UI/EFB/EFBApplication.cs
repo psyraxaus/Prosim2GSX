@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
+using Prosim2GSX.Models;
 using Prosim2GSX.UI.EFB.Themes;
 using Prosim2GSX.UI.EFB.ViewModels;
 using Prosim2GSX.UI.EFB.Windows;

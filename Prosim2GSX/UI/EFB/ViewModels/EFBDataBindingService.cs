@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
+using Prosim2GSX.Models;
 
 namespace Prosim2GSX.UI.EFB.ViewModels
 {
