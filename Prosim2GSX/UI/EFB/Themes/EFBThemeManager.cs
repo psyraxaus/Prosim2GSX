@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
+using Newtonsoft.Json;
 
 namespace Prosim2GSX.UI.EFB.Themes
 {
@@ -68,9 +69,136 @@ namespace Prosim2GSX.UI.EFB.Themes
                 throw new DirectoryNotFoundException($"Themes directory not found: {themesDirectory}");
             }
 
-            // Load themes from the directory
-            // This is a placeholder implementation
-            await Task.CompletedTask;
+            // Find all JSON theme files
+            var themeFiles = Directory.GetFiles(themesDirectory, "*.json");
+            
+            foreach (var themeFile in themeFiles)
+            {
+                try
+                {
+                    // Read the theme file
+                    var json = await File.ReadAllTextAsync(themeFile);
+                    
+                    // Deserialize the theme
+                    var themeJson = JsonConvert.DeserializeObject<ThemeJson>(json);
+                    
+                    // Validate the theme
+                    if (!ValidateTheme(themeJson))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Theme validation failed for {themeFile}");
+                        continue;
+                    }
+                    
+                    // Convert to EFBThemeDefinition
+                    var themeDefinition = ConvertJsonToThemeDefinition(themeJson);
+                    
+                    // Add to themes dictionary
+                    AddTheme(themeDefinition);
+                    
+                    System.Diagnostics.Debug.WriteLine($"Loaded theme: {themeDefinition.Name}");
+                }
+                catch (Exception ex)
+                {
+                    // Log the error but continue processing other themes
+                    System.Diagnostics.Debug.WriteLine($"Error loading theme from {themeFile}: {ex.Message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Validates a theme JSON object.
+        /// </summary>
+        /// <param name="theme">The theme to validate.</param>
+        /// <returns>True if the theme is valid, false otherwise.</returns>
+        private bool ValidateTheme(ThemeJson theme)
+        {
+            if (theme == null)
+            {
+                System.Diagnostics.Debug.WriteLine("Theme validation failed: Theme is null");
+                return false;
+            }
+            
+            // Check required properties
+            if (string.IsNullOrEmpty(theme.Name))
+            {
+                System.Diagnostics.Debug.WriteLine("Theme validation failed: Name is required");
+                return false;
+            }
+            
+            if (theme.Colors == null || theme.Colors.Count == 0)
+            {
+                System.Diagnostics.Debug.WriteLine("Theme validation failed: Colors are required");
+                return false;
+            }
+            
+            // Check required colors
+            var requiredColors = new[] 
+            { 
+                "PrimaryColor", 
+                "SecondaryColor", 
+                "AccentColor", 
+                "BackgroundColor", 
+                "ForegroundColor" 
+            };
+            
+            foreach (var color in requiredColors)
+            {
+                if (!theme.Colors.ContainsKey(color))
+                {
+                    System.Diagnostics.Debug.WriteLine($"Theme validation failed: Required color {color} is missing");
+                    return false;
+                }
+                
+                // Validate color format
+                if (!ThemeColorConverter.IsValidColor(theme.Colors[color]))
+                {
+                    System.Diagnostics.Debug.WriteLine($"Theme validation failed: Color {color} has invalid format: {theme.Colors[color]}");
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+
+        /// <summary>
+        /// Converts a ThemeJson object to an EFBThemeDefinition.
+        /// </summary>
+        /// <param name="themeJson">The ThemeJson object to convert.</param>
+        /// <returns>An EFBThemeDefinition.</returns>
+        private EFBThemeDefinition ConvertJsonToThemeDefinition(ThemeJson themeJson)
+        {
+            var theme = new EFBThemeDefinition(themeJson.Name)
+            {
+                Description = themeJson.Description,
+                // Use a default resource dictionary path based on the theme name
+                ResourceDictionaryPath = $"/Prosim2GSX;component/UI/EFB/Styles/EFBStyles.xaml"
+            };
+            
+            // Add colors
+            foreach (var color in themeJson.Colors)
+            {
+                theme.SetResource(color.Key, ThemeColorConverter.ConvertToResource(color.Key, color.Value));
+            }
+            
+            // Add fonts
+            if (themeJson.Fonts != null)
+            {
+                foreach (var font in themeJson.Fonts)
+                {
+                    theme.SetResource(font.Key, font.Value);
+                }
+            }
+            
+            // Add other resources
+            if (themeJson.Resources != null)
+            {
+                foreach (var resource in themeJson.Resources)
+                {
+                    theme.SetResource(resource.Key, resource.Value);
+                }
+            }
+            
+            return theme;
         }
 
         /// <summary>
@@ -116,6 +244,15 @@ namespace Prosim2GSX.UI.EFB.Themes
             var oldTheme = _currentTheme;
             _currentTheme = theme;
 
+            // Begin a transition animation if we're switching themes
+            var transition = oldTheme != null && oldTheme != theme;
+            var mainWindow = Application.Current.MainWindow;
+            
+            if (transition && mainWindow != null)
+            {
+                ThemeTransitionManager.BeginTransition(mainWindow);
+            }
+
             // Load the theme's resource dictionary if it's not already loaded
             if (theme.ResourceDictionary == null && !string.IsNullOrEmpty(theme.ResourceDictionaryPath))
             {
@@ -143,6 +280,18 @@ namespace Prosim2GSX.UI.EFB.Themes
 
                 // Add the new theme's resource dictionary
                 Application.Current.Resources.MergedDictionaries.Add(theme.ResourceDictionary);
+            }
+
+            // Apply all theme resources to the application resources
+            foreach (var resource in theme.GetResources())
+            {
+                Application.Current.Resources[resource.Key] = resource.Value;
+            }
+
+            // Complete the transition if we're switching themes
+            if (transition && mainWindow != null)
+            {
+                ThemeTransitionManager.CompleteTransition(mainWindow);
             }
 
             // Raise the ThemeChanged event

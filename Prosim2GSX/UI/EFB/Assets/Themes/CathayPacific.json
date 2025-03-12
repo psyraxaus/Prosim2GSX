@@ -1,0 +1,51 @@
+{
+  "name": "Cathay Pacific",
+  "description": "Cathay Pacific-themed EFB with airline colors",
+  "author": "Prosim2GSX",
+  "version": "1.0.0",
+  "airlineCode": "CPA",
+  "isDefault": false,
+  "isDarkTheme": true,
+  "creationDate": "2025-03-15T00:00:00Z",
+  "lastModifiedDate": "2025-03-15T00:00:00Z",
+  "colors": {
+    "PrimaryColor": "#006564",
+    "SecondaryColor": "#8D1A3D",
+    "AccentColor": "#8D1A3D",
+    "BackgroundColor": "#1A1A1A",
+    "ForegroundColor": "#FFFFFF",
+    "BorderColor": "#333333",
+    "HeaderColor": "#006564",
+    "TabColor": "#2A2A2A",
+    "TabSelectedColor": "#006564",
+    "ButtonColor": "#006564",
+    "ButtonHoverColor": "#005453",
+    "ButtonPressedColor": "#004342",
+    "TextBoxColor": "#2A2A2A",
+    "TextBoxBorderColor": "#333333",
+    "TextBoxFocusedColor": "#006564",
+    "ErrorColor": "#8D1A3D",
+    "WarningColor": "#F7A800",
+    "SuccessColor": "#00A650",
+    "InfoColor": "#0072CE"
+  },
+  "fonts": {
+    "PrimaryFont": "Segoe UI",
+    "SecondaryFont": "Consolas",
+    "HeaderFont": "Segoe UI Semibold",
+    "MonospaceFont": "Consolas"
+  },
+  "resources": {
+    "CornerRadius": 0,
+    "ButtonHeight": 32,
+    "TabHeight": 40,
+    "HeaderHeight": 48,
+    "DefaultMargin": 8,
+    "DefaultPadding": 8,
+    "SmallFontSize": 11,
+    "DefaultFontSize": 12,
+    "LargeFontSize": 14,
+    "HeaderFontSize": 16,
+    "TitleFontSize": 20
+  }
+}

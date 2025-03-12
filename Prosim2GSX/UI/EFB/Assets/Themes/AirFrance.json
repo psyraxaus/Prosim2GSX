@@ -1,0 +1,51 @@
+{
+  "name": "Air France",
+  "description": "Air France-themed EFB with airline colors",
+  "author": "Prosim2GSX",
+  "version": "1.0.0",
+  "airlineCode": "AFR",
+  "isDefault": false,
+  "isDarkTheme": false,
+  "creationDate": "2025-03-15T00:00:00Z",
+  "lastModifiedDate": "2025-03-15T00:00:00Z",
+  "colors": {
+    "PrimaryColor": "#002157",
+    "SecondaryColor": "#F80000",
+    "AccentColor": "#F80000",
+    "BackgroundColor": "#FFFFFF",
+    "ForegroundColor": "#333333",
+    "BorderColor": "#D9D9D9",
+    "HeaderColor": "#002157",
+    "TabColor": "#F2F2F2",
+    "TabSelectedColor": "#002157",
+    "ButtonColor": "#002157",
+    "ButtonHoverColor": "#001942",
+    "ButtonPressedColor": "#00102E",
+    "TextBoxColor": "#FFFFFF",
+    "TextBoxBorderColor": "#D9D9D9",
+    "TextBoxFocusedColor": "#002157",
+    "ErrorColor": "#F80000",
+    "WarningColor": "#F7A800",
+    "SuccessColor": "#00A650",
+    "InfoColor": "#0072CE"
+  },
+  "fonts": {
+    "PrimaryFont": "Segoe UI",
+    "SecondaryFont": "Consolas",
+    "HeaderFont": "Segoe UI Semibold",
+    "MonospaceFont": "Consolas"
+  },
+  "resources": {
+    "CornerRadius": 0,
+    "ButtonHeight": 32,
+    "TabHeight": 40,
+    "HeaderHeight": 48,
+    "DefaultMargin": 8,
+    "DefaultPadding": 8,
+    "SmallFontSize": 11,
+    "DefaultFontSize": 12,
+    "LargeFontSize": 14,
+    "HeaderFontSize": 16,
+    "TitleFontSize": 20
+  }
+}
