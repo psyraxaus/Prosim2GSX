@@ -11,6 +11,29 @@
       Title="Aircraft">
 
 <Grid Background="White">
+        <Grid.Resources>
+            <!-- Default styles with fallback values -->
+            <Style x:Key="HeaderBorderStyle" TargetType="Border">
+                <Setter Property="Background" Value="#3C3C3C"/>
+                <Setter Property="BorderBrush" Value="#454545"/>
+                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                <Setter Property="Padding" Value="10"/>
+            </Style>
+            <Style x:Key="PrimaryTextStyle" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="#FFFFFF"/>
+            </Style>
+            <Style x:Key="SecondaryTextStyle" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="#CCCCCC"/>
+            </Style>
+            <Style x:Key="PanelBorderStyle" TargetType="Border">
+                <Setter Property="Background" Value="#1E1E1E"/>
+                <Setter Property="BorderBrush" Value="#454545"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="5"/>
+                <Setter Property="Padding" Value="10"/>
+            </Style>
+        </Grid.Resources>
+        
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -19,10 +42,9 @@
         
         <!-- Header -->
         <Border Grid.Row="0" 
-                Background="{DynamicResource EFBPrimaryBackgroundBrush}" 
-                BorderBrush="{DynamicResource EFBPrimaryBorderBrush}" 
-                BorderThickness="0,0,0,1"
-                Padding="10">
+                Style="{StaticResource HeaderBorderStyle}"
+                Background="{DynamicResource EFBPrimaryBackgroundBrush, FallbackValue=#3C3C3C}" 
+                BorderBrush="{DynamicResource EFBPrimaryBorderBrush, FallbackValue=#454545}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -33,14 +55,16 @@
                            Text="Aircraft Status" 
                            FontSize="20" 
                            FontWeight="Bold"
-                           Foreground="{DynamicResource EFBPrimaryTextBrush}"
+                           Style="{StaticResource PrimaryTextStyle}"
+                           Foreground="{DynamicResource EFBPrimaryTextBrush, FallbackValue=#FFFFFF}"
                            VerticalAlignment="Center"/>
                 
                 <TextBlock Grid.Column="1" 
                            Text="{Binding CurrentFlightPhase}" 
                            FontSize="16" 
                            FontWeight="Bold"
-                           Foreground="{DynamicResource EFBPrimaryTextBrush}"
+                           Style="{StaticResource PrimaryTextStyle}"
+                           Foreground="{DynamicResource EFBPrimaryTextBrush, FallbackValue=#FFFFFF}"
                            VerticalAlignment="Center"/>
             </Grid>
         </Border>
@@ -52,10 +76,10 @@
         
         <!-- Status Bar -->
         <Border Grid.Row="2" 
-                Background="{DynamicResource EFBPrimaryBackgroundBrush}" 
-                BorderBrush="{DynamicResource EFBPrimaryBorderBrush}" 
+                Style="{StaticResource HeaderBorderStyle}"
                 BorderThickness="0,1,0,0"
-                Padding="10">
+                Background="{DynamicResource EFBPrimaryBackgroundBrush, FallbackValue=#3C3C3C}" 
+                BorderBrush="{DynamicResource EFBPrimaryBorderBrush, FallbackValue=#454545}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -65,7 +89,8 @@
                 
                 <TextBlock Grid.Column="0" 
                            Text="{Binding StatusMessage}" 
-                           Foreground="{DynamicResource EFBPrimaryTextBrush}"
+                           Style="{StaticResource PrimaryTextStyle}"
+                           Foreground="{DynamicResource EFBPrimaryTextBrush, FallbackValue=#FFFFFF}"
                            VerticalAlignment="Center"/>
                 
                 <controls:StatusIndicator Grid.Column="1" 
@@ -76,7 +101,8 @@
                 
                 <TextBlock Grid.Column="2" 
                            Text="{Binding ConnectionStatusText}" 
-                           Foreground="{DynamicResource EFBPrimaryTextBrush}"
+                           Style="{StaticResource PrimaryTextStyle}"
+                           Foreground="{DynamicResource EFBPrimaryTextBrush, FallbackValue=#FFFFFF}"
                            VerticalAlignment="Center"/>
             </Grid>
         </Border>
@@ -85,17 +111,16 @@
         <Border Grid.Row="1" 
                 HorizontalAlignment="Right" 
                 VerticalAlignment="Top"
-                Background="{DynamicResource EFBSecondaryBackgroundBrush}" 
-                BorderBrush="{DynamicResource EFBPrimaryBorderBrush}" 
-                BorderThickness="1"
-                CornerRadius="5"
+                Style="{StaticResource PanelBorderStyle}"
                 Margin="0,10,10,0"
-                Padding="10">
+                Background="{DynamicResource EFBSecondaryBackgroundBrush, FallbackValue=#1E1E1E}" 
+                BorderBrush="{DynamicResource EFBPrimaryBorderBrush, FallbackValue=#454545}">
             <StackPanel>
                 <TextBlock Text="Services" 
                            FontSize="16" 
                            FontWeight="Bold"
-                           Foreground="{DynamicResource EFBPrimaryTextBrush}"
+                           Style="{StaticResource PrimaryTextStyle}"
+                           Foreground="{DynamicResource EFBPrimaryTextBrush, FallbackValue=#FFFFFF}"
                            Margin="0,0,0,10"/>
                 
                 <Button Content="Request Refueling" 
@@ -176,17 +201,16 @@
         <Border Grid.Row="1" 
                 HorizontalAlignment="Left" 
                 VerticalAlignment="Top"
-                Background="{DynamicResource EFBSecondaryBackgroundBrush}" 
-                BorderBrush="{DynamicResource EFBPrimaryBorderBrush}" 
-                BorderThickness="1"
-                CornerRadius="5"
+                Style="{StaticResource PanelBorderStyle}"
                 Margin="10,10,0,0"
-                Padding="10">
+                Background="{DynamicResource EFBSecondaryBackgroundBrush, FallbackValue=#1E1E1E}" 
+                BorderBrush="{DynamicResource EFBPrimaryBorderBrush, FallbackValue=#454545}">
             <StackPanel Width="200">
                 <TextBlock Text="Service Progress" 
                            FontSize="16" 
                            FontWeight="Bold"
-                           Foreground="{DynamicResource EFBPrimaryTextBrush}"
+                           Style="{StaticResource PrimaryTextStyle}"
+                           Foreground="{DynamicResource EFBPrimaryTextBrush, FallbackValue=#FFFFFF}"
                            Margin="0,0,0,10"/>
                 
                 <Grid Margin="0,5" Visibility="{Binding RefuelingInProgress, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -197,7 +221,8 @@
                     
                     <TextBlock Grid.Row="0" 
                                Text="Refueling" 
-                               Foreground="{DynamicResource EFBPrimaryTextBrush}"/>
+                               Style="{StaticResource PrimaryTextStyle}"
+                               Foreground="{DynamicResource EFBPrimaryTextBrush, FallbackValue=#FFFFFF}"/>
                     
                     <controls:LinearProgressIndicator Grid.Row="1" 
                                                     Height="20"
@@ -212,7 +237,8 @@
                     
                     <TextBlock Grid.Row="0" 
                                Text="Boarding" 
-                               Foreground="{DynamicResource EFBPrimaryTextBrush}"/>
+                               Style="{StaticResource PrimaryTextStyle}"
+                               Foreground="{DynamicResource EFBPrimaryTextBrush, FallbackValue=#FFFFFF}"/>
                     
                     <controls:LinearProgressIndicator Grid.Row="1" 
                                                     Height="20"
@@ -227,7 +253,8 @@
                     
                     <TextBlock Grid.Row="0" 
                                Text="Deboarding" 
-                               Foreground="{DynamicResource EFBPrimaryTextBrush}"/>
+                               Style="{StaticResource PrimaryTextStyle}"
+                               Foreground="{DynamicResource EFBPrimaryTextBrush, FallbackValue=#FFFFFF}"/>
                     
                     <controls:LinearProgressIndicator Grid.Row="1" 
                                                     Height="20"
@@ -242,7 +269,8 @@
                     
                     <TextBlock Grid.Row="0" 
                                Text="Cargo Loading" 
-                               Foreground="{DynamicResource EFBPrimaryTextBrush}"/>
+                               Style="{StaticResource PrimaryTextStyle}"
+                               Foreground="{DynamicResource EFBPrimaryTextBrush, FallbackValue=#FFFFFF}"/>
                     
                     <controls:LinearProgressIndicator Grid.Row="1" 
                                                     Height="20"
@@ -257,7 +285,8 @@
                     
                     <TextBlock Grid.Row="0" 
                                Text="Cargo Unloading" 
-                               Foreground="{DynamicResource EFBPrimaryTextBrush}"/>
+                               Style="{StaticResource PrimaryTextStyle}"
+                               Foreground="{DynamicResource EFBPrimaryTextBrush, FallbackValue=#FFFFFF}"/>
                     
                     <controls:LinearProgressIndicator Grid.Row="1" 
                                                     Height="20"
@@ -265,7 +294,8 @@
                 </Grid>
                 
                 <TextBlock Text="No services in progress" 
-                           Foreground="{DynamicResource EFBSecondaryTextBrush}"
+                           Style="{StaticResource SecondaryTextStyle}"
+                           Foreground="{DynamicResource EFBSecondaryTextBrush, FallbackValue=#CCCCCC}"
                            TextAlignment="Center"
                            Margin="0,10"
                            Visibility="{Binding AnyServiceInProgress, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>

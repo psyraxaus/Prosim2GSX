@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿﻿using System;
 using System.Collections;
 using System.Globalization;
 using Prosim2GSX.Services;
@@ -8,6 +8,7 @@ namespace Prosim2GSX
     public static class Logger
     {
         private static readonly LoggerImplementation _instance = new LoggerImplementation();
+        private static bool _isStartup = true;
         
         /// <summary>
         /// Gets the singleton instance of the logger
@@ -24,6 +25,10 @@ namespace Prosim2GSX
         /// <param name="message">The log message</param>
         public static void Log(LogLevel level, string context, string message)
         {
+            // Skip non-critical logs during startup
+            if (_isStartup && level < LogLevel.Warning)
+                return;
+                
             // Determine context length
             ReadOnlySpan<char> contextSpan = context.AsSpan();
             ReadOnlySpan<char> formattedContext = contextSpan.Length <= 32 ? 
@@ -179,6 +184,15 @@ namespace Prosim2GSX
             
             if (level != LogLevel.Debug)
                 MessageQueue.Enqueue(exceptionMessage);
+        }
+        
+        /// <summary>
+        /// Ends the startup phase, enabling full logging.
+        /// </summary>
+        public static void EndStartup()
+        {
+            _isStartup = false;
+            Log(LogLevel.Information, "Logger", "Startup phase ended, full logging enabled");
         }
         
         /// <summary>

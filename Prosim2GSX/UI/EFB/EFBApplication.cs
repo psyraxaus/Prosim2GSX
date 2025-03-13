@@ -1,9 +1,11 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using Microsoft.Extensions.DependencyInjection;
 using Prosim2GSX.UI.EFB.Navigation;
 using Prosim2GSX.Models;
@@ -91,11 +93,87 @@ namespace Prosim2GSX.UI.EFB
         public EFBWindow MainWindow => _mainWindow;
 
         /// <summary>
+        /// Preloads critical resources to ensure they're available when needed.
+        /// </summary>
+        private void PreloadCriticalResources()
+        {
+            _logger?.Log(LogLevel.Debug, "EFBApplication:PreloadCriticalResources", 
+                "Preloading critical resources");
+            
+            var criticalResources = new[] {
+                "EFBPrimaryBackgroundBrush",
+                "EFBSecondaryBackgroundBrush",
+                "EFBPrimaryTextBrush",
+                "EFBSecondaryTextBrush",
+                "EFBHighlightBrush",
+                "EFBPrimaryBorderBrush",
+                "EFBAccentBrush"
+            };
+            
+            foreach (var resource in criticalResources)
+            {
+                try
+                {
+                    if (Application.Current.Resources[resource] == null)
+                    {
+                        _logger?.Log(LogLevel.Warning, "EFBApplication:PreloadCriticalResources", 
+                            $"Resource '{resource}' not found, adding default fallback");
+                        
+                        // Add default fallback
+                        Application.Current.Resources[resource] = GetDefaultResource(resource);
+                    }
+                    else
+                    {
+                        _logger?.Log(LogLevel.Debug, "EFBApplication:PreloadCriticalResources", 
+                            $"Resource '{resource}' found");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger?.Log(LogLevel.Error, "EFBApplication:PreloadCriticalResources", ex,
+                        $"Error checking resource '{resource}'");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets a default resource value for a given resource key.
+        /// </summary>
+        /// <param name="resourceKey">The resource key.</param>
+        /// <returns>The default resource value.</returns>
+        private object GetDefaultResource(string resourceKey)
+        {
+            switch (resourceKey)
+            {
+                case "EFBPrimaryBackgroundBrush":
+                    return new SolidColorBrush(Color.FromRgb(60, 60, 60));
+                case "EFBSecondaryBackgroundBrush":
+                    return new SolidColorBrush(Color.FromRgb(30, 30, 30));
+                case "EFBPrimaryTextBrush":
+                    return new SolidColorBrush(Colors.White);
+                case "EFBSecondaryTextBrush":
+                    return new SolidColorBrush(Color.FromRgb(204, 204, 204));
+                case "EFBHighlightBrush":
+                    return new SolidColorBrush(Color.FromRgb(51, 153, 255)) { Opacity = 0.3 };
+                case "EFBPrimaryBorderBrush":
+                    return new SolidColorBrush(Color.FromRgb(69, 69, 69));
+                case "EFBAccentBrush":
+                    return new SolidColorBrush(Color.FromRgb(255, 153, 0));
+                default:
+                    _logger?.Log(LogLevel.Warning, "EFBApplication:GetDefaultResource", 
+                        $"No default value defined for resource '{resourceKey}'");
+                    return null;
+            }
+        }
+
+        /// <summary>
         /// Initializes the EFB application.
         /// </summary>
         /// <returns>True if initialization was successful, false otherwise.</returns>
         public async Task<bool> InitializeAsync()
         {
+            var sw = Stopwatch.StartNew();
+            
             if (_isInitialized)
             {
                 _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", "Application already initialized, skipping initialization");
@@ -107,11 +185,16 @@ namespace Prosim2GSX.UI.EFB
                 _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", "Starting EFB application initialization");
                 
                 // Initialize the theme manager
+                var themeMgrSw = Stopwatch.StartNew();
                 UpdateInitializationState(EFBInitializationState.ThemeManagerInitializing);
                 _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", "Initializing theme manager");
                 _themeManager = new EFBThemeManager(_serviceModel, _logger);
+                themeMgrSw.Stop();
+                _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", 
+                    $"Theme manager initialized in {themeMgrSw.ElapsedMilliseconds}ms");
                 
                 // Load themes from the themes directory
+                var themeLoadSw = Stopwatch.StartNew();
                 var themesDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "UI", "EFB", "Assets", "Themes");
                 bool themesDirectoryExists = Directory.Exists(themesDirectory);
                 _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", 
@@ -123,6 +206,16 @@ namespace Prosim2GSX.UI.EFB
                 // Load themes
                 _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", "Loading themes from directory");
                 await _themeManager.LoadThemesAsync(themesDirectory);
+                themeLoadSw.Stop();
+                _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", 
+                    $"Themes loaded in {themeLoadSw.ElapsedMilliseconds}ms");
+                
+                // Preload critical resources
+                var preloadSw = Stopwatch.StartNew();
+                PreloadCriticalResources();
+                preloadSw.Stop();
+                _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", 
+                    $"Critical resources preloaded in {preloadSw.ElapsedMilliseconds}ms");
                 
                 // Check if themes were loaded
                 int themeCount = _themeManager.Themes?.Count ?? 0;
@@ -173,32 +266,51 @@ namespace Prosim2GSX.UI.EFB
                 UpdateInitializationState(EFBInitializationState.ThemeManagerInitialized);
 
                 // Initialize the window manager
+                var windowMgrSw = Stopwatch.StartNew();
                 UpdateInitializationState(EFBInitializationState.WindowManagerInitializing);
                 _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", "Initializing window manager");
                 _windowManager = new EFBWindowManager(_themeManager, _logger);
                 UpdateInitializationState(EFBInitializationState.WindowManagerInitialized);
+                windowMgrSw.Stop();
+                _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", 
+                    $"Window manager initialized in {windowMgrSw.ElapsedMilliseconds}ms");
 
                 // Initialize the data binding service
+                var dataBindingSw = Stopwatch.StartNew();
                 UpdateInitializationState(EFBInitializationState.DataBindingInitializing);
                 _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", "Initializing data binding service");
                 _dataBindingService = new EFBDataBindingService(_serviceModel, 500, _logger);
                 UpdateInitializationState(EFBInitializationState.DataBindingInitialized);
+                dataBindingSw.Stop();
+                _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", 
+                    $"Data binding service initialized in {dataBindingSw.ElapsedMilliseconds}ms");
 
                 // Initialize the service locator
+                var serviceLocatorSw = Stopwatch.StartNew();
                 UpdateInitializationState(EFBInitializationState.ServiceLocatorInitializing);
                 _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", "Initializing service locator");
                 InitializeServiceLocator();
                 UpdateInitializationState(EFBInitializationState.ServiceLocatorInitialized);
+                serviceLocatorSw.Stop();
+                _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", 
+                    $"Service locator initialized in {serviceLocatorSw.ElapsedMilliseconds}ms");
 
                 // Register pages with the window manager
+                var pageRegSw = Stopwatch.StartNew();
                 UpdateInitializationState(EFBInitializationState.PagesRegistering);
                 _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", "Registering pages with window manager");
                 RegisterPages();
                 UpdateInitializationState(EFBInitializationState.PagesRegistered);
+                pageRegSw.Stop();
+                _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", 
+                    $"Pages registered in {pageRegSw.ElapsedMilliseconds}ms");
 
                 _isInitialized = true;
                 UpdateInitializationState(EFBInitializationState.Completed);
-                _logger?.Log(LogLevel.Information, "EFBApplication:InitializeAsync", "EFB application initialization completed successfully");
+                
+                sw.Stop();
+                _logger?.Log(LogLevel.Information, "EFBApplication:InitializeAsync", 
+                    $"EFB application initialization completed successfully in {sw.ElapsedMilliseconds}ms");
                 return true;
             }
             catch (Exception ex)
@@ -231,9 +343,17 @@ namespace Prosim2GSX.UI.EFB
             {
                 _logger?.Log(LogLevel.Debug, "EFBApplication:Start", "Starting EFB application");
                 
+                // Initialize window diagnostics
+                _logger?.Log(LogLevel.Debug, "EFBApplication:Start", "Initializing window diagnostics");
+                EFBWindowDiagnostics.Initialize(_logger);
+                
                 // Create the main window
                 _logger?.Log(LogLevel.Debug, "EFBApplication:Start", "Creating main window");
                 _mainWindow = _windowManager.CreateWindow();
+                
+                // Add diagnostics to the main window
+                _logger?.Log(LogLevel.Debug, "EFBApplication:Start", "Adding diagnostics to main window");
+                EFBWindowDiagnostics.AddDiagnostics(_mainWindow);
                 
                 // Show the main window
                 _logger?.Log(LogLevel.Debug, "EFBApplication:Start", "Showing main window");
@@ -242,6 +362,9 @@ namespace Prosim2GSX.UI.EFB
                 // Navigate to the home page
                 _logger?.Log(LogLevel.Debug, "EFBApplication:Start", "Navigating to home page");
                 _mainWindow.NavigateTo("Home");
+
+                // End startup phase to enable full logging
+                Logger.EndStartup();
 
                 _logger?.Log(LogLevel.Information, "EFBApplication:Start", "EFB application started successfully");
                 return true;
