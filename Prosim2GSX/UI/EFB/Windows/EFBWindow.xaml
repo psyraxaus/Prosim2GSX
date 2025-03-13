@@ -10,8 +10,8 @@
         Width="1024" 
         MinHeight="600" 
         MinWidth="800"
-        Background="{StaticResource BackgroundColor}"
-        Foreground="{StaticResource ForegroundColor}"
+        Background="{DynamicResource EFBBackgroundBrush}"
+        Foreground="{DynamicResource EFBForegroundBrush}"
         WindowStartupLocation="CenterScreen"
         Loaded="Window_Loaded"
         Closing="Window_Closing">
@@ -23,7 +23,7 @@
             <Setter Property="Height" Value="30"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="{StaticResource ForegroundColor}"/>
+            <Setter Property="Foreground" Value="{DynamicResource EFBForegroundBrush}"/>
             <Setter Property="FontFamily" Value="Segoe MDL2 Assets, Arial, sans-serif"/>
             <Setter Property="FontSize" Value="10"/>
             <Setter Property="Padding" Value="0"/>
@@ -38,10 +38,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource ButtonHoverColor}"/>
+                                <Setter Property="Background" Value="{DynamicResource ButtonHoverBackgroundColor}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource ButtonPressedColor}"/>
+                                <Setter Property="Background" Value="{DynamicResource ButtonPressedBackgroundColor}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -60,7 +60,7 @@
         <!-- Custom title bar -->
         <Grid x:Name="TitleBar" 
               Grid.Row="0" 
-              Background="{DynamicResource HeaderColor}" 
+              Background="{DynamicResource EFBPrimaryBrush}" 
               MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
@@ -117,7 +117,7 @@
             <StackPanel x:Name="NavigationPanel" 
                         Grid.Column="0" 
                         Width="60" 
-                        Background="{DynamicResource SecondaryColor}">
+                        Background="{DynamicResource EFBSecondaryBrush}">
                 <!-- Navigation buttons will be added here programmatically -->
             </StackPanel>
             
@@ -129,7 +129,7 @@
         
         <!-- Status bar -->
         <Grid Grid.Row="2" 
-              Background="{DynamicResource SecondaryColor}" 
+              Background="{DynamicResource EFBSecondaryBrush}" 
               Height="24">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>

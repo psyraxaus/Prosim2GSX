@@ -214,7 +214,26 @@ namespace Prosim2GSX.UI.EFB.Themes
                 { "WarningColor", "EFBWarningColor" },
                 { "ErrorColor", "EFBErrorColor" },
                 { "InfoColor", "EFBInfoColor" },
-                { "TabSelectedColor", "TabSelectedColor" }
+                { "TabSelectedColor", "TabSelectedColor" },
+                // Additional mappings for header and button colors
+                { "HeaderBackgroundColor", "HeaderBackgroundColor" },
+                { "HeaderForegroundColor", "HeaderForegroundColor" },
+                { "ButtonBackgroundColor", "ButtonBackgroundColor" },
+                { "ButtonForegroundColor", "ButtonForegroundColor" },
+                { "ButtonHoverBackgroundColor", "ButtonHoverBackgroundColor" },
+                { "ButtonPressedBackgroundColor", "ButtonPressedBackgroundColor" },
+                { "InputBackgroundColor", "InputBackgroundColor" },
+                { "InputForegroundColor", "InputForegroundColor" },
+                { "InputBorderColor", "InputBorderColor" },
+                { "InputFocusBorderColor", "InputFocusBorderColor" },
+                // Legacy mappings for backward compatibility
+                { "HeaderColor", "HeaderBackgroundColor" },
+                { "ButtonColor", "ButtonBackgroundColor" },
+                { "ButtonHoverColor", "ButtonHoverBackgroundColor" },
+                { "ButtonPressedColor", "ButtonPressedBackgroundColor" },
+                { "TextBoxColor", "InputBackgroundColor" },
+                { "TextBoxBorderColor", "InputBorderColor" },
+                { "TextBoxFocusedColor", "InputFocusBorderColor" }
             };
             
             // Add colors with mapped keys
@@ -476,8 +495,21 @@ namespace Prosim2GSX.UI.EFB.Themes
             // Apply all theme resources to the application resources
             foreach (var resource in theme.GetResources())
             {
-                Application.Current.Resources[resource.Key] = resource.Value;
+                try
+                {
+                    Application.Current.Resources[resource.Key] = resource.Value;
+                    _logger?.Log(LogLevel.Debug, "EFBThemeManager:ApplyTheme", 
+                        $"Applied resource '{resource.Key}' for theme '{theme.Name}'");
+                }
+                catch (Exception ex)
+                {
+                    _logger?.Log(LogLevel.Error, "EFBThemeManager:ApplyTheme", ex,
+                        $"Error applying resource '{resource.Key}' for theme '{theme.Name}'");
+                }
             }
+            
+            // Ensure all required resources are set
+            EnsureRequiredResources();
 
             // Complete the transition if we're switching themes
             if (transition && mainWindow != null)
@@ -633,6 +665,90 @@ namespace Prosim2GSX.UI.EFB.Themes
             // This would be implemented to show a theme selector dialog
             // For now, just cycle themes
             CycleThemes();
+        }
+        
+        /// <summary>
+        /// Ensures that all required resources are set in the application resources.
+        /// </summary>
+        private void EnsureRequiredResources()
+        {
+            // Define default values for required resources
+            var defaultResources = new Dictionary<string, object>
+            {
+                // Colors
+                { "EFBPrimaryColor", System.Windows.Media.Colors.DodgerBlue },
+                { "EFBSecondaryColor", System.Windows.Media.Colors.DarkSlateGray },
+                { "EFBAccentColor", System.Windows.Media.Colors.Orange },
+                { "EFBBackgroundColor", System.Windows.Media.Colors.White },
+                { "EFBForegroundColor", System.Windows.Media.Colors.Black },
+                { "EFBBorderColor", System.Windows.Media.Colors.LightGray },
+                { "EFBSuccessColor", System.Windows.Media.Colors.Green },
+                { "EFBWarningColor", System.Windows.Media.Colors.Orange },
+                { "EFBErrorColor", System.Windows.Media.Colors.Red },
+                { "EFBInfoColor", System.Windows.Media.Colors.Blue },
+                
+                // Brushes
+                { "EFBPrimaryBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.DodgerBlue) },
+                { "EFBSecondaryBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.DarkSlateGray) },
+                { "EFBAccentBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Orange) },
+                { "EFBBackgroundBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.White) },
+                { "EFBForegroundBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Black) },
+                { "EFBBorderBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.LightGray) },
+                { "EFBSuccessBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Green) },
+                { "EFBWarningBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Orange) },
+                { "EFBErrorBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Red) },
+                { "EFBInfoBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Blue) },
+                
+                // Button colors
+                { "ButtonBackgroundColor", System.Windows.Media.Colors.DodgerBlue },
+                { "ButtonForegroundColor", System.Windows.Media.Colors.White },
+                { "ButtonHoverBackgroundColor", System.Windows.Media.Colors.RoyalBlue },
+                { "ButtonPressedBackgroundColor", System.Windows.Media.Colors.DarkBlue },
+                
+                // Button brushes
+                { "ButtonBackgroundBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.DodgerBlue) },
+                { "ButtonForegroundBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.White) },
+                { "ButtonHoverBackgroundBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.RoyalBlue) },
+                { "ButtonPressedBackgroundBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.DarkBlue) },
+                
+                // Header colors
+                { "HeaderBackgroundColor", System.Windows.Media.Colors.DarkSlateGray },
+                { "HeaderForegroundColor", System.Windows.Media.Colors.White },
+                
+                // Header brushes
+                { "HeaderBackgroundBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.DarkSlateGray) },
+                { "HeaderForegroundBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.White) },
+                
+                // Input colors
+                { "InputBackgroundColor", System.Windows.Media.Colors.White },
+                { "InputForegroundColor", System.Windows.Media.Colors.Black },
+                { "InputBorderColor", System.Windows.Media.Colors.LightGray },
+                { "InputFocusBorderColor", System.Windows.Media.Colors.DodgerBlue },
+                
+                // Input brushes
+                { "InputBackgroundBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.White) },
+                { "InputForegroundBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Black) },
+                { "InputBorderBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.LightGray) },
+                { "InputFocusBorderBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.DodgerBlue) },
+                
+                // Tab colors
+                { "TabSelectedColor", System.Windows.Media.Colors.DodgerBlue },
+                
+                // Tab brushes
+                { "TabSelectedBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.DodgerBlue) }
+            };
+            
+            // Check if each required resource exists in the application resources
+            foreach (var resource in defaultResources)
+            {
+                if (!Application.Current.Resources.Contains(resource.Key))
+                {
+                    // If not, add the default value
+                    Application.Current.Resources[resource.Key] = resource.Value;
+                    _logger?.Log(LogLevel.Debug, "EFBThemeManager:EnsureRequiredResources", 
+                        $"Added missing resource '{resource.Key}' with default value");
+                }
+            }
         }
     }
 }
