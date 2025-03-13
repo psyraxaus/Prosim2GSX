@@ -1,0 +1,58 @@
+<UserControl x:Class="Prosim2GSX.UI.EFB.Views.LogsPage"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Prosim2GSX.UI.EFB.Views"
+        mc:Ignorable="d"
+        d:DesignHeight="450" d:DesignWidth="800">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Controls Panel -->
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- Log Level Filter -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="Filter Level:" VerticalAlignment="Center" Margin="0,0,10,0" 
+                           Foreground="{DynamicResource EFBForegroundBrush}"/>
+                <ComboBox x:Name="LogLevelFilter" Width="120" SelectedIndex="0" SelectionChanged="LogLevelFilter_SelectionChanged">
+                    <ComboBoxItem Content="All Levels"/>
+                    <ComboBoxItem Content="Debug"/>
+                    <ComboBoxItem Content="Information"/>
+                    <ComboBoxItem Content="Warning"/>
+                    <ComboBoxItem Content="Error"/>
+                    <ComboBoxItem Content="Critical"/>
+                </ComboBox>
+            </StackPanel>
+            
+            <!-- Auto-Scroll Toggle -->
+            <CheckBox x:Name="AutoScrollToggle" Grid.Column="2" Content="Auto-Scroll" IsChecked="True" 
+                      VerticalAlignment="Center" Foreground="{DynamicResource EFBForegroundBrush}"/>
+        </Grid>
+        
+        <!-- Log Display -->
+        <Border Grid.Row="1" BorderBrush="{DynamicResource EFBBorderBrush}" BorderThickness="1" 
+                Background="{DynamicResource EFBBackgroundBrush}">
+            <ScrollViewer x:Name="LogScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                <RichTextBox x:Name="LogTextBox" IsReadOnly="True" Background="Transparent" 
+                             BorderThickness="0" Foreground="{DynamicResource EFBForegroundBrush}"
+                             FontFamily="Consolas, Courier New, monospace">
+                    <RichTextBox.Resources>
+                        <Style TargetType="{x:Type Paragraph}">
+                            <Setter Property="Margin" Value="0"/>
+                        </Style>
+                    </RichTextBox.Resources>
+                </RichTextBox>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

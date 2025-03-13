@@ -210,7 +210,7 @@ namespace Prosim2GSX.UI.EFB.Input
             // This will be implemented by the navigation service
             if (_navigationService != null)
             {
-                _navigationService.NavigateTo("HomePage");
+                _navigationService.NavigateTo("Home");
             }
         }
 
@@ -219,7 +219,7 @@ namespace Prosim2GSX.UI.EFB.Input
             // Navigate to the aircraft page
             if (_navigationService != null)
             {
-                _navigationService.NavigateTo("AircraftPage");
+                _navigationService.NavigateTo("Aircraft");
             }
         }
 
@@ -228,7 +228,7 @@ namespace Prosim2GSX.UI.EFB.Input
             // Navigate to the services page
             if (_navigationService != null)
             {
-                _navigationService.NavigateTo("ServicesPage");
+                _navigationService.NavigateTo("Services");
             }
         }
 
@@ -237,7 +237,7 @@ namespace Prosim2GSX.UI.EFB.Input
             // Navigate to the plan page
             if (_navigationService != null)
             {
-                _navigationService.NavigateTo("PlanPage");
+                _navigationService.NavigateTo("Plan");
             }
         }
 
@@ -246,7 +246,7 @@ namespace Prosim2GSX.UI.EFB.Input
             // Navigate to the ground page
             if (_navigationService != null)
             {
-                _navigationService.NavigateTo("GroundPage");
+                _navigationService.NavigateTo("Ground");
             }
         }
 
@@ -255,7 +255,7 @@ namespace Prosim2GSX.UI.EFB.Input
             // Navigate to the logs page
             if (_navigationService != null)
             {
-                _navigationService.NavigateTo("LogsPage");
+                _navigationService.NavigateTo("Logs");
             }
         }
 

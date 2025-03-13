@@ -426,6 +426,7 @@ namespace Prosim2GSX.UI.EFB
                 
                 // Register page types
                 services.AddTransient<Views.Aircraft.AircraftPageAdapter>();
+                services.AddTransient<Views.LogsPage>();
                 services.AddTransient<DummyPage>();
                 
                 // Initialize the service locator
@@ -673,7 +674,7 @@ namespace Prosim2GSX.UI.EFB
             // Logs page
             _windowManager.RegisterPage(
                 "Logs",
-                typeof(DummyPage), // Replace with actual page type
+                typeof(Views.LogsPage), // Using the actual LogsPage implementation
                 "Logs",
                 "\uE9D9"); // Logs icon
         }
