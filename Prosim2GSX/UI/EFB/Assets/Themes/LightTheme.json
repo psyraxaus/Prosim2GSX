@@ -28,14 +28,15 @@
     "InputBackgroundColor": "#FFFFFF",
     "InputForegroundColor": "#212121",
     "InputBorderColor": "#BDBDBD",
-    "InputFocusBorderColor": "#1976D2"
+    "InputFocusBorderColor": "#1976D2",
+    "TabSelectedColor": "#1976D2"
   },
   "fonts": {
-    "PrimaryFontFamily": "Segoe UI",
-    "SecondaryFontFamily": "Segoe UI",
-    "HeaderFontFamily": "Segoe UI",
+    "PrimaryFontFamily": "Arial, sans-serif",
+    "SecondaryFontFamily": "Arial, sans-serif",
+    "HeaderFontFamily": "Arial, sans-serif",
     "HeaderFontWeight": "SemiBold",
-    "MonospaceFontFamily": "Consolas"
+    "MonospaceFontFamily": "Courier New, monospace"
   },
   "resources": {
     "CornerRadius": "4",

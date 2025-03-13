@@ -39,10 +39,11 @@ Themes are defined in JSON files with the following structure:
     "InfoColor": "#3366FF"
   },
   "fonts": {
-    "PrimaryFont": "Segoe UI",
-    "SecondaryFont": "Consolas",
-    "HeaderFont": "Segoe UI Semibold",
-    "MonospaceFont": "Consolas"
+    "PrimaryFontFamily": "Arial, sans-serif",
+    "SecondaryFontFamily": "Arial, sans-serif",
+    "HeaderFontFamily": "Arial, sans-serif",
+    "HeaderFontWeight": "SemiBold",
+    "MonospaceFontFamily": "Courier New, monospace"
   },
   "resources": {
     "CornerRadius": 4,
@@ -125,10 +126,27 @@ Themes are defined in JSON files with the following structure:
 
 | Property | Description | Example |
 |----------|-------------|---------|
-| PrimaryFont | Main font for the application | Segoe UI |
-| SecondaryFont | Secondary font, often used for specific elements | Consolas |
-| HeaderFont | Font used for headers | Segoe UI Semibold |
-| MonospaceFont | Monospace font for code or fixed-width text | Consolas |
+| PrimaryFontFamily | Main font for the application | Arial, sans-serif |
+| SecondaryFontFamily | Secondary font, often used for specific elements | Arial, sans-serif |
+| HeaderFontFamily | Font used for headers | Arial, sans-serif |
+| HeaderFontWeight | Weight for header font | SemiBold |
+| MonospaceFontFamily | Monospace font for code or fixed-width text | Courier New, monospace |
+
+### Font Fallbacks
+
+To ensure compatibility across different systems, always include fallback fonts:
+
+```json
+"fonts": {
+  "PrimaryFontFamily": "Arial, sans-serif",
+  "SecondaryFontFamily": "Arial, sans-serif",
+  "HeaderFontFamily": "Arial, sans-serif",
+  "HeaderFontWeight": "SemiBold",
+  "MonospaceFontFamily": "Courier New, monospace"
+}
+```
+
+This approach ensures that if the primary font is not available on the user's system, the fallback fonts will be used instead. The application automatically adds appropriate fallbacks if you specify only a single font.
 
 ## Resource Properties
 
@@ -159,6 +177,11 @@ Themes are defined in JSON files with the following structure:
 - **Colors look wrong**: Verify hex codes are in the correct format (#RRGGBB)
 - **Text is hard to read**: Adjust the contrast between text and background colors
 - **UI elements look strange**: Check your resource values for appropriate sizes
+- **Font rendering issues**: 
+  - Always use font families with fallbacks (e.g., "Arial, sans-serif")
+  - Avoid using fonts that might not be installed on all systems
+  - If you see "FontFamily not valid" errors, check that you're using generic fallbacks
+  - For icon fonts, ensure you have appropriate fallbacks specified
 
 ## Example: Creating a Lufthansa Theme
 
@@ -198,10 +221,11 @@ Themes are defined in JSON files with the following structure:
 4. **Choose fonts**
    ```json
    "fonts": {
-     "PrimaryFont": "Segoe UI",
-     "SecondaryFont": "Consolas",
-     "HeaderFont": "Segoe UI Semibold",
-     "MonospaceFont": "Consolas"
+     "PrimaryFontFamily": "Arial, sans-serif",
+     "SecondaryFontFamily": "Arial, sans-serif",
+     "HeaderFontFamily": "Arial, sans-serif",
+     "HeaderFontWeight": "SemiBold",
+     "MonospaceFontFamily": "Courier New, monospace"
    }
    ```
 

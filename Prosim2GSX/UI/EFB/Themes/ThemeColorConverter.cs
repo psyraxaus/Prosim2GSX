@@ -6,41 +6,69 @@ using Prosim2GSX.Services;
 namespace Prosim2GSX.UI.EFB.Themes
 {
     /// <summary>
-    /// Provides utilities for converting color strings to WPF resources.
+    /// Provides utilities for converting color strings and other theme values to WPF resources.
     /// </summary>
     public static class ThemeColorConverter
     {
         /// <summary>
-        /// Converts a color string to a WPF resource.
+        /// Converts a resource string to a WPF resource.
         /// </summary>
         /// <param name="key">The resource key.</param>
-        /// <param name="colorString">The color string.</param>
+        /// <param name="resourceString">The resource string.</param>
         /// <returns>The WPF resource.</returns>
-        public static object ConvertToResource(string key, string colorString)
+        public static object ConvertToResource(string key, string resourceString)
         {
-            if (string.IsNullOrEmpty(colorString))
+            if (string.IsNullOrEmpty(resourceString))
             {
                 return null;
             }
             
             try
             {
-                // Convert the color string to a Color
-                var color = (Color)ColorConverter.ConvertFromString(colorString);
-                
-                // For brush resources, create a SolidColorBrush
-                if (key.EndsWith("Color") || key.EndsWith("Brush"))
+                // Handle font family resources
+                if (key.EndsWith("FontFamily", StringComparison.OrdinalIgnoreCase))
                 {
-                    return new SolidColorBrush(color);
+                    return ConvertToFontFamily(resourceString);
                 }
                 
-                // For other resources, return the color itself
-                return color;
+                // Handle color resources
+                if (key.EndsWith("Color") || key.EndsWith("Brush"))
+                {
+                    // Convert the color string to a Color
+                    var color = (Color)ColorConverter.ConvertFromString(resourceString);
+                    
+                    // For brush resources, create a SolidColorBrush
+                    if (key.EndsWith("Brush"))
+                    {
+                        return new SolidColorBrush(color);
+                    }
+                    
+                    // For color resources, return the Color object directly
+                    return color;
+                }
+                
+                // For other resources, return the string itself
+                return resourceString;
             }
             catch (Exception ex)
             {
                 Logger.Log(LogLevel.Warning, "ThemeColorConverter:ConvertToResource", 
-                    $"Error converting color '{colorString}' for key '{key}': {ex.Message}");
+                    $"Error converting resource '{resourceString}' for key '{key}': {ex.Message}");
+                
+                // Return appropriate fallbacks based on resource type
+                if (key.EndsWith("FontFamily", StringComparison.OrdinalIgnoreCase))
+                {
+                    return new FontFamily("Arial, sans-serif");
+                }
+                else if (key.EndsWith("Color"))
+                {
+                    return Colors.Black;
+                }
+                else if (key.EndsWith("Brush"))
+                {
+                    return Brushes.Black;
+                }
+                
                 return null;
             }
         }
@@ -73,6 +101,58 @@ namespace Prosim2GSX.UI.EFB.Themes
             catch
             {
                 return false;
+            }
+        }
+        
+        /// <summary>
+        /// Converts a font family string to a WPF FontFamily with fallbacks.
+        /// </summary>
+        /// <param name="fontFamilyString">The font family string.</param>
+        /// <returns>A FontFamily object with appropriate fallbacks.</returns>
+        public static FontFamily ConvertToFontFamily(string fontFamilyString)
+        {
+            if (string.IsNullOrEmpty(fontFamilyString))
+            {
+                // Default fallback
+                return new FontFamily("Arial, sans-serif");
+            }
+            
+            try
+            {
+                // If the font family already includes fallbacks, use it as is
+                if (fontFamilyString.Contains(","))
+                {
+                    return new FontFamily(fontFamilyString);
+                }
+                
+                // Add fallbacks based on the font type
+                string fontWithFallbacks;
+                
+                if (fontFamilyString.Contains("MDL2") || fontFamilyString.Contains("Segoe MDL"))
+                {
+                    // Icon font fallbacks
+                    fontWithFallbacks = $"{fontFamilyString}, Arial, sans-serif";
+                }
+                else if (fontFamilyString.Contains("Consolas") || fontFamilyString.Contains("Courier"))
+                {
+                    // Monospace font fallbacks
+                    fontWithFallbacks = $"{fontFamilyString}, Courier New, monospace";
+                }
+                else
+                {
+                    // Standard font fallbacks
+                    fontWithFallbacks = $"{fontFamilyString}, Arial, sans-serif";
+                }
+                
+                return new FontFamily(fontWithFallbacks);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Warning, "ThemeColorConverter:ConvertToFontFamily", 
+                    $"Error converting font family '{fontFamilyString}': {ex.Message}");
+                
+                // Return a safe fallback
+                return new FontFamily("Arial, sans-serif");
             }
         }
     }

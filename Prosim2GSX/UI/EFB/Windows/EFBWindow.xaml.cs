@@ -147,7 +147,7 @@ namespace Prosim2GSX.UI.EFB.Windows
                 ToolTip = title,
                 Width = 60,
                 Height = 60,
-                FontFamily = new FontFamily("Segoe MDL2 Assets"),
+                FontFamily = new FontFamily("Segoe MDL2 Assets, Arial, sans-serif"),
                 FontSize = 24,
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
@@ -200,7 +200,7 @@ namespace Prosim2GSX.UI.EFB.Windows
                 ToolTip = title,
                 Width = 60,
                 Height = 60,
-                FontFamily = new FontFamily("Segoe MDL2 Assets"),
+                FontFamily = new FontFamily("Segoe MDL2 Assets, Arial, sans-serif"),
                 FontSize = 24,
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
@@ -416,7 +416,7 @@ namespace Prosim2GSX.UI.EFB.Windows
 
             if (_navigationButtons.TryGetValue(e.PageKey, out var selectedButton))
             {
-                selectedButton.Background = (Brush)FindResource("TabSelectedColor");
+                selectedButton.Background = (Brush)FindResource("TabSelectedBrush");
             }
         }
 

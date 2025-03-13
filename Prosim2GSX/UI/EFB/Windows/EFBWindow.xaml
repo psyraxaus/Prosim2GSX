@@ -24,7 +24,7 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Foreground" Value="{DynamicResource ForegroundColor}"/>
-            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets, Arial, sans-serif"/>
             <Setter Property="FontSize" Value="10"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Margin" Value="0"/>

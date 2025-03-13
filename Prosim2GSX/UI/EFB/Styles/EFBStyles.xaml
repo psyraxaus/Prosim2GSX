@@ -33,7 +33,8 @@
     <SolidColorBrush x:Key="EFBWarningBrush" Color="{DynamicResource EFBWarningColor}" />
     <SolidColorBrush x:Key="EFBErrorBrush" Color="{DynamicResource EFBErrorColor}" />
     <SolidColorBrush x:Key="EFBInfoBrush" Color="{DynamicResource EFBInfoColor}" />
-    <SolidColorBrush x:Key="TabSelectedColor" Color="{DynamicResource EFBPrimaryColor}" />
+    <Color x:Key="TabSelectedColor">#007ACC</Color>
+    <SolidColorBrush x:Key="TabSelectedBrush" Color="{DynamicResource TabSelectedColor}" />
     
     <!-- Additional Brushes -->
     <SolidColorBrush x:Key="EFBHighlightBrush" Color="#3399FF" Opacity="0.3" />

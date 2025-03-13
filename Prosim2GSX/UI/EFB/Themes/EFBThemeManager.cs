@@ -207,7 +207,8 @@ namespace Prosim2GSX.UI.EFB.Themes
                 { "SuccessColor", "EFBSuccessColor" },
                 { "WarningColor", "EFBWarningColor" },
                 { "ErrorColor", "EFBErrorColor" },
-                { "InfoColor", "EFBInfoColor" }
+                { "InfoColor", "EFBInfoColor" },
+                { "TabSelectedColor", "TabSelectedColor" }
             };
             
             // Add colors with mapped keys
@@ -231,12 +232,21 @@ namespace Prosim2GSX.UI.EFB.Themes
                 }
             }
             
-            // Add fonts
+            // Add fonts with fallbacks
             if (themeJson.Fonts != null)
             {
                 foreach (var font in themeJson.Fonts)
                 {
-                    theme.SetResource(font.Key, font.Value);
+                    if (font.Key.EndsWith("FontFamily", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Convert font family strings to FontFamily objects with fallbacks
+                        theme.SetResource(font.Key, ThemeColorConverter.ConvertToFontFamily(font.Value));
+                    }
+                    else
+                    {
+                        // For other font properties (weight, size, etc.), use as is
+                        theme.SetResource(font.Key, font.Value);
+                    }
                 }
             }
             
