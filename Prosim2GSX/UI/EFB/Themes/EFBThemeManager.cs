@@ -195,6 +195,12 @@ namespace Prosim2GSX.UI.EFB.Themes
                 ResourceDictionaryPath = $"/Prosim2GSX;component/UI/EFB/Styles/EFBStyles.xaml"
             };
             
+            // Store airline code if available
+            if (!string.IsNullOrEmpty(themeJson.AirlineCode))
+            {
+                theme.SetResource("AirlineCode", themeJson.AirlineCode);
+            }
+            
             // Define mapping from theme JSON keys to EFB resource keys
             var colorKeyMapping = new Dictionary<string, string>
             {
@@ -538,6 +544,34 @@ namespace Prosim2GSX.UI.EFB.Themes
 
             return _themes.TryGetValue(themeName, out var theme) ? theme : null;
         }
+        
+        /// <summary>
+        /// Gets all themes that have an airline code.
+        /// </summary>
+        /// <returns>A collection of airline themes.</returns>
+        public IEnumerable<EFBThemeDefinition> GetAirlineThemes()
+        {
+            return _themes.Values.Where(t => 
+                t.GetResource("AirlineCode") != null && 
+                !string.IsNullOrEmpty(t.GetResource("AirlineCode").ToString()));
+        }
+
+        /// <summary>
+        /// Gets a theme by airline code.
+        /// </summary>
+        /// <param name="airlineCode">The airline code.</param>
+        /// <returns>The theme, or null if not found.</returns>
+        public EFBThemeDefinition GetThemeByAirlineCode(string airlineCode)
+        {
+            if (string.IsNullOrEmpty(airlineCode))
+            {
+                throw new ArgumentException("Airline code cannot be null or empty.", nameof(airlineCode));
+            }
+
+            return _themes.Values.FirstOrDefault(t => 
+                t.GetResource("AirlineCode") != null && 
+                t.GetResource("AirlineCode").ToString().Equals(airlineCode, StringComparison.OrdinalIgnoreCase));
+        }
 
         /// <summary>
         /// Determines whether a theme with the specified name exists.
@@ -552,6 +586,19 @@ namespace Prosim2GSX.UI.EFB.Themes
             }
 
             return _themes.ContainsKey(themeName);
+        }
+        
+        /// <summary>
+        /// Gets all available airline codes from the loaded themes.
+        /// </summary>
+        /// <returns>A collection of airline codes.</returns>
+        public IEnumerable<string> GetAvailableAirlineCodes()
+        {
+            return _themes.Values
+                .Where(t => t.GetResource("AirlineCode") != null)
+                .Select(t => t.GetResource("AirlineCode").ToString())
+                .Where(code => !string.IsNullOrEmpty(code))
+                .Distinct();
         }
 
         /// <summary>

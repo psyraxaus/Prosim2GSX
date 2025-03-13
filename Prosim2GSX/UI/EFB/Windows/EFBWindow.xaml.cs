@@ -333,10 +333,75 @@ namespace Prosim2GSX.UI.EFB.Windows
             if (_themeManager != null)
             {
                 _themeManager.ApplyDefaultTheme();
+                
+                // Populate the airline selector
+                PopulateAirlineSelector();
             }
 
             // Update the time display
             UpdateTimeDisplay();
+        }
+        
+        /// <summary>
+        /// Populates the airline selector with available airline themes.
+        /// </summary>
+        private void PopulateAirlineSelector()
+        {
+            if (_themeManager == null)
+                return;
+                
+            // Clear existing items
+            AirlineSelector.Items.Clear();
+            
+            // Get all themes with airline codes
+            var airlineThemes = _themeManager.GetAirlineThemes();
+            
+            // Add each airline to the selector
+            foreach (var theme in airlineThemes)
+            {
+                var airlineCode = theme.GetResource("AirlineCode")?.ToString();
+                if (string.IsNullOrEmpty(airlineCode))
+                    continue;
+                    
+                ComboBoxItem item = new ComboBoxItem
+                {
+                    Content = theme.Name,
+                    Tag = theme.Name
+                };
+                AirlineSelector.Items.Add(item);
+            }
+            
+            // Select the current theme if it's an airline theme
+            var currentTheme = _themeManager.CurrentTheme;
+            if (currentTheme.GetResource("AirlineCode") != null)
+            {
+                foreach (ComboBoxItem item in AirlineSelector.Items)
+                {
+                    if ((string)item.Tag == currentTheme.Name)
+                    {
+                        AirlineSelector.SelectedItem = item;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Handles the selection changed event of the airline selector.
+        /// </summary>
+        private void AirlineSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_themeManager == null || AirlineSelector.SelectedItem == null)
+                return;
+                
+            ComboBoxItem selectedItem = (ComboBoxItem)AirlineSelector.SelectedItem;
+            string themeName = (string)selectedItem.Tag;
+            
+            // Apply the selected theme
+            _themeManager.ApplyTheme(themeName);
+            
+            // Update status
+            SetStatus($"Theme changed to {themeName}");
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -435,6 +500,19 @@ namespace Prosim2GSX.UI.EFB.Windows
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"Error loading logo image: {ex.Message}");
+                }
+            }
+            
+            // Update the selected item in the airline selector
+            if (e.NewTheme.GetResource("AirlineCode") != null)
+            {
+                foreach (ComboBoxItem item in AirlineSelector.Items)
+                {
+                    if ((string)item.Tag == e.NewTheme.Name)
+                    {
+                        AirlineSelector.SelectedItem = item;
+                        break;
+                    }
                 }
             }
         }
