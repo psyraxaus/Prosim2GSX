@@ -36,10 +36,12 @@
                            Foreground="{DynamicResource EFBPrimaryTextBrush}"
                            VerticalAlignment="Center"/>
                 
-                <controls:FlightPhaseIndicator Grid.Column="1" 
-                                              Width="150" 
-                                              Height="40"
-                                              CurrentPhase="{Binding CurrentFlightPhase}"/>
+                <TextBlock Grid.Column="1" 
+                           Text="{Binding CurrentFlightPhase}" 
+                           FontSize="16" 
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource EFBPrimaryTextBrush}"
+                           VerticalAlignment="Center"/>
             </Grid>
         </Border>
         

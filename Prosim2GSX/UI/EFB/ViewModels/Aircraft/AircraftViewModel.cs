@@ -5,6 +5,7 @@ using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Prosim2GSX.Services;
+using Prosim2GSX.UI.EFB.Controls;
 
 namespace Prosim2GSX.UI.EFB.ViewModels.Aircraft
 {
@@ -22,8 +23,8 @@ namespace Prosim2GSX.UI.EFB.ViewModels.Aircraft
         #region Properties
 
         // Flight phase
-        private string _currentFlightPhase;
-        public string CurrentFlightPhase
+        private FlightPhaseIndicator.FlightPhase _currentFlightPhase;
+        public FlightPhaseIndicator.FlightPhase CurrentFlightPhase
         {
             get => _currentFlightPhase;
             set => SetProperty(value, nameof(CurrentFlightPhase));
@@ -37,8 +38,8 @@ namespace Prosim2GSX.UI.EFB.ViewModels.Aircraft
             set => SetProperty(value, nameof(StatusMessage));
         }
 
-        private string _connectionStatus;
-        public string ConnectionStatus
+        private StatusIndicator.StatusType _connectionStatus;
+        public StatusIndicator.StatusType ConnectionStatus
         {
             get => _connectionStatus;
             set => SetProperty(value, nameof(ConnectionStatus));
@@ -332,9 +333,9 @@ namespace Prosim2GSX.UI.EFB.ViewModels.Aircraft
             BaggageTruckPresent = CargoLoadingInProgress || CargoUnloadingInProgress;
 
             // Initialize status information
-            CurrentFlightPhase = "GROUND";
+            CurrentFlightPhase = FlightPhaseIndicator.FlightPhase.Preflight;
             StatusMessage = "Aircraft ready for services";
-            ConnectionStatus = "Connected";
+            ConnectionStatus = StatusIndicator.StatusType.Success;
             ConnectionStatusText = "Connected to GSX and ProSim";
         }
 
