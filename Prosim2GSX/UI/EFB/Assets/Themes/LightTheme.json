@@ -15,6 +15,10 @@
     "BackgroundColor": "#F5F5F5",
     "ForegroundColor": "#212121",
     "BorderColor": "#BDBDBD",
+    "SuccessColor": "#4CAF50",
+    "WarningColor": "#FFC107",
+    "ErrorColor": "#F44336",
+    "InfoColor": "#2196F3",
     "HeaderBackgroundColor": "#1976D2",
     "HeaderForegroundColor": "#FFFFFF",
     "ButtonBackgroundColor": "#1976D2",
@@ -24,11 +28,7 @@
     "InputBackgroundColor": "#FFFFFF",
     "InputForegroundColor": "#212121",
     "InputBorderColor": "#BDBDBD",
-    "InputFocusBorderColor": "#1976D2",
-    "StatusSuccessColor": "#4CAF50",
-    "StatusWarningColor": "#FFC107",
-    "StatusErrorColor": "#F44336",
-    "StatusInfoColor": "#2196F3"
+    "InputFocusBorderColor": "#1976D2"
   },
   "fonts": {
     "PrimaryFontFamily": "Segoe UI",

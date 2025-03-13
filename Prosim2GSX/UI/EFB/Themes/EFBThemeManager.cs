@@ -195,10 +195,40 @@ namespace Prosim2GSX.UI.EFB.Themes
                 ResourceDictionaryPath = $"/Prosim2GSX;component/UI/EFB/Styles/EFBStyles.xaml"
             };
             
-            // Add colors
+            // Define mapping from theme JSON keys to EFB resource keys
+            var colorKeyMapping = new Dictionary<string, string>
+            {
+                { "PrimaryColor", "EFBPrimaryColor" },
+                { "SecondaryColor", "EFBSecondaryColor" },
+                { "AccentColor", "EFBAccentColor" },
+                { "BackgroundColor", "EFBBackgroundColor" },
+                { "ForegroundColor", "EFBForegroundColor" },
+                { "BorderColor", "EFBBorderColor" },
+                { "SuccessColor", "EFBSuccessColor" },
+                { "WarningColor", "EFBWarningColor" },
+                { "ErrorColor", "EFBErrorColor" },
+                { "InfoColor", "EFBInfoColor" }
+            };
+            
+            // Add colors with mapped keys
             foreach (var color in themeJson.Colors)
             {
-                theme.SetResource(color.Key, ThemeColorConverter.ConvertToResource(color.Key, color.Value));
+                // Get the mapped key if it exists, otherwise use the original key
+                string resourceKey = color.Key;
+                if (colorKeyMapping.TryGetValue(color.Key, out string mappedKey))
+                {
+                    resourceKey = mappedKey;
+                }
+                
+                // Convert the color value to a resource and add it to the theme
+                theme.SetResource(resourceKey, ThemeColorConverter.ConvertToResource(resourceKey, color.Value));
+                
+                // Also add brush resources for each color
+                if (resourceKey.EndsWith("Color"))
+                {
+                    string brushKey = resourceKey.Replace("Color", "Brush");
+                    theme.SetResource(brushKey, ThemeColorConverter.ConvertToResource(brushKey, color.Value));
+                }
             }
             
             // Add fonts

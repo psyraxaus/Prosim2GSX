@@ -64,11 +64,21 @@ Themes are defined in JSON files stored in the `UI/EFB/Assets/Themes` directory.
 
 The following colors are required for a theme to be valid:
 
-- `PrimaryColor`: The primary color of the theme
-- `SecondaryColor`: The secondary color of the theme
-- `AccentColor`: The accent color of the theme
-- `BackgroundColor`: The background color of the UI
-- `ForegroundColor`: The foreground color of the UI (text color)
+- `PrimaryColor`: The primary color of the theme (maps to `EFBPrimaryColor` in the UI)
+- `SecondaryColor`: The secondary color of the theme (maps to `EFBSecondaryColor` in the UI)
+- `AccentColor`: The accent color of the theme (maps to `EFBAccentColor` in the UI)
+- `BackgroundColor`: The background color of the UI (maps to `EFBBackgroundColor` in the UI)
+- `ForegroundColor`: The foreground color of the UI (text color) (maps to `EFBForegroundColor` in the UI)
+
+Additional colors you can define:
+
+- `BorderColor`: The color of borders (maps to `EFBBorderColor` in the UI)
+- `SuccessColor`: The color for success states (maps to `EFBSuccessColor` in the UI)
+- `WarningColor`: The color for warning states (maps to `EFBWarningColor` in the UI)
+- `ErrorColor`: The color for error states (maps to `EFBErrorColor` in the UI)
+- `InfoColor`: The color for informational states (maps to `EFBInfoColor` in the UI)
+
+> **Note:** The theme system automatically maps these color keys to the corresponding EFB resource keys used in the UI. It also automatically creates brush resources for each color (e.g., `PrimaryColor` is mapped to both `EFBPrimaryColor` and `EFBPrimaryBrush`).
 
 ### Optional Properties
 
