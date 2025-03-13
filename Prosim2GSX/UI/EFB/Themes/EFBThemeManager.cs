@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using Newtonsoft.Json;
+using Prosim2GSX.Models;
 using Prosim2GSX.Services;
 
 namespace Prosim2GSX.UI.EFB.Themes
@@ -18,6 +19,7 @@ namespace Prosim2GSX.UI.EFB.Themes
         private EFBThemeDefinition _currentTheme;
         private EFBThemeDefinition _defaultTheme;
         private readonly ILogger _logger;
+        private readonly ServiceModel _serviceModel;
 
         /// <summary>
         /// Event raised when the theme changes.
@@ -27,9 +29,11 @@ namespace Prosim2GSX.UI.EFB.Themes
         /// <summary>
         /// Initializes a new instance of the <see cref="EFBThemeManager"/> class.
         /// </summary>
+        /// <param name="serviceModel">The service model.</param>
         /// <param name="logger">Optional logger instance.</param>
-        public EFBThemeManager(ILogger logger = null)
+        public EFBThemeManager(ServiceModel serviceModel, ILogger logger = null)
         {
+            _serviceModel = serviceModel ?? throw new ArgumentNullException(nameof(serviceModel));
             _logger = logger;
             
             // Create a default theme
@@ -215,6 +219,9 @@ namespace Prosim2GSX.UI.EFB.Themes
                 }
             }
             
+            // Store IsDefault property
+            theme.SetResource("IsDefault", themeJson.IsDefault);
+            
             return theme;
         }
 
@@ -260,6 +267,9 @@ namespace Prosim2GSX.UI.EFB.Themes
 
             var oldTheme = _currentTheme;
             _currentTheme = theme;
+            
+            // Save the theme name to configuration
+            _serviceModel.SetSetting("efbThemeName", theme.Name, true);
 
             // Begin a transition animation if we're switching themes
             var transition = oldTheme != null && oldTheme != theme;

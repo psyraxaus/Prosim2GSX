@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿using Prosim2GSX.Behaviours;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using Prosim2GSX.Behaviours;
 using Prosim2GSX.Services;
 using System;
 
@@ -54,6 +54,7 @@ namespace Prosim2GSX.Models
         public string Vhf1VolumeApp { get; set; }
         public bool Vhf1VolumeControl { get; set; }
         public bool UseEfbUi { get; set; }
+        public string EfbThemeName { get; set; }
 
         // Services
         private IProsimDoorService _doorService;
@@ -120,7 +121,7 @@ namespace Prosim2GSX.Models
             Vhf1LatchMute = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf1LatchMute", "true"));
             WaitForConnect = Convert.ToBoolean(ConfigurationFile.GetSetting("waitForConnect", "true"));
             UseEfbUi = Convert.ToBoolean(ConfigurationFile.GetSetting("useEfbUi", "true"));
-
+            EfbThemeName = Convert.ToString(ConfigurationFile.GetSetting("efbThemeName", "Default"));
         }
 
         public string GetSetting(string key, string defaultValue = "")

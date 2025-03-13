@@ -35,6 +35,13 @@
     <SolidColorBrush x:Key="EFBInfoBrush" Color="{DynamicResource EFBInfoColor}" />
     <SolidColorBrush x:Key="TabSelectedColor" Color="{DynamicResource EFBPrimaryColor}" />
     
+    <!-- Additional Brushes -->
+    <SolidColorBrush x:Key="EFBHighlightBrush" Color="#3399FF" Opacity="0.3" />
+    <SolidColorBrush x:Key="EFBPrimaryBackgroundBrush" Color="{DynamicResource EFBPrimaryColor}" Opacity="0.2" />
+    <SolidColorBrush x:Key="EFBSecondaryBackgroundBrush" Color="{DynamicResource EFBSecondaryColor}" Opacity="0.8" />
+    <SolidColorBrush x:Key="EFBPrimaryTextBrush" Color="{DynamicResource EFBForegroundColor}" />
+    <SolidColorBrush x:Key="EFBSecondaryTextBrush" Color="{DynamicResource EFBForegroundColor}" Opacity="0.7" />
+    
     <!-- Gradients -->
     <LinearGradientBrush x:Key="EFBHeaderGradient" StartPoint="0,0" EndPoint="0,1">
         <GradientStop Color="{DynamicResource EFBPrimaryColor}" Offset="0" />

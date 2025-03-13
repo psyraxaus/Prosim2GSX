@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -108,7 +109,7 @@ namespace Prosim2GSX.UI.EFB
                 // Initialize the theme manager
                 UpdateInitializationState(EFBInitializationState.ThemeManagerInitializing);
                 _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", "Initializing theme manager");
-                _themeManager = new EFBThemeManager(_logger);
+                _themeManager = new EFBThemeManager(_serviceModel, _logger);
                 
                 // Load themes from the themes directory
                 var themesDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "UI", "EFB", "Assets", "Themes");
@@ -127,9 +128,43 @@ namespace Prosim2GSX.UI.EFB
                 int themeCount = _themeManager.Themes?.Count ?? 0;
                 _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", $"Loaded {themeCount} themes");
                 
-                // Apply default theme if no themes were loaded
-                if (themeCount == 0)
+                // Get saved theme name
+                string savedThemeName = _serviceModel.EfbThemeName;
+                
+                // Apply saved theme if it exists, otherwise apply default
+                if (themeCount > 0)
                 {
+                    if (!string.IsNullOrEmpty(savedThemeName) && _themeManager.ThemeExists(savedThemeName))
+                    {
+                        _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", 
+                            $"Applying saved theme: {savedThemeName}");
+                        _themeManager.ApplyTheme(savedThemeName);
+                    }
+                    else
+                    {
+                        // Find a theme marked as default, or use the first one
+                        var defaultTheme = _themeManager.Themes.Values.FirstOrDefault(t => 
+                            t.GetResource("IsDefault") != null && (bool)t.GetResource("IsDefault"));
+                            
+                        if (defaultTheme != null)
+                        {
+                            _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", 
+                                $"Applying theme marked as default: {defaultTheme.Name}");
+                            _themeManager.ApplyTheme(defaultTheme);
+                        }
+                        else
+                        {
+                            // Apply first theme
+                            var firstTheme = _themeManager.Themes.Values.First();
+                            _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", 
+                                $"Applying first theme: {firstTheme.Name}");
+                            _themeManager.ApplyTheme(firstTheme);
+                        }
+                    }
+                }
+                else
+                {
+                    // No themes found, apply default
                     _logger?.Log(LogLevel.Warning, "EFBApplication:InitializeAsync", 
                         "No themes found, applying default theme");
                     _themeManager.ApplyDefaultTheme();
