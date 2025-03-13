@@ -245,7 +245,7 @@ namespace Prosim2GSX.UI.EFB.Themes
             {
                 foreach (var resource in themeJson.Resources)
                 {
-                    theme.SetResource(resource.Key, resource.Value);
+                    theme.SetResource(resource.Key, ConvertResourceValue(resource.Key, resource.Value));
                 }
             }
             
@@ -255,6 +255,123 @@ namespace Prosim2GSX.UI.EFB.Themes
             return theme;
         }
 
+        /// <summary>
+        /// Converts a resource value to the appropriate type based on the resource key.
+        /// </summary>
+        /// <param name="key">The resource key.</param>
+        /// <param name="value">The resource value.</param>
+        /// <returns>The converted value.</returns>
+        private object ConvertResourceValue(string key, object value)
+        {
+            // If the value is null, return null
+            if (value == null)
+            {
+                return null;
+            }
+            
+            try
+            {
+                // Convert string values to the appropriate types based on the key
+                if (value is string stringValue)
+                {
+                    // Convert font sizes to doubles
+                    if (key.EndsWith("FontSize", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (double.TryParse(stringValue, out double fontSize))
+                        {
+                            return fontSize;
+                        }
+                        else
+                        {
+                            _logger?.Log(LogLevel.Warning, "EFBThemeManager:ConvertResourceValue", 
+                                $"Failed to parse font size value '{stringValue}' for key '{key}'");
+                            return 12.0; // Default font size
+                        }
+                    }
+                    
+                    // Convert corner radii to doubles
+                    if (key.EndsWith("CornerRadius", StringComparison.OrdinalIgnoreCase) ||
+                        key.EndsWith("Radius", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (double.TryParse(stringValue, out double radius))
+                        {
+                            return radius;
+                        }
+                        else
+                        {
+                            _logger?.Log(LogLevel.Warning, "EFBThemeManager:ConvertResourceValue", 
+                                $"Failed to parse radius value '{stringValue}' for key '{key}'");
+                            return 0.0; // Default radius
+                        }
+                    }
+                    
+                    // Convert thickness values to doubles
+                    if (key.EndsWith("Thickness", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (double.TryParse(stringValue, out double thickness))
+                        {
+                            return thickness;
+                        }
+                        else
+                        {
+                            _logger?.Log(LogLevel.Warning, "EFBThemeManager:ConvertResourceValue", 
+                                $"Failed to parse thickness value '{stringValue}' for key '{key}'");
+                            return 1.0; // Default thickness
+                        }
+                    }
+                    
+                    // Convert margin and padding values to doubles
+                    if (key.EndsWith("Margin", StringComparison.OrdinalIgnoreCase) ||
+                        key.EndsWith("Padding", StringComparison.OrdinalIgnoreCase) ||
+                        key.EndsWith("Spacing", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (double.TryParse(stringValue, out double spacing))
+                        {
+                            return spacing;
+                        }
+                        else
+                        {
+                            _logger?.Log(LogLevel.Warning, "EFBThemeManager:ConvertResourceValue", 
+                                $"Failed to parse spacing value '{stringValue}' for key '{key}'");
+                            return 8.0; // Default spacing
+                        }
+                    }
+                    
+                    // Convert height and width values to doubles
+                    if (key.EndsWith("Height", StringComparison.OrdinalIgnoreCase) ||
+                        key.EndsWith("Width", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (double.TryParse(stringValue, out double size))
+                        {
+                            return size;
+                        }
+                        else
+                        {
+                            _logger?.Log(LogLevel.Warning, "EFBThemeManager:ConvertResourceValue", 
+                                $"Failed to parse size value '{stringValue}' for key '{key}'");
+                            return 0.0; // Default size
+                        }
+                    }
+                    
+                    // Convert boolean values
+                    if (stringValue.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                        stringValue.Equals("false", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return bool.Parse(stringValue);
+                    }
+                }
+                
+                // Return the original value if no conversion was applied
+                return value;
+            }
+            catch (Exception ex)
+            {
+                _logger?.Log(LogLevel.Error, "EFBThemeManager:ConvertResourceValue", ex,
+                    $"Error converting resource value '{value}' for key '{key}'");
+                return value; // Return the original value on error
+            }
+        }
+        
         /// <summary>
         /// Applies the default theme.
         /// </summary>

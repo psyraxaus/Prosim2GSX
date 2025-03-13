@@ -52,7 +52,7 @@ namespace Prosim2GSX.UI.EFB.Windows
         /// </summary>
         public EFBWindow()
         {
-            InitializeComponent();
+             InitializeComponent();
 
             // Initialize the navigation service
             _navigationService = new EFBNavigationService(PageContent);

@@ -81,7 +81,7 @@
                        VerticalAlignment="Center"/>
                 <TextBlock Text="Electronic Flight Bag" 
                            FontSize="{DynamicResource HeaderFontSize}" 
-                           FontFamily="{DynamicResource HeaderFont}" 
+                           FontFamily="{DynamicResource HeaderFontFamily}" 
                            VerticalAlignment="Center"/>
             </StackPanel>
             

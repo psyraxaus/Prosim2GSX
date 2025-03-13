@@ -33,7 +33,8 @@
   "fonts": {
     "PrimaryFontFamily": "Segoe UI",
     "SecondaryFontFamily": "Segoe UI",
-    "HeaderFontFamily": "Segoe UI Semibold",
+    "HeaderFontFamily": "Segoe UI",
+    "HeaderFontWeight": "SemiBold",
     "MonospaceFontFamily": "Consolas"
   },
   "resources": {
