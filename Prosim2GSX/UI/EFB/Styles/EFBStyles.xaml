@@ -33,6 +33,7 @@
     <SolidColorBrush x:Key="EFBWarningBrush" Color="{DynamicResource EFBWarningColor}" />
     <SolidColorBrush x:Key="EFBErrorBrush" Color="{DynamicResource EFBErrorColor}" />
     <SolidColorBrush x:Key="EFBInfoBrush" Color="{DynamicResource EFBInfoColor}" />
+    <SolidColorBrush x:Key="TabSelectedColor" Color="{DynamicResource EFBPrimaryColor}" />
     
     <!-- Gradients -->
     <LinearGradientBrush x:Key="EFBHeaderGradient" StartPoint="0,0" EndPoint="0,1">
