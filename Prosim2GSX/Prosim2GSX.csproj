@@ -74,4 +74,10 @@
     <PackageReference Update="chromiumembeddedframework.runtime.win-x86" Version="120.1.110" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="UI\EFB\Assets\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
