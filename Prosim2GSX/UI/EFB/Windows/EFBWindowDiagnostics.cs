@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using Prosim2GSX.Services;
+using Prosim2GSX.UI.EFB.Resources;
 
 namespace Prosim2GSX.UI.EFB.Windows
 {
@@ -12,6 +13,7 @@ namespace Prosim2GSX.UI.EFB.Windows
     public static class EFBWindowDiagnostics
     {
         private static ILogger _logger;
+        private static EFBResourceManager _resourceManager;
 
         /// <summary>
         /// Initializes the diagnostics with a logger.
@@ -21,6 +23,16 @@ namespace Prosim2GSX.UI.EFB.Windows
         {
             _logger = logger;
             _logger?.Log(LogLevel.Debug, "EFBWindowDiagnostics", "Diagnostics initialized");
+        }
+        
+        /// <summary>
+        /// Sets the resource manager to use for diagnostics.
+        /// </summary>
+        /// <param name="resourceManager">The resource manager to use.</param>
+        public static void SetResourceManager(EFBResourceManager resourceManager)
+        {
+            _resourceManager = resourceManager;
+            _logger?.Log(LogLevel.Debug, "EFBWindowDiagnostics", "Resource manager set");
         }
 
         /// <summary>
@@ -42,11 +54,19 @@ namespace Prosim2GSX.UI.EFB.Windows
                 // Add loaded event handler
                 window.Loaded += (sender, e) => Window_Loaded(window, e);
 
-                // Add resource checking
-                CheckCriticalResources();
-
-                // Add default resources
-                AddDefaultResources();
+                // Add resource checking and fallbacks
+                if (_resourceManager != null)
+                {
+                    _resourceManager.EnsureCriticalResources();
+                    _resourceManager.ApplyFallbackResources(window);
+                    _logger?.Log(LogLevel.Debug, "EFBWindowDiagnostics", "Applied resource manager fallbacks");
+                }
+                else
+                {
+                    // Fallback to old method if resource manager is not available
+                    CheckCriticalResources();
+                    AddDefaultResources();
+                }
             }
             catch (Exception ex)
             {

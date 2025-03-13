@@ -10,8 +10,8 @@
         Width="1024" 
         MinHeight="600" 
         MinWidth="800"
-        Background="{DynamicResource BackgroundColor}"
-        Foreground="{DynamicResource ForegroundColor}"
+        Background="{StaticResource BackgroundColor}"
+        Foreground="{StaticResource ForegroundColor}"
         WindowStartupLocation="CenterScreen"
         Loaded="Window_Loaded"
         Closing="Window_Closing">
@@ -23,7 +23,7 @@
             <Setter Property="Height" Value="30"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="{DynamicResource ForegroundColor}"/>
+            <Setter Property="Foreground" Value="{StaticResource ForegroundColor}"/>
             <Setter Property="FontFamily" Value="Segoe MDL2 Assets, Arial, sans-serif"/>
             <Setter Property="FontSize" Value="10"/>
             <Setter Property="Padding" Value="0"/>

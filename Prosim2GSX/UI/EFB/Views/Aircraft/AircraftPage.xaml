@@ -43,8 +43,8 @@
         <!-- Header -->
         <Border Grid.Row="0" 
                 Style="{StaticResource HeaderBorderStyle}"
-                Background="{DynamicResource EFBPrimaryBackgroundBrush}" 
-                BorderBrush="{DynamicResource EFBPrimaryBorderBrush}">
+                Background="{StaticResource EFBPrimaryBackgroundBrush}" 
+                BorderBrush="{StaticResource EFBPrimaryBorderBrush}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -56,7 +56,7 @@
                            FontSize="20" 
                            FontWeight="Bold"
                            Style="{StaticResource PrimaryTextStyle}"
-                           Foreground="{DynamicResource EFBPrimaryTextBrush}"
+                           Foreground="{StaticResource EFBPrimaryTextBrush}"
                            VerticalAlignment="Center"/>
                 
                 <TextBlock Grid.Column="1" 
@@ -64,7 +64,7 @@
                            FontSize="16" 
                            FontWeight="Bold"
                            Style="{StaticResource PrimaryTextStyle}"
-                           Foreground="{DynamicResource EFBPrimaryTextBrush}"
+                           Foreground="{StaticResource EFBPrimaryTextBrush}"
                            VerticalAlignment="Center"/>
             </Grid>
         </Border>
@@ -78,8 +78,8 @@
         <Border Grid.Row="2" 
                 Style="{StaticResource HeaderBorderStyle}"
                 BorderThickness="0,1,0,0"
-                Background="{DynamicResource EFBPrimaryBackgroundBrush}" 
-                BorderBrush="{DynamicResource EFBPrimaryBorderBrush}">
+                Background="{StaticResource EFBPrimaryBackgroundBrush}" 
+                BorderBrush="{StaticResource EFBPrimaryBorderBrush}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -90,7 +90,7 @@
                 <TextBlock Grid.Column="0" 
                            Text="{Binding StatusMessage}" 
                            Style="{StaticResource PrimaryTextStyle}"
-                           Foreground="{DynamicResource EFBPrimaryTextBrush}"
+                           Foreground="{StaticResource EFBPrimaryTextBrush}"
                            VerticalAlignment="Center"/>
                 
                 <controls:StatusIndicator Grid.Column="1" 
@@ -102,7 +102,7 @@
                 <TextBlock Grid.Column="2" 
                            Text="{Binding ConnectionStatusText}" 
                            Style="{StaticResource PrimaryTextStyle}"
-                           Foreground="{DynamicResource EFBPrimaryTextBrush}"
+                           Foreground="{StaticResource EFBPrimaryTextBrush}"
                            VerticalAlignment="Center"/>
             </Grid>
         </Border>
@@ -113,14 +113,14 @@
                 VerticalAlignment="Top"
                 Style="{StaticResource PanelBorderStyle}"
                 Margin="0,10,10,0"
-                Background="{DynamicResource EFBSecondaryBackgroundBrush}" 
-                BorderBrush="{DynamicResource EFBPrimaryBorderBrush}">
+                Background="{StaticResource EFBSecondaryBackgroundBrush}" 
+                BorderBrush="{StaticResource EFBPrimaryBorderBrush}">
             <StackPanel>
                 <TextBlock Text="Services" 
                            FontSize="16" 
                            FontWeight="Bold"
                            Style="{StaticResource PrimaryTextStyle}"
-                           Foreground="{DynamicResource EFBPrimaryTextBrush}"
+                           Foreground="{StaticResource EFBPrimaryTextBrush}"
                            Margin="0,0,0,10"/>
                 
                 <Button Content="Request Refueling" 
@@ -203,14 +203,14 @@
                 VerticalAlignment="Top"
                 Style="{StaticResource PanelBorderStyle}"
                 Margin="10,10,0,0"
-                Background="{DynamicResource EFBSecondaryBackgroundBrush}" 
-                BorderBrush="{DynamicResource EFBPrimaryBorderBrush}">
+                Background="{StaticResource EFBSecondaryBackgroundBrush}" 
+                BorderBrush="{StaticResource EFBPrimaryBorderBrush}">
             <StackPanel Width="200">
                 <TextBlock Text="Service Progress" 
                            FontSize="16" 
                            FontWeight="Bold"
                            Style="{StaticResource PrimaryTextStyle}"
-                           Foreground="{DynamicResource EFBPrimaryTextBrush}"
+                           Foreground="{StaticResource EFBPrimaryTextBrush}"
                            Margin="0,0,0,10"/>
                 
                 <Grid Margin="0,5" Visibility="{Binding RefuelingInProgress, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -222,7 +222,7 @@
                     <TextBlock Grid.Row="0" 
                                Text="Refueling" 
                                Style="{StaticResource PrimaryTextStyle}"
-                               Foreground="{DynamicResource EFBPrimaryTextBrush}"/>
+                               Foreground="{StaticResource EFBPrimaryTextBrush}"/>
                     
                     <controls:LinearProgressIndicator Grid.Row="1" 
                                                     Height="20"
@@ -238,7 +238,7 @@
                     <TextBlock Grid.Row="0" 
                                Text="Boarding" 
                                Style="{StaticResource PrimaryTextStyle}"
-                               Foreground="{DynamicResource EFBPrimaryTextBrush}"/>
+                               Foreground="{StaticResource EFBPrimaryTextBrush}"/>
                     
                     <controls:LinearProgressIndicator Grid.Row="1" 
                                                     Height="20"
@@ -254,7 +254,7 @@
                     <TextBlock Grid.Row="0" 
                                Text="Deboarding" 
                                Style="{StaticResource PrimaryTextStyle}"
-                               Foreground="{DynamicResource EFBPrimaryTextBrush}"/>
+                               Foreground="{StaticResource EFBPrimaryTextBrush}"/>
                     
                     <controls:LinearProgressIndicator Grid.Row="1" 
                                                     Height="20"
@@ -270,7 +270,7 @@
                     <TextBlock Grid.Row="0" 
                                Text="Cargo Loading" 
                                Style="{StaticResource PrimaryTextStyle}"
-                               Foreground="{DynamicResource EFBPrimaryTextBrush}"/>
+                               Foreground="{StaticResource EFBPrimaryTextBrush}"/>
                     
                     <controls:LinearProgressIndicator Grid.Row="1" 
                                                     Height="20"
@@ -286,7 +286,7 @@
                     <TextBlock Grid.Row="0" 
                                Text="Cargo Unloading" 
                                Style="{StaticResource PrimaryTextStyle}"
-                               Foreground="{DynamicResource EFBPrimaryTextBrush}"/>
+                               Foreground="{StaticResource EFBPrimaryTextBrush}"/>
                     
                     <controls:LinearProgressIndicator Grid.Row="1" 
                                                     Height="20"
@@ -295,7 +295,7 @@
                 
                 <TextBlock Text="No services in progress" 
                            Style="{StaticResource SecondaryTextStyle}"
-                           Foreground="{DynamicResource EFBSecondaryTextBrush}"
+                           Foreground="{StaticResource EFBSecondaryTextBrush}"
                            TextAlignment="Center"
                            Margin="0,10"
                            Visibility="{Binding AnyServiceInProgress, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>

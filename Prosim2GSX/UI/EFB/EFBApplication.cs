@@ -9,6 +9,7 @@ using System.Windows.Media;
 using Microsoft.Extensions.DependencyInjection;
 using Prosim2GSX.UI.EFB.Navigation;
 using Prosim2GSX.Models;
+using Prosim2GSX.UI.EFB.Resources;
 using Prosim2GSX.UI.EFB.Themes;
 using Prosim2GSX.UI.EFB.ViewModels;
 using Prosim2GSX.UI.EFB.Windows;
@@ -46,6 +47,7 @@ namespace Prosim2GSX.UI.EFB
         private EFBThemeManager _themeManager;
         private EFBWindowManager _windowManager;
         private EFBDataBindingService _dataBindingService;
+        private EFBResourceManager _resourceManager;
         private EFBWindow _mainWindow;
         private bool _isInitialized;
         private EFBInitializationState _initializationState = EFBInitializationState.NotStarted;
@@ -93,6 +95,11 @@ namespace Prosim2GSX.UI.EFB
         public EFBWindow MainWindow => _mainWindow;
 
         /// <summary>
+        /// Gets the resource manager.
+        /// </summary>
+        public EFBResourceManager ResourceManager => _resourceManager;
+
+        /// <summary>
         /// Preloads critical resources to ensure they're available when needed.
         /// </summary>
         private void PreloadCriticalResources()
@@ -100,70 +107,17 @@ namespace Prosim2GSX.UI.EFB
             _logger?.Log(LogLevel.Debug, "EFBApplication:PreloadCriticalResources", 
                 "Preloading critical resources");
             
-            var criticalResources = new[] {
-                "EFBPrimaryBackgroundBrush",
-                "EFBSecondaryBackgroundBrush",
-                "EFBPrimaryTextBrush",
-                "EFBSecondaryTextBrush",
-                "EFBHighlightBrush",
-                "EFBPrimaryBorderBrush",
-                "EFBAccentBrush"
-            };
+            // Initialize the resource manager if it hasn't been initialized yet
+            if (_resourceManager == null)
+            {
+                _resourceManager = new EFBResourceManager(_logger);
+            }
             
-            foreach (var resource in criticalResources)
-            {
-                try
-                {
-                    if (Application.Current.Resources[resource] == null)
-                    {
-                        _logger?.Log(LogLevel.Warning, "EFBApplication:PreloadCriticalResources", 
-                            $"Resource '{resource}' not found, adding default fallback");
-                        
-                        // Add default fallback
-                        Application.Current.Resources[resource] = GetDefaultResource(resource);
-                    }
-                    else
-                    {
-                        _logger?.Log(LogLevel.Debug, "EFBApplication:PreloadCriticalResources", 
-                            $"Resource '{resource}' found");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger?.Log(LogLevel.Error, "EFBApplication:PreloadCriticalResources", ex,
-                        $"Error checking resource '{resource}'");
-                }
-            }
-        }
-
-        /// <summary>
-        /// Gets a default resource value for a given resource key.
-        /// </summary>
-        /// <param name="resourceKey">The resource key.</param>
-        /// <returns>The default resource value.</returns>
-        private object GetDefaultResource(string resourceKey)
-        {
-            switch (resourceKey)
-            {
-                case "EFBPrimaryBackgroundBrush":
-                    return new SolidColorBrush(Color.FromRgb(60, 60, 60));
-                case "EFBSecondaryBackgroundBrush":
-                    return new SolidColorBrush(Color.FromRgb(30, 30, 30));
-                case "EFBPrimaryTextBrush":
-                    return new SolidColorBrush(Colors.White);
-                case "EFBSecondaryTextBrush":
-                    return new SolidColorBrush(Color.FromRgb(204, 204, 204));
-                case "EFBHighlightBrush":
-                    return new SolidColorBrush(Color.FromRgb(51, 153, 255)) { Opacity = 0.3 };
-                case "EFBPrimaryBorderBrush":
-                    return new SolidColorBrush(Color.FromRgb(69, 69, 69));
-                case "EFBAccentBrush":
-                    return new SolidColorBrush(Color.FromRgb(255, 153, 0));
-                default:
-                    _logger?.Log(LogLevel.Warning, "EFBApplication:GetDefaultResource", 
-                        $"No default value defined for resource '{resourceKey}'");
-                    return null;
-            }
+            // Ensure all critical resources are available
+            _resourceManager.EnsureCriticalResources();
+            
+            // Log the status of all resources
+            _resourceManager.LogResourceStatus();
         }
 
         /// <summary>
@@ -210,12 +164,14 @@ namespace Prosim2GSX.UI.EFB
                 _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", 
                     $"Themes loaded in {themeLoadSw.ElapsedMilliseconds}ms");
                 
-                // Preload critical resources
+                // Initialize and preload critical resources
                 var preloadSw = Stopwatch.StartNew();
+                _resourceManager = new EFBResourceManager(_logger);
+                _resourceManager.Initialize();
                 PreloadCriticalResources();
                 preloadSw.Stop();
                 _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", 
-                    $"Critical resources preloaded in {preloadSw.ElapsedMilliseconds}ms");
+                    $"Resource manager initialized and critical resources preloaded in {preloadSw.ElapsedMilliseconds}ms");
                 
                 // Check if themes were loaded
                 int themeCount = _themeManager.Themes?.Count ?? 0;
@@ -294,6 +250,9 @@ namespace Prosim2GSX.UI.EFB
                 serviceLocatorSw.Stop();
                 _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", 
                     $"Service locator initialized in {serviceLocatorSw.ElapsedMilliseconds}ms");
+                
+                // Resource manager is already initialized at this point
+                _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", "Resource manager is ready for use");
 
                 // Register pages with the window manager
                 var pageRegSw = Stopwatch.StartNew();
@@ -346,6 +305,14 @@ namespace Prosim2GSX.UI.EFB
                 // Initialize window diagnostics
                 _logger?.Log(LogLevel.Debug, "EFBApplication:Start", "Initializing window diagnostics");
                 EFBWindowDiagnostics.Initialize(_logger);
+                
+                // Apply resource manager to diagnostics
+                if (_resourceManager != null)
+                {
+                    _logger?.Log(LogLevel.Debug, "EFBApplication:Start", "Applying resource manager to diagnostics");
+                    EFBWindowDiagnostics.SetResourceManager(_resourceManager);
+                    _resourceManager.EnsureCriticalResources();
+                }
                 
                 // Create the main window
                 _logger?.Log(LogLevel.Debug, "EFBApplication:Start", "Creating main window");
@@ -429,6 +396,13 @@ namespace Prosim2GSX.UI.EFB
                 
                 // Register services from the service model
                 services.AddSingleton(_serviceModel);
+                
+                // Register the resource manager if available
+                if (_resourceManager != null)
+                {
+                    _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeServiceLocator", "Registering resource manager");
+                    services.AddSingleton(_resourceManager);
+                }
                 
                 // Get services from the service model
                 var doorService = _serviceModel.GetService<IProsimDoorService>();
