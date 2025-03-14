@@ -177,7 +177,7 @@ namespace Prosim2GSX.UI.EFB.Themes
                 foreach (var color in coreColors)
                 {
                     // Validate color format
-                    if (!ThemeColorConverter.IsValidColor(theme.Colors[color]))
+                    if (!ColorUtilities.IsValidColor(theme.Colors[color]))
                     {
                         _logger?.Log(LogLevel.Warning, "EFBThemeManager:ValidateTheme", 
                             $"Theme validation failed: Color {color} has invalid format: {theme.Colors[color]}");
@@ -208,7 +208,7 @@ namespace Prosim2GSX.UI.EFB.Themes
                 }
                 
                 // Validate color format
-                if (!ThemeColorConverter.IsValidColor(theme.Colors[color]))
+                if (!ColorUtilities.IsValidColor(theme.Colors[color]))
                 {
                     _logger?.Log(LogLevel.Warning, "EFBThemeManager:ValidateTheme", 
                         $"Theme validation failed: Color {color} has invalid format: {theme.Colors[color]}");
@@ -299,13 +299,13 @@ namespace Prosim2GSX.UI.EFB.Themes
                 }
                 
                 // Convert the color value to a resource and add it to the theme
-                theme.SetResource(resourceKey, ThemeColorConverter.ConvertToResource(resourceKey, color.Value));
+                theme.SetResource(resourceKey, ResourceConverter.ConvertToResource(resourceKey, color.Value));
                 
                 // Also add brush resources for each color
                 if (resourceKey.EndsWith("Color"))
                 {
                     string brushKey = resourceKey.Replace("Color", "Brush");
-                    theme.SetResource(brushKey, ThemeColorConverter.ConvertToResource(brushKey, color.Value));
+                    theme.SetResource(brushKey, ResourceConverter.ConvertToResource(brushKey, color.Value));
                 }
             }
             
@@ -317,7 +317,7 @@ namespace Prosim2GSX.UI.EFB.Themes
                     if (font.Key.EndsWith("FontFamily", StringComparison.OrdinalIgnoreCase))
                     {
                         // Convert font family strings to FontFamily objects with fallbacks
-                        theme.SetResource(font.Key, ThemeColorConverter.ConvertToFontFamily(font.Value));
+                        theme.SetResource(font.Key, FontUtilities.ConvertToFontFamily(font.Value));
                     }
                     else
                     {
@@ -351,11 +351,11 @@ namespace Prosim2GSX.UI.EFB.Themes
             try
             {
                 // Get base colors
-                var primaryColor = ThemeColorConverter.ConvertToColor(colors["PrimaryColor"]);
-                var secondaryColor = ThemeColorConverter.ConvertToColor(colors["SecondaryColor"]);
-                var accentColor = ThemeColorConverter.ConvertToColor(colors["AccentColor"]);
-                var backgroundColor = ThemeColorConverter.ConvertToColor(colors["BackgroundColor"]);
-                var textColor = ThemeColorConverter.ConvertToColor(colors["TextColor"]);
+                var primaryColor = ColorUtilities.ConvertToColor(colors["PrimaryColor"]);
+                var secondaryColor = ColorUtilities.ConvertToColor(colors["SecondaryColor"]);
+                var accentColor = ColorUtilities.ConvertToColor(colors["AccentColor"]);
+                var backgroundColor = ColorUtilities.ConvertToColor(colors["BackgroundColor"]);
+                var textColor = ColorUtilities.ConvertToColor(colors["TextColor"]);
                 
                 // Derive UI element colors if not explicitly defined
                 SetIfMissing(colors, "ForegroundColor", textColor);
@@ -368,12 +368,12 @@ namespace Prosim2GSX.UI.EFB.Themes
                 // Button colors
                 SetIfMissing(colors, "ButtonBackgroundColor", secondaryColor);
                 SetIfMissing(colors, "ButtonForegroundColor", textColor);
-                SetIfMissing(colors, "ButtonHoverBackgroundColor", ThemeColorConverter.LightenColor(secondaryColor, 0.15));
+                SetIfMissing(colors, "ButtonHoverBackgroundColor", ColorUtilities.LightenColor(secondaryColor, 0.15));
                 SetIfMissing(colors, "ButtonPressedBackgroundColor", accentColor);
-                SetIfMissing(colors, "ButtonPressedForegroundColor", ThemeColorConverter.GetContrastColor(accentColor));
+                SetIfMissing(colors, "ButtonPressedForegroundColor", AccessibilityHelper.GetContrastColor(accentColor));
                 
                 // Input colors
-                SetIfMissing(colors, "InputBackgroundColor", ThemeColorConverter.DarkenColor(backgroundColor, 0.1));
+                SetIfMissing(colors, "InputBackgroundColor", ColorUtilities.DarkenColor(backgroundColor, 0.1));
                 SetIfMissing(colors, "InputForegroundColor", textColor);
                 SetIfMissing(colors, "InputBorderColor", secondaryColor);
                 SetIfMissing(colors, "InputFocusBorderColor", accentColor);
@@ -383,9 +383,9 @@ namespace Prosim2GSX.UI.EFB.Themes
                 
                 // Text colors
                 SetIfMissing(colors, "EFBTextPrimaryColor", textColor);
-                SetIfMissing(colors, "EFBTextSecondaryColor", ColorToHex(ThemeColorConverter.SetOpacity(textColor, 0.7)));
+                SetIfMissing(colors, "EFBTextSecondaryColor", ColorToHex(ColorUtilities.SetOpacity(textColor, 0.7)));
                 SetIfMissing(colors, "EFBTextAccentColor", accentColor);
-                SetIfMissing(colors, "EFBTextContrastColor", ThemeColorConverter.GetContrastColor(accentColor));
+                SetIfMissing(colors, "EFBTextContrastColor", AccessibilityHelper.GetContrastColor(accentColor));
                 
                 // Status colors (defaults if not specified)
                 SetIfMissing(colors, "SuccessColor", "#33CC33");

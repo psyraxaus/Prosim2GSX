@@ -10,7 +10,14 @@ namespace Prosim2GSX.UI.EFB.Themes
     /// <summary>
     /// Provides utilities for converting color strings and other theme values to WPF resources.
     /// Also includes methods for color manipulation and contrast calculation.
+    /// 
+    /// This class is maintained for backward compatibility. For new code, use the specialized utility classes:
+    /// - ResourceConverter: For converting resource strings to WPF resources
+    /// - ColorUtilities: For color-specific operations
+    /// - AccessibilityHelper: For accessibility-related calculations
+    /// - FontUtilities: For font-related operations
     /// </summary>
+    [Obsolete("This class is maintained for backward compatibility. Use the specialized utility classes instead: ResourceConverter, ColorUtilities, AccessibilityHelper, and FontUtilities.")]
     public static class ThemeColorConverter
     {
         /// <summary>
@@ -19,6 +26,7 @@ namespace Prosim2GSX.UI.EFB.Themes
         /// <param name="key">The resource key.</param>
         /// <param name="resourceString">The resource string.</param>
         /// <returns>The WPF resource.</returns>
+        [Obsolete("Use ResourceConverter.ConvertToResource() instead.")]
         public static object ConvertToResource(string key, string resourceString)
         {
             return ResourceConverter.ConvertToResource(key, resourceString);
@@ -29,6 +37,7 @@ namespace Prosim2GSX.UI.EFB.Themes
         /// </summary>
         /// <param name="colorString">The color string.</param>
         /// <returns>The Color object.</returns>
+        [Obsolete("Use ColorUtilities.ConvertToColor() instead.")]
         public static Color ConvertToColor(string colorString)
         {
             return ColorUtilities.ConvertToColor(colorString);
@@ -39,6 +48,7 @@ namespace Prosim2GSX.UI.EFB.Themes
         /// </summary>
         /// <param name="colorString">The color string to check.</param>
         /// <returns>True if the color is valid, false otherwise.</returns>
+        [Obsolete("Use ColorUtilities.IsValidColor() instead.")]
         public static bool IsValidColor(string colorString)
         {
             return ColorUtilities.IsValidColor(colorString);
@@ -49,6 +59,7 @@ namespace Prosim2GSX.UI.EFB.Themes
         /// </summary>
         /// <param name="fontWeightString">The font weight string.</param>
         /// <returns>The FontWeight object.</returns>
+        [Obsolete("Use ResourceConverter.ConvertToFontWeight() instead.")]
         public static FontWeight ConvertToFontWeight(string fontWeightString)
         {
             return ResourceConverter.ConvertToFontWeight(fontWeightString);
@@ -59,6 +70,7 @@ namespace Prosim2GSX.UI.EFB.Themes
         /// </summary>
         /// <param name="fontFamilyString">The font family string.</param>
         /// <returns>A FontFamily object with appropriate fallbacks.</returns>
+        [Obsolete("Use FontUtilities.ConvertToFontFamily() instead.")]
         public static FontFamily ConvertToFontFamily(string fontFamilyString)
         {
             return FontUtilities.ConvertToFontFamily(fontFamilyString);
@@ -69,6 +81,7 @@ namespace Prosim2GSX.UI.EFB.Themes
         /// </summary>
         /// <param name="cornerRadiusString">The corner radius string.</param>
         /// <returns>The CornerRadius object.</returns>
+        [Obsolete("Use ResourceConverter.ConvertToCornerRadius() instead.")]
         public static CornerRadius ConvertToCornerRadius(string cornerRadiusString)
         {
             return ResourceConverter.ConvertToCornerRadius(cornerRadiusString);
@@ -79,6 +92,7 @@ namespace Prosim2GSX.UI.EFB.Themes
         /// </summary>
         /// <param name="thicknessString">The thickness string.</param>
         /// <returns>The Thickness object.</returns>
+        [Obsolete("Use ResourceConverter.ConvertToThickness() instead.")]
         public static Thickness ConvertToThickness(string thicknessString)
         {
             return ResourceConverter.ConvertToThickness(thicknessString);
@@ -89,6 +103,7 @@ namespace Prosim2GSX.UI.EFB.Themes
         /// </summary>
         /// <param name="fontStyleString">The font style string.</param>
         /// <returns>The FontStyle object.</returns>
+        [Obsolete("Use ResourceConverter.ConvertToFontStyle() instead.")]
         public static FontStyle ConvertToFontStyle(string fontStyleString)
         {
             return ResourceConverter.ConvertToFontStyle(fontStyleString);
@@ -99,6 +114,7 @@ namespace Prosim2GSX.UI.EFB.Themes
         /// </summary>
         /// <param name="fontStretchString">The font stretch string.</param>
         /// <returns>The FontStretch object.</returns>
+        [Obsolete("Use ResourceConverter.ConvertToFontStretch() instead.")]
         public static FontStretch ConvertToFontStretch(string fontStretchString)
         {
             return ResourceConverter.ConvertToFontStretch(fontStretchString);
@@ -109,6 +125,7 @@ namespace Prosim2GSX.UI.EFB.Themes
         /// </summary>
         /// <param name="textAlignmentString">The text alignment string.</param>
         /// <returns>The TextAlignment value.</returns>
+        [Obsolete("Use ResourceConverter.ConvertToTextAlignment() instead.")]
         public static TextAlignment ConvertToTextAlignment(string textAlignmentString)
         {
             return ResourceConverter.ConvertToTextAlignment(textAlignmentString);
@@ -119,6 +136,7 @@ namespace Prosim2GSX.UI.EFB.Themes
         /// </summary>
         /// <param name="horizontalAlignmentString">The horizontal alignment string.</param>
         /// <returns>The HorizontalAlignment value.</returns>
+        [Obsolete("Use ResourceConverter.ConvertToHorizontalAlignment() instead.")]
         public static HorizontalAlignment ConvertToHorizontalAlignment(string horizontalAlignmentString)
         {
             return ResourceConverter.ConvertToHorizontalAlignment(horizontalAlignmentString);
@@ -129,6 +147,7 @@ namespace Prosim2GSX.UI.EFB.Themes
         /// </summary>
         /// <param name="verticalAlignmentString">The vertical alignment string.</param>
         /// <returns>The VerticalAlignment value.</returns>
+        [Obsolete("Use ResourceConverter.ConvertToVerticalAlignment() instead.")]
         public static VerticalAlignment ConvertToVerticalAlignment(string verticalAlignmentString)
         {
             return ResourceConverter.ConvertToVerticalAlignment(verticalAlignmentString);
@@ -139,6 +158,7 @@ namespace Prosim2GSX.UI.EFB.Themes
         /// </summary>
         /// <param name="visibilityString">The visibility string.</param>
         /// <returns>The Visibility value.</returns>
+        [Obsolete("Use ResourceConverter.ConvertToVisibility() instead.")]
         public static Visibility ConvertToVisibility(string visibilityString)
         {
             return ResourceConverter.ConvertToVisibility(visibilityString);
@@ -150,6 +170,7 @@ namespace Prosim2GSX.UI.EFB.Themes
         /// <param name="color">The color to lighten.</param>
         /// <param name="amount">The amount to lighten by (0-1).</param>
         /// <returns>The lightened color.</returns>
+        [Obsolete("Use ColorUtilities.LightenColor() instead.")]
         public static Color LightenColor(Color color, double amount)
         {
             return ColorUtilities.LightenColor(color, amount);
@@ -161,6 +182,7 @@ namespace Prosim2GSX.UI.EFB.Themes
         /// <param name="color">The color to darken.</param>
         /// <param name="amount">The amount to darken by (0-1).</param>
         /// <returns>The darkened color.</returns>
+        [Obsolete("Use ColorUtilities.DarkenColor() instead.")]
         public static Color DarkenColor(Color color, double amount)
         {
             return ColorUtilities.DarkenColor(color, amount);
@@ -172,6 +194,7 @@ namespace Prosim2GSX.UI.EFB.Themes
         /// <param name="color">The color to modify.</param>
         /// <param name="opacity">The opacity value (0-1).</param>
         /// <returns>The color with the specified opacity.</returns>
+        [Obsolete("Use ColorUtilities.SetOpacity() instead.")]
         public static Color SetOpacity(Color color, double opacity)
         {
             return ColorUtilities.SetOpacity(color, opacity);
@@ -182,6 +205,7 @@ namespace Prosim2GSX.UI.EFB.Themes
         /// </summary>
         /// <param name="color">The color to calculate luminance for.</param>
         /// <returns>The relative luminance value between 0 and 1.</returns>
+        [Obsolete("Use AccessibilityHelper.CalculateLuminance() instead.")]
         public static double CalculateLuminance(Color color)
         {
             return AccessibilityHelper.CalculateLuminance(color);
@@ -193,6 +217,7 @@ namespace Prosim2GSX.UI.EFB.Themes
         /// <param name="color1">The first color.</param>
         /// <param name="color2">The second color.</param>
         /// <returns>The contrast ratio between the two colors.</returns>
+        [Obsolete("Use AccessibilityHelper.CalculateContrast() instead.")]
         public static double CalculateContrast(Color color1, Color color2)
         {
             return AccessibilityHelper.CalculateContrast(color1, color2);
@@ -203,6 +228,7 @@ namespace Prosim2GSX.UI.EFB.Themes
         /// </summary>
         /// <param name="backgroundColor">The background color.</param>
         /// <returns>Black or white, depending on which provides better contrast.</returns>
+        [Obsolete("Use AccessibilityHelper.GetContrastColor() instead.")]
         public static Color GetContrastColor(Color backgroundColor)
         {
             return AccessibilityHelper.GetContrastColor(backgroundColor);
@@ -215,6 +241,7 @@ namespace Prosim2GSX.UI.EFB.Themes
         /// <param name="background">The background color.</param>
         /// <param name="minContrast">The minimum contrast ratio required.</param>
         /// <returns>The adjusted foreground color.</returns>
+        [Obsolete("Use AccessibilityHelper.EnsureContrast() instead.")]
         public static Color EnsureContrast(Color foreground, Color background, double minContrast = 4.5)
         {
             return AccessibilityHelper.EnsureContrast(foreground, background, minContrast);
