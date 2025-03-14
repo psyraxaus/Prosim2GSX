@@ -100,6 +100,8 @@ Themes are defined in JSON files with the following structure:
 
 ## Color Properties
 
+### Base Colors
+
 | Property | Description | Example |
 |----------|-------------|---------|
 | PrimaryColor | Main color of the airline | #003366 (Delta blue) |
@@ -108,19 +110,53 @@ Themes are defined in JSON files with the following structure:
 | BackgroundColor | Background color for the application | #FFFFFF (white) |
 | ForegroundColor | Text color | #333333 (dark gray) |
 | BorderColor | Color for borders | #D9D9D9 (light gray) |
-| HeaderColor | Color for headers | #003366 |
-| TabColor | Color for inactive tabs | #F2F2F2 (very light gray) |
-| TabSelectedColor | Color for selected tabs | #003366 |
-| ButtonColor | Base color for buttons | #003366 |
-| ButtonHoverColor | Color when hovering over buttons | #00264D (darker blue) |
-| ButtonPressedColor | Color when pressing buttons | #001A33 (even darker blue) |
-| TextBoxColor | Background color for text boxes | #FFFFFF |
-| TextBoxBorderColor | Border color for text boxes | #D9D9D9 |
-| TextBoxFocusedColor | Border color for focused text boxes | #003366 |
-| ErrorColor | Color for error messages | #E01A33 (red) |
-| WarningColor | Color for warning messages | #F7A800 (amber) |
 | SuccessColor | Color for success messages | #00A650 (green) |
+| WarningColor | Color for warning messages | #F7A800 (amber) |
+| ErrorColor | Color for error messages | #E01A33 (red) |
 | InfoColor | Color for informational messages | #0072CE (blue) |
+
+### UI Element Colors
+
+| Property | Description | Example |
+|----------|-------------|---------|
+| HeaderBackgroundColor | Background color for headers | #003366 |
+| HeaderForegroundColor | Text color for headers | #FFFFFF |
+| ButtonBackgroundColor | Base color for buttons | #003366 |
+| ButtonForegroundColor | Text color for buttons | #FFFFFF |
+| ButtonHoverBackgroundColor | Background color when hovering over buttons | #00264D |
+| ButtonPressedBackgroundColor | Background color when pressing buttons | #001A33 |
+| ButtonPressedForegroundColor | Text color when pressing buttons | #FFFFFF |
+| InputBackgroundColor | Background color for text boxes | #FFFFFF |
+| InputForegroundColor | Text color for text boxes | #333333 |
+| InputBorderColor | Border color for text boxes | #D9D9D9 |
+| InputFocusBorderColor | Border color for focused text boxes | #003366 |
+| TabSelectedColor | Color for selected tabs | #003366 |
+
+### Text-Specific Colors
+
+| Property | Description | Example |
+|----------|-------------|---------|
+| EFBTextPrimaryColor | Primary text color | #333333 |
+| EFBTextSecondaryColor | Secondary text color (for less important text) | #666666 |
+| EFBTextAccentColor | Accent text color (for highlighted text) | #003366 |
+| EFBTextContrastColor | Contrast text color (for text on accent backgrounds) | #FFFFFF |
+| EFBStatusSuccessTextColor | Text color for success messages | #00A650 |
+| EFBStatusWarningTextColor | Text color for warning messages | #F7A800 |
+| EFBStatusErrorTextColor | Text color for error messages | #E01A33 |
+| EFBStatusInfoTextColor | Text color for info messages | #0072CE |
+| EFBStatusInactiveTextColor | Text color for inactive elements | #999999 |
+
+### Legacy Properties (for backward compatibility)
+
+| Property | Maps to | Example |
+|----------|---------|---------|
+| HeaderColor | HeaderBackgroundColor | #003366 |
+| ButtonColor | ButtonBackgroundColor | #003366 |
+| ButtonHoverColor | ButtonHoverBackgroundColor | #00264D |
+| ButtonPressedColor | ButtonPressedBackgroundColor | #001A33 |
+| TextBoxColor | InputBackgroundColor | #FFFFFF |
+| TextBoxBorderColor | InputBorderColor | #D9D9D9 |
+| TextBoxFocusedColor | InputFocusBorderColor | #003366 |
 
 ## Font Properties
 
@@ -170,6 +206,61 @@ This approach ensures that if the primary font is not available on the user's sy
 - Ensure sufficient contrast between text and background colors
 - Consider color blindness and accessibility
 - Test your theme in different lighting conditions
+
+## Ensuring Proper Contrast
+
+Good contrast between text and background colors is essential for readability. The application includes automatic contrast checking, but it's best to design with contrast in mind from the start.
+
+### WCAG 2.0 Contrast Guidelines
+
+The Web Content Accessibility Guidelines (WCAG) 2.0 recommend the following minimum contrast ratios:
+
+- **4.5:1** for normal text (12pt or 16px and below)
+- **3:1** for large text (14pt/18.5px bold or 18pt/24px normal and above)
+- **3:1** for UI components and graphical objects
+
+### Contrast Checking
+
+The EFB theme system automatically checks and adjusts text colors to ensure they have sufficient contrast with their backgrounds. However, you should still verify contrast manually during testing.
+
+You can use online tools like the [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/) to verify your color combinations.
+
+### Tips for Better Contrast
+
+1. **For light backgrounds**: Use dark text colors (#000000 to #595959)
+2. **For dark backgrounds**: Use light text colors (#FFFFFF to #A6A6A6)
+3. **Avoid**: 
+   - Gray text on colored backgrounds
+   - Colored text on colored backgrounds (unless they have high contrast)
+   - Light text on light backgrounds
+   - Dark text on dark backgrounds
+
+### Text-Specific Color Properties
+
+The theme system includes several text-specific color properties that help ensure proper contrast:
+
+- `EFBTextPrimaryColor`: Main text color
+- `EFBTextSecondaryColor`: Secondary text (less emphasis)
+- `EFBTextAccentColor`: Accent text (more emphasis)
+- `EFBTextContrastColor`: Text on accent backgrounds
+
+Always set these properties explicitly in your theme to ensure proper text visibility.
+
+## High Contrast Themes
+
+The application includes high contrast themes for users who need better visibility:
+
+- **High Contrast Light**: A light theme with enhanced contrast
+- **High Contrast Dark**: A dark theme with enhanced contrast
+
+These themes use:
+
+- Larger font sizes
+- Bolder text
+- Higher contrast color combinations
+- Thicker borders
+
+You can use these themes as references when designing your own accessible themes.
 
 ## Troubleshooting
 

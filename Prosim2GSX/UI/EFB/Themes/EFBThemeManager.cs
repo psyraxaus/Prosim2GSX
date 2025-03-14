@@ -781,59 +781,115 @@ namespace Prosim2GSX.UI.EFB.Themes
         }
         
         /// <summary>
+        /// Defines a relationship between a foreground color and a background color.
+        /// </summary>
+        private class ColorRelationship
+        {
+            /// <summary>
+            /// Gets the background color key.
+            /// </summary>
+            public string BackgroundKey { get; }
+            
+            /// <summary>
+            /// Gets the minimum contrast ratio required.
+            /// </summary>
+            public double MinimumContrast { get; }
+            
+            /// <summary>
+            /// Initializes a new instance of the <see cref="ColorRelationship"/> class.
+            /// </summary>
+            /// <param name="backgroundKey">The background color key.</param>
+            /// <param name="minimumContrast">The minimum contrast ratio required.</param>
+            public ColorRelationship(string backgroundKey, double minimumContrast)
+            {
+                BackgroundKey = backgroundKey;
+                MinimumContrast = minimumContrast;
+            }
+        }
+        
+        /// <summary>
+        /// Defines color relationships for contrast checking.
+        /// </summary>
+        private readonly Dictionary<string, ColorRelationship> _colorRelationships = new Dictionary<string, ColorRelationship>
+        {
+            // Main text on backgrounds
+            { "EFBForegroundColor", new ColorRelationship("EFBBackgroundColor", 4.5) },
+            { "EFBTextPrimaryColor", new ColorRelationship("EFBBackgroundColor", 4.5) },
+            { "EFBTextSecondaryColor", new ColorRelationship("EFBBackgroundColor", 4.5) },
+            { "EFBTextContrastColor", new ColorRelationship("EFBPrimaryColor", 4.5) },
+            
+            // Header text on header backgrounds
+            { "HeaderForegroundColor", new ColorRelationship("HeaderBackgroundColor", 4.5) },
+            
+            // Button text on button backgrounds - using unique keys for each relationship
+            { "ButtonForegroundColor", new ColorRelationship("ButtonBackgroundColor", 4.5) },
+            { "ButtonForegroundColor_Hover", new ColorRelationship("ButtonHoverBackgroundColor", 4.5) },
+            { "ButtonForegroundColor_Pressed", new ColorRelationship("ButtonPressedBackgroundColor", 4.5) },
+            
+            // Input text on input backgrounds
+            { "InputForegroundColor", new ColorRelationship("InputBackgroundColor", 4.5) },
+            
+            // Status text on backgrounds
+            { "EFBStatusSuccessTextColor", new ColorRelationship("EFBBackgroundColor", 3.0) },
+            { "EFBStatusWarningTextColor", new ColorRelationship("EFBBackgroundColor", 3.0) },
+            { "EFBStatusErrorTextColor", new ColorRelationship("EFBBackgroundColor", 3.0) },
+            { "EFBStatusInfoTextColor", new ColorRelationship("EFBBackgroundColor", 3.0) },
+            { "EFBStatusInactiveTextColor", new ColorRelationship("EFBBackgroundColor", 3.0) }
+        };
+        
+        /// <summary>
         /// Ensures text colors have appropriate contrast with background colors.
         /// </summary>
         private void EnsureTextContrast()
         {
             try
             {
-                // Get background and foreground colors
-                var backgroundColor = Application.Current.Resources["EFBBackgroundColor"] as System.Windows.Media.Color? 
-                    ?? System.Windows.Media.Colors.White;
-                var foregroundColor = Application.Current.Resources["EFBForegroundColor"] as System.Windows.Media.Color? 
-                    ?? System.Windows.Media.Colors.Black;
+                // Get background colors for different contexts
+                var backgroundColor = GetResourceColor("EFBBackgroundColor", System.Windows.Media.Colors.White);
+                var primaryColor = GetResourceColor("EFBPrimaryColor", System.Windows.Media.Colors.DodgerBlue);
+                var secondaryColor = GetResourceColor("EFBSecondaryColor", System.Windows.Media.Colors.DarkSlateGray);
+                var headerBackgroundColor = GetResourceColor("HeaderBackgroundColor", System.Windows.Media.Colors.DarkSlateGray);
+                var buttonBackgroundColor = GetResourceColor("ButtonBackgroundColor", System.Windows.Media.Colors.DodgerBlue);
+                var buttonHoverBackgroundColor = GetResourceColor("ButtonHoverBackgroundColor", System.Windows.Media.Colors.RoyalBlue);
+                var buttonPressedBackgroundColor = GetResourceColor("ButtonPressedBackgroundColor", System.Windows.Media.Colors.DarkBlue);
+                var inputBackgroundColor = GetResourceColor("InputBackgroundColor", System.Windows.Media.Colors.White);
                 
-                // Calculate luminance of background color
+                // Calculate background luminance
                 double backgroundLuminance = CalculateLuminance(backgroundColor);
                 
-                // If background is dark, ensure foreground is light
+                // Set appropriate text contrast colors based on background luminance
                 if (backgroundLuminance < 0.5)
                 {
-                    // Dark background - ensure light text
-                    if (CalculateLuminance(foregroundColor) < 0.5)
-                    {
-                        // Foreground is too dark, use white instead
-                        Application.Current.Resources["EFBForegroundColor"] = System.Windows.Media.Colors.White;
-                        Application.Current.Resources["EFBForegroundBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.White);
-                        Application.Current.Resources["EFBTextPrimaryColor"] = System.Windows.Media.Colors.White;
-                        Application.Current.Resources["EFBTextPrimaryBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.White);
-                        Application.Current.Resources["EFBTextContrastColor"] = System.Windows.Media.Colors.Black;
-                        Application.Current.Resources["EFBTextContrastBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Black);
-                        
-                        _logger?.Log(LogLevel.Debug, "EFBThemeManager:EnsureTextContrast", 
-                            "Adjusted text colors for dark background");
-                    }
+                    // Dark background - use light text
+                    SetResourceColorIfNeeded("EFBForegroundColor", System.Windows.Media.Colors.White);
+                    SetResourceColorIfNeeded("EFBTextPrimaryColor", System.Windows.Media.Colors.White);
+                    SetResourceColorIfNeeded("EFBTextSecondaryColor", System.Windows.Media.Colors.LightGray);
+                    SetResourceColorIfNeeded("EFBTextContrastColor", System.Windows.Media.Colors.Black);
                 }
                 else
                 {
-                    // Light background - ensure dark text
-                    if (CalculateLuminance(foregroundColor) > 0.5)
-                    {
-                        // Foreground is too light, use black instead
-                        Application.Current.Resources["EFBForegroundColor"] = System.Windows.Media.Colors.Black;
-                        Application.Current.Resources["EFBForegroundBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Black);
-                        Application.Current.Resources["EFBTextPrimaryColor"] = System.Windows.Media.Colors.Black;
-                        Application.Current.Resources["EFBTextPrimaryBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Black);
-                        Application.Current.Resources["EFBTextContrastColor"] = System.Windows.Media.Colors.White;
-                        Application.Current.Resources["EFBTextContrastBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.White);
-                        
-                        _logger?.Log(LogLevel.Debug, "EFBThemeManager:EnsureTextContrast", 
-                            "Adjusted text colors for light background");
-                    }
+                    // Light background - use dark text
+                    SetResourceColorIfNeeded("EFBForegroundColor", System.Windows.Media.Colors.Black);
+                    SetResourceColorIfNeeded("EFBTextPrimaryColor", System.Windows.Media.Colors.Black);
+                    SetResourceColorIfNeeded("EFBTextSecondaryColor", System.Windows.Media.Colors.DarkGray);
+                    SetResourceColorIfNeeded("EFBTextContrastColor", System.Windows.Media.Colors.White);
                 }
                 
-                // Ensure status text colors have good contrast
-                EnsureStatusTextContrast(backgroundColor);
+                // Check and adjust all color relationships
+                foreach (var relationship in _colorRelationships)
+                {
+                    string foregroundKey = relationship.Key;
+                    string backgroundKey = relationship.Value.BackgroundKey;
+                    double minContrast = relationship.Value.MinimumContrast;
+                    
+                    EnsureContrastForContext(foregroundKey, backgroundKey, minContrast);
+                }
+                
+                // Update brushes for all adjusted colors
+                UpdateBrushesFromColors();
+                
+                _logger?.Log(LogLevel.Debug, "EFBThemeManager:EnsureTextContrast", 
+                    "Completed text contrast adjustments");
             }
             catch (Exception ex)
             {
@@ -843,67 +899,314 @@ namespace Prosim2GSX.UI.EFB.Themes
         }
         
         /// <summary>
-        /// Ensures status text colors have appropriate contrast.
+        /// Gets a color resource with a fallback.
         /// </summary>
-        /// <param name="backgroundColor">The background color to check against.</param>
-        private void EnsureStatusTextContrast(System.Windows.Media.Color backgroundColor)
+        /// <param name="key">The resource key.</param>
+        /// <param name="fallback">The fallback color.</param>
+        /// <returns>The color resource or fallback.</returns>
+        private System.Windows.Media.Color GetResourceColor(string key, System.Windows.Media.Color fallback)
+        {
+            return Application.Current.Resources[key] as System.Windows.Media.Color? ?? fallback;
+        }
+        
+        /// <summary>
+        /// Sets a color resource if it doesn't already have sufficient contrast.
+        /// </summary>
+        /// <param name="key">The resource key.</param>
+        /// <param name="color">The color to set.</param>
+        private void SetResourceColorIfNeeded(string key, System.Windows.Media.Color color)
+        {
+            Application.Current.Resources[key] = color;
+        }
+        
+        /// <summary>
+        /// Updates brushes for all color resources.
+        /// </summary>
+        private void UpdateBrushesFromColors()
+        {
+            foreach (var key in Application.Current.Resources.Keys.OfType<string>().ToList())
+            {
+                if (key.EndsWith("Color") && Application.Current.Resources[key] is System.Windows.Media.Color color)
+                {
+                    string brushKey = key.Replace("Color", "Brush");
+                    Application.Current.Resources[brushKey] = new System.Windows.Media.SolidColorBrush(color);
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Ensures contrast for a specific color context.
+        /// </summary>
+        /// <param name="foregroundKey">The foreground color key.</param>
+        /// <param name="backgroundKey">The background color key.</param>
+        /// <param name="minContrast">The minimum contrast ratio required.</param>
+        private void EnsureContrastForContext(string foregroundKey, string backgroundKey, double minContrast)
         {
             try
             {
-                double backgroundLuminance = CalculateLuminance(backgroundColor);
-                
-                // Status colors that need to be checked
-                var statusColors = new Dictionary<string, System.Windows.Media.Color>
+                // Handle special case for button foreground colors with suffixes
+                string actualForegroundKey = foregroundKey;
+                if (foregroundKey.StartsWith("ButtonForegroundColor_"))
                 {
-                    { "EFBStatusSuccessTextColor", System.Windows.Media.Colors.Green },
-                    { "EFBStatusWarningTextColor", System.Windows.Media.Colors.Orange },
-                    { "EFBStatusErrorTextColor", System.Windows.Media.Colors.Red },
-                    { "EFBStatusInfoTextColor", System.Windows.Media.Colors.Blue },
-                    { "EFBStatusInactiveTextColor", System.Windows.Media.Colors.Gray }
-                };
+                    // Use the base ButtonForegroundColor as the actual resource key
+                    actualForegroundKey = "ButtonForegroundColor";
+                }
                 
-                foreach (var statusColor in statusColors)
+                if (!Application.Current.Resources.Contains(actualForegroundKey) || 
+                    !Application.Current.Resources.Contains(backgroundKey))
                 {
-                    var color = Application.Current.Resources[statusColor.Key] as System.Windows.Media.Color? 
-                        ?? statusColor.Value;
+                    return;
+                }
+                
+                var foregroundColor = Application.Current.Resources[actualForegroundKey] as System.Windows.Media.Color?;
+                var backgroundColor = Application.Current.Resources[backgroundKey] as System.Windows.Media.Color?;
+                
+                if (foregroundColor == null || backgroundColor == null)
+                {
+                    return;
+                }
+                
+                double contrast = CalculateContrast(
+                    CalculateLuminance(foregroundColor.Value), 
+                    CalculateLuminance(backgroundColor.Value));
+                
+                if (contrast < minContrast)
+                {
+                    // Adjust the foreground color to meet contrast requirements
+                    System.Windows.Media.Color adjustedColor = AdjustColorForContrast(
+                        foregroundColor.Value, 
+                        backgroundColor.Value, 
+                        minContrast);
                     
-                    double colorLuminance = CalculateLuminance(color);
-                    double contrast = CalculateContrast(backgroundLuminance, colorLuminance);
+                    // Update the actual resource key
+                    Application.Current.Resources[actualForegroundKey] = adjustedColor;
                     
-                    // If contrast is too low, adjust the color
-                    if (contrast < 3.0)
-                    {
-                        // Determine if we need a lighter or darker version
-                        System.Windows.Media.Color adjustedColor;
-                        
-                        if (backgroundLuminance < 0.5)
-                        {
-                            // Dark background - make color lighter
-                            adjustedColor = LightenColor(color, 0.3);
-                        }
-                        else
-                        {
-                            // Light background - make color darker
-                            adjustedColor = DarkenColor(color, 0.3);
-                        }
-                        
-                        // Update the color resource
-                        Application.Current.Resources[statusColor.Key] = adjustedColor;
-                        
-                        // Update the corresponding brush
-                        string brushKey = statusColor.Key.Replace("Color", "Brush");
-                        Application.Current.Resources[brushKey] = new System.Windows.Media.SolidColorBrush(adjustedColor);
-                        
-                        _logger?.Log(LogLevel.Debug, "EFBThemeManager:EnsureStatusTextContrast", 
-                            $"Adjusted {statusColor.Key} for better contrast");
-                    }
+                    _logger?.Log(LogLevel.Debug, "EFBThemeManager:EnsureContrastForContext", 
+                        $"Adjusted {actualForegroundKey} for better contrast with {backgroundKey} (from {contrast:F2} to {CalculateContrast(CalculateLuminance(adjustedColor), CalculateLuminance(backgroundColor.Value)):F2})");
                 }
             }
             catch (Exception ex)
             {
-                _logger?.Log(LogLevel.Error, "EFBThemeManager:EnsureStatusTextContrast", ex,
-                    "Error ensuring status text contrast");
+                _logger?.Log(LogLevel.Error, "EFBThemeManager:EnsureContrastForContext", ex,
+                    $"Error ensuring contrast for {foregroundKey} against {backgroundKey}");
             }
+        }
+        
+        /// <summary>
+        /// Adjusts a color to meet a target contrast ratio with a background color.
+        /// </summary>
+        /// <param name="foreground">The foreground color to adjust.</param>
+        /// <param name="background">The background color to contrast against.</param>
+        /// <param name="targetContrast">The target contrast ratio.</param>
+        /// <returns>The adjusted color.</returns>
+        private System.Windows.Media.Color AdjustColorForContrast(
+            System.Windows.Media.Color foreground, 
+            System.Windows.Media.Color background, 
+            double targetContrast)
+        {
+            // Convert to HSL for more natural adjustments
+            var hsl = RgbToHsl(foreground);
+            double backgroundLuminance = CalculateLuminance(background);
+            
+            // Start with small adjustments and increase until we meet contrast requirements
+            double step = 0.05;
+            double maxAdjustment = 0.5;
+            double adjustment = 0;
+            
+            System.Windows.Media.Color adjustedColor = foreground;
+            double contrast = CalculateContrast(
+                CalculateLuminance(adjustedColor), 
+                backgroundLuminance);
+            
+            while (contrast < targetContrast && adjustment < maxAdjustment)
+            {
+                // Determine if we should lighten or darken based on background
+                bool shouldLighten = backgroundLuminance < 0.5;
+                
+                if (shouldLighten)
+                {
+                    hsl.L = Math.Min(1.0, hsl.L + step);
+                }
+                else
+                {
+                    hsl.L = Math.Max(0.0, hsl.L - step);
+                }
+                
+                adjustedColor = HslToRgb(hsl);
+                contrast = CalculateContrast(
+                    CalculateLuminance(adjustedColor), 
+                    backgroundLuminance);
+                adjustment += step;
+            }
+            
+            // If we still don't have enough contrast, try more drastic measures
+            if (contrast < targetContrast)
+            {
+                // Use white or black for maximum contrast
+                if (backgroundLuminance < 0.5)
+                {
+                    adjustedColor = System.Windows.Media.Colors.White;
+                }
+                else
+                {
+                    adjustedColor = System.Windows.Media.Colors.Black;
+                }
+            }
+            
+            return adjustedColor;
+        }
+        
+        /// <summary>
+        /// Represents a color in HSL (Hue, Saturation, Lightness) format.
+        /// </summary>
+        private struct HslColor
+        {
+            public double H; // Hue (0-360)
+            public double S; // Saturation (0-1)
+            public double L; // Lightness (0-1)
+        }
+        
+        /// <summary>
+        /// Converts an RGB color to HSL.
+        /// </summary>
+        /// <param name="rgb">The RGB color to convert.</param>
+        /// <returns>The HSL representation.</returns>
+        private HslColor RgbToHsl(System.Windows.Media.Color rgb)
+        {
+            double r = rgb.R / 255.0;
+            double g = rgb.G / 255.0;
+            double b = rgb.B / 255.0;
+            
+            double max = Math.Max(r, Math.Max(g, b));
+            double min = Math.Min(r, Math.Min(g, b));
+            double delta = max - min;
+            
+            HslColor hsl = new HslColor();
+            
+            // Lightness
+            hsl.L = (max + min) / 2.0;
+            
+            if (delta == 0)
+            {
+                // Achromatic (gray)
+                hsl.H = 0;
+                hsl.S = 0;
+            }
+            else
+            {
+                // Saturation
+                hsl.S = hsl.L < 0.5 ? delta / (max + min) : delta / (2.0 - max - min);
+                
+                // Hue
+                if (r == max)
+                {
+                    hsl.H = (g - b) / delta + (g < b ? 6 : 0);
+                }
+                else if (g == max)
+                {
+                    hsl.H = (b - r) / delta + 2;
+                }
+                else
+                {
+                    hsl.H = (r - g) / delta + 4;
+                }
+                
+                hsl.H *= 60; // Convert to degrees
+            }
+            
+            return hsl;
+        }
+        
+        /// <summary>
+        /// Converts an HSL color to RGB.
+        /// </summary>
+        /// <param name="hsl">The HSL color to convert.</param>
+        /// <returns>The RGB representation.</returns>
+        private System.Windows.Media.Color HslToRgb(HslColor hsl)
+        {
+            double r, g, b;
+            
+            if (hsl.S == 0)
+            {
+                // Achromatic (gray)
+                r = g = b = hsl.L;
+            }
+            else
+            {
+                double q = hsl.L < 0.5 ? hsl.L * (1 + hsl.S) : hsl.L + hsl.S - hsl.L * hsl.S;
+                double p = 2 * hsl.L - q;
+                
+                r = HueToRgb(p, q, hsl.H / 360.0 + 1.0/3.0);
+                g = HueToRgb(p, q, hsl.H / 360.0);
+                b = HueToRgb(p, q, hsl.H / 360.0 - 1.0/3.0);
+            }
+            
+            return System.Windows.Media.Color.FromArgb(
+                255,
+                (byte)(r * 255),
+                (byte)(g * 255),
+                (byte)(b * 255)
+            );
+        }
+        
+        /// <summary>
+        /// Helper function for HSL to RGB conversion.
+        /// </summary>
+        private double HueToRgb(double p, double q, double t)
+        {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            
+            if (t < 1.0/6.0) return p + (q - p) * 6 * t;
+            if (t < 1.0/2.0) return q;
+            if (t < 2.0/3.0) return p + (q - p) * (2.0/3.0 - t) * 6;
+            
+            return p;
+        }
+        
+        /// <summary>
+        /// Validates the contrast of a theme.
+        /// </summary>
+        /// <param name="theme">The theme to validate.</param>
+        /// <returns>A dictionary of contrast issues.</returns>
+        public Dictionary<string, double> ValidateThemeContrast(EFBThemeDefinition theme)
+        {
+            var issues = new Dictionary<string, double>();
+            
+            foreach (var relationship in _colorRelationships)
+            {
+                string foregroundKey = relationship.Key;
+                string backgroundKey = relationship.Value.BackgroundKey;
+                double minContrast = relationship.Value.MinimumContrast;
+                
+                // Handle special case for button foreground colors with suffixes
+                string actualForegroundKey = foregroundKey;
+                if (foregroundKey.StartsWith("ButtonForegroundColor_"))
+                {
+                    // Use the base ButtonForegroundColor as the actual resource key
+                    actualForegroundKey = "ButtonForegroundColor";
+                }
+                
+                if (theme.ContainsResource(actualForegroundKey) && theme.ContainsResource(backgroundKey))
+                {
+                    var foreground = theme.GetResource(actualForegroundKey) as System.Windows.Media.Color?;
+                    var background = theme.GetResource(backgroundKey) as System.Windows.Media.Color?;
+                    
+                    if (foreground != null && background != null)
+                    {
+                        double contrast = CalculateContrast(
+                            CalculateLuminance(foreground.Value), 
+                            CalculateLuminance(background.Value));
+                        
+                        if (contrast < minContrast)
+                        {
+                            issues.Add($"{foregroundKey} on {backgroundKey}", contrast);
+                        }
+                    }
+                }
+            }
+            
+            return issues;
         }
         
         /// <summary>

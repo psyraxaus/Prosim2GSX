@@ -2,6 +2,11 @@
 
 The Electronic Flight Bag (EFB) UI in Prosim2GSX supports a comprehensive theming system that allows users to customize the appearance of the interface. This document explains how the theme system works and how to create custom themes.
 
+> **New Features (March 2025):**
+> - **Enhanced Contrast Checking**: The theme system now automatically ensures proper contrast between text and background colors.
+> - **Text-Specific Color Properties**: New color properties for better text visibility.
+> - **High Contrast Themes**: New high contrast themes for improved accessibility.
+
 ## Theme Selection
 
 The EFB UI determines which theme to use based on the following logic:
@@ -103,13 +108,40 @@ To create a custom theme:
 
 The theme will be automatically loaded the next time the application starts.
 
+## Text-Specific Color Properties
+
+The theme system now supports additional color properties specifically for text elements to ensure proper contrast and readability:
+
+- `EFBTextPrimaryColor`: Primary text color for most text elements
+- `EFBTextSecondaryColor`: Secondary text color for less important text
+- `EFBTextAccentColor`: Accent text color for highlighted text
+- `EFBTextContrastColor`: Contrast text color for text on accent backgrounds
+- `EFBStatusSuccessTextColor`: Text color for success messages
+- `EFBStatusWarningTextColor`: Text color for warning messages
+- `EFBStatusErrorTextColor`: Text color for error messages
+- `EFBStatusInfoTextColor`: Text color for info messages
+- `EFBStatusInactiveTextColor`: Text color for inactive elements
+
+These properties are optional but recommended for ensuring proper text visibility. If not provided, the theme system will automatically derive appropriate values based on the background colors.
+
+## Automatic Contrast Checking
+
+The theme system now includes automatic contrast checking to ensure that text is always readable:
+
+1. When a theme is loaded, the system checks the contrast between text colors and their background colors.
+2. If the contrast is insufficient (below WCAG 2.0 recommendations), the system automatically adjusts the text color.
+3. This ensures that text is always readable, even if the theme doesn't explicitly define good contrast colors.
+
+For more details on contrast requirements and recommendations, see the `ThemingGuide.md` file.
+
 ## Example Themes
 
 The following example themes are provided:
 
-- `DefaultTheme.json`: A dark theme with blue accents (marked as default)
-- `LightTheme.json`: A light theme with blue accents
-- `LufthansaTheme.json`: A dark theme with Lufthansa colors
+- `Default.json`: A dark theme with blue accents (marked as default)
+- `Light.json`: A light theme with blue accents
+- `HighContrastLight.json`: A high-contrast light theme for improved accessibility
+- `HighContrastDark.json`: A high-contrast dark theme for improved accessibility
 
 You can use these themes as a starting point for creating your own custom themes.
 
