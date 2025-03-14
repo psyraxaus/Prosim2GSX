@@ -129,4 +129,22 @@
         <Setter Property="Padding" Value="0" />
         <Setter Property="Background" Value="Transparent" />
     </Style>
+    
+    <!-- Flight Phase Indicator Resources -->
+    <SolidColorBrush x:Key="PhaseDetailsForeground" Color="{DynamicResource EFBForegroundColor}" />
+    <SolidColorBrush x:Key="PhaseItemForeground" Color="{DynamicResource EFBForegroundColor}" />
+    <SolidColorBrush x:Key="ActivePhaseItemForeground" Color="{DynamicResource EFBForegroundColor}" />
+    <SolidColorBrush x:Key="PredictedPhaseItemForeground" Color="{DynamicResource EFBForegroundColor}" Opacity="0.7" />
+   
+    <SolidColorBrush x:Key="PhaseDetailsBackground" Color="{DynamicResource EFBSecondaryColor}" Opacity="0.8" />
+    <SolidColorBrush x:Key="PhaseDetailsBorderBrush" Color="{DynamicResource EFBBorderColor}" />
+    <SolidColorBrush x:Key="PhaseItemBackground" Color="{DynamicResource EFBSecondaryColor}" Opacity="0.5" />
+    <SolidColorBrush x:Key="PhaseItemBorderBrush" Color="{DynamicResource EFBBorderColor}" />
+    <SolidColorBrush x:Key="ActivePhaseItemBackground" Color="{DynamicResource EFBPrimaryColor}" />
+    <SolidColorBrush x:Key="ActivePhaseItemBorderBrush" Color="{DynamicResource EFBPrimaryColor}" />
+    <SolidColorBrush x:Key="PredictedPhaseItemBackground" Color="{DynamicResource EFBSecondaryColor}" Opacity="0.3" />
+    <SolidColorBrush x:Key="PredictedPhaseItemBorderBrush" Color="{DynamicResource EFBBorderColor}" Opacity="0.7" />
+    <SolidColorBrush x:Key="PhaseConnectorStroke" Color="{DynamicResource EFBBorderColor}" />
+    <SolidColorBrush x:Key="ActivePhaseConnectorStroke" Color="{DynamicResource EFBPrimaryColor}" />
+    <SolidColorBrush x:Key="PredictedPhaseConnectorStroke" Color="{DynamicResource EFBBorderColor}" Opacity="0.7" />
 </ResourceDictionary>

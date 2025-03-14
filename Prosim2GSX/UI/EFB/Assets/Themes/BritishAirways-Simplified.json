@@ -12,7 +12,11 @@
     "SecondaryColor": "#001A3E",
     "AccentColor": "#CE1A39",
     "BackgroundColor": "#01295C",
-    "TextColor": "#FFFFFF"
+    "TextColor": "#FFFFFF",
+    
+    "ActivePhaseItemBackground": "#CE1A39",
+    "ActivePhaseConnectorStroke": "#CE1A39",
+    "PhaseDetailsForeground": "#FFFFFF"
   },
   "fonts": {
     "PrimaryFontFamily": "Segoe UI",

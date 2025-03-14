@@ -28,7 +28,7 @@
                         ToolTip="Back" 
                         Margin="0,0,10,0" />
                 <TextBlock Text="SETTINGS" 
-                           Style="{DynamicResource EFBHeaderStyle}" 
+                           Style="{DynamicResource EFBHeaderTextStyle}" 
                            VerticalAlignment="Center" />
             </StackPanel>
             
@@ -48,7 +48,7 @@
                     
                     <StackPanel Grid.Row="1" Margin="10">
                         <TextBlock Text="Load Flight Plan From:" 
-                                   Style="{DynamicResource EFBLabelStyle}" 
+                                   Style="{DynamicResource EFBLabelTextStyle}" 
                                    Margin="0,0,0,5" />
                         
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
@@ -131,15 +131,18 @@
                         
                         <StackPanel Orientation="Horizontal" Margin="20,0,0,10">
                             <TextBlock Text="Reposition Delay:" 
+                                       Style="{DynamicResource EFBBodyTextStyle}"
                                        VerticalAlignment="Center" 
                                        Margin="0,0,5,0" />
                             
                             <TextBox Text="{Binding RepositionDelay}" 
+                                     Style="{DynamicResource EFBNumericTextBoxStyle}"
                                      Width="60" 
                                      VerticalAlignment="Center" 
                                      Margin="0,0,5,0" />
                             
                             <TextBlock Text="s" 
+                                       Style="{DynamicResource EFBUnitTextStyle}"
                                        VerticalAlignment="Center" />
                         </StackPanel>
                         
@@ -195,11 +198,12 @@
                                   ToolTip="Configures GSX to not board/deboard any Crew-Members, so the Question/Pop-Up will not appear. This Option is independent of the Service Automations, it will work either Way." />
                         
                         <TextBlock Text="Refuel Rate" 
-                                   Style="{DynamicResource EFBLabelStyle}" 
+                                   Style="{DynamicResource EFBLabelTextStyle}" 
                                    Margin="0,0,0,5" />
                         
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
                             <TextBox Text="{Binding RefuelRate}" 
+                                     Style="{DynamicResource EFBNumericTextBoxStyle}"
                                      Width="60" 
                                      VerticalAlignment="Center" 
                                      Margin="0,0,10,0" />
@@ -297,16 +301,19 @@
                         
                         <StackPanel Orientation="Horizontal" Margin="20,0,0,0">
                             <TextBlock Text="Custom App:" 
+                                       Style="{DynamicResource EFBBodyTextStyle}"
                                        VerticalAlignment="Center" 
                                        Margin="0,0,5,0" />
                             
                             <TextBox Text="{Binding Vhf1VolumeApp}" 
+                                     Style="{DynamicResource EFBTextBoxStyle}"
                                      Width="120" 
                                      IsEnabled="{Binding IsVhf1AppEnabled}"
                                      VerticalAlignment="Center" 
                                      Margin="0,0,5,0" />
                             
                             <TextBlock Text="(Name of the Binary without .exe Extension)" 
+                                       Style="{DynamicResource EFBCaptionTextStyle}"
                                        VerticalAlignment="Center" />
                         </StackPanel>
                     </StackPanel>

@@ -23,7 +23,7 @@
             <!-- Log Level Filter -->
             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock Text="Filter Level:" VerticalAlignment="Center" Margin="0,0,10,0" 
-                           Foreground="{DynamicResource EFBForegroundBrush}"/>
+                           Style="{DynamicResource EFBLabelTextStyle}"/>
                 <ComboBox x:Name="LogLevelFilter" Width="120" SelectedIndex="0" SelectionChanged="LogLevelFilter_SelectionChanged">
                     <ComboBoxItem Content="All Levels"/>
                     <ComboBoxItem Content="Debug"/>
@@ -36,7 +36,7 @@
             
             <!-- Auto-Scroll Toggle -->
             <CheckBox x:Name="AutoScrollToggle" Grid.Column="2" Content="Auto-Scroll" IsChecked="True" 
-                      VerticalAlignment="Center" Foreground="{DynamicResource EFBForegroundBrush}"/>
+                      VerticalAlignment="Center" Style="{DynamicResource EFBCheckBoxStyle}"/>
         </Grid>
         
         <!-- Log Display -->
@@ -44,8 +44,8 @@
                 Background="{DynamicResource EFBBackgroundBrush}">
             <ScrollViewer x:Name="LogScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                 <RichTextBox x:Name="LogTextBox" IsReadOnly="True" Background="Transparent" 
-                             BorderThickness="0" Foreground="{DynamicResource EFBForegroundBrush}"
-                             FontFamily="Consolas, Courier New, monospace">
+                             BorderThickness="0" Foreground="{DynamicResource EFBTextPrimaryBrush}"
+                             FontFamily="{DynamicResource MonospaceFontFamily}">
                     <RichTextBox.Document>
                         <FlowDocument LineStackingStrategy="BlockLineHeight" PageWidth="3000" 
                                       TextAlignment="Left">

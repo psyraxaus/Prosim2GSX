@@ -444,6 +444,54 @@ You can use these themes as references when designing your own accessible themes
    - Check all UI elements for proper styling
    - Make adjustments as needed
 
+## Flight Phase Indicator Theming
+
+The Flight Phase Indicator is a key component of the EFB UI that displays the current and predicted flight phases. It has its own set of theme resources that control its appearance:
+
+| Property | Description | Default Value |
+|----------|-------------|---------------|
+| PhaseDetailsForeground | Text color for phase details | Same as EFBTextPrimaryColor |
+| PhaseItemForeground | Text color for phase items | Same as EFBTextPrimaryColor |
+| ActivePhaseItemForeground | Text color for active phase item | Same as EFBTextContrastBrush |
+| PredictedPhaseItemForeground | Text color for predicted phase item | Same as EFBTextSecondaryColor |
+| PhaseDetailsBackground | Background color for phase details | Derived from EFBSecondaryColor |
+| PhaseDetailsBorderBrush | Border color for phase details | Same as EFBBorderColor |
+| PhaseItemBackground | Background color for phase items | Derived from EFBSecondaryColor |
+| PhaseItemBorderBrush | Border color for phase items | Same as EFBBorderColor |
+| ActivePhaseItemBackground | Background color for active phase item | Same as EFBPrimaryColor |
+| ActivePhaseItemBorderBrush | Border color for active phase item | Same as EFBPrimaryColor |
+| PredictedPhaseItemBackground | Background color for predicted phase item | Derived from EFBSecondaryColor |
+| PredictedPhaseItemBorderBrush | Border color for predicted phase item | Same as EFBBorderColor |
+| PhaseConnectorStroke | Stroke color for phase connectors | Same as EFBBorderColor |
+| ActivePhaseConnectorStroke | Stroke color for active phase connector | Same as EFBPrimaryColor |
+| PredictedPhaseConnectorStroke | Stroke color for predicted phase connector | Same as EFBBorderColor |
+
+### Flight Phase Indicator in Simplified Themes
+
+When using the simplified theme format, these colors are automatically derived from your core colors. However, you can override any of them by explicitly including them in your theme:
+
+```json
+"colors": {
+  "PrimaryColor": "#123456",
+  "SecondaryColor": "#234567",
+  "AccentColor": "#345678",
+  "BackgroundColor": "#123456",
+  "TextColor": "#FFFFFF",
+  
+  // Optional Flight Phase Indicator overrides
+  "PhaseDetailsForeground": "#FFFFFF",
+  "ActivePhaseItemBackground": "#FF9900",
+  "ActivePhaseConnectorStroke": "#FF9900"
+}
+```
+
+### Flight Phase Indicator Styling Tips
+
+- **Ensure contrast**: Make sure text colors have sufficient contrast with their backgrounds
+- **Highlight active phase**: Use a distinctive color for the active phase item and connector
+- **Subtle prediction styling**: Use a more subtle style for predicted phases
+- **Consistent colors**: Use colors that match your overall theme
+
 ## Conclusion
 
 Creating custom airline themes for the Prosim2GSX EFB is a straightforward process that allows you to personalize your experience. By following this guide, you can create themes that match your favorite airlines or create entirely new designs.

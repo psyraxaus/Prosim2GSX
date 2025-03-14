@@ -178,51 +178,51 @@
                         
                         <TextBlock Grid.Row="0" Grid.Column="0" 
                                    Text="LEFT TANK" 
-                                   Style="{DynamicResource EFBLabelStyle}" 
+                                   Style="{DynamicResource EFBLabelTextStyle}" 
                                    HorizontalAlignment="Center" 
                                    Margin="0,0,0,5" />
                         
                         <TextBlock Grid.Row="0" Grid.Column="1" 
                                    Text="CENTER TANK" 
-                                   Style="{DynamicResource EFBLabelStyle}" 
+                                   Style="{DynamicResource EFBLabelTextStyle}" 
                                    HorizontalAlignment="Center" 
                                    Margin="0,0,0,5" />
                         
                         <TextBlock Grid.Row="0" Grid.Column="2" 
                                    Text="RIGHT TANK" 
-                                   Style="{DynamicResource EFBLabelStyle}" 
+                                   Style="{DynamicResource EFBLabelTextStyle}" 
                                    HorizontalAlignment="Center" 
                                    Margin="0,0,0,5" />
                         
                         <TextBlock Grid.Row="1" Grid.Column="0" 
                                    Text="{Binding LeftTankFuel, StringFormat='{}{0:N0} KG'}" 
-                                   Style="{DynamicResource EFBValueStyle}" 
+                                   Style="{DynamicResource EFBNumericValueTextStyle}" 
                                    HorizontalAlignment="Center" 
                                    Margin="0,0,0,10" />
                         
                         <TextBlock Grid.Row="1" Grid.Column="1" 
                                    Text="{Binding CenterTankFuel, StringFormat='{}{0:N0} KG'}" 
-                                   Style="{DynamicResource EFBValueStyle}" 
+                                   Style="{DynamicResource EFBNumericValueTextStyle}" 
                                    HorizontalAlignment="Center" 
                                    Margin="0,0,0,10" />
                         
                         <TextBlock Grid.Row="1" Grid.Column="2" 
                                    Text="{Binding RightTankFuel, StringFormat='{}{0:N0} KG'}" 
-                                   Style="{DynamicResource EFBValueStyle}" 
+                                   Style="{DynamicResource EFBNumericValueTextStyle}" 
                                    HorizontalAlignment="Center" 
                                    Margin="0,0,0,10" />
                         
                         <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" 
                                    Text="TOTAL FUEL" 
-                                   Style="{DynamicResource EFBLabelStyle}" 
+                                   Style="{DynamicResource EFBLabelTextStyle}" 
                                    HorizontalAlignment="Center" 
                                    Margin="0,0,0,5" />
                         
                         <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" 
                                    Text="{Binding TotalFuel, StringFormat='{}{0:N0} KG'}" 
-                                   Style="{DynamicResource EFBValueStyle}" 
+                                   Style="{DynamicResource EFBNumericValueTextStyle}" 
                                    HorizontalAlignment="Center" 
-                                   FontSize="24" />
+                                   FontSize="{DynamicResource LargeFontSize}" />
                         
                         <controls:CircularProgressIndicator Grid.Row="1" Grid.Column="0" 
                                                           Progress="{Binding RefuelingProgress}" 
@@ -258,16 +258,18 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         
                         <TextBlock Grid.Row="0" Grid.Column="0" 
                                    Text="PASSENGERS" 
-                                   Style="{DynamicResource EFBLabelStyle}" 
+                                   Style="{DynamicResource EFBLabelTextStyle}" 
                                    Margin="0,0,0,5" />
                         
                         <TextBlock Grid.Row="0" Grid.Column="1" 
                                    Text="{Binding PassengerCount}" 
-                                   Style="{DynamicResource EFBValueStyle}" 
+                                   Style="{DynamicResource EFBNumericValueTextStyle}" 
                                    HorizontalAlignment="Right" />
                         
                         <controls:LinearProgressIndicator Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" 
@@ -284,12 +286,12 @@
                         
                         <TextBlock Grid.Row="3" Grid.Column="0" 
                                    Text="CARGO" 
-                                   Style="{DynamicResource EFBLabelStyle}" 
+                                   Style="{DynamicResource EFBLabelTextStyle}" 
                                    Margin="0,0,0,5" />
                         
                         <TextBlock Grid.Row="3" Grid.Column="1" 
                                    Text="{Binding CargoWeight, StringFormat='{}{0:N0} KG'}" 
-                                   Style="{DynamicResource EFBValueStyle}" 
+                                   Style="{DynamicResource EFBNumericValueTextStyle}" 
                                    HorizontalAlignment="Right" />
                         
                         <controls:LinearProgressIndicator Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" 

@@ -919,7 +919,25 @@ namespace Prosim2GSX.UI.EFB.Themes
                 { "EFBStatusWarningTextBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Orange) },
                 { "EFBStatusErrorTextBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Red) },
                 { "EFBStatusInfoTextBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Blue) },
-                { "EFBStatusInactiveTextBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Gray) }
+                { "EFBStatusInactiveTextBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Gray) },
+                
+                // Flight Phase Indicator Resources
+                { "PhaseDetailsForeground", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Black) },
+                { "PhaseItemForeground", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Black) },
+                { "ActivePhaseItemForeground", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.White) },
+                { "PredictedPhaseItemForeground", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.DarkGray) },
+                
+                { "PhaseDetailsBackground", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.LightGray) },
+                { "PhaseDetailsBorderBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Gray) },
+                { "PhaseItemBackground", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.LightGray) },
+                { "PhaseItemBorderBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Gray) },
+                { "ActivePhaseItemBackground", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.DodgerBlue) },
+                { "ActivePhaseItemBorderBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.DodgerBlue) },
+                { "PredictedPhaseItemBackground", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.WhiteSmoke) },
+                { "PredictedPhaseItemBorderBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.LightGray) },
+                { "PhaseConnectorStroke", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Gray) },
+                { "ActivePhaseConnectorStroke", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.DodgerBlue) },
+                { "PredictedPhaseConnectorStroke", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.LightGray) }
             };
             
             // Check if each required resource exists in the application resources

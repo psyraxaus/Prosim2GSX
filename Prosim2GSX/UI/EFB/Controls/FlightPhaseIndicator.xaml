@@ -160,7 +160,7 @@
                 <StackPanel Grid.Column="0" Orientation="Vertical">
                     <!-- Current Phase -->
                     <TextBlock Text="{Binding CurrentPhaseText, RelativeSource={RelativeSource AncestorType=local:FlightPhaseIndicator}}" 
-                               FontSize="14" 
+                               FontSize="14"
                                FontWeight="Bold" 
                                Foreground="{DynamicResource PhaseDetailsForeground}"/>
                     
