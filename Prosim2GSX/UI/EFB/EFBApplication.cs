@@ -180,6 +180,11 @@ namespace Prosim2GSX.UI.EFB
                 // Get saved theme name
                 string savedThemeName = _serviceModel.EfbThemeName;
                 
+                // Register the theme manager in the application resources
+                _logger?.Log(LogLevel.Debug, "EFBApplication:InitializeAsync", 
+                    "Registering theme manager in application resources");
+                Application.Current.Resources["ThemeManager"] = _themeManager;
+                
                 // Apply saved theme if it exists, otherwise apply default
                 if (themeCount > 0)
                 {

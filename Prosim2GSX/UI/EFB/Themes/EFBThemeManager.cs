@@ -735,7 +735,33 @@ namespace Prosim2GSX.UI.EFB.Themes
                 { "TabSelectedColor", System.Windows.Media.Colors.DodgerBlue },
                 
                 // Tab brushes
-                { "TabSelectedBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.DodgerBlue) }
+                { "TabSelectedBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.DodgerBlue) },
+                
+                // Text-specific colors for better readability
+                { "EFBTextPrimaryColor", System.Windows.Media.Colors.Black },
+                { "EFBTextSecondaryColor", System.Windows.Media.Colors.DarkGray },
+                { "EFBTextAccentColor", System.Windows.Media.Colors.DodgerBlue },
+                { "EFBTextContrastColor", System.Windows.Media.Colors.White },
+                
+                // Text-specific brushes
+                { "EFBTextPrimaryBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Black) },
+                { "EFBTextSecondaryBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.DarkGray) },
+                { "EFBTextAccentBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.DodgerBlue) },
+                { "EFBTextContrastBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.White) },
+                
+                // Status text colors
+                { "EFBStatusSuccessTextColor", System.Windows.Media.Colors.Green },
+                { "EFBStatusWarningTextColor", System.Windows.Media.Colors.Orange },
+                { "EFBStatusErrorTextColor", System.Windows.Media.Colors.Red },
+                { "EFBStatusInfoTextColor", System.Windows.Media.Colors.Blue },
+                { "EFBStatusInactiveTextColor", System.Windows.Media.Colors.Gray },
+                
+                // Status text brushes
+                { "EFBStatusSuccessTextBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Green) },
+                { "EFBStatusWarningTextBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Orange) },
+                { "EFBStatusErrorTextBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Red) },
+                { "EFBStatusInfoTextBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Blue) },
+                { "EFBStatusInactiveTextBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Gray) }
             };
             
             // Check if each required resource exists in the application resources
@@ -749,6 +775,201 @@ namespace Prosim2GSX.UI.EFB.Themes
                         $"Added missing resource '{resource.Key}' with default value");
                 }
             }
+            
+            // Ensure text colors have appropriate contrast with background
+            EnsureTextContrast();
+        }
+        
+        /// <summary>
+        /// Ensures text colors have appropriate contrast with background colors.
+        /// </summary>
+        private void EnsureTextContrast()
+        {
+            try
+            {
+                // Get background and foreground colors
+                var backgroundColor = Application.Current.Resources["EFBBackgroundColor"] as System.Windows.Media.Color? 
+                    ?? System.Windows.Media.Colors.White;
+                var foregroundColor = Application.Current.Resources["EFBForegroundColor"] as System.Windows.Media.Color? 
+                    ?? System.Windows.Media.Colors.Black;
+                
+                // Calculate luminance of background color
+                double backgroundLuminance = CalculateLuminance(backgroundColor);
+                
+                // If background is dark, ensure foreground is light
+                if (backgroundLuminance < 0.5)
+                {
+                    // Dark background - ensure light text
+                    if (CalculateLuminance(foregroundColor) < 0.5)
+                    {
+                        // Foreground is too dark, use white instead
+                        Application.Current.Resources["EFBForegroundColor"] = System.Windows.Media.Colors.White;
+                        Application.Current.Resources["EFBForegroundBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.White);
+                        Application.Current.Resources["EFBTextPrimaryColor"] = System.Windows.Media.Colors.White;
+                        Application.Current.Resources["EFBTextPrimaryBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.White);
+                        Application.Current.Resources["EFBTextContrastColor"] = System.Windows.Media.Colors.Black;
+                        Application.Current.Resources["EFBTextContrastBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Black);
+                        
+                        _logger?.Log(LogLevel.Debug, "EFBThemeManager:EnsureTextContrast", 
+                            "Adjusted text colors for dark background");
+                    }
+                }
+                else
+                {
+                    // Light background - ensure dark text
+                    if (CalculateLuminance(foregroundColor) > 0.5)
+                    {
+                        // Foreground is too light, use black instead
+                        Application.Current.Resources["EFBForegroundColor"] = System.Windows.Media.Colors.Black;
+                        Application.Current.Resources["EFBForegroundBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Black);
+                        Application.Current.Resources["EFBTextPrimaryColor"] = System.Windows.Media.Colors.Black;
+                        Application.Current.Resources["EFBTextPrimaryBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Black);
+                        Application.Current.Resources["EFBTextContrastColor"] = System.Windows.Media.Colors.White;
+                        Application.Current.Resources["EFBTextContrastBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.White);
+                        
+                        _logger?.Log(LogLevel.Debug, "EFBThemeManager:EnsureTextContrast", 
+                            "Adjusted text colors for light background");
+                    }
+                }
+                
+                // Ensure status text colors have good contrast
+                EnsureStatusTextContrast(backgroundColor);
+            }
+            catch (Exception ex)
+            {
+                _logger?.Log(LogLevel.Error, "EFBThemeManager:EnsureTextContrast", ex,
+                    "Error ensuring text contrast");
+            }
+        }
+        
+        /// <summary>
+        /// Ensures status text colors have appropriate contrast.
+        /// </summary>
+        /// <param name="backgroundColor">The background color to check against.</param>
+        private void EnsureStatusTextContrast(System.Windows.Media.Color backgroundColor)
+        {
+            try
+            {
+                double backgroundLuminance = CalculateLuminance(backgroundColor);
+                
+                // Status colors that need to be checked
+                var statusColors = new Dictionary<string, System.Windows.Media.Color>
+                {
+                    { "EFBStatusSuccessTextColor", System.Windows.Media.Colors.Green },
+                    { "EFBStatusWarningTextColor", System.Windows.Media.Colors.Orange },
+                    { "EFBStatusErrorTextColor", System.Windows.Media.Colors.Red },
+                    { "EFBStatusInfoTextColor", System.Windows.Media.Colors.Blue },
+                    { "EFBStatusInactiveTextColor", System.Windows.Media.Colors.Gray }
+                };
+                
+                foreach (var statusColor in statusColors)
+                {
+                    var color = Application.Current.Resources[statusColor.Key] as System.Windows.Media.Color? 
+                        ?? statusColor.Value;
+                    
+                    double colorLuminance = CalculateLuminance(color);
+                    double contrast = CalculateContrast(backgroundLuminance, colorLuminance);
+                    
+                    // If contrast is too low, adjust the color
+                    if (contrast < 3.0)
+                    {
+                        // Determine if we need a lighter or darker version
+                        System.Windows.Media.Color adjustedColor;
+                        
+                        if (backgroundLuminance < 0.5)
+                        {
+                            // Dark background - make color lighter
+                            adjustedColor = LightenColor(color, 0.3);
+                        }
+                        else
+                        {
+                            // Light background - make color darker
+                            adjustedColor = DarkenColor(color, 0.3);
+                        }
+                        
+                        // Update the color resource
+                        Application.Current.Resources[statusColor.Key] = adjustedColor;
+                        
+                        // Update the corresponding brush
+                        string brushKey = statusColor.Key.Replace("Color", "Brush");
+                        Application.Current.Resources[brushKey] = new System.Windows.Media.SolidColorBrush(adjustedColor);
+                        
+                        _logger?.Log(LogLevel.Debug, "EFBThemeManager:EnsureStatusTextContrast", 
+                            $"Adjusted {statusColor.Key} for better contrast");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.Log(LogLevel.Error, "EFBThemeManager:EnsureStatusTextContrast", ex,
+                    "Error ensuring status text contrast");
+            }
+        }
+        
+        /// <summary>
+        /// Calculates the relative luminance of a color.
+        /// </summary>
+        /// <param name="color">The color to calculate luminance for.</param>
+        /// <returns>The relative luminance value between 0 and 1.</returns>
+        private double CalculateLuminance(System.Windows.Media.Color color)
+        {
+            // Convert RGB to relative luminance using the formula from WCAG 2.0
+            double r = color.R / 255.0;
+            double g = color.G / 255.0;
+            double b = color.B / 255.0;
+            
+            r = r <= 0.03928 ? r / 12.92 : Math.Pow((r + 0.055) / 1.055, 2.4);
+            g = g <= 0.03928 ? g / 12.92 : Math.Pow((g + 0.055) / 1.055, 2.4);
+            b = b <= 0.03928 ? b / 12.92 : Math.Pow((b + 0.055) / 1.055, 2.4);
+            
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        }
+        
+        /// <summary>
+        /// Calculates the contrast ratio between two luminance values.
+        /// </summary>
+        /// <param name="luminance1">The first luminance value.</param>
+        /// <param name="luminance2">The second luminance value.</param>
+        /// <returns>The contrast ratio between the two luminance values.</returns>
+        private double CalculateContrast(double luminance1, double luminance2)
+        {
+            // Calculate contrast ratio using the formula from WCAG 2.0
+            double lighter = Math.Max(luminance1, luminance2);
+            double darker = Math.Min(luminance1, luminance2);
+            
+            return (lighter + 0.05) / (darker + 0.05);
+        }
+        
+        /// <summary>
+        /// Lightens a color by the specified amount.
+        /// </summary>
+        /// <param name="color">The color to lighten.</param>
+        /// <param name="amount">The amount to lighten by (0-1).</param>
+        /// <returns>The lightened color.</returns>
+        private System.Windows.Media.Color LightenColor(System.Windows.Media.Color color, double amount)
+        {
+            return System.Windows.Media.Color.FromArgb(
+                color.A,
+                (byte)Math.Min(255, color.R + (255 - color.R) * amount),
+                (byte)Math.Min(255, color.G + (255 - color.G) * amount),
+                (byte)Math.Min(255, color.B + (255 - color.B) * amount)
+            );
+        }
+        
+        /// <summary>
+        /// Darkens a color by the specified amount.
+        /// </summary>
+        /// <param name="color">The color to darken.</param>
+        /// <param name="amount">The amount to darken by (0-1).</param>
+        /// <returns>The darkened color.</returns>
+        private System.Windows.Media.Color DarkenColor(System.Windows.Media.Color color, double amount)
+        {
+            return System.Windows.Media.Color.FromArgb(
+                color.A,
+                (byte)Math.Max(0, color.R - color.R * amount),
+                (byte)Math.Max(0, color.G - color.G * amount),
+                (byte)Math.Max(0, color.B - color.B * amount)
+            );
         }
     }
 }

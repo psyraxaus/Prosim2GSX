@@ -18,6 +18,14 @@
         <Setter Property="Margin" Value="0,0,0,10" />
     </Style>
     
+    <!-- Panel Header Style -->
+    <Style x:Key="EFBPanelHeaderStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBHeaderTextStyle}">
+        <Setter Property="Foreground" Value="{DynamicResource EFBTextContrastBrush}" />
+        <Setter Property="FontWeight" Value="{DynamicResource EFBBoldFontWeight}" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="Padding" Value="5" />
+    </Style>
+    
     <!-- Sub Header Text Style -->
     <Style x:Key="EFBSubHeaderTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
         <Setter Property="FontSize" Value="{DynamicResource EFBSubHeaderFontSize}" />
@@ -43,41 +51,44 @@
         <Setter Property="FontSize" Value="{DynamicResource EFBSmallFontSize}" />
         <Setter Property="FontWeight" Value="{DynamicResource EFBBoldFontWeight}" />
         <Setter Property="Margin" Value="0,0,0,2" />
+        <Setter Property="Foreground" Value="{DynamicResource EFBTextPrimaryBrush}" />
     </Style>
     
     <!-- Value Text Style -->
     <Style x:Key="EFBValueTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
         <Setter Property="FontSize" Value="{DynamicResource EFBNormalFontSize}" />
         <Setter Property="FontWeight" Value="{DynamicResource EFBBoldFontWeight}" />
+        <Setter Property="Foreground" Value="{DynamicResource EFBTextPrimaryBrush}" />
     </Style>
     
     <!-- Status Text Style -->
     <Style x:Key="EFBStatusTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
         <Setter Property="FontSize" Value="{DynamicResource EFBNormalFontSize}" />
         <Setter Property="FontWeight" Value="{DynamicResource EFBBoldFontWeight}" />
+        <Setter Property="Foreground" Value="{DynamicResource EFBTextPrimaryBrush}" />
     </Style>
     
     <!-- Success Text Style -->
     <Style x:Key="EFBSuccessTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
-        <Setter Property="Foreground" Value="{DynamicResource EFBSuccessBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource EFBStatusSuccessTextBrush}" />
         <Setter Property="FontWeight" Value="{DynamicResource EFBBoldFontWeight}" />
     </Style>
     
     <!-- Warning Text Style -->
     <Style x:Key="EFBWarningTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
-        <Setter Property="Foreground" Value="{DynamicResource EFBWarningBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource EFBStatusWarningTextBrush}" />
         <Setter Property="FontWeight" Value="{DynamicResource EFBBoldFontWeight}" />
     </Style>
     
     <!-- Error Text Style -->
     <Style x:Key="EFBErrorTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
-        <Setter Property="Foreground" Value="{DynamicResource EFBErrorBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource EFBStatusErrorTextBrush}" />
         <Setter Property="FontWeight" Value="{DynamicResource EFBBoldFontWeight}" />
     </Style>
     
     <!-- Info Text Style -->
     <Style x:Key="EFBInfoTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
-        <Setter Property="Foreground" Value="{DynamicResource EFBInfoBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource EFBStatusInfoTextBrush}" />
         <Setter Property="FontWeight" Value="{DynamicResource EFBBoldFontWeight}" />
     </Style>
     
@@ -107,6 +118,7 @@
     <Style x:Key="EFBServiceStatusTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBBaseTextBlockStyle}">
         <Setter Property="FontSize" Value="{DynamicResource EFBNormalFontSize}" />
         <Setter Property="FontWeight" Value="{DynamicResource EFBBoldFontWeight}" />
+        <Setter Property="Foreground" Value="{DynamicResource EFBTextPrimaryBrush}" />
     </Style>
     
     <!-- Numeric Value Text Style -->
@@ -134,7 +146,7 @@
     
     <!-- TextBox Style -->
     <Style x:Key="EFBTextBoxStyle" TargetType="TextBox">
-        <Setter Property="Foreground" Value="{DynamicResource EFBForegroundBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource EFBTextPrimaryBrush}" />
         <Setter Property="Background" Value="{DynamicResource EFBSecondaryBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource EFBBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
@@ -182,7 +194,7 @@
     
     <!-- Password Box Style -->
     <Style x:Key="EFBPasswordBoxStyle" TargetType="PasswordBox">
-        <Setter Property="Foreground" Value="{DynamicResource EFBForegroundBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource EFBTextPrimaryBrush}" />
         <Setter Property="Background" Value="{DynamicResource EFBSecondaryBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource EFBBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
