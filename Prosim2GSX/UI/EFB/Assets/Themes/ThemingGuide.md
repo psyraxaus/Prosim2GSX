@@ -446,51 +446,36 @@ You can use these themes as references when designing your own accessible themes
 
 ## Flight Phase Indicator Theming
 
-The Flight Phase Indicator is a key component of the EFB UI that displays the current and predicted flight phases. It has its own set of theme resources that control its appearance:
+The Flight Phase Indicator is a key component of the EFB UI that displays the current and predicted flight phases. All styling for flight phase indicators is automatically derived from the core theme colors:
 
-| Property | Description | Default Value |
-|----------|-------------|---------------|
-| PhaseDetailsForeground | Text color for phase details | Same as EFBTextPrimaryColor |
-| PhaseItemForeground | Text color for phase items | Same as EFBTextPrimaryColor |
-| ActivePhaseItemForeground | Text color for active phase item | Same as EFBTextContrastBrush |
-| PredictedPhaseItemForeground | Text color for predicted phase item | Same as EFBTextSecondaryColor |
-| PhaseDetailsBackground | Background color for phase details | Derived from EFBSecondaryColor |
-| PhaseDetailsBorderBrush | Border color for phase details | Same as EFBBorderColor |
-| PhaseItemBackground | Background color for phase items | Derived from EFBSecondaryColor |
-| PhaseItemBorderBrush | Border color for phase items | Same as EFBBorderColor |
-| ActivePhaseItemBackground | Background color for active phase item | Same as EFBPrimaryColor |
-| ActivePhaseItemBorderBrush | Border color for active phase item | Same as EFBPrimaryColor |
-| PredictedPhaseItemBackground | Background color for predicted phase item | Derived from EFBSecondaryColor |
-| PredictedPhaseItemBorderBrush | Border color for predicted phase item | Same as EFBBorderColor |
-| PhaseConnectorStroke | Stroke color for phase connectors | Same as EFBBorderColor |
-| ActivePhaseConnectorStroke | Stroke color for active phase connector | Same as EFBPrimaryColor |
-| PredictedPhaseConnectorStroke | Stroke color for predicted phase connector | Same as EFBBorderColor |
+| Component | How It's Styled |
+|-----------|----------------|
+| Phase Details Text | Derived from TextColor |
+| Phase Item Text | Derived from TextColor |
+| Active Phase Item Text | Automatically set for optimal contrast with background |
+| Predicted Phase Item Text | Derived from TextColor with reduced opacity |
+| Phase Details Background | Derived from SecondaryColor |
+| Phase Details Border | Derived from SecondaryColor |
+| Phase Item Background | Derived from SecondaryColor |
+| Phase Item Border | Derived from SecondaryColor |
+| Active Phase Item Background | Uses PrimaryColor or AccentColor depending on theme |
+| Active Phase Item Border | Matches the active background |
+| Predicted Phase Item Background | Derived from SecondaryColor with transparency |
+| Predicted Phase Item Border | Derived from SecondaryColor |
+| Phase Connectors | Derived from SecondaryColor |
+| Active Phase Connector | Matches the active phase item background |
+| Predicted Phase Connector | Derived from SecondaryColor with transparency |
 
-### Flight Phase Indicator in Simplified Themes
+### Automatic Styling
 
-When using the simplified theme format, these colors are automatically derived from your core colors. However, you can override any of them by explicitly including them in your theme:
+The system automatically handles all flight phase indicator styling based on your core colors. This ensures:
 
-```json
-"colors": {
-  "PrimaryColor": "#123456",
-  "SecondaryColor": "#234567",
-  "AccentColor": "#345678",
-  "BackgroundColor": "#123456",
-  "TextColor": "#FFFFFF",
-  
-  // Optional Flight Phase Indicator overrides
-  "PhaseDetailsForeground": "#FFFFFF",
-  "ActivePhaseItemBackground": "#FF9900",
-  "ActivePhaseConnectorStroke": "#FF9900"
-}
-```
+1. **Consistent styling** across the entire UI
+2. **Proper contrast** between text and backgrounds
+3. **Visual hierarchy** that highlights the active phase
+4. **Harmonious color scheme** that matches your airline theme
 
-### Flight Phase Indicator Styling Tips
-
-- **Ensure contrast**: Make sure text colors have sufficient contrast with their backgrounds
-- **Highlight active phase**: Use a distinctive color for the active phase item and connector
-- **Subtle prediction styling**: Use a more subtle style for predicted phases
-- **Consistent colors**: Use colors that match your overall theme
+You don't need to specify any additional properties for flight phase indicators in your theme files. The simplified 5-color theme format provides all the information needed to create appropriate styling.
 
 ## Conclusion
 
