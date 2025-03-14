@@ -234,22 +234,23 @@ namespace Prosim2GSX.UI.EFB.ViewModels
         
         private void SubscribeToPropertyChanges()
         {
-            // Subscribe to property changes from service model
-            _dataBindingService.Subscribe("IsProsimConnected", value => IsProsimConnected = (bool)value);
-            _dataBindingService.Subscribe("IsSimConnected", value => IsSimConnected = (bool)value);
-            _dataBindingService.Subscribe("IsGSXActive", value => IsGSXActive = (bool)value);
-            _dataBindingService.Subscribe("LeftTankFuel", value => LeftTankFuel = (double)value);
-            _dataBindingService.Subscribe("CenterTankFuel", value => CenterTankFuel = (double)value);
-            _dataBindingService.Subscribe("RightTankFuel", value => RightTankFuel = (double)value);
-            _dataBindingService.Subscribe("TotalFuel", value => TotalFuel = (double)value);
-            _dataBindingService.Subscribe("PassengerCount", value => PassengerCount = (int)value);
-            _dataBindingService.Subscribe("CargoWeight", value => CargoWeight = (double)value);
-            _dataBindingService.Subscribe("RefuelingProgress", value => RefuelingProgress = (double)value);
-            _dataBindingService.Subscribe("BoardingProgress", value => BoardingProgress = (double)value);
-            _dataBindingService.Subscribe("DeboardingProgress", value => DeboardingProgress = (double)value);
-            _dataBindingService.Subscribe("CargoLoadingProgress", value => CargoLoadingProgress = (double)value);
-            _dataBindingService.Subscribe("CargoUnloadingProgress", value => CargoUnloadingProgress = (double)value);
-            _dataBindingService.Subscribe("CurrentFlightPhase", value => CurrentFlightPhase = (FlightPhaseIndicator.FlightPhase)value);
+            // Subscribe to property changes from service model with null-safe conversions
+            _dataBindingService.Subscribe("IsProsimRunning", value => IsProsimConnected = value as bool? ?? false);
+            _dataBindingService.Subscribe("IsSimRunning", value => IsSimConnected = value as bool? ?? false);
+            _dataBindingService.Subscribe("IsGSXActive", value => IsGSXActive = value as bool? ?? false);
+            _dataBindingService.Subscribe("LeftTankFuel", value => LeftTankFuel = value as double? ?? 0.0);
+            _dataBindingService.Subscribe("CenterTankFuel", value => CenterTankFuel = value as double? ?? 0.0);
+            _dataBindingService.Subscribe("RightTankFuel", value => RightTankFuel = value as double? ?? 0.0);
+            _dataBindingService.Subscribe("TotalFuel", value => TotalFuel = value as double? ?? 0.0);
+            _dataBindingService.Subscribe("PassengerCount", value => PassengerCount = value as int? ?? 0);
+            _dataBindingService.Subscribe("CargoWeight", value => CargoWeight = value as double? ?? 0.0);
+            _dataBindingService.Subscribe("RefuelingProgress", value => RefuelingProgress = value as double? ?? 0.0);
+            _dataBindingService.Subscribe("BoardingProgress", value => BoardingProgress = value as double? ?? 0.0);
+            _dataBindingService.Subscribe("DeboardingProgress", value => DeboardingProgress = value as double? ?? 0.0);
+            _dataBindingService.Subscribe("CargoLoadingProgress", value => CargoLoadingProgress = value as double? ?? 0.0);
+            _dataBindingService.Subscribe("CargoUnloadingProgress", value => CargoUnloadingProgress = value as double? ?? 0.0);
+            _dataBindingService.Subscribe("CurrentFlightPhase", value => CurrentFlightPhase = value != null ? 
+                (FlightPhaseIndicator.FlightPhase)value : FlightPhaseIndicator.FlightPhase.Preflight);
         }
         
         private void UnsubscribeFromPropertyChanges()
@@ -259,9 +260,10 @@ namespace Prosim2GSX.UI.EFB.ViewModels
         
         private void UpdateProperties()
         {
-            // Update properties from service model
-            IsProsimConnected = _dataBindingService.GetValue<bool>("IsProsimConnected");
-            IsSimConnected = _dataBindingService.GetValue<bool>("IsSimConnected");
+            // Update properties from service model with null-safe conversions
+            // GetValue<T> already returns default(T) for missing properties, but we'll add extra safety
+            IsProsimConnected = _dataBindingService.GetValue<bool>("IsProsimRunning");
+            IsSimConnected = _dataBindingService.GetValue<bool>("IsSimRunning");
             IsGSXActive = _dataBindingService.GetValue<bool>("IsGSXActive");
             LeftTankFuel = _dataBindingService.GetValue<double>("LeftTankFuel");
             CenterTankFuel = _dataBindingService.GetValue<double>("CenterTankFuel");
@@ -274,7 +276,10 @@ namespace Prosim2GSX.UI.EFB.ViewModels
             DeboardingProgress = _dataBindingService.GetValue<double>("DeboardingProgress");
             CargoLoadingProgress = _dataBindingService.GetValue<double>("CargoLoadingProgress");
             CargoUnloadingProgress = _dataBindingService.GetValue<double>("CargoUnloadingProgress");
-            CurrentFlightPhase = _dataBindingService.GetValue<FlightPhaseIndicator.FlightPhase>("CurrentFlightPhase");
+            
+            // For enum properties, we need to handle the case where the default(T) is 0
+            var flightPhase = _dataBindingService.GetValue<FlightPhaseIndicator.FlightPhase>("CurrentFlightPhase");
+            CurrentFlightPhase = flightPhase; // This is safe because enums default to their first value (0)
         }
         
         private void NavigateToAircraft()

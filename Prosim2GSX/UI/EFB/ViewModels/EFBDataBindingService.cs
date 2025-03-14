@@ -72,12 +72,21 @@ namespace Prosim2GSX.UI.EFB.ViewModels
             var property = GetPropertyInfo(propertyName);
             if (property == null)
             {
-                var errorMessage = $"Property '{propertyName}' not found on service model.";
-                _logger?.Log(LogLevel.Error, "EFBDataBindingService:GetValue", errorMessage);
-                throw new ArgumentException(errorMessage, nameof(propertyName));
+                var errorMessage = $"Property '{propertyName}' not found on service model. Returning default value.";
+                _logger?.Log(LogLevel.Warning, "EFBDataBindingService:GetValue", errorMessage);
+                return default(T);
             }
             
-            return (T)property.GetValue(_serviceModel);
+            try
+            {
+                return (T)property.GetValue(_serviceModel);
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = $"Error getting value for property '{propertyName}': {ex.Message}. Returning default value.";
+                _logger?.Log(LogLevel.Error, "EFBDataBindingService:GetValue", errorMessage);
+                return default(T);
+            }
         }
         
         /// <summary>
@@ -142,12 +151,54 @@ namespace Prosim2GSX.UI.EFB.ViewModels
             var property = GetPropertyInfo(propertyName);
             if (property != null)
             {
-                var value = property.GetValue(_serviceModel);
-                _lastValues[propertyName] = value;
-                callback(value);
-                _logger?.Log(LogLevel.Debug, "EFBDataBindingService:Subscribe", 
-                    $"Initialized property '{propertyName}' with current value");
+                try
+                {
+                    var value = property.GetValue(_serviceModel);
+                    _lastValues[propertyName] = value;
+                    callback(value);
+                    _logger?.Log(LogLevel.Debug, "EFBDataBindingService:Subscribe", 
+                        $"Initialized property '{propertyName}' with current value");
+                }
+                catch (Exception ex)
+                {
+                    var errorMessage = $"Error getting initial value for property '{propertyName}': {ex.Message}. Using default value.";
+                    _logger?.Log(LogLevel.Error, "EFBDataBindingService:Subscribe", errorMessage);
+                    
+                    // Use default value for the property type
+                    var defaultValue = GetDefaultValue(property.PropertyType);
+                    _lastValues[propertyName] = defaultValue;
+                    callback(defaultValue);
+                }
             }
+            else
+            {
+                var warningMessage = $"Property '{propertyName}' not found on service model. Subscription will be maintained but no initial value is available.";
+                _logger?.Log(LogLevel.Warning, "EFBDataBindingService:Subscribe", warningMessage);
+                
+                // Use null as the default value
+                _lastValues[propertyName] = null;
+                callback(null);
+            }
+        }
+        
+        /// <summary>
+        /// Gets the default value for a type.
+        /// </summary>
+        /// <param name="type">The type to get the default value for.</param>
+        /// <returns>The default value for the type.</returns>
+        private object GetDefaultValue(Type type)
+        {
+            if (type == null)
+            {
+                return null;
+            }
+            
+            if (type.IsValueType)
+            {
+                return Activator.CreateInstance(type);
+            }
+            
+            return null;
         }
         
         /// <summary>
@@ -230,15 +281,40 @@ namespace Prosim2GSX.UI.EFB.ViewModels
                 var property = GetPropertyInfo(e.PropertyName);
                 if (property != null)
                 {
-                    var value = property.GetValue(_serviceModel);
+                    object value;
+                    try
+                    {
+                        value = property.GetValue(_serviceModel);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.Log(LogLevel.Error, "EFBDataBindingService:OnServiceModelPropertyChanged", 
+                            $"Error getting value for property '{e.PropertyName}': {ex.Message}. Using default value.");
+                        
+                        // Use default value for the property type
+                        value = GetDefaultValue(property.PropertyType);
+                    }
                     
                     _dispatcher.Invoke(() =>
                     {
                         foreach (var callback in callbacks)
                         {
-                            callback(value);
+                            try
+                            {
+                                callback(value);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger?.Log(LogLevel.Error, "EFBDataBindingService:OnServiceModelPropertyChanged", 
+                                    $"Error invoking callback for property '{e.PropertyName}': {ex.Message}");
+                            }
                         }
                     });
+                }
+                else
+                {
+                    _logger?.Log(LogLevel.Warning, "EFBDataBindingService:OnServiceModelPropertyChanged", 
+                        $"Property '{e.PropertyName}' not found on service model during property changed event.");
                 }
             }
         }
@@ -251,35 +327,76 @@ namespace Prosim2GSX.UI.EFB.ViewModels
                 return;
             }
             
-            foreach (var propertyName in _propertyChangedCallbacks.Keys)
+            // Create a copy of the keys to avoid collection modified exceptions
+            var propertyNames = new List<string>(_propertyChangedCallbacks.Keys);
+            
+            foreach (var propertyName in propertyNames)
             {
-                var property = GetPropertyInfo(propertyName);
-                if (property != null)
+                try
                 {
-                    var value = property.GetValue(_serviceModel);
-                    
-                    if (_lastValues.TryGetValue(propertyName, out var lastValue))
+                    var property = GetPropertyInfo(propertyName);
+                    if (property != null)
                     {
-                        if (!Equals(value, lastValue))
+                        object value;
+                        try
+                        {
+                            value = property.GetValue(_serviceModel);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger?.Log(LogLevel.Error, "EFBDataBindingService:PollProperties", 
+                                $"Error getting value for property '{propertyName}': {ex.Message}. Using default value.");
+                            
+                            // Use default value for the property type
+                            value = GetDefaultValue(property.PropertyType);
+                        }
+                        
+                        if (_lastValues.TryGetValue(propertyName, out var lastValue))
+                        {
+                            if (!Equals(value, lastValue))
+                            {
+                                _lastValues[propertyName] = value;
+                                
+                                if (_propertyChangedCallbacks.TryGetValue(propertyName, out var callbacks))
+                                {
+                                    _dispatcher.Invoke(() =>
+                                    {
+                                        foreach (var callback in callbacks)
+                                        {
+                                            try
+                                            {
+                                                callback(value);
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                _logger?.Log(LogLevel.Error, "EFBDataBindingService:PollProperties", 
+                                                    $"Error invoking callback for property '{propertyName}': {ex.Message}");
+                                            }
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                        else
                         {
                             _lastValues[propertyName] = value;
-                            
-                            if (_propertyChangedCallbacks.TryGetValue(propertyName, out var callbacks))
-                            {
-                                _dispatcher.Invoke(() =>
-                                {
-                                    foreach (var callback in callbacks)
-                                    {
-                                        callback(value);
-                                    }
-                                });
-                            }
                         }
                     }
                     else
                     {
-                        _lastValues[propertyName] = value;
+                        // Property not found, log a warning once
+                        if (!_lastValues.ContainsKey(propertyName))
+                        {
+                            _logger?.Log(LogLevel.Warning, "EFBDataBindingService:PollProperties", 
+                                $"Property '{propertyName}' not found on service model during polling.");
+                            _lastValues[propertyName] = null;
+                        }
                     }
+                }
+                catch (Exception ex)
+                {
+                    _logger?.Log(LogLevel.Error, "EFBDataBindingService:PollProperties", 
+                        $"Unexpected error polling property '{propertyName}': {ex.Message}");
                 }
             }
         }
