@@ -46,9 +46,16 @@
                 <RichTextBox x:Name="LogTextBox" IsReadOnly="True" Background="Transparent" 
                              BorderThickness="0" Foreground="{DynamicResource EFBForegroundBrush}"
                              FontFamily="Consolas, Courier New, monospace">
+                    <RichTextBox.Document>
+                        <FlowDocument LineStackingStrategy="BlockLineHeight" PageWidth="3000" 
+                                      TextAlignment="Left">
+                            <!-- Initial content can be empty -->
+                        </FlowDocument>
+                    </RichTextBox.Document>
                     <RichTextBox.Resources>
                         <Style TargetType="{x:Type Paragraph}">
-                            <Setter Property="Margin" Value="0"/>
+                            <Setter Property="Margin" Value="0,0,0,5"/>
+                            <Setter Property="LineHeight" Value="20"/>
                         </Style>
                     </RichTextBox.Resources>
                 </RichTextBox>

@@ -1,5 +1,5 @@
-﻿﻿﻿﻿using System;
-using System.Collections;
+﻿﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using Prosim2GSX.Services;
 
@@ -15,7 +15,7 @@ namespace Prosim2GSX
         /// </summary>
         public static ILogger Instance => _instance;
         
-        public static Queue MessageQueue = new();
+        public static Queue<string> MessageQueue = new Queue<string>();
 
         /// <summary>
         /// Logs a message with the specified level, context, and message

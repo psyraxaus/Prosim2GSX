@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
@@ -19,7 +18,7 @@ namespace Prosim2GSX.UI.EFB.Views
     {
         private readonly DispatcherTimer _updateTimer;
         private readonly Dictionary<LogLevel, SolidColorBrush> _logLevelColors;
-        private readonly Queue _logQueue;
+        private readonly Queue<string> _logQueue;
         private LogLevel _filterLevel = LogLevel.Debug; // Default to showing all logs
         private bool _showAllLevels = true;
         private readonly ILogger _logger;
@@ -82,6 +81,13 @@ namespace Prosim2GSX.UI.EFB.Views
                 _logger?.Log(LogLevel.Error, "LogsPage", "Failed to find UI elements");
                 return;
             }
+
+            // Set additional FlowDocument properties
+            _logTextBox.Document.LineStackingStrategy = LineStackingStrategy.BlockLineHeight;
+            _logTextBox.Document.PageWidth = 3000; // Very wide to prevent word wrapping
+            _logTextBox.Document.TextAlignment = TextAlignment.Left;
+            _logTextBox.AcceptsReturn = false;
+            _logTextBox.Document.LineHeight = Double.NaN; // Use default line height
 
             // Hook up event handlers
             _logLevelFilter.SelectionChanged += LogLevelFilter_SelectionChanged;
@@ -175,7 +181,7 @@ namespace Prosim2GSX.UI.EFB.Views
                 var newLogs = new List<string>();
                 while (_logQueue != null && _logQueue.Count > 0)
                 {
-                    newLogs.Add(_logQueue.Dequeue() as string);
+                    newLogs.Add(_logQueue.Dequeue());
                 }
 
                 // Add new logs to the display
@@ -233,6 +239,7 @@ namespace Prosim2GSX.UI.EFB.Views
 
             // Create a new paragraph for the log entry
             var paragraph = new Paragraph();
+            paragraph.Margin = new Thickness(0, 0, 0, 5); // Ensure margin is set programmatically
             
             // Add a timestamp
             paragraph.Inlines.Add(new Run($"[{DateTime.Now:HH:mm:ss.fff}] ") 
