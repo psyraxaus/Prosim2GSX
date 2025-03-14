@@ -8,10 +8,10 @@ using Prosim2GSX.Services;
 namespace Prosim2GSX.UI.EFB.Themes
 {
     /// <summary>
-    /// Provides utilities for converting color strings and other theme values to WPF resources.
-    /// Also includes methods for color manipulation and contrast calculation.
+    /// Provides backward compatibility for the ThemeColorConverter class.
+    /// This class forwards calls to the new utility classes while maintaining the existing API.
     /// </summary>
-    public static class ThemeColorConverter
+    public static class ThemeColorConverterBackwardCompat
     {
         /// <summary>
         /// Converts a resource string to a WPF resource.
