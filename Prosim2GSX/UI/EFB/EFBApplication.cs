@@ -447,7 +447,11 @@ namespace Prosim2GSX.UI.EFB
                 services.AddTransient<Views.HomePage>();
                 services.AddTransient<Views.Aircraft.AircraftPageAdapter>();
                 services.AddTransient<Views.LogsPage>();
+                services.AddTransient<Views.SettingsPage>();
                 services.AddTransient<DummyPage>();
+                
+                // Register view models
+                services.AddTransient<ViewModels.SettingsViewModel>();
                 
                 // Initialize the service locator
                 ServiceLocator.Initialize(services);
@@ -696,6 +700,13 @@ namespace Prosim2GSX.UI.EFB
                 typeof(Views.LogsPage),
                 "Logs",
                 "\uE9D9"); // Logs icon
+                
+            // Settings page - Using actual SettingsPage implementation
+            _windowManager.RegisterPage(
+                "Settings",
+                typeof(Views.SettingsPage),
+                "Settings",
+                "\uE713"); // Settings icon
         }
     }
 

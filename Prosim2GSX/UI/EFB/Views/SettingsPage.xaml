@@ -1,0 +1,317 @@
+<local:SettingsPageBase x:Class="Prosim2GSX.UI.EFB.Views.SettingsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Prosim2GSX.UI.EFB.Views"
+             xmlns:controls="clr-namespace:Prosim2GSX.UI.EFB.Controls"
+             xmlns:viewmodels="clr-namespace:Prosim2GSX.UI.EFB.ViewModels"
+             d:DataContext="{d:DesignInstance Type=viewmodels:SettingsViewModel}"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
+                <Button Command="{Binding NavigateBackCommand}" 
+                        Style="{DynamicResource EFBIconButtonStyle}" 
+                        Content="&#xE72B;" 
+                        ToolTip="Back" 
+                        Margin="0,0,10,0" />
+                <TextBlock Text="SETTINGS" 
+                           Style="{DynamicResource EFBHeaderStyle}" 
+                           VerticalAlignment="Center" />
+            </StackPanel>
+            
+            <!-- Flight Plan Settings -->
+            <Border Grid.Row="1" 
+                    Style="{DynamicResource EFBPanelStyle}" 
+                    Margin="0,0,0,20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" 
+                               Text="FLIGHT PLAN SETTINGS" 
+                               Style="{DynamicResource EFBPanelHeaderStyle}" />
+                    
+                    <StackPanel Grid.Row="1" Margin="10">
+                        <TextBlock Text="Load Flight Plan From:" 
+                                   Style="{DynamicResource EFBLabelStyle}" 
+                                   Margin="0,0,0,5" />
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <RadioButton Content="EFB" 
+                                         IsChecked="{Binding UseEfbFlightPlan}" 
+                                         Margin="0,0,20,0" 
+                                         ToolTip="Load flight plan from EFB" />
+                            
+                            <RadioButton Content="MCDU" 
+                                         IsChecked="{Binding UseMcduFlightPlan}" 
+                                         ToolTip="Load flight plan from MCDU" />
+                        </StackPanel>
+                        
+                        <CheckBox Content="Use actual Passenger Count from SimBrief OFP" 
+                                  IsChecked="{Binding UseActualPaxValue}" 
+                                  Margin="0,0,0,10" 
+                                  ToolTip="The SimBrief Flightplan includes a Field for actual Passenger Count which can be different from the planned Passenger Count. If you don't want that (light) Randomization disable this Setting." />
+                        
+                        <CheckBox Content="Use ACARS for OPS messages" 
+                                  IsChecked="{Binding UseAcars}" 
+                                  Margin="0,0,0,5" 
+                                  ToolTip="This will use the Hoppie/SayIntenions ACARS network for sending OPS messages." />
+                        
+                        <StackPanel Orientation="Horizontal" Margin="20,0,0,0" 
+                                    IsEnabled="{Binding IsAcarsNetworkSelectionEnabled}">
+                            <RadioButton Content="Hoppie" 
+                                         IsChecked="{Binding UseHoppieAcars}" 
+                                         Margin="0,0,20,0" 
+                                         ToolTip="Use Hoppie ACARS network" />
+                            
+                            <RadioButton Content="Say Intentions" 
+                                         IsChecked="{Binding UseSayIntentionsAcars}" 
+                                         ToolTip="Use Say Intentions ACARS network" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </Border>
+            
+            <!-- Prosim Settings -->
+            <Border Grid.Row="2" 
+                    Style="{DynamicResource EFBPanelStyle}" 
+                    Margin="0,0,0,20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" 
+                               Text="PROSIM SETTINGS" 
+                               Style="{DynamicResource EFBPanelHeaderStyle}" />
+                    
+                    <StackPanel Grid.Row="1" Margin="10">
+                        <CheckBox Content="Save hydraulic fluids on arrival" 
+                                  IsChecked="{Binding SaveHydraulicFluids}" 
+                                  ToolTip="Saves the Prosim Hydraulic fluid value on arrival for use in later flights after shutdown." />
+                    </StackPanel>
+                </Grid>
+            </Border>
+            
+            <!-- Service Calls -->
+            <Border Grid.Row="3" 
+                    Style="{DynamicResource EFBPanelStyle}" 
+                    Margin="0,0,0,20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" 
+                               Text="SERVICE CALLS" 
+                               Style="{DynamicResource EFBPanelHeaderStyle}" />
+                    
+                    <StackPanel Grid.Row="1" Margin="10">
+                        <CheckBox Content="Reposition Plane on Startup (via GSX)" 
+                                  IsChecked="{Binding RepositionPlane}" 
+                                  Margin="0,0,0,5" 
+                                  ToolTip="Uses the 'Reposition here at current Gate' Option of GSX to position the Plane in accordance with the Airport Profile. The Repositioning is done when the Flight-Session becomes ready and after the configurable Delay below." />
+                        
+                        <StackPanel Orientation="Horizontal" Margin="20,0,0,10">
+                            <TextBlock Text="Reposition Delay:" 
+                                       VerticalAlignment="Center" 
+                                       Margin="0,0,5,0" />
+                            
+                            <TextBox Text="{Binding RepositionDelay}" 
+                                     Width="60" 
+                                     VerticalAlignment="Center" 
+                                     Margin="0,0,5,0" />
+                            
+                            <TextBlock Text="s" 
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                        
+                        <CheckBox Content="Call Refuel Service on Flightplan Import" 
+                                  IsChecked="{Binding AutoRefuel}" 
+                                  Margin="0,0,0,5" 
+                                  ToolTip="The Refuel Service will refuel from zero" />
+                        
+                        <CheckBox Content="Set Zero Fuel at start of refueling" 
+                                  IsChecked="{Binding ZeroFuel}" 
+                                  IsEnabled="{Binding IsZeroFuelEnabled}"
+                                  Margin="20,0,0,5" 
+                                  ToolTip="The Refuel Service will be directly called after you have imported your SimBrief Flightplan in the EFB or MCDU - regardless on which Device/Browser you use it." />
+                        
+                        <CheckBox Content="Save current FOB on engine shutdown" 
+                                  IsChecked="{Binding SaveFuel}" 
+                                  Margin="20,0,0,10" 
+                                  ToolTip="Save the fuel on board after landing." />
+                        
+                        <CheckBox Content="Call Catering Service together with Refuel Service" 
+                                  IsChecked="{Binding CallCatering}" 
+                                  Margin="0,0,0,5" 
+                                  ToolTip="The Catering Service is directly called after the Refuel Service was called automatically. Manually calling the Refuel Service will not trigger that!" />
+                        
+                        <CheckBox Content="Auto Open/Close Right Doors when catering in position and requesting door action" 
+                                  IsChecked="{Binding OpenDoorCatering}" 
+                                  Margin="20,0,0,5" 
+                                  ToolTip="Open right aft door when catering is in position." />
+                        
+                        <CheckBox Content="Auto Open/Close Cargo Doors after catering has finished" 
+                                  IsChecked="{Binding OpenCargoDoors}" 
+                                  Margin="0,0,0,5" 
+                                  ToolTip="Automatically open and close cargo doors after catering is finished." />
+                        
+                        <CheckBox Content="Start cargo loading before boarding (otherwise during boarding)" 
+                                  IsChecked="{Binding CargoLoadingBeforeBoarding}" 
+                                  Margin="20,0,0,10" 
+                                  ToolTip="If checked, cargo loading will start before boarding. If unchecked, cargo loading will start during the boarding process." />
+                        
+                        <CheckBox Content="Automatically start Boarding when Refuel and Catering are finished" 
+                                  IsChecked="{Binding AutoBoard}" 
+                                  Margin="0,0,0,5" 
+                                  ToolTip="Boarding will automatically start 90s after Refueling is finished (regardless if the Refuel Service was called automatically or manually). Boarding-Synchronization still works when this Option is disabled! The Final Loadsheet will always be send regardless who called Refueling and Boarding." />
+                        
+                        <CheckBox Content="Automatically start Deboarding on Arrival (after Beacon is off)" 
+                                  IsChecked="{Binding AutoDeboard}" 
+                                  Margin="0,0,0,5" 
+                                  ToolTip="Deboarding will start automatically as soon as the Beacon was switched off. Deboarding-Synchronization still works when this Option is disabled!" />
+                        
+                        <CheckBox Content="Disable Crew De-/Boarding (supress Question/Pop-Up)" 
+                                  IsChecked="{Binding DisableCrewBoarding}" 
+                                  Margin="0,0,0,10" 
+                                  ToolTip="Configures GSX to not board/deboard any Crew-Members, so the Question/Pop-Up will not appear. This Option is independent of the Service Automations, it will work either Way." />
+                        
+                        <TextBlock Text="Refuel Rate" 
+                                   Style="{DynamicResource EFBLabelStyle}" 
+                                   Margin="0,0,0,5" />
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
+                            <TextBox Text="{Binding RefuelRate}" 
+                                     Width="60" 
+                                     VerticalAlignment="Center" 
+                                     Margin="0,0,10,0" />
+                            
+                            <RadioButton Content="kg/s" 
+                                         IsChecked="{Binding UseKgsUnit}" 
+                                         Margin="0,0,10,0" 
+                                         VerticalAlignment="Center" />
+                            
+                            <RadioButton Content="lbs/s" 
+                                         IsChecked="{Binding UseLbsUnit}" 
+                                         VerticalAlignment="Center" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </Border>
+            
+            <!-- Ground Handling -->
+            <Border Grid.Row="4" 
+                    Style="{DynamicResource EFBPanelStyle}" 
+                    Margin="0,0,0,20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" 
+                               Text="GROUND HANDLING" 
+                               Style="{DynamicResource EFBPanelHeaderStyle}" />
+                    
+                    <StackPanel Grid.Row="1" Margin="10">
+                        <CheckBox Content="Automatic Jetway and Stairs Operation (on Startup, Departure and Arrival)" 
+                                  IsChecked="{Binding AutoConnect}" 
+                                  Margin="0,0,0,5" 
+                                  ToolTip="The Jetway and Stairs will automatically be called when the Session is started, the Plane is ready for Push-Back or has arrived at the Gate. Ready for Push-Back = External Power disconnected &amp; Parking Brake is set &amp; Beacon Light is On. Handling of other Ground-Equipment (Chocks, GPU) will always be performed!" />
+                        
+                        <CheckBox Content="Jetway Only (no Stairs)" 
+                                  IsChecked="{Binding JetwayOnly}" 
+                                  Margin="20,0,0,10" 
+                                  ToolTip="When checked, only the Jetway will be called (no Stairs). When unchecked, both Jetway and Stairs will be called." />
+                        
+                        <CheckBox Content="Connect/Disconnect PCA (on Startup, Departure and Arrival)" 
+                                  IsChecked="{Binding ConnectPCA}" 
+                                  Margin="0,0,0,5" 
+                                  ToolTip="The Pre-Conditioned Air (PCA) will be automatically connected/disconnected to air-condition the Cabin without APU. The Disconnect will already happen when the APU is 'Avail' and APU Bleed is On. Else it will connect or disconnect with the Jetway." />
+                        
+                        <CheckBox Content="PCA only available on Jetways" 
+                                  IsChecked="{Binding PcaOnlyJetway}" 
+                                  Margin="20,0,0,10" 
+                                  ToolTip="PCA will not be connected on Stands with only Stairs available." />
+                        
+                        <CheckBox Content="Synchronize By-Pass Pin State during Push-Back" 
+                                  IsChecked="{Binding SynchBypass}" 
+                                  ToolTip="Triggers the 'NWS STRG DISC' ECAM Message in synch with the GSX Animation &amp; Audio Messages. The Message is triggered by overwriting a L-Var from GSX which the Fenix monitors (so it thinks the Push-Back is longer). If you have Issues with Push-Back you can disable that Option for Troubleshooting." />
+                    </StackPanel>
+                </Grid>
+            </Border>
+            
+            <!-- Volume Control and UI Settings -->
+            <Border Grid.Row="5" 
+                    Style="{DynamicResource EFBPanelStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" 
+                               Text="VOLUME CONTROL AND UI SETTINGS" 
+                               Style="{DynamicResource EFBPanelHeaderStyle}" />
+                    
+                    <StackPanel Grid.Row="1" Margin="10">
+                        <CheckBox Content="Use EFB-Style UI (requires restart)" 
+                                  IsChecked="{Binding UseEfbUi}" 
+                                  Margin="0,0,0,10" 
+                                  ToolTip="Use the new Electronic Flight Bag (EFB) style user interface. This change will take effect after restarting the application." />
+                        
+                        <Separator Margin="0,0,0,10" />
+                        
+                        <CheckBox Content="Control GSX App Audio Volume via the INT Knob on ACP1 (Record Latch does mute)" 
+                                  IsChecked="{Binding GsxVolumeControl}" 
+                                  Margin="0,0,0,10" 
+                                  ToolTip="The Volume of the GSX (Couatl) Application will be controlled on the OS-Level. The Volume-Level is controlled with the INT Knob on ACP1. Pushing/Pulling the Knob will mute/unmute the whole Application. Volume Control will only start after the Plane is powered (that is FCU Displays are On). Be aware that the default Position in the Fenix is 50%!" />
+                        
+                        <CheckBox Content="Control Custom App Audio Volume via the VHF1 Knob on ACP1" 
+                                  IsChecked="{Binding Vhf1VolumeControl}" 
+                                  Margin="0,0,0,5" 
+                                  ToolTip="The Volume of the Application configured below will be controlled on the OS-Level. The Volume-Level is controlled with the VHF1 Knob on ACP1. Volume Control will only start after the Plane is powered (that is FCU Displays are On). Be aware that the default Position in the Fenix is 50%!" />
+                        
+                        <CheckBox Content="Use Record Latch to mute/unmute App (push/pull Knob)" 
+                                  IsChecked="{Binding Vhf1LatchMute}" 
+                                  Margin="20,0,0,5" 
+                                  ToolTip="Pushing/Pulling the VHF1 Knob will mute/unmute the whole Application. Leave it disabled for vPilot if you want to be able to deselect VHF1 and still hear VHF2 for Example!" />
+                        
+                        <StackPanel Orientation="Horizontal" Margin="20,0,0,0">
+                            <TextBlock Text="Custom App:" 
+                                       VerticalAlignment="Center" 
+                                       Margin="0,0,5,0" />
+                            
+                            <TextBox Text="{Binding Vhf1VolumeApp}" 
+                                     Width="120" 
+                                     IsEnabled="{Binding IsVhf1AppEnabled}"
+                                     VerticalAlignment="Center" 
+                                     Margin="0,0,5,0" />
+                            
+                            <TextBlock Text="(Name of the Binary without .exe Extension)" 
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </ScrollViewer>
+</local:SettingsPageBase>
