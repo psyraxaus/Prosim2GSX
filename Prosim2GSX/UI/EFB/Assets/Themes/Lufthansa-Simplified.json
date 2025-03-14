@@ -1,0 +1,40 @@
+{
+  "name": "Lufthansa (Simplified)",
+  "description": "Lufthansa-themed EFB with airline colors (simplified theme format)",
+  "author": "Prosim2GSX",
+  "version": "2.0.0",
+  "airlineCode": "DLH",
+  "isDarkTheme": true,
+  "creationDate": "2025-03-15T00:00:00Z",
+  "lastModifiedDate": "2025-03-15T00:00:00Z",
+  "colors": {
+    "PrimaryColor": "#05164D",
+    "SecondaryColor": "#041033",
+    "AccentColor": "#FFAD00",
+    "BackgroundColor": "#05164D",
+    "TextColor": "#FFFFFF"
+  },
+  "fonts": {
+    "PrimaryFontFamily": "Segoe UI",
+    "SecondaryFontFamily": "Segoe UI",
+    "HeaderFontFamily": "Segoe UI",
+    "HeaderFontWeight": "SemiBold",
+    "MonospaceFontFamily": "Consolas"
+  },
+  "resources": {
+    "CornerRadius": "4",
+    "ButtonCornerRadius": "4",
+    "InputCornerRadius": "4",
+    "PanelCornerRadius": "4",
+    "WindowCornerRadius": "4",
+    "DefaultPadding": "8",
+    "DefaultMargin": "8",
+    "DefaultSpacing": "8",
+    "DefaultBorderThickness": "1",
+    "DefaultFontSize": "12",
+    "HeaderFontSize": "16",
+    "SubheaderFontSize": "14",
+    "SmallFontSize": "11",
+    "LargeFontSize": "20"
+  }
+}

@@ -2,9 +2,98 @@
 
 This guide will walk you through the process of creating a custom airline theme for the Prosim2GSX Electronic Flight Bag (EFB).
 
-## Theme JSON Structure
+## Simplified Theme Format (Recommended)
 
-Themes are defined in JSON files with the following structure:
+The simplified theme format requires only 5 core colors, from which all other colors are automatically derived. This makes theme creation much easier while still allowing for customization.
+
+```json
+{
+  "name": "Your Airline Name",
+  "description": "Description of your theme",
+  "author": "Your Name",
+  "version": "1.0.0",
+  "airlineCode": "ABC",
+  "isDefault": false,
+  "isDarkTheme": true,
+  "creationDate": "2025-04-01T00:00:00Z",
+  "lastModifiedDate": "2025-04-01T00:00:00Z",
+  "colors": {
+    "PrimaryColor": "#123456",    // Main brand color
+    "SecondaryColor": "#234567",  // Secondary/complementary color
+    "AccentColor": "#345678",     // Highlight/call-to-action color
+    "BackgroundColor": "#123456", // Main background
+    "TextColor": "#FFFFFF"        // Primary text color
+  },
+  "fonts": {
+    "PrimaryFontFamily": "Arial, sans-serif",
+    "SecondaryFontFamily": "Arial, sans-serif",
+    "HeaderFontFamily": "Arial, sans-serif",
+    "HeaderFontWeight": "SemiBold",
+    "MonospaceFontFamily": "Courier New, monospace"
+  },
+  "resources": {
+    "CornerRadius": "4",
+    "ButtonCornerRadius": "4",
+    "InputCornerRadius": "4",
+    "PanelCornerRadius": "4",
+    "WindowCornerRadius": "4",
+    "DefaultPadding": "8",
+    "DefaultMargin": "8",
+    "DefaultSpacing": "8",
+    "DefaultBorderThickness": "1",
+    "DefaultFontSize": "12",
+    "HeaderFontSize": "16",
+    "SubheaderFontSize": "14",
+    "SmallFontSize": "11",
+    "LargeFontSize": "20"
+  }
+}
+```
+
+### Core Colors
+
+The simplified theme format requires only 5 core colors:
+
+| Color | Description | Example |
+|-------|-------------|---------|
+| PrimaryColor | Main brand color | #003366 (Delta blue) |
+| SecondaryColor | Secondary/complementary color | #001A3E (Darker blue) |
+| AccentColor | Highlight/call-to-action color | #E01A33 (Delta red) |
+| BackgroundColor | Main background color | #001A3E (Dark blue) |
+| TextColor | Primary text color | #FFFFFF (White) |
+
+### Automatic Color Derivation
+
+From these 5 core colors, the system automatically derives all other colors needed for the UI:
+
+- **Header colors**: Derived from SecondaryColor and TextColor
+- **Button colors**: Normal state uses SecondaryColor, hover state is a lightened version, pressed state uses AccentColor
+- **Input field colors**: Derived from BackgroundColor and TextColor
+- **Border colors**: Derived from SecondaryColor
+- **Text colors**: Primary, secondary, and contrast text colors are derived from TextColor and AccentColor
+- **Status colors**: Default values are provided but can be overridden
+
+### Optional Overrides
+
+If you need more control over specific colors, you can override any automatically derived color by including it explicitly in your theme:
+
+```json
+"colors": {
+  "PrimaryColor": "#123456",
+  "SecondaryColor": "#234567",
+  "AccentColor": "#345678",
+  "BackgroundColor": "#123456",
+  "TextColor": "#FFFFFF",
+  
+  // Optional overrides
+  "ButtonHoverBackgroundColor": "#003366",
+  "ButtonPressedBackgroundColor": "#CE1A39"
+}
+```
+
+## Legacy Theme Format (Complete)
+
+For advanced customization, you can still use the complete theme format with all color properties specified explicitly:
 
 ```json
 {
@@ -58,17 +147,20 @@ Themes are defined in JSON files with the following structure:
     "MonospaceFontFamily": "Courier New, monospace"
   },
   "resources": {
-    "CornerRadius": 4,
-    "ButtonHeight": 32,
-    "TabHeight": 40,
-    "HeaderHeight": 48,
-    "DefaultMargin": 8,
-    "DefaultPadding": 8,
-    "SmallFontSize": 11,
-    "DefaultFontSize": 12,
-    "LargeFontSize": 14,
-    "HeaderFontSize": 16,
-    "TitleFontSize": 20
+    "CornerRadius": "4",
+    "ButtonCornerRadius": "4",
+    "InputCornerRadius": "4",
+    "PanelCornerRadius": "4",
+    "WindowCornerRadius": "4",
+    "DefaultPadding": "8",
+    "DefaultMargin": "8",
+    "DefaultSpacing": "8",
+    "DefaultBorderThickness": "1",
+    "DefaultFontSize": "12",
+    "HeaderFontSize": "16",
+    "SubheaderFontSize": "14",
+    "SmallFontSize": "11",
+    "LargeFontSize": "20"
   }
 }
 ```
@@ -81,7 +173,7 @@ Themes are defined in JSON files with the following structure:
    - Observe their UI design patterns (rounded corners, etc.)
 
 2. **Create a new JSON file**
-   - Copy the template above
+   - Copy the simplified template above
    - Save it as `[AirlineName].json` in the `Assets/Themes` directory
 
 3. **Fill in the basic information**
@@ -89,11 +181,13 @@ Themes are defined in JSON files with the following structure:
    - Set the airline code (IATA code)
    - Decide if it's a dark or light theme
 
-4. **Define the colors**
+4. **Define the core colors**
    - Use hex color codes (#RRGGBB)
    - Primary color should be the main airline color
    - Secondary color should be a complementary color
    - Accent color should be used for highlights and important elements
+   - Background color sets the main app background
+   - Text color defines the main text color
 
 5. **Choose appropriate fonts**
    - Use fonts that are available on most systems
@@ -108,67 +202,57 @@ Themes are defined in JSON files with the following structure:
 7. **Test your theme**
    - Load the theme in the EFB
    - Check all UI elements for proper styling
-   - Make adjustments as needed
+   - Add optional color overrides if needed
 
 ## Color Properties
 
-### Base Colors
+### Core Colors (Simplified Format)
 
 | Property | Description | Example |
 |----------|-------------|---------|
 | PrimaryColor | Main color of the airline | #003366 (Delta blue) |
-| SecondaryColor | Secondary color, often used for contrast | #E01A33 (Delta red) |
-| AccentColor | Used for highlights and important elements | #E01A33 |
-| BackgroundColor | Background color for the application | #FFFFFF (white) |
-| ForegroundColor | Text color | #333333 (dark gray) |
-| BorderColor | Color for borders | #D9D9D9 (light gray) |
-| SuccessColor | Color for success messages | #00A650 (green) |
-| WarningColor | Color for warning messages | #F7A800 (amber) |
-| ErrorColor | Color for error messages | #E01A33 (red) |
-| InfoColor | Color for informational messages | #0072CE (blue) |
+| SecondaryColor | Secondary color, often used for contrast | #001A3E (Darker blue) |
+| AccentColor | Used for highlights and important elements | #E01A33 (Delta red) |
+| BackgroundColor | Background color for the application | #001A3E (Dark blue) |
+| TextColor | Primary text color | #FFFFFF (White) |
 
-### UI Element Colors
+### Derived Colors
 
-| Property | Description | Example |
-|----------|-------------|---------|
-| HeaderBackgroundColor | Background color for headers | #003366 |
-| HeaderForegroundColor | Text color for headers | #FFFFFF |
-| ButtonBackgroundColor | Base color for buttons | #003366 |
-| ButtonForegroundColor | Text color for buttons | #FFFFFF |
-| ButtonHoverBackgroundColor | Background color when hovering over buttons | #00264D |
-| ButtonPressedBackgroundColor | Background color when pressing buttons | #001A33 |
-| ButtonPressedForegroundColor | Text color when pressing buttons | #FFFFFF |
-| InputBackgroundColor | Background color for text boxes | #FFFFFF |
-| InputForegroundColor | Text color for text boxes | #333333 |
-| InputBorderColor | Border color for text boxes | #D9D9D9 |
-| InputFocusBorderColor | Border color for focused text boxes | #003366 |
-| TabSelectedColor | Color for selected tabs | #003366 |
+These colors are automatically derived from the core colors but can be overridden if needed:
+
+| Derived Property | Derivation Rule | Example |
+|------------------|-----------------|---------|
+| ForegroundColor | Same as TextColor | #FFFFFF |
+| BorderColor | Same as SecondaryColor | #001A3E |
+| HeaderBackgroundColor | Same as SecondaryColor | #001A3E |
+| HeaderForegroundColor | Same as TextColor | #FFFFFF |
+| ButtonBackgroundColor | Same as SecondaryColor | #001A3E |
+| ButtonForegroundColor | Same as TextColor | #FFFFFF |
+| ButtonHoverBackgroundColor | Lightened SecondaryColor (15%) | #00264D |
+| ButtonPressedBackgroundColor | Same as AccentColor | #E01A33 |
+| InputBackgroundColor | Darkened BackgroundColor (10%) | #001631 |
+| InputForegroundColor | Same as TextColor | #FFFFFF |
+| InputBorderColor | Same as SecondaryColor | #001A3E |
+| InputFocusBorderColor | Same as AccentColor | #E01A33 |
+| TabSelectedColor | Same as AccentColor | #E01A33 |
+
+### Status Colors (Default Values)
+
+| Property | Default Value | Example |
+|----------|---------------|---------|
+| SuccessColor | #33CC33 | Green |
+| WarningColor | #FFCC00 | Amber |
+| ErrorColor | #FF3333 | Red |
+| InfoColor | #3366FF | Blue |
 
 ### Text-Specific Colors
 
-| Property | Description | Example |
-|----------|-------------|---------|
-| EFBTextPrimaryColor | Primary text color | #333333 |
-| EFBTextSecondaryColor | Secondary text color (for less important text) | #666666 |
-| EFBTextAccentColor | Accent text color (for highlighted text) | #003366 |
-| EFBTextContrastColor | Contrast text color (for text on accent backgrounds) | #FFFFFF |
-| EFBStatusSuccessTextColor | Text color for success messages | #00A650 |
-| EFBStatusWarningTextColor | Text color for warning messages | #F7A800 |
-| EFBStatusErrorTextColor | Text color for error messages | #E01A33 |
-| EFBStatusInfoTextColor | Text color for info messages | #0072CE |
-| EFBStatusInactiveTextColor | Text color for inactive elements | #999999 |
-
-### Legacy Properties (for backward compatibility)
-
-| Property | Maps to | Example |
-|----------|---------|---------|
-| HeaderColor | HeaderBackgroundColor | #003366 |
-| ButtonColor | ButtonBackgroundColor | #003366 |
-| ButtonHoverColor | ButtonHoverBackgroundColor | #00264D |
-| ButtonPressedColor | ButtonPressedBackgroundColor | #001A33 |
-| TextBoxColor | InputBackgroundColor | #FFFFFF |
-| TextBoxBorderColor | InputBorderColor | #D9D9D9 |
-| TextBoxFocusedColor | InputFocusBorderColor | #003366 |
+| Property | Derivation Rule | Example |
+|----------|-----------------|---------|
+| EFBTextPrimaryColor | Same as TextColor | #FFFFFF |
+| EFBTextSecondaryColor | TextColor with 70% opacity | #FFFFFFB3 |
+| EFBTextAccentColor | Same as AccentColor | #E01A33 |
+| EFBTextContrastColor | Auto-calculated for contrast | #000000 |
 
 ## Font Properties
 
@@ -201,16 +285,19 @@ This approach ensures that if the primary font is not available on the user's sy
 | Property | Description | Example |
 |----------|-------------|---------|
 | CornerRadius | Radius for rounded corners | 4 |
-| ButtonHeight | Height of buttons | 32 |
-| TabHeight | Height of tabs | 40 |
-| HeaderHeight | Height of headers | 48 |
-| DefaultMargin | Default margin for elements | 8 |
+| ButtonCornerRadius | Radius for button corners | 4 |
+| InputCornerRadius | Radius for input field corners | 4 |
+| PanelCornerRadius | Radius for panel corners | 4 |
+| WindowCornerRadius | Radius for window corners | 4 |
 | DefaultPadding | Default padding for elements | 8 |
-| SmallFontSize | Size for small text | 11 |
+| DefaultMargin | Default margin for elements | 8 |
+| DefaultSpacing | Default spacing between elements | 8 |
+| DefaultBorderThickness | Default thickness for borders | 1 |
 | DefaultFontSize | Default font size | 12 |
-| LargeFontSize | Size for large text | 14 |
 | HeaderFontSize | Size for header text | 16 |
-| TitleFontSize | Size for title text | 20 |
+| SubheaderFontSize | Size for subheader text | 14 |
+| SmallFontSize | Size for small text | 11 |
+| LargeFontSize | Size for large text | 20 |
 
 ## Tips for Color Selection
 
@@ -218,10 +305,16 @@ This approach ensures that if the primary font is not available on the user's sy
 - Ensure sufficient contrast between text and background colors
 - Consider color blindness and accessibility
 - Test your theme in different lighting conditions
+- For dark themes, use darker colors for BackgroundColor and SecondaryColor
+- For light themes, use lighter colors for BackgroundColor and darker colors for TextColor
 
-## Ensuring Proper Contrast
+## Automatic Contrast Handling
 
-Good contrast between text and background colors is essential for readability. The application includes automatic contrast checking, but it's best to design with contrast in mind from the start.
+The simplified theme system includes automatic contrast checking and adjustment to ensure readability:
+
+1. **Text Color Contrast**: The system automatically checks the contrast between text colors and their backgrounds
+2. **Automatic Adjustments**: If contrast is insufficient, colors are automatically adjusted
+3. **Smart Derivation**: Text colors on colored backgrounds are derived to ensure readability
 
 ### WCAG 2.0 Contrast Guidelines
 
@@ -231,32 +324,17 @@ The Web Content Accessibility Guidelines (WCAG) 2.0 recommend the following mini
 - **3:1** for large text (14pt/18.5px bold or 18pt/24px normal and above)
 - **3:1** for UI components and graphical objects
 
-### Contrast Checking
+The theme system automatically enforces these guidelines.
 
-The EFB theme system automatically checks and adjusts text colors to ensure they have sufficient contrast with their backgrounds. However, you should still verify contrast manually during testing.
+### How Contrast is Ensured
 
-You can use online tools like the [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/) to verify your color combinations.
+1. **Background Analysis**: The system analyzes the luminance of background colors
+2. **Smart Text Colors**: For dark backgrounds, lighter text is used; for light backgrounds, darker text is used
+3. **Contrast Calculation**: The system calculates the contrast ratio between text and background
+4. **Automatic Adjustment**: If contrast is insufficient, colors are adjusted until they meet guidelines
+5. **Fallback to Black/White**: If adjustments can't achieve sufficient contrast, the system falls back to black or white
 
-### Tips for Better Contrast
-
-1. **For light backgrounds**: Use dark text colors (#000000 to #595959)
-2. **For dark backgrounds**: Use light text colors (#FFFFFF to #A6A6A6)
-3. **Avoid**: 
-   - Gray text on colored backgrounds
-   - Colored text on colored backgrounds (unless they have high contrast)
-   - Light text on light backgrounds
-   - Dark text on dark backgrounds
-
-### Text-Specific Color Properties
-
-The theme system includes several text-specific color properties that help ensure proper contrast:
-
-- `EFBTextPrimaryColor`: Main text color
-- `EFBTextSecondaryColor`: Secondary text (less emphasis)
-- `EFBTextAccentColor`: Accent text (more emphasis)
-- `EFBTextContrastColor`: Text on accent backgrounds
-
-Always set these properties explicitly in your theme to ensure proper text visibility.
+This automatic handling means you don't need to worry about contrast issues when creating themes with the simplified format.
 
 ## High Contrast Themes
 
@@ -278,7 +356,7 @@ You can use these themes as references when designing your own accessible themes
 
 - **Theme doesn't load**: Check your JSON syntax for errors
 - **Colors look wrong**: Verify hex codes are in the correct format (#RRGGBB)
-- **Text is hard to read**: Adjust the contrast between text and background colors
+- **Text is hard to read**: Try adjusting your core colors for better contrast
 - **UI elements look strange**: Check your resource values for appropriate sizes
 - **Font rendering issues**: 
   - Always use font families with fallbacks (e.g., "Arial, sans-serif")

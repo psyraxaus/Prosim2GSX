@@ -1,150 +1,106 @@
-# EFB Theme System
+# Prosim2GSX EFB Themes
 
-The Electronic Flight Bag (EFB) UI in Prosim2GSX supports a comprehensive theming system that allows users to customize the appearance of the interface. This document explains how the theme system works and how to create custom themes.
+This directory contains themes for the Prosim2GSX Electronic Flight Bag (EFB). Themes control the visual appearance of the EFB, including colors, fonts, and other visual elements.
 
-> **New Features (March 2025):**
-> - **Enhanced Contrast Checking**: The theme system now automatically ensures proper contrast between text and background colors.
-> - **Text-Specific Color Properties**: New color properties for better text visibility.
-> - **High Contrast Themes**: New high contrast themes for improved accessibility.
+## Simplified Theme System
 
-## Theme Selection
+The EFB now supports a simplified theme format that requires only 5 core colors, from which all other colors are automatically derived. This makes theme creation much easier while still allowing for customization.
 
-The EFB UI determines which theme to use based on the following logic:
+### Core Colors
 
-1. If a theme preference has been saved from a previous session, it will use that theme.
-2. If no preference is saved or the saved theme is not found, it will look for a theme with the `isDefault` property set to `true`.
-3. If no default theme is found, it will use the first theme it finds.
-4. If no themes are found, it will use a built-in default theme.
+The simplified theme format requires only these 5 core colors:
 
-## Theme Persistence
+1. **PrimaryColor**: Main brand color
+2. **SecondaryColor**: Secondary/complementary color
+3. **AccentColor**: Highlight/call-to-action color
+4. **BackgroundColor**: Main background color
+5. **TextColor**: Primary text color
 
-When you select a theme (either by cycling through themes or using a theme selector), your preference is automatically saved to the application's configuration file. The next time you start the application, it will load your preferred theme.
-
-## Theme Files
-
-Themes are defined in JSON files stored in the `UI/EFB/Assets/Themes` directory. Each theme file should follow the structure shown in the example themes provided.
-
-### Theme File Structure
+### Example
 
 ```json
 {
-  "name": "ThemeName",
-  "description": "Theme description",
-  "author": "Author name",
+  "name": "Airline Name",
+  "description": "Description of your theme",
+  "author": "Your Name",
   "version": "1.0.0",
-  "airlineCode": "IATA",
-  "isDefault": false,
+  "airlineCode": "ABC",
   "isDarkTheme": true,
-  "creationDate": "2025-03-13T12:00:00Z",
-  "lastModifiedDate": "2025-03-13T12:00:00Z",
   "colors": {
-    "PrimaryColor": "#RRGGBB",
-    "SecondaryColor": "#RRGGBB",
-    "AccentColor": "#RRGGBB",
-    "BackgroundColor": "#RRGGBB",
-    "ForegroundColor": "#RRGGBB",
-    ...
-  },
-  "fonts": {
-    "PrimaryFontFamily": "Font name",
-    "SecondaryFontFamily": "Font name",
-    "HeaderFontFamily": "Font name",
-    "MonospaceFontFamily": "Font name"
-  },
-  "resources": {
-    "CornerRadius": "4",
-    "ButtonCornerRadius": "4",
-    ...
+    "PrimaryColor": "#123456",
+    "SecondaryColor": "#234567",
+    "AccentColor": "#345678",
+    "BackgroundColor": "#123456",
+    "TextColor": "#FFFFFF"
   }
 }
 ```
 
-### Required Properties
+### Automatic Derivation
 
-- `name`: The name of the theme (must be unique)
-- `description`: A brief description of the theme
-- `colors`: A dictionary of color values (see Required Colors below)
+From these 5 core colors, the system automatically derives all other colors needed for the UI:
 
-### Required Colors
+- **Header colors**: Derived from SecondaryColor and TextColor
+- **Button colors**: Normal state uses SecondaryColor, hover state is a lightened version, pressed state uses AccentColor
+- **Input field colors**: Derived from BackgroundColor and TextColor
+- **Border colors**: Derived from SecondaryColor
+- **Text colors**: Primary, secondary, and contrast text colors are derived from TextColor and AccentColor
 
-The following colors are required for a theme to be valid:
+### Optional Overrides
 
-- `PrimaryColor`: The primary color of the theme (maps to `EFBPrimaryColor` in the UI)
-- `SecondaryColor`: The secondary color of the theme (maps to `EFBSecondaryColor` in the UI)
-- `AccentColor`: The accent color of the theme (maps to `EFBAccentColor` in the UI)
-- `BackgroundColor`: The background color of the UI (maps to `EFBBackgroundColor` in the UI)
-- `ForegroundColor`: The foreground color of the UI (text color) (maps to `EFBForegroundColor` in the UI)
+If you need more control over specific colors, you can override any automatically derived color by including it explicitly in your theme:
 
-Additional colors you can define:
+```json
+"colors": {
+  "PrimaryColor": "#123456",
+  "SecondaryColor": "#234567",
+  "AccentColor": "#345678",
+  "BackgroundColor": "#123456",
+  "TextColor": "#FFFFFF",
+  
+  // Optional overrides
+  "ButtonHoverBackgroundColor": "#003366",
+  "ButtonPressedBackgroundColor": "#CE1A39"
+}
+```
 
-- `BorderColor`: The color of borders (maps to `EFBBorderColor` in the UI)
-- `SuccessColor`: The color for success states (maps to `EFBSuccessColor` in the UI)
-- `WarningColor`: The color for warning states (maps to `EFBWarningColor` in the UI)
-- `ErrorColor`: The color for error states (maps to `EFBErrorColor` in the UI)
-- `InfoColor`: The color for informational states (maps to `EFBInfoColor` in the UI)
+## Available Themes
 
-> **Note:** The theme system automatically maps these color keys to the corresponding EFB resource keys used in the UI. It also automatically creates brush resources for each color (e.g., `PrimaryColor` is mapped to both `EFBPrimaryColor` and `EFBPrimaryBrush`).
+### Default Themes
 
-### Optional Properties
+- **Default**: The default theme for the EFB
+- **Light**: A light theme with blue accents
+- **HighContrastDark**: A high contrast dark theme for better visibility
+- **HighContrastLight**: A high contrast light theme for better visibility
 
-- `author`: The name of the theme author
-- `version`: The version of the theme
-- `airlineCode`: The IATA code of the airline (for airline-specific themes)
-- `isDefault`: Whether this theme should be used as the default theme (only one theme should have this set to `true`)
-- `isDarkTheme`: Whether this is a dark theme (affects system UI integration)
-- `creationDate`: The date the theme was created
-- `lastModifiedDate`: The date the theme was last modified
-- `fonts`: A dictionary of font family names
-- `resources`: A dictionary of other resources (corner radii, padding, etc.)
+### Airline Themes
 
-## Creating Custom Themes
+- **AirFrance**: Air France-themed EFB
+- **BritishAirways**: British Airways-themed EFB
+- **CathayPacific**: Cathay Pacific-themed EFB
+- **DeltaAirLines**: Delta Air Lines-themed EFB
+- **Emirates**: Emirates-themed EFB
+- **Finnair**: Finnair-themed EFB
+- **KLM**: KLM Royal Dutch Airlines-themed EFB
+- **Lufthansa**: Lufthansa-themed EFB
+- **Qantas**: Qantas-themed EFB
+- **SingaporeAirlines**: Singapore Airlines-themed EFB
 
-To create a custom theme:
+### Simplified Themes (Examples)
 
-1. Create a new JSON file in the `UI/EFB/Assets/Themes` directory with a `.json` extension.
-2. Copy the structure from one of the example themes.
-3. Modify the properties to match your desired theme.
-4. Save the file.
+- **BritishAirways-Simplified**: British Airways theme using the simplified format
+- **Lufthansa-Simplified**: Lufthansa theme using the simplified format
 
-The theme will be automatically loaded the next time the application starts.
+## Creating Your Own Theme
 
-## Text-Specific Color Properties
+1. Copy one of the simplified theme examples (e.g., `BritishAirways-Simplified.json`)
+2. Rename it to your airline or preferred name (e.g., `MyAirline.json`)
+3. Edit the core colors to match your preferred colors
+4. Save the file in this directory
+5. The theme will be available in the EFB settings
 
-The theme system now supports additional color properties specifically for text elements to ensure proper contrast and readability:
+For more detailed instructions, see the [ThemingGuide.md](ThemingGuide.md) file.
 
-- `EFBTextPrimaryColor`: Primary text color for most text elements
-- `EFBTextSecondaryColor`: Secondary text color for less important text
-- `EFBTextAccentColor`: Accent text color for highlighted text
-- `EFBTextContrastColor`: Contrast text color for text on accent backgrounds
-- `EFBStatusSuccessTextColor`: Text color for success messages
-- `EFBStatusWarningTextColor`: Text color for warning messages
-- `EFBStatusErrorTextColor`: Text color for error messages
-- `EFBStatusInfoTextColor`: Text color for info messages
-- `EFBStatusInactiveTextColor`: Text color for inactive elements
+## Theme Format Reference
 
-These properties are optional but recommended for ensuring proper text visibility. If not provided, the theme system will automatically derive appropriate values based on the background colors.
-
-## Automatic Contrast Checking
-
-The theme system now includes automatic contrast checking to ensure that text is always readable:
-
-1. When a theme is loaded, the system checks the contrast between text colors and their background colors.
-2. If the contrast is insufficient (below WCAG 2.0 recommendations), the system automatically adjusts the text color.
-3. This ensures that text is always readable, even if the theme doesn't explicitly define good contrast colors.
-
-For more details on contrast requirements and recommendations, see the `ThemingGuide.md` file.
-
-## Example Themes
-
-The following example themes are provided:
-
-- `Default.json`: A dark theme with blue accents (marked as default)
-- `Light.json`: A light theme with blue accents
-- `HighContrastLight.json`: A high-contrast light theme for improved accessibility
-- `HighContrastDark.json`: A high-contrast dark theme for improved accessibility
-
-You can use these themes as a starting point for creating your own custom themes.
-
-## Theme Switching
-
-You can switch between themes at runtime using the theme selector or by cycling through available themes. Your theme preference will be automatically saved for the next session.
+For a complete reference of all available theme properties, see the [ThemingGuide.md](ThemingGuide.md) file.

@@ -150,8 +150,46 @@ namespace Prosim2GSX.UI.EFB.Themes
                 return false;
             }
             
-            // Check required colors
-            var requiredColors = new[] 
+            // Check for simplified theme format (only requires core colors)
+            var coreColors = new[] 
+            { 
+                "PrimaryColor", 
+                "SecondaryColor", 
+                "AccentColor", 
+                "BackgroundColor", 
+                "TextColor" 
+            };
+            
+            // Check if we have all core colors for simplified format
+            bool hasAllCoreColors = true;
+            foreach (var color in coreColors)
+            {
+                if (!theme.Colors.ContainsKey(color))
+                {
+                    hasAllCoreColors = false;
+                    break;
+                }
+            }
+            
+            // If we have all core colors, validate them
+            if (hasAllCoreColors)
+            {
+                foreach (var color in coreColors)
+                {
+                    // Validate color format
+                    if (!ThemeColorConverter.IsValidColor(theme.Colors[color]))
+                    {
+                        _logger?.Log(LogLevel.Warning, "EFBThemeManager:ValidateTheme", 
+                            $"Theme validation failed: Color {color} has invalid format: {theme.Colors[color]}");
+                        return false;
+                    }
+                }
+                
+                return true;
+            }
+            
+            // If not using simplified format, check legacy required colors
+            var legacyRequiredColors = new[] 
             { 
                 "PrimaryColor", 
                 "SecondaryColor", 
@@ -160,7 +198,7 @@ namespace Prosim2GSX.UI.EFB.Themes
                 "ForegroundColor" 
             };
             
-            foreach (var color in requiredColors)
+            foreach (var color in legacyRequiredColors)
             {
                 if (!theme.Colors.ContainsKey(color))
                 {
@@ -209,6 +247,7 @@ namespace Prosim2GSX.UI.EFB.Themes
                 { "AccentColor", "EFBAccentColor" },
                 { "BackgroundColor", "EFBBackgroundColor" },
                 { "ForegroundColor", "EFBForegroundColor" },
+                { "TextColor", "EFBForegroundColor" }, // Map TextColor to ForegroundColor for simplified themes
                 { "BorderColor", "EFBBorderColor" },
                 { "SuccessColor", "EFBSuccessColor" },
                 { "WarningColor", "EFBWarningColor" },
@@ -235,6 +274,19 @@ namespace Prosim2GSX.UI.EFB.Themes
                 { "TextBoxBorderColor", "InputBorderColor" },
                 { "TextBoxFocusedColor", "InputFocusBorderColor" }
             };
+            
+            // Check if we're using the simplified theme format
+            bool isSimplifiedTheme = themeJson.Colors.ContainsKey("PrimaryColor") &&
+                                    themeJson.Colors.ContainsKey("SecondaryColor") &&
+                                    themeJson.Colors.ContainsKey("AccentColor") &&
+                                    themeJson.Colors.ContainsKey("BackgroundColor") &&
+                                    themeJson.Colors.ContainsKey("TextColor");
+            
+            // If using simplified theme, derive missing colors
+            if (isSimplifiedTheme)
+            {
+                DeriveColorsFromSimplifiedTheme(themeJson.Colors);
+            }
             
             // Add colors with mapped keys
             foreach (var color in themeJson.Colors)
@@ -288,6 +340,112 @@ namespace Prosim2GSX.UI.EFB.Themes
             theme.SetResource("IsDefault", themeJson.IsDefault);
             
             return theme;
+        }
+        
+        /// <summary>
+        /// Derives missing colors from a simplified theme.
+        /// </summary>
+        /// <param name="colors">The colors dictionary to update.</param>
+        private void DeriveColorsFromSimplifiedTheme(Dictionary<string, string> colors)
+        {
+            try
+            {
+                // Get base colors
+                var primaryColor = ThemeColorConverter.ConvertToColor(colors["PrimaryColor"]);
+                var secondaryColor = ThemeColorConverter.ConvertToColor(colors["SecondaryColor"]);
+                var accentColor = ThemeColorConverter.ConvertToColor(colors["AccentColor"]);
+                var backgroundColor = ThemeColorConverter.ConvertToColor(colors["BackgroundColor"]);
+                var textColor = ThemeColorConverter.ConvertToColor(colors["TextColor"]);
+                
+                // Derive UI element colors if not explicitly defined
+                SetIfMissing(colors, "ForegroundColor", textColor);
+                SetIfMissing(colors, "BorderColor", secondaryColor);
+                
+                // Header colors
+                SetIfMissing(colors, "HeaderBackgroundColor", secondaryColor);
+                SetIfMissing(colors, "HeaderForegroundColor", textColor);
+                
+                // Button colors
+                SetIfMissing(colors, "ButtonBackgroundColor", secondaryColor);
+                SetIfMissing(colors, "ButtonForegroundColor", textColor);
+                SetIfMissing(colors, "ButtonHoverBackgroundColor", ThemeColorConverter.LightenColor(secondaryColor, 0.15));
+                SetIfMissing(colors, "ButtonPressedBackgroundColor", accentColor);
+                SetIfMissing(colors, "ButtonPressedForegroundColor", ThemeColorConverter.GetContrastColor(accentColor));
+                
+                // Input colors
+                SetIfMissing(colors, "InputBackgroundColor", ThemeColorConverter.DarkenColor(backgroundColor, 0.1));
+                SetIfMissing(colors, "InputForegroundColor", textColor);
+                SetIfMissing(colors, "InputBorderColor", secondaryColor);
+                SetIfMissing(colors, "InputFocusBorderColor", accentColor);
+                
+                // Tab colors
+                SetIfMissing(colors, "TabSelectedColor", accentColor);
+                
+                // Text colors
+                SetIfMissing(colors, "EFBTextPrimaryColor", textColor);
+                SetIfMissing(colors, "EFBTextSecondaryColor", ColorToHex(ThemeColorConverter.SetOpacity(textColor, 0.7)));
+                SetIfMissing(colors, "EFBTextAccentColor", accentColor);
+                SetIfMissing(colors, "EFBTextContrastColor", ThemeColorConverter.GetContrastColor(accentColor));
+                
+                // Status colors (defaults if not specified)
+                SetIfMissing(colors, "SuccessColor", "#33CC33");
+                SetIfMissing(colors, "WarningColor", "#FFCC00");
+                SetIfMissing(colors, "ErrorColor", "#FF3333");
+                SetIfMissing(colors, "InfoColor", "#3366FF");
+                
+                // Status text colors
+                SetIfMissing(colors, "EFBStatusSuccessTextColor", colors["SuccessColor"]);
+                SetIfMissing(colors, "EFBStatusWarningTextColor", colors["WarningColor"]);
+                SetIfMissing(colors, "EFBStatusErrorTextColor", colors["ErrorColor"]);
+                SetIfMissing(colors, "EFBStatusInfoTextColor", colors["InfoColor"]);
+                SetIfMissing(colors, "EFBStatusInactiveTextColor", "#AAAAAA");
+                
+                _logger?.Log(LogLevel.Debug, "EFBThemeManager:DeriveColorsFromSimplifiedTheme", 
+                    "Successfully derived colors from simplified theme");
+            }
+            catch (Exception ex)
+            {
+                _logger?.Log(LogLevel.Error, "EFBThemeManager:DeriveColorsFromSimplifiedTheme", ex,
+                    "Error deriving colors from simplified theme");
+            }
+        }
+        
+        /// <summary>
+        /// Sets a color in the dictionary if it doesn't already exist.
+        /// </summary>
+        /// <param name="colors">The colors dictionary.</param>
+        /// <param name="key">The color key.</param>
+        /// <param name="value">The color value.</param>
+        private void SetIfMissing(Dictionary<string, string> colors, string key, System.Windows.Media.Color value)
+        {
+            if (!colors.ContainsKey(key))
+            {
+                colors[key] = ColorToHex(value);
+            }
+        }
+        
+        /// <summary>
+        /// Sets a color in the dictionary if it doesn't already exist.
+        /// </summary>
+        /// <param name="colors">The colors dictionary.</param>
+        /// <param name="key">The color key.</param>
+        /// <param name="value">The color value as a hex string.</param>
+        private void SetIfMissing(Dictionary<string, string> colors, string key, string value)
+        {
+            if (!colors.ContainsKey(key))
+            {
+                colors[key] = value;
+            }
+        }
+        
+        /// <summary>
+        /// Converts a Color to a hex string.
+        /// </summary>
+        /// <param name="color">The color to convert.</param>
+        /// <returns>The hex string representation of the color.</returns>
+        private string ColorToHex(System.Windows.Media.Color color)
+        {
+            return $"#{color.R:X2}{color.G:X2}{color.B:X2}";
         }
 
         /// <summary>
