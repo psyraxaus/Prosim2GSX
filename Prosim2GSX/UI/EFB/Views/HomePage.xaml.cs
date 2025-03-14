@@ -6,7 +6,7 @@ namespace Prosim2GSX.UI.EFB.Views
     /// <summary>
     /// Interaction logic for HomePage.xaml
     /// </summary>
-    public partial class HomePage : BasePage<HomeViewModel>
+    public partial class HomePage : HomePageBase
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="HomePage"/> class.

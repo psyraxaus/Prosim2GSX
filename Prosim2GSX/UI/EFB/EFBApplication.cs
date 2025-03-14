@@ -424,7 +424,22 @@ namespace Prosim2GSX.UI.EFB
                     services.AddSingleton(_logger);
                 }
                 
+                // Register EFB services
+                services.AddSingleton(_dataBindingService);
+                services.AddSingleton(_themeManager);
+                
+                // Register navigation service (will be initialized later for each window)
+                services.AddTransient<EFBNavigationService>(sp => 
+                    new EFBNavigationService(new ContentControl()));
+                
+                // Register view models
+                services.AddTransient<ViewModels.HomeViewModel>(sp => 
+                    new ViewModels.HomeViewModel(
+                        sp.GetRequiredService<EFBDataBindingService>(),
+                        sp.GetRequiredService<EFBNavigationService>()));
+                
                 // Register page types
+                services.AddTransient<Views.HomePage>();
                 services.AddTransient<Views.Aircraft.AircraftPageAdapter>();
                 services.AddTransient<Views.LogsPage>();
                 services.AddTransient<DummyPage>();
@@ -523,13 +538,12 @@ namespace Prosim2GSX.UI.EFB
         /// </summary>
         private void RegisterPages()
         {
-            // TODO: Register actual page implementations
-            // For now, we'll just register placeholder pages
+            // Register implemented pages and placeholders for pages not yet implemented
             
-            // Home page
+            // Home page - Using actual HomePage implementation
             _windowManager.RegisterPage(
                 "Home",
-                typeof(DummyPage), // Replace with actual page type
+                typeof(Views.HomePage),
                 "Home",
                 "\uE80F"); // Home icon
             
@@ -643,38 +657,38 @@ namespace Prosim2GSX.UI.EFB
                     "\uE709"); // Aircraft icon
             }
             
-            // Services page
+            // Services page - Using DummyPage as placeholder until implemented
             _windowManager.RegisterPage(
                 "Services",
-                typeof(DummyPage), // Replace with actual page type
+                typeof(DummyPage), // TODO: Replace with actual page type when implemented
                 "Services",
                 "\uE8F1"); // Services icon
             
-            // Plan page
+            // Plan page - Using DummyPage as placeholder until implemented
             _windowManager.RegisterPage(
                 "Plan",
-                typeof(DummyPage), // Replace with actual page type
+                typeof(DummyPage), // TODO: Replace with actual page type when implemented
                 "Plan",
                 "\uE8A5"); // Plan icon
             
-            // Ground page
+            // Ground page - Using DummyPage as placeholder until implemented
             _windowManager.RegisterPage(
                 "Ground",
-                typeof(DummyPage), // Replace with actual page type
+                typeof(DummyPage), // TODO: Replace with actual page type when implemented
                 "Ground",
                 "\uE945"); // Ground icon
             
-            // Audio page
+            // Audio page - Using DummyPage as placeholder until implemented
             _windowManager.RegisterPage(
                 "Audio",
-                typeof(DummyPage), // Replace with actual page type
+                typeof(DummyPage), // TODO: Replace with actual page type when implemented
                 "Audio",
                 "\uE767"); // Audio icon
             
-            // Logs page
+            // Logs page - Using actual LogsPage implementation
             _windowManager.RegisterPage(
                 "Logs",
-                typeof(Views.LogsPage), // Using the actual LogsPage implementation
+                typeof(Views.LogsPage),
                 "Logs",
                 "\uE9D9"); // Logs icon
         }

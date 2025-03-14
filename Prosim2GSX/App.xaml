@@ -17,6 +17,10 @@
             <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
             <converters:BooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" Invert="True" />
             <converters:BooleanConverter x:Key="InverseBooleanConverter" Invert="True" />
+            <converters:BooleanToStatusConverter x:Key="BooleanToStatusConverter" />
+            <converters:BooleanToStatusMessageConverter x:Key="BooleanToStatusMessageConverter" />
+            <converters:ProgressToVisibilityConverter x:Key="ProgressToVisibilityConverter" />
+            <converters:InverseRotateTransformConverter x:Key="InverseRotateTransformConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>
