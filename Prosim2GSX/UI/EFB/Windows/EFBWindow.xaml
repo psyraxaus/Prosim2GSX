@@ -13,6 +13,9 @@
         Background="{DynamicResource EFBBackgroundBrush}"
         Foreground="{DynamicResource EFBForegroundBrush}"
         WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        ResizeMode="CanResize"
+        AllowsTransparency="False"
         Loaded="Window_Loaded"
         Closing="Window_Closing">
     

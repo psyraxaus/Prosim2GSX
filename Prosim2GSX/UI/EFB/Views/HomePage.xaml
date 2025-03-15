@@ -57,6 +57,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         
                         <controls:StatusIndicator Grid.Row="0" 
@@ -100,6 +101,7 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
@@ -174,6 +176,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         
                         <TextBlock Grid.Row="0" Grid.Column="0" 
@@ -216,13 +219,14 @@
                                    Text="TOTAL FUEL" 
                                    Style="{DynamicResource EFBLabelTextStyle}" 
                                    HorizontalAlignment="Center" 
-                                   Margin="0,0,0,5" />
+                                   Margin="0,15,0,5" />
                         
-                        <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" 
+                        <TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" 
                                    Text="{Binding TotalFuel, StringFormat='{}{0:N0} KG'}" 
                                    Style="{DynamicResource EFBNumericValueTextStyle}" 
                                    HorizontalAlignment="Center" 
-                                   FontSize="{DynamicResource LargeFontSize}" />
+                                   FontSize="{DynamicResource LargeFontSize}"
+                                   Margin="0,5,0,5" />
                         
                         <controls:CircularProgressIndicator Grid.Row="1" Grid.Column="0" 
                                                           Progress="{Binding RefuelingProgress}" 

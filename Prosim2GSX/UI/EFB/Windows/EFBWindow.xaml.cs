@@ -48,6 +48,25 @@ namespace Prosim2GSX.UI.EFB.Windows
         private Rect _previousBounds;
         private string _currentPageKey;
 
+        // Window resizing constants
+        private const int ResizeBorderThickness = 5;
+        private bool _isResizing = false;
+        private Point _resizeStartPoint;
+        private ResizeDirection _resizeDirection = ResizeDirection.None;
+
+        private enum ResizeDirection
+        {
+            None,
+            Left,
+            Right,
+            Top,
+            Bottom,
+            TopLeft,
+            TopRight,
+            BottomLeft,
+            BottomRight
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="EFBWindow"/> class.
         /// </summary>
@@ -64,6 +83,11 @@ namespace Prosim2GSX.UI.EFB.Windows
             _timer.Interval = TimeSpan.FromSeconds(1);
             _timer.Tick += Timer_Tick;
             _timer.Start();
+
+            // Add mouse events for window resizing
+            MouseLeftButtonDown += EFBWindow_MouseLeftButtonDown;
+            MouseLeftButtonUp += EFBWindow_MouseLeftButtonUp;
+            MouseMove += EFBWindow_MouseMove;
         }
 
         /// <summary>
@@ -450,6 +474,159 @@ namespace Prosim2GSX.UI.EFB.Windows
                 // Toggle between normal and maximized on double-click
                 WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
             }
+        }
+
+        private void EFBWindow_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (WindowState == WindowState.Maximized)
+                return;
+
+            // Get the mouse position relative to the window
+            Point position = e.GetPosition(this);
+            
+            // Determine resize direction based on mouse position
+            _resizeDirection = GetResizeDirection(position);
+            
+            if (_resizeDirection != ResizeDirection.None)
+            {
+                _isResizing = true;
+                _resizeStartPoint = position;
+                CaptureMouse();
+                e.Handled = true;
+            }
+        }
+
+        private void EFBWindow_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (_isResizing)
+            {
+                _isResizing = false;
+                ReleaseMouseCapture();
+                e.Handled = true;
+            }
+        }
+
+        private void EFBWindow_MouseMove(object sender, MouseEventArgs e)
+        {
+            // Update cursor based on position
+            if (!_isResizing)
+            {
+                Point position = e.GetPosition(this);
+                ResizeDirection direction = GetResizeDirection(position);
+                UpdateCursor(direction);
+            }
+            
+            // Handle resizing
+            if (_isResizing)
+            {
+                Point position = e.GetPosition(this);
+                ResizeWindow(position);
+                e.Handled = true;
+            }
+        }
+
+        private ResizeDirection GetResizeDirection(Point position)
+        {
+            // Determine resize direction based on mouse position
+            bool left = position.X < ResizeBorderThickness;
+            bool right = position.X > ActualWidth - ResizeBorderThickness;
+            bool top = position.Y < ResizeBorderThickness;
+            bool bottom = position.Y > ActualHeight - ResizeBorderThickness;
+
+            if (top && left) return ResizeDirection.TopLeft;
+            if (top && right) return ResizeDirection.TopRight;
+            if (bottom && left) return ResizeDirection.BottomLeft;
+            if (bottom && right) return ResizeDirection.BottomRight;
+            if (left) return ResizeDirection.Left;
+            if (right) return ResizeDirection.Right;
+            if (top) return ResizeDirection.Top;
+            if (bottom) return ResizeDirection.Bottom;
+
+            return ResizeDirection.None;
+        }
+
+        private void UpdateCursor(ResizeDirection direction)
+        {
+            switch (direction)
+            {
+                case ResizeDirection.Left:
+                case ResizeDirection.Right:
+                    Cursor = Cursors.SizeWE;
+                    break;
+                case ResizeDirection.Top:
+                case ResizeDirection.Bottom:
+                    Cursor = Cursors.SizeNS;
+                    break;
+                case ResizeDirection.TopLeft:
+                case ResizeDirection.BottomRight:
+                    Cursor = Cursors.SizeNWSE;
+                    break;
+                case ResizeDirection.TopRight:
+                case ResizeDirection.BottomLeft:
+                    Cursor = Cursors.SizeNESW;
+                    break;
+                default:
+                    Cursor = Cursors.Arrow;
+                    break;
+            }
+        }
+
+        private void ResizeWindow(Point currentPosition)
+        {
+            double deltaX = currentPosition.X - _resizeStartPoint.X;
+            double deltaY = currentPosition.Y - _resizeStartPoint.Y;
+            double newWidth = Width;
+            double newHeight = Height;
+            double newLeft = Left;
+            double newTop = Top;
+
+            // Apply resizing based on direction
+            switch (_resizeDirection)
+            {
+                case ResizeDirection.Left:
+                    newWidth = Math.Max(MinWidth, Width - deltaX);
+                    newLeft = Left + (Width - newWidth);
+                    break;
+                case ResizeDirection.Right:
+                    newWidth = Math.Max(MinWidth, Width + deltaX);
+                    break;
+                case ResizeDirection.Top:
+                    newHeight = Math.Max(MinHeight, Height - deltaY);
+                    newTop = Top + (Height - newHeight);
+                    break;
+                case ResizeDirection.Bottom:
+                    newHeight = Math.Max(MinHeight, Height + deltaY);
+                    break;
+                case ResizeDirection.TopLeft:
+                    newWidth = Math.Max(MinWidth, Width - deltaX);
+                    newLeft = Left + (Width - newWidth);
+                    newHeight = Math.Max(MinHeight, Height - deltaY);
+                    newTop = Top + (Height - newHeight);
+                    break;
+                case ResizeDirection.TopRight:
+                    newWidth = Math.Max(MinWidth, Width + deltaX);
+                    newHeight = Math.Max(MinHeight, Height - deltaY);
+                    newTop = Top + (Height - newHeight);
+                    break;
+                case ResizeDirection.BottomLeft:
+                    newWidth = Math.Max(MinWidth, Width - deltaX);
+                    newLeft = Left + (Width - newWidth);
+                    newHeight = Math.Max(MinHeight, Height + deltaY);
+                    break;
+                case ResizeDirection.BottomRight:
+                    newWidth = Math.Max(MinWidth, Width + deltaX);
+                    newHeight = Math.Max(MinHeight, Height + deltaY);
+                    break;
+            }
+
+            // Apply the new size and position
+            Width = newWidth;
+            Height = newHeight;
+            Left = newLeft;
+            Top = newTop;
+
+            // Update the start point for the next move
+            _resizeStartPoint = currentPosition;
         }
 
         private void DetachButton_Click(object sender, RoutedEventArgs e)
