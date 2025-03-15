@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 
 namespace Prosim2GSX.UI.EFB.Views.Aircraft
@@ -49,7 +50,7 @@ namespace Prosim2GSX.UI.EFB.Views.Aircraft
         private Canvas _cabinLayout;
         private Canvas _doorIndicatorsCanvas;
         private Canvas _servicePointsCanvas;
-        private Path _aircraftOutline;
+        private Image _aircraftImage;
 
         // Theme-aware brushes
         private Brush _aircraftFill;
@@ -193,13 +194,6 @@ namespace Prosim2GSX.UI.EFB.Views.Aircraft
         /// </summary>
         private void UpdateVisualElements()
         {
-            // Update aircraft outline
-            if (_aircraftOutline != null)
-            {
-                _aircraftOutline.Fill = _aircraftFill;
-                _aircraftOutline.Stroke = _aircraftStroke;
-            }
-            
             // Update seats
             if (_cabinLayout != null)
             {
@@ -306,67 +300,21 @@ namespace Prosim2GSX.UI.EFB.Views.Aircraft
                 Background = Brushes.Transparent
             };
             
-            // Add the aircraft outline
-            _aircraftOutline = new Path
-            {
-                // A320 silhouette path data (top view, facing up)
-                Data = Geometry.Parse("M 300,50 C 320,50 340,55 350,65 L 400,120 L 450,120 C 470,120 480,130 480,150 L 480,250 C 480,270 470,280 450,280 L 400,280 L 350,335 C 340,345 320,350 300,350 C 280,350 260,345 250,335 L 200,280 L 150,280 C 130,280 120,270 120,250 L 120,150 C 120,130 130,120 150,120 L 200,120 L 250,65 C 260,55 280,50 300,50 Z"),
-                Fill = _aircraftFill,
-                Stroke = _aircraftStroke,
-                StrokeThickness = 2
-            };
-            _mainCanvas.Children.Add(_aircraftOutline);
-            
-            // Add wings
-            var leftWing = new Path
-            {
-                Data = Geometry.Parse("M 200,180 L 100,220 L 100,240 L 200,220 Z"),
-                Fill = _aircraftFill,
-                Stroke = _aircraftStroke,
-                StrokeThickness = 2
-            };
-            _mainCanvas.Children.Add(leftWing);
-            
-            var rightWing = new Path
-            {
-                Data = Geometry.Parse("M 400,180 L 500,220 L 500,240 L 400,220 Z"),
-                Fill = _aircraftFill,
-                Stroke = _aircraftStroke,
-                StrokeThickness = 2
-            };
-            _mainCanvas.Children.Add(rightWing);
-            
-            // Add engines
-            var leftEngine = new Path
-            {
-                Data = Geometry.Parse("M 150,210 C 150,200 160,195 170,195 L 190,195 C 200,195 210,200 210,210 C 210,220 200,225 190,225 L 170,225 C 160,225 150,220 150,210 Z"),
-                Fill = _aircraftFill,
-                Stroke = _aircraftStroke,
-                StrokeThickness = 1.5
-            };
-            _mainCanvas.Children.Add(leftEngine);
-            
-            var rightEngine = new Path
-            {
-                Data = Geometry.Parse("M 390,210 C 390,200 400,195 410,195 L 430,195 C 440,195 450,200 450,210 C 450,220 440,225 430,225 L 410,225 C 400,225 390,220 390,210 Z"),
-                Fill = _aircraftFill,
-                Stroke = _aircraftStroke,
-                StrokeThickness = 1.5
-            };
-            _mainCanvas.Children.Add(rightEngine);
+            // Load the aircraft image
+            LoadAircraftImage();
             
             // Generate seatmap
             GenerateSeatmap();
             
-            // Create door indicators
-            CreateDoorIndicator(_doorIndicatorsCanvas, "ForwardLeft", 180, 130, DoorType.Passenger);
-            CreateDoorIndicator(_doorIndicatorsCanvas, "ForwardRight", 420, 130, DoorType.Passenger);
-            CreateDoorIndicator(_doorIndicatorsCanvas, "AftLeft", 180, 270, DoorType.Passenger);
-            CreateDoorIndicator(_doorIndicatorsCanvas, "AftRight", 420, 270, DoorType.Passenger);
-            CreateDoorIndicator(_doorIndicatorsCanvas, "ForwardCargo", 220, 240, DoorType.Cargo);
-            CreateDoorIndicator(_doorIndicatorsCanvas, "AftCargo", 380, 240, DoorType.Cargo);
+            // Create door indicators - adjusted positions to match the A320-TOP.png image
+            CreateDoorIndicator(_doorIndicatorsCanvas, "ForwardLeft", 160, 120, DoorType.Passenger);
+            CreateDoorIndicator(_doorIndicatorsCanvas, "ForwardRight", 440, 120, DoorType.Passenger);
+            CreateDoorIndicator(_doorIndicatorsCanvas, "AftLeft", 160, 280, DoorType.Passenger);
+            CreateDoorIndicator(_doorIndicatorsCanvas, "AftRight", 440, 280, DoorType.Passenger);
+            CreateDoorIndicator(_doorIndicatorsCanvas, "ForwardCargo", 200, 220, DoorType.Cargo);
+            CreateDoorIndicator(_doorIndicatorsCanvas, "AftCargo", 400, 220, DoorType.Cargo);
             
-            // Create refueling point
+            // Create refueling point - adjusted position to match the A320-TOP.png image
             CreateRefuelingPoint(_servicePointsCanvas);
             
             // Add all canvases to the grid
@@ -377,6 +325,40 @@ namespace Prosim2GSX.UI.EFB.Views.Aircraft
             
             // Set the content of this UserControl to the grid
             Content = grid;
+        }
+        
+        /// <summary>
+        /// Loads the aircraft image from the assets directory.
+        /// </summary>
+        private void LoadAircraftImage()
+        {
+            try
+            {
+                // Create image control
+                _aircraftImage = new Image();
+                
+                // Load the image from the assets directory
+                var imageUri = new Uri("/Prosim2GSX;component/UI/EFB/Assets/Images/A320-TOP.png", UriKind.Relative);
+                _aircraftImage.Source = new BitmapImage(imageUri);
+                
+                // Apply 90-degree clockwise rotation
+                _aircraftImage.RenderTransform = new RotateTransform(90);
+                _aircraftImage.RenderTransformOrigin = new Point(0.5, 0.5);
+                
+                // Set sizing and positioning - adjusted for better fit
+                _aircraftImage.Stretch = Stretch.Uniform;
+                _aircraftImage.Width = 500;
+                _aircraftImage.Height = 350;
+                
+                // Add to canvas - centered in the control
+                Canvas.SetLeft(_aircraftImage, 50);
+                Canvas.SetTop(_aircraftImage, 25);
+                _mainCanvas.Children.Add(_aircraftImage);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading aircraft image: {ex.Message}", "Image Load Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         /// <summary>
@@ -391,7 +373,7 @@ namespace Prosim2GSX.UI.EFB.Views.Aircraft
             // Clear existing seats
             _cabinLayout.Children.Clear();
             
-            // Create seat grid
+            // Create seat grid - adjusted to match the A320-TOP.png image
             for (int row = 0; row < maxRows; row++)
             {
                 for (int seat = 0; seat < seatsPerRow; seat++)
@@ -411,17 +393,17 @@ namespace Prosim2GSX.UI.EFB.Views.Aircraft
                     // Position seat
                     double xOffset = seat < 3 ? -15 - (seat * 8) : 15 + ((seat - 3) * 8);
                     Canvas.SetLeft(seatRect, 300 + xOffset); // Center of aircraft
-                    Canvas.SetTop(seatRect, 120 + (row * 10)); // Starting from front
+                    Canvas.SetTop(seatRect, 130 + (row * 8)); // Starting from front, adjusted spacing
                     
                     // Add seat to layout
                     _cabinLayout.Children.Add(seatRect);
                 }
             }
             
-            // Add galleys and lavatories
-            AddGalley(280, 90); // Forward galley
-            AddGalley(280, 310); // Aft galley
-            AddLavatory(320, 310); // Aft lavatory
+            // Add galleys and lavatories - adjusted positions to match the A320-TOP.png image
+            AddGalley(280, 100); // Forward galley
+            AddGalley(280, 300); // Aft galley
+            AddLavatory(320, 300); // Aft lavatory
         }
 
         /// <summary>
@@ -552,8 +534,8 @@ namespace Prosim2GSX.UI.EFB.Views.Aircraft
                 RenderTransform = new ScaleTransform(1, 1),
                 RenderTransformOrigin = new Point(0.5, 0.5)
             };
-            Canvas.SetLeft(refuelingContainer, 450);
-            Canvas.SetTop(refuelingContainer, 230);
+            Canvas.SetLeft(refuelingContainer, 470);
+            Canvas.SetTop(refuelingContainer, 200);
             
             // Create refueling point background
             var refuelingBackground = new Ellipse
@@ -600,6 +582,47 @@ namespace Prosim2GSX.UI.EFB.Views.Aircraft
             Canvas.SetLeft(label, 430);
             Canvas.SetTop(label, 250);
             canvas.Children.Add(label);
+        }
+
+        /// <summary>
+        /// Highlights a service point on the aircraft diagram.
+        /// </summary>
+        /// <param name="servicePointName">The name of the service point to highlight.</param>
+        public void HighlightServicePoint(string servicePointName)
+        {
+            if (servicePointName == "Refueling" && _refuelingPoint != null)
+            {
+                // Create scale animation for container
+                var scaleAnimation = new DoubleAnimation
+                {
+                    From = 1.0,
+                    To = 1.3,
+                    Duration = TimeSpan.FromMilliseconds(300),
+                    AutoReverse = true,
+                    RepeatBehavior = new RepeatBehavior(3)
+                };
+                
+                // Apply animation
+                ((ScaleTransform)_refuelingPoint.Container.RenderTransform).BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnimation);
+                ((ScaleTransform)_refuelingPoint.Container.RenderTransform).BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnimation);
+            }
+        }
+
+        /// <summary>
+        /// Resets all service point highlights on the aircraft diagram.
+        /// </summary>
+        public void ResetServicePointHighlights()
+        {
+            if (_refuelingPoint != null)
+            {
+                // Stop animations if not active
+                if (_refuelingPoint.Background.Fill is SolidColorBrush brush && 
+                    brush.Color != ((SolidColorBrush)_refuelingActiveFill).Color)
+                {
+                    ((ScaleTransform)_refuelingPoint.Container.RenderTransform).BeginAnimation(ScaleTransform.ScaleXProperty, null);
+                    ((ScaleTransform)_refuelingPoint.Container.RenderTransform).BeginAnimation(ScaleTransform.ScaleYProperty, null);
+                }
+            }
         }
 
         /// <summary>
@@ -779,47 +802,6 @@ namespace Prosim2GSX.UI.EFB.Views.Aircraft
                 // Stop animations
                 ((ScaleTransform)doorIndicator.Container.RenderTransform).BeginAnimation(ScaleTransform.ScaleXProperty, null);
                 ((ScaleTransform)doorIndicator.Container.RenderTransform).BeginAnimation(ScaleTransform.ScaleYProperty, null);
-            }
-        }
-
-        /// <summary>
-        /// Highlights a service point on the aircraft diagram.
-        /// </summary>
-        /// <param name="servicePointName">The name of the service point to highlight.</param>
-        public void HighlightServicePoint(string servicePointName)
-        {
-            if (servicePointName == "Refueling" && _refuelingPoint != null)
-            {
-                // Create scale animation for container
-                var scaleAnimation = new DoubleAnimation
-                {
-                    From = 1.0,
-                    To = 1.3,
-                    Duration = TimeSpan.FromMilliseconds(300),
-                    AutoReverse = true,
-                    RepeatBehavior = new RepeatBehavior(3)
-                };
-                
-                // Apply animation
-                ((ScaleTransform)_refuelingPoint.Container.RenderTransform).BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnimation);
-                ((ScaleTransform)_refuelingPoint.Container.RenderTransform).BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnimation);
-            }
-        }
-
-        /// <summary>
-        /// Resets all service point highlights on the aircraft diagram.
-        /// </summary>
-        public void ResetServicePointHighlights()
-        {
-            if (_refuelingPoint != null)
-            {
-                // Stop animations if not active
-                if (_refuelingPoint.Background.Fill is SolidColorBrush brush && 
-                    brush.Color != ((SolidColorBrush)_refuelingActiveFill).Color)
-                {
-                    ((ScaleTransform)_refuelingPoint.Container.RenderTransform).BeginAnimation(ScaleTransform.ScaleXProperty, null);
-                    ((ScaleTransform)_refuelingPoint.Container.RenderTransform).BeginAnimation(ScaleTransform.ScaleYProperty, null);
-                }
             }
         }
     }
