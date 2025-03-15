@@ -356,6 +356,10 @@ namespace Prosim2GSX.UI.EFB.Windows
             // Get all themes with airline codes
             var airlineThemes = _themeManager.GetAirlineThemes();
             
+            // Store the current theme name for later selection
+            var currentThemeName = _themeManager.CurrentTheme?.Name;
+            ComboBoxItem selectedItem = null;
+            
             // Add each airline to the selector
             foreach (var theme in airlineThemes)
             {
@@ -365,24 +369,28 @@ namespace Prosim2GSX.UI.EFB.Windows
                     
                 ComboBoxItem item = new ComboBoxItem
                 {
-                    Content = theme.Name,
+                    Content = $"{theme.Name}",
                     Tag = theme.Name
                 };
                 AirlineSelector.Items.Add(item);
+                
+                // If this is the current theme, store the item for selection
+                if (theme.Name == currentThemeName)
+                {
+                    selectedItem = item;
+                }
             }
             
-            // Select the current theme if it's an airline theme
-            var currentTheme = _themeManager.CurrentTheme;
-            if (currentTheme.GetResource("AirlineCode") != null)
+            // Select the current theme in the ComboBox if found
+            if (selectedItem != null)
             {
-                foreach (ComboBoxItem item in AirlineSelector.Items)
-                {
-                    if ((string)item.Tag == currentTheme.Name)
-                    {
-                        AirlineSelector.SelectedItem = item;
-                        break;
-                    }
-                }
+                AirlineSelector.SelectedItem = selectedItem;
+            }
+            else if (AirlineSelector.Items.Count > 0)
+            {
+                // If the current theme wasn't found in the list but we have items,
+                // select the first item as a fallback
+                AirlineSelector.SelectedIndex = 0;
             }
         }
         
@@ -397,6 +405,10 @@ namespace Prosim2GSX.UI.EFB.Windows
             ComboBoxItem selectedItem = (ComboBoxItem)AirlineSelector.SelectedItem;
             string themeName = (string)selectedItem.Tag;
             
+            // Check if this is the same as the current theme
+            if (_themeManager.CurrentTheme?.Name == themeName)
+                return;
+                
             // Apply the selected theme
             _themeManager.ApplyTheme(themeName);
             
@@ -504,6 +516,7 @@ namespace Prosim2GSX.UI.EFB.Windows
             }
             
             // Update the selected item in the airline selector
+            bool found = false;
             if (e.NewTheme.GetResource("AirlineCode") != null)
             {
                 foreach (ComboBoxItem item in AirlineSelector.Items)
@@ -511,8 +524,15 @@ namespace Prosim2GSX.UI.EFB.Windows
                     if ((string)item.Tag == e.NewTheme.Name)
                     {
                         AirlineSelector.SelectedItem = item;
+                        found = true;
                         break;
                     }
+                }
+                
+                // If the theme wasn't found in the selector, repopulate the selector
+                if (!found)
+                {
+                    PopulateAirlineSelector();
                 }
             }
         }

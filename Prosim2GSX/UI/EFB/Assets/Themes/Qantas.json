@@ -10,10 +10,11 @@
   "lastModifiedDate": "2025-03-14T00:00:00Z",
   "colors": {
     "PrimaryColor": "#E40000",
-    "SecondaryColor": "#2B2B2B",
+    "SecondaryColor": "#D0D0D0",
     "AccentColor": "#E40000",
     "BackgroundColor": "#FFFFFF",
-    "TextColor": "#2B2B2B"
+    "TextColor": "#000000"
+
   },
   "fonts": {
     "PrimaryFontFamily": "Segoe UI",

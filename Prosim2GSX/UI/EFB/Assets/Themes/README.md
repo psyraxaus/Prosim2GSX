@@ -86,14 +86,9 @@ If you need more control over specific colors, you can override any automaticall
 - **Qantas**: Qantas-themed EFB
 - **SingaporeAirlines**: Singapore Airlines-themed EFB
 
-### Simplified Themes (Examples)
-
-- **BritishAirways-Simplified**: British Airways theme using the simplified format
-- **Lufthansa-Simplified**: Lufthansa theme using the simplified format
-
 ## Creating Your Own Theme
 
-1. Copy one of the simplified theme examples (e.g., `BritishAirways-Simplified.json`)
+1. Copy one of the simplified theme examples (e.g., `BritishAirways.json`)
 2. Rename it to your airline or preferred name (e.g., `MyAirline.json`)
 3. Edit the core colors to match your preferred colors
 4. Save the file in this directory
