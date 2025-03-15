@@ -493,9 +493,23 @@ namespace Prosim2GSX.UI.EFB.Themes
                         }
                     }
                     
-                    // Convert corner radii to doubles
-                    if (key.EndsWith("CornerRadius", StringComparison.OrdinalIgnoreCase) ||
-                        key.EndsWith("Radius", StringComparison.OrdinalIgnoreCase))
+                    // Convert corner radii to CornerRadius objects
+                    if (key.EndsWith("CornerRadius", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (double.TryParse(stringValue, out double radius))
+                        {
+                            return new System.Windows.CornerRadius(radius);
+                        }
+                        else
+                        {
+                            _logger?.Log(LogLevel.Warning, "EFBThemeManager:ConvertResourceValue", 
+                                $"Failed to parse corner radius value '{stringValue}' for key '{key}'");
+                            return new System.Windows.CornerRadius(0);
+                        }
+                    }
+                    
+                    // Convert regular radius values to doubles (not corner radius)
+                    if (key.EndsWith("Radius", StringComparison.OrdinalIgnoreCase))
                     {
                         if (double.TryParse(stringValue, out double radius))
                         {
@@ -509,25 +523,39 @@ namespace Prosim2GSX.UI.EFB.Themes
                         }
                     }
                     
-                    // Convert thickness values to doubles
+                    // Convert thickness values to Thickness objects
                     if (key.EndsWith("Thickness", StringComparison.OrdinalIgnoreCase))
                     {
                         if (double.TryParse(stringValue, out double thickness))
                         {
-                            return thickness;
+                            return new System.Windows.Thickness(thickness);
                         }
                         else
                         {
                             _logger?.Log(LogLevel.Warning, "EFBThemeManager:ConvertResourceValue", 
                                 $"Failed to parse thickness value '{stringValue}' for key '{key}'");
-                            return 1.0; // Default thickness
+                            return new System.Windows.Thickness(1);
                         }
                     }
                     
-                    // Convert margin and padding values to doubles
+                    // Convert margin and padding values to Thickness objects
                     if (key.EndsWith("Margin", StringComparison.OrdinalIgnoreCase) ||
-                        key.EndsWith("Padding", StringComparison.OrdinalIgnoreCase) ||
-                        key.EndsWith("Spacing", StringComparison.OrdinalIgnoreCase))
+                        key.EndsWith("Padding", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (double.TryParse(stringValue, out double spacing))
+                        {
+                            return new System.Windows.Thickness(spacing);
+                        }
+                        else
+                        {
+                            _logger?.Log(LogLevel.Warning, "EFBThemeManager:ConvertResourceValue", 
+                                $"Failed to parse margin/padding value '{stringValue}' for key '{key}'");
+                            return new System.Windows.Thickness(8);
+                        }
+                    }
+                    
+                    // Convert spacing values to doubles
+                    if (key.EndsWith("Spacing", StringComparison.OrdinalIgnoreCase))
                     {
                         if (double.TryParse(stringValue, out double spacing))
                         {

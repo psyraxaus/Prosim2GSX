@@ -12,6 +12,7 @@ namespace Prosim2GSX.UI.EFB.ViewModels.Settings
     public class SystemSettingsViewModel : SettingsCategoryViewModelBase
     {
         private readonly EFBThemeManager _themeManager;
+        private bool _isInitializing = true; // Flag to track initialization state
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SystemSettingsViewModel"/> class.
@@ -87,12 +88,15 @@ namespace Prosim2GSX.UI.EFB.ViewModels.Settings
                 {
                     ServiceModel.SetSetting("useEfbUi", value.ToString().ToLower());
 
-                    // Show a message to inform the user that the change will take effect after restart
-                    System.Windows.MessageBox.Show(
-                        "The UI change will take effect after restarting the application.",
-                        "UI Change",
-                        System.Windows.MessageBoxButton.OK,
-                        System.Windows.MessageBoxImage.Information);
+                    // Only show the message if not initializing (i.e., when changed by user)
+                    if (!_isInitializing)
+                    {
+                        System.Windows.MessageBox.Show(
+                            "The UI change will take effect after restarting the application.",
+                            "UI Change",
+                            System.Windows.MessageBoxButton.OK,
+                            System.Windows.MessageBoxImage.Information);
+                    }
                 }
             }
         }
@@ -196,6 +200,8 @@ namespace Prosim2GSX.UI.EFB.ViewModels.Settings
         {
             try
             {
+                _isInitializing = true; // Set flag before loading settings
+                
                 AutoConnect = ServiceModel.AutoConnect;
                 SynchBypass = ServiceModel.SynchBypass;
                 UseEfbUi = ServiceModel.UseEfbUi;
@@ -205,10 +211,13 @@ namespace Prosim2GSX.UI.EFB.ViewModels.Settings
                 LoadAvailableThemes();
 
                 UpdateSettings();
+                
+                _isInitializing = false; // Clear flag after loading settings
             }
             catch (Exception ex)
             {
                 Logger?.Log(LogLevel.Error, "SystemSettingsViewModel", ex, "Error loading system settings");
+                _isInitializing = false; // Ensure flag is cleared even on error
             }
         }
 
