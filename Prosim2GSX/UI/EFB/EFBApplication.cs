@@ -451,7 +451,19 @@ namespace Prosim2GSX.UI.EFB
                 services.AddTransient<DummyPage>();
                 
                 // Register view models
-                services.AddTransient<ViewModels.SettingsViewModel>();
+                services.AddTransient<ViewModels.SettingsViewModel>(sp => 
+                    new ViewModels.SettingsViewModel(
+                        sp.GetRequiredService<ServiceModel>(),
+                        sp.GetRequiredService<EFBNavigationService>(),
+                        sp.GetService<ILogger>()));
+                
+                // Register settings category view models
+                services.AddTransient<ViewModels.Settings.FlightPlanningSettingsViewModel>();
+                services.AddTransient<ViewModels.Settings.AutomationSettingsViewModel>();
+                services.AddTransient<ViewModels.Settings.AircraftConfigSettingsViewModel>();
+                services.AddTransient<ViewModels.Settings.FuelManagementSettingsViewModel>();
+                services.AddTransient<ViewModels.Settings.AudioControlSettingsViewModel>();
+                services.AddTransient<ViewModels.Settings.SystemSettingsViewModel>();
                 
                 // Initialize the service locator
                 ServiceLocator.Initialize(services);
@@ -701,10 +713,17 @@ namespace Prosim2GSX.UI.EFB
                 "Logs",
                 "\uE9D9"); // Logs icon
                 
-            // Settings page - Using DummyPage as placeholder until implemented
+            // Settings page - Using actual SettingsPage implementation
             _windowManager.RegisterPage(
                 "Settings",
-                typeof(DummyPage),
+                () => {
+                    // Create a navigation service for the settings page
+                    var navigationService = new EFBNavigationService(new ContentControl());
+                    return new Views.Settings.SettingsPageAdapter(
+                        _serviceModel,
+                        navigationService,
+                        _logger);
+                },
                 "Settings",
                 "\uE713"); // Settings icon
         }

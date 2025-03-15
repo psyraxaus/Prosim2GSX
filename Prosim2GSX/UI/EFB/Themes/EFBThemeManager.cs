@@ -319,9 +319,16 @@ namespace Prosim2GSX.UI.EFB.Themes
                         // Convert font family strings to FontFamily objects with fallbacks
                         theme.SetResource(font.Key, FontUtilities.ConvertToFontFamily(font.Value));
                     }
+                    else if (font.Key.EndsWith("FontWeight", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Convert font weight strings to FontWeight objects
+                        theme.SetResource(font.Key, ResourceConverter.ConvertToFontWeight(font.Value));
+                        _logger?.Log(LogLevel.Debug, "EFBThemeManager:ConvertJsonToThemeDefinition", 
+                            $"Converted font weight '{font.Value}' for key '{font.Key}'");
+                    }
                     else
                     {
-                        // For other font properties (weight, size, etc.), use as is
+                        // For other font properties (size, etc.), use as is
                         theme.SetResource(font.Key, font.Value);
                     }
                 }
