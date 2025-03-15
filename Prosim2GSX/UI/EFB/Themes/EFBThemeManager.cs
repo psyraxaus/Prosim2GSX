@@ -896,11 +896,27 @@ namespace Prosim2GSX.UI.EFB.Themes
                 { "EFBErrorBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Red) },
                 { "EFBInfoBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Blue) },
                 
+                // Toggle colors
+                { "EFBToggleBackgroundColor", System.Windows.Media.Colors.Gray },
+                { "EFBToggleBorderColor", System.Windows.Media.Colors.DarkGray },
+                { "EFBToggleThumbColor", System.Windows.Media.Colors.LightGray },
+                { "EFBToggleThumbBorderColor", System.Windows.Media.Colors.Silver },
+                { "EFBToggleCheckedBackgroundColor", System.Windows.Media.Colors.DodgerBlue },
+                { "EFBToggleCheckedThumbColor", System.Windows.Media.Colors.White },
+                
                 // Button colors
                 { "ButtonBackgroundColor", System.Windows.Media.Colors.DodgerBlue },
                 { "ButtonForegroundColor", System.Windows.Media.Colors.White },
                 { "ButtonHoverBackgroundColor", System.Windows.Media.Colors.RoyalBlue },
                 { "ButtonPressedBackgroundColor", System.Windows.Media.Colors.DarkBlue },
+                
+                // Toggle brushes
+                { "EFBToggleBackgroundBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Gray) },
+                { "EFBToggleBorderBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.DarkGray) },
+                { "EFBToggleThumbBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.LightGray) },
+                { "EFBToggleThumbBorderBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Silver) },
+                { "EFBToggleCheckedBackgroundBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.DodgerBlue) },
+                { "EFBToggleCheckedThumbBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.White) },
                 
                 // Button brushes
                 { "ButtonBackgroundBrush", new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.DodgerBlue) },

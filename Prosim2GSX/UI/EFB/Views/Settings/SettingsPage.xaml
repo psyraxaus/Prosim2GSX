@@ -1,4 +1,5 @@
 <Page x:Class="Prosim2GSX.UI.EFB.Views.Settings.SettingsPage"
+      x:Name="SettingsPageRoot"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -8,7 +9,10 @@
       xmlns:settings="clr-namespace:Prosim2GSX.UI.EFB.ViewModels.Settings"
       mc:Ignorable="d" 
       d:DesignHeight="600" d:DesignWidth="800"
-      Title="Settings">
+      Title="Settings"
+      TextOptions.TextFormattingMode="Display"
+      TextOptions.TextRenderingMode="ClearType"
+      UseLayoutRounding="True">
 
     <Page.Resources>
         <!-- Card Border Style -->
@@ -53,18 +57,19 @@
         </Style>
 
         <!-- Toggle Switch Style -->
-        <Style x:Key="ToggleSwitchStyle" TargetType="ToggleButton">
+        <Style x:Key="ToggleSwitchStyle" TargetType="CheckBox">
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="ToggleButton">
-                        <Grid>
+                    <ControlTemplate TargetType="CheckBox">
+<Grid>
                             <Border x:Name="BackgroundElement" 
                                     Background="{DynamicResource EFBToggleBackgroundBrush}" 
                                     BorderBrush="{DynamicResource EFBToggleBorderBrush}" 
                                     BorderThickness="1" 
                                     CornerRadius="10" 
                                     Width="40" 
-                                    Height="20">
+                                    Height="20"
+                                    SnapsToDevicePixels="True">
                             </Border>
                             <Border x:Name="ThumbElement" 
                                     Background="{DynamicResource EFBToggleThumbBrush}" 
@@ -74,7 +79,8 @@
                                     Width="16" 
                                     Height="16" 
                                     HorizontalAlignment="Left" 
-                                    Margin="2,0,0,0">
+                                    Margin="2,0,0,0"
+                                    SnapsToDevicePixels="True">
                             </Border>
                         </Grid>
                         <ControlTemplate.Triggers>
@@ -93,6 +99,8 @@
             </Setter>
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="UseLayoutRounding" Value="True" />
         </Style>
 
         <!-- Numeric Up Down Style -->
@@ -184,26 +192,30 @@
                     <TextBlock Text="{Binding Name}" 
                                Style="{StaticResource SettingNameStyle}" 
                                Grid.Row="0" 
-                               Grid.Column="0" />
+                               Grid.Column="0"
+                               TextOptions.TextFormattingMode="Display"
+                               TextOptions.TextRenderingMode="ClearType" />
                     
-                    <ToggleButton IsChecked="{Binding IsToggled}" 
-                                  Style="{StaticResource ToggleSwitchStyle}" 
-                                  Grid.Row="0" 
-                                  Grid.Column="1" 
-                                  IsEnabled="{Binding IsEnabled}" />
+                    <CheckBox IsChecked="{Binding IsToggled}" 
+                              Style="{StaticResource ToggleSwitchStyle}" 
+                              Grid.Row="0" 
+                              Grid.Column="1" 
+                              IsEnabled="{Binding IsEnabled}" />
                     
                     <TextBlock Text="{Binding Description}" 
                                Style="{StaticResource SettingDescriptionStyle}" 
                                Grid.Row="1" 
                                Grid.Column="0" 
-                               Grid.ColumnSpan="2" />
+                               Grid.ColumnSpan="2"
+                               TextOptions.TextFormattingMode="Display"
+                               TextOptions.TextRenderingMode="ClearType" />
                 </Grid>
             </Border>
         </DataTemplate>
 
         <DataTemplate x:Key="OptionsSettingTemplate">
             <Border Style="{StaticResource SettingContainerStyle}">
-                <Grid>
+    <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -216,7 +228,9 @@
                     <TextBlock Text="{Binding Name}" 
                                Style="{StaticResource SettingNameStyle}" 
                                Grid.Row="0" 
-                               Grid.Column="0" />
+                               Grid.Column="0"
+                               TextOptions.TextFormattingMode="Display"
+                               TextOptions.TextRenderingMode="ClearType" />
                     
                     <ComboBox ItemsSource="{Binding Options}" 
                               SelectedItem="{Binding SelectedOption}" 
@@ -229,7 +243,9 @@
                                Style="{StaticResource SettingDescriptionStyle}" 
                                Grid.Row="1" 
                                Grid.Column="0" 
-                               Grid.ColumnSpan="2" />
+                               Grid.ColumnSpan="2"
+                               TextOptions.TextFormattingMode="Display"
+                               TextOptions.TextRenderingMode="ClearType" />
                 </Grid>
             </Border>
         </DataTemplate>
@@ -374,7 +390,8 @@
                 BorderBrush="{DynamicResource EFBHeaderBorderBrush}" 
                 BorderThickness="0,0,0,1" 
                 Padding="16,12" 
-                Grid.Row="0">
+                Grid.Row="0"
+                SnapsToDevicePixels="True">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -386,11 +403,15 @@
                                FontFamily="Segoe MDL2 Assets" 
                                FontSize="24" 
                                VerticalAlignment="Center" 
-                               Margin="0,0,12,0" />
+                               Margin="0,0,12,0"
+                               TextOptions.TextFormattingMode="Display"
+                               TextOptions.TextRenderingMode="ClearType" />
                     <TextBlock Text="Settings" 
                                Style="{StaticResource EFBHeaderTextStyle}" 
                                VerticalAlignment="Center" 
-                               Margin="0" />
+                               Margin="0"
+                               TextOptions.TextFormattingMode="Display"
+                               TextOptions.TextRenderingMode="ClearType" />
                 </StackPanel>
             </Grid>
         </Border>
