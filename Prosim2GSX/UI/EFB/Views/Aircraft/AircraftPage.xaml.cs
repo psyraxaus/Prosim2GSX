@@ -76,9 +76,11 @@ namespace Prosim2GSX.UI.EFB.Views.Aircraft
             {
                 Logger.Log(LogLevel.Debug, "AircraftPage", "Initializing full UI");
                 
-                // Instead of trying to load XAML directly, we'll create the UI programmatically
-                // This avoids XML parsing issues and is more reliable
-                CreateManualUI();
+                // Initialize the component from XAML
+                InitializeComponent();
+                
+                // Update the aircraft diagram based on the current state
+                UpdateAircraftDiagram();
                 
                 Logger.Log(LogLevel.Debug, "AircraftPage", "UI initialized successfully");
                 
@@ -88,6 +90,42 @@ namespace Prosim2GSX.UI.EFB.Views.Aircraft
             catch (Exception ex)
             {
                 Logger.Log(LogLevel.Error, "AircraftPage", ex, "Error initializing UI");
+                
+                // If XAML initialization fails, fall back to manual UI creation
+                CreateManualUI();
+            }
+        }
+        
+        /// <summary>
+        /// Updates the aircraft diagram based on the current state.
+        /// </summary>
+        private void UpdateAircraftDiagram()
+        {
+            try
+            {
+                if (AircraftDiagramControl != null)
+                {
+                    // Update door states
+                    AircraftDiagramControl.SetDoorActive("ForwardLeft", _viewModel.ForwardLeftDoorOpen);
+                    AircraftDiagramControl.SetDoorActive("ForwardRight", _viewModel.ForwardRightDoorOpen);
+                    AircraftDiagramControl.SetDoorActive("AftLeft", _viewModel.AftLeftDoorOpen);
+                    AircraftDiagramControl.SetDoorActive("AftRight", _viewModel.AftRightDoorOpen);
+                    AircraftDiagramControl.SetDoorActive("ForwardCargo", _viewModel.ForwardCargoDoorOpen);
+                    AircraftDiagramControl.SetDoorActive("AftCargo", _viewModel.AftCargoDoorOpen);
+                    
+                    // Update refueling state
+                    AircraftDiagramControl.SetRefuelingActive(_viewModel.RefuelingInProgress);
+                    
+                    Logger.Log(LogLevel.Debug, "AircraftPage", "Aircraft diagram updated successfully");
+                }
+                else
+                {
+                    Logger.Log(LogLevel.Warning, "AircraftPage", "AircraftDiagramControl is null");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "AircraftPage", ex, "Error updating aircraft diagram");
             }
         }
 
@@ -272,6 +310,27 @@ namespace Prosim2GSX.UI.EFB.Views.Aircraft
                 progressBorder.Child = progressPanel;
                 mainGrid.Children.Add(progressBorder);
                 
+                // Create aircraft diagram control
+                try
+                {
+                    // Create the aircraft diagram control
+                    AircraftDiagramControl = new AircraftDiagramControl();
+                    AircraftDiagramControl.DataContext = _viewModel;
+                    Grid.SetRow(AircraftDiagramControl, 1);
+                    
+                    // Add the aircraft diagram control to the grid
+                    mainGrid.Children.Add(AircraftDiagramControl);
+                    
+                    // Update the aircraft diagram based on the current state
+                    UpdateAircraftDiagram();
+                    
+                    Logger.Log(LogLevel.Debug, "AircraftPage", "Aircraft diagram control created successfully");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LogLevel.Error, "AircraftPage", ex, "Error creating aircraft diagram control");
+                }
+                
                 // Set the Grid as the content of the Page
                 this.Content = mainGrid;
                 
@@ -338,6 +397,9 @@ namespace Prosim2GSX.UI.EFB.Views.Aircraft
     {
         // Update the view model when navigated to
         _viewModel.InitializeState();
+        
+        // Update the aircraft diagram
+        UpdateAircraftDiagram();
     }
 
     /// <summary>
@@ -356,6 +418,9 @@ namespace Prosim2GSX.UI.EFB.Views.Aircraft
     {
         // Handle activation
         _viewModel.InitializeState();
+        
+        // Update the aircraft diagram
+        UpdateAircraftDiagram();
     }
     
     /// <summary>
@@ -374,6 +439,9 @@ namespace Prosim2GSX.UI.EFB.Views.Aircraft
     {
         // Refresh the page
         _viewModel.InitializeState();
+        
+        // Update the aircraft diagram
+        UpdateAircraftDiagram();
     }
 
     #endregion
@@ -384,12 +452,67 @@ namespace Prosim2GSX.UI.EFB.Views.Aircraft
         {
             // Log the door state change
             Logger.Log(LogLevel.Debug, "AircraftPage", $"Door state changed: {args.DoorType} - IsOpen: {args.IsOpen}");
+            
+            // Update the aircraft diagram
+            try
+            {
+                if (AircraftDiagramControl != null)
+                {
+                    // Map the door type to the door name in the diagram
+                    string doorName = args.DoorType.ToString();
+                    
+                    // Update the door state in the diagram
+                    AircraftDiagramControl.SetDoorActive(doorName, args.IsOpen);
+                    
+                    // If the door is opening, highlight it briefly
+                    if (args.IsOpen)
+                    {
+                        AircraftDiagramControl.HighlightDoor(doorName);
+                        
+                        // Schedule a task to reset the highlight after a delay
+                        Dispatcher.InvokeAsync(async () => {
+                            await Task.Delay(3000); // 3 seconds
+                            AircraftDiagramControl.ResetDoorHighlights();
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "AircraftPage", ex, "Error updating door state in aircraft diagram");
+            }
         }
 
         private void OnFuelStateChanged(FuelStateChangedEventArgs args)
         {
             // Log the fuel state change
             Logger.Log(LogLevel.Debug, "AircraftPage", $"Fuel state changed: IsRefueling: {args.IsRefueling}");
+            
+            // Update the aircraft diagram
+            try
+            {
+                if (AircraftDiagramControl != null)
+                {
+                    // Update the refueling state in the diagram
+                    AircraftDiagramControl.SetRefuelingActive(args.IsRefueling);
+                    
+                    // If refueling is starting, highlight the refueling point briefly
+                    if (args.IsRefueling)
+                    {
+                        AircraftDiagramControl.HighlightServicePoint("Refueling");
+                        
+                        // Schedule a task to reset the highlight after a delay
+                        Dispatcher.InvokeAsync(async () => {
+                            await Task.Delay(3000); // 3 seconds
+                            AircraftDiagramControl.ResetServicePointHighlights();
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "AircraftPage", ex, "Error updating refueling state in aircraft diagram");
+            }
         }
 
         #endregion

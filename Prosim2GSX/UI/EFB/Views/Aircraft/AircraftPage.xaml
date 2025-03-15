@@ -32,7 +32,7 @@
                 <TextBlock Grid.Column="0" 
                            Text="Aircraft Status" 
                            Style="{DynamicResource EFBHeaderTextStyle}"
-                           Foreground="{DynamicResource EFBTextOnPrimaryStyle}"
+                           Foreground="{DynamicResource HeaderForegroundBrush}"
                            VerticalAlignment="Center"/>
                 
                 <TextBlock Grid.Column="1" 
@@ -43,9 +43,9 @@
         </Border>
         
         <!-- Aircraft Diagram -->
-        <aircraft:AircraftDiagram Grid.Row="1" 
-                                 x:Name="AircraftDiagramControl"
-                                 DataContext="{Binding}"/>
+        <local:AircraftDiagramControl Grid.Row="1" 
+                                     x:Name="AircraftDiagramControl"
+                                     DataContext="{Binding}"/>
         
         <!-- Status Bar -->
         <Border Grid.Row="2" 
