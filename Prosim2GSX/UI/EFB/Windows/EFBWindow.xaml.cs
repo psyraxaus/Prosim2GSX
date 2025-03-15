@@ -46,6 +46,7 @@ namespace Prosim2GSX.UI.EFB.Windows
         private WindowStyle _previousWindowStyle;
         private ResizeMode _previousResizeMode;
         private Rect _previousBounds;
+        private string _currentPageKey;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EFBWindow"/> class.
@@ -485,6 +486,9 @@ namespace Prosim2GSX.UI.EFB.Windows
             // Update the UI to reflect the navigation
             SetStatus($"Navigated to {e.PageKey}");
 
+            // Store the current page key
+            _currentPageKey = e.PageKey;
+
             // Update the selected navigation button
             foreach (var button in _navigationButtons.Values)
             {
@@ -534,6 +538,19 @@ namespace Prosim2GSX.UI.EFB.Windows
                 {
                     PopulateAirlineSelector();
                 }
+            }
+            
+            // Refresh the selected navigation button to reflect the new theme
+            if (!string.IsNullOrEmpty(_currentPageKey) && _navigationButtons.TryGetValue(_currentPageKey, out var selectedButton))
+            {
+                // First reset all buttons
+                foreach (var button in _navigationButtons.Values)
+                {
+                    button.Background = Brushes.Transparent;
+                }
+                
+                // Then set the selected button with the new theme's color
+                selectedButton.Background = (Brush)FindResource("TabSelectedBrush");
             }
         }
 

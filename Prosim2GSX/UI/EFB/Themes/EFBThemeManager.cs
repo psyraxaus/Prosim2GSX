@@ -363,7 +363,11 @@ namespace Prosim2GSX.UI.EFB.Themes
                 
                 // Header colors
                 SetIfMissing(colors, "HeaderBackgroundColor", secondaryColor);
-                SetIfMissing(colors, "HeaderForegroundColor", textColor);
+                
+                // Ensure header foreground has good contrast with header background
+                var headerBackground = ColorUtilities.ConvertToColor(colors["HeaderBackgroundColor"]);
+                var headerForeground = AccessibilityHelper.GetContrastColor(headerBackground);
+                SetIfMissing(colors, "HeaderForegroundColor", headerForeground);
                 
                 // Button colors
                 SetIfMissing(colors, "ButtonBackgroundColor", secondaryColor);

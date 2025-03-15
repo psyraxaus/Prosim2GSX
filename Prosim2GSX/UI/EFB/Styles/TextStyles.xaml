@@ -20,7 +20,7 @@
     
     <!-- Panel Header Style -->
     <Style x:Key="EFBPanelHeaderStyle" TargetType="TextBlock" BasedOn="{StaticResource EFBHeaderTextStyle}">
-        <Setter Property="Foreground" Value="{DynamicResource EFBTextContrastBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource HeaderForegroundBrush}" />
         <Setter Property="FontWeight" Value="Bold" />
         <Setter Property="Margin" Value="0" />
         <Setter Property="Padding" Value="5" />

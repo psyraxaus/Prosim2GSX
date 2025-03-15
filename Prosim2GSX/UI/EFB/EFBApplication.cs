@@ -701,10 +701,10 @@ namespace Prosim2GSX.UI.EFB
                 "Logs",
                 "\uE9D9"); // Logs icon
                 
-            // Settings page - Using actual SettingsPage implementation
+            // Settings page - Using DummyPage as placeholder until implemented
             _windowManager.RegisterPage(
                 "Settings",
-                typeof(Views.SettingsPage),
+                typeof(DummyPage),
                 "Settings",
                 "\uE713"); // Settings icon
         }
