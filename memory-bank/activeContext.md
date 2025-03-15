@@ -4,6 +4,8 @@
 
 The current focus for Prosim2GSX is implementing the EFB UI while continuing to refine the architecture and improve integration between all the modularized components. With Phase 6 of the EFB UI implementation (Optimization and Polish) now complete, we're focusing on addressing the EFB UI rendering and performance issues while also continuing work on Phase 5 of the modularization strategy.
 
+A standardized page architecture has been implemented to resolve the "Page can have only Window or Frame as parent" error that occurred when navigating to the Aircraft page. This architecture provides a consistent pattern for all pages and ensures proper WPF compatibility. See [EFB UI Page Architecture](efb-ui-page-architecture.md) for details.
+
 The .NET 8.0 migration has been completed successfully, and we've successfully implemented .NET 8.0 features for performance improvements as part of Phase 5.4.
 
 Additionally, a critical issue with the catering door opening prematurely has been identified and has been addressed. After a flight plan is loaded into the MCDU, the forward right passenger door was being opened immediately and going into a loop, when it should remain closed until the catering service specifically requests it to be opened. All three phases of the fix have been successfully implemented, resolving the issue completely.
