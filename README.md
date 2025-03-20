@@ -1,9 +1,9 @@
-# Fenix2GSX
+# Prosim2GSX
 <img src="img/icon.png" width="196"><br/>
-Full and proper GSX Integration and Automation for the Fenix A320! <br/>
+Full and proper GSX Integration and Automation for the Prosim A320! <br/>
 
-- The Refuel Service fill's the Tanks as planned (or more correctly GSX and Fenix are "synched")
-- Calling Boarding load's Passengers and Cargo, as does Deboarding for unloading (or more correctly GSX and Fenix are "synched")
+- The Refuel Service fill's the Tanks as planned (or more correctly GSX and Prosim are "synched")
+- Calling Boarding load's Passengers and Cargo, as does Deboarding for unloading (or more correctly GSX and Prosim are "synched")
 - Ground Equipment (GPU, Chocks, PCA) is automatically set or removed
 - All Service Calls except Push-Back, De-Ice and Gate-Selection can be automated
 - GSX Audio can be controlled via the INT-Knob from the Cockpit
@@ -15,7 +15,7 @@ Full and proper GSX Integration and Automation for the Fenix A320! <br/>
 - Windows 10/11
 - [.NET 7](https://dotnet.microsoft.com/en-us/download/dotnet/7.0) x64 Runtime (.NET Runtime and .NET Desktop Runtime. Do not confuse it with arm64!) installed & updated. Reboot when installing the Runtimes for the first Time.
 - MobiFlight [WASM Module](https://github.com/MobiFlight/MobiFlight-WASM-Module/releases) installed in your Community Folder
-- MSFS, Fenix, GSX Pro :wink:
+- MSFS, Prosim, GSX Pro :wink:
 
 <br/><br/>
 ## Installation
@@ -27,31 +27,31 @@ You can check if the .NET Runtimes are correctly installed by running the Comman
 If you own a registered Copy of FSUIPC, you can start it automatically through that. Add this to your FSUIPC7.ini:
 ```
 [Programs]
-RunIf1=READY,KILL,X:\PATH\YOU\USED\Fenix2GSX.exe
+RunIf1=READY,KILL,X:\PATH\YOU\USED\Prosim2GSX.exe
 ```
 The ini-File is in the Folder where FSUIPC was installed to, remember to change the Path to the Binary. If there are multiple RunIf-Entries, make sure they are numbered uniquely and that the [Programs] Section only exists once.<br/>
 When starting it manually (or by other means), either start it before MSFS or when MSFS is in the Main Menu.
 
 <br/><br/>
 ## Configuration
-**Fenix**:<br/>
+**Prosim**:<br/>
 Disable **Auto-Door** and **Auto-Jetway** Simulation in the EFB!<br/><br/>
 
-**Fenix2GSX**:<br/>
-The Configuration is done through the UI, open it by clicking on the System-Tray/Notification-Icon. They are stored persistently in the *Fenix2GSX.dll.config* File - so set them once to your Preference and you should be fine :smiley:<br/>
+**Prosim2GSX**:<br/>
+The Configuration is done through the UI, open it by clicking on the System-Tray/Notification-Icon. They are stored persistently in the *Prosim2GSX.dll.config* File - so set them once to your Preference and you should be fine :smiley:<br/>
 All Options have ToolTips which explains them further.
 <br/><br/>
 <img src="img/ui.png" width="400"><br/><br/>
 All Settings can be changed dynamically on the Fly if needed. But do that before a Service/Feature starts or after it has ended. For example, don't disable "Automatic Jetway/Stair Operation" while the Jetway is connected. Do it before the Tool calls the Jetway or after it was disconnected by the Tool.<br/><br/>
 In general, it is up to your Preference how much Automation you want. I you want to keep Control of when Services are Called and/or the Jetway is connected, you can still enjoy the (De-)Boarding and Refueling Syncronization when the Automation-Options are disabled. The only Automation which can not be disabled: The Removal of the Ground-Equipment and Jetway-Disconnection (if still connected) is always active on Depature.<br/><br/>
-A Note on the Audio-Control: The Tool does not control Audio until the Plane is powered (=FCU is On). Be aware, that the Fenix defaults to 50% Volume on INT and VHF1 when loaded. When you end your Session, Fenix2GSX will try to reset the Application-Audio to unmuted and 100% Volume. But that does not really work on GSX because it is resetting at the same Time. So GSX can stay muted when switching to another Plane (if it was muted) - keep that in Mind.
+A Note on the Audio-Control: The Tool does not control Audio until the Plane is powered (=FCU is On). Be aware, that the Prosim defaults to 50% Volume on INT and VHF1 when loaded. When you end your Session, Prosim2GSX will try to reset the Application-Audio to unmuted and 100% Volume. But that does not really work on GSX because it is resetting at the same Time. So GSX can stay muted when switching to another Plane (if it was muted) - keep that in Mind.
 
 
 <br/><br/>
 
 **GSX Pro**:
 - Make sure you do not have a customized Aircraft Config (GSX In-Game Menu -> Customize Aircraft -> should show only "Internal GSX Database"). If you want to keep your customized Config for whatever Reason, make sure the Option **"Show MSFS Fuel and Cargo during refueling"** is disabled!
-- If using any Automation Option from Fenix2GSX, make sure **"Assistance services Auto Mode"** is disabled in the GSX Settings (GSX In-Game Menu -> GSX Settings -> Simulation)
+- If using any Automation Option from Prosim2GSX, make sure **"Assistance services Auto Mode"** is disabled in the GSX Settings (GSX In-Game Menu -> GSX Settings -> Simulation)
 - If you have troubles with Refueling, try if disabling "Always refuel progressively" and "Detect custom aircraft system refueling" in the GSX Settings helps. (Though it should work with these Settings)
 - The De-/Boarding Speed of Passengers is dependant on the Passenger Density Setting (GSX In-Game Menu -> GSX Settings -> Timings). Higher Density => faster Boarding. *BUT*: The Setting **Extreme** is too extreme! Boarding does not work with this Setting.
 - Ensure the other two Settings under Timings are on their Default (15s, 1x).
@@ -59,7 +59,7 @@ A Note on the Audio-Control: The Tool does not control Audio until the Plane is 
 <br/><br/>
 
 ## General Service Flow
-There might be Issues when used together with FS2Crew! (that is "FS2Crew: Fenix A320 Edition", the RAAS Tool is fine!)
+There might be Issues when used together with FS2Crew! (that is "FS2Crew: Prosim A320 Edition", the RAAS Tool is fine!)
 
 1) Create your SB Flightplan and start MSFS as you normally would. Depending on your Configuration, start the Tool before MSFS or when MSFS is in the Main Menu.
 2) When your Session is loaded (Ready to Fly was pressed), wait for the Repositioning and Jetway/Stair Call to happen (if configured).
@@ -73,6 +73,6 @@ There might be Issues when used together with FS2Crew! (that is "FS2Crew: Fenix 
 
 
 If you set every Option for automatic Service Calls, I'd recommend to disable the GSX Menu in the Toolbar (Icon not white). The Services are still called, but you won't see the Menu popping-up. So Push-Back, De-Ice and Gate-Selection are the only Situations where you need to open it.<br/>
-Be aware that Fenix2GSX automatically selectes the first Operator in the List if GSX asks for a Selection (Ground Handling, Catering). If you're picky about which Operator should appear, you have to disable the Automatic Jetway Operation and the Automatic Catering Call!<br/><br/>
-Be cautious on the Mass and Balance Page in the EFB: Don't change the planned Numbers, use *"Load Aircraft"* or *"Reset All"* - they likely break the Integration. *"Resend Loadsheet"* should not hurt though if needed! (In Case the Prelim-LS wasn't send automatically by the Fenix due to EOBT or because the Plane had no Power yet).<br/><br/>
+Be aware that Prosim2GSX automatically selectes the first Operator in the List if GSX asks for a Selection (Ground Handling, Catering). If you're picky about which Operator should appear, you have to disable the Automatic Jetway Operation and the Automatic Catering Call!<br/><br/>
+Be cautious on the Mass and Balance Page in the EFB: Don't change the planned Numbers, use *"Load Aircraft"* or *"Reset All"* - they likely break the Integration. *"Resend Loadsheet"* should not hurt though if needed! (In Case the Prelim-LS wasn't send automatically by the Prosim due to EOBT or because the Plane had no Power yet).<br/><br/>
 Tip for VATSIM / IVAO: Disable the automatic Jetway Operation before loading the Session in MSFS, in Case you need to move to another Gate. If the Gate is free (or you have moved to a free one) you can renable Auto-Connect and the Jetway/Stairs will still connect then (unless the Flightplan was already loaded in the EFB).<br/><br/>
