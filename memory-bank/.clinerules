@@ -1,0 +1,103 @@
+# Prosim2GSX Project Rules and Patterns
+
+## Project Conventions
+
+### Naming Conventions
+- Use PascalCase for class names, public methods, and properties
+- Use camelCase for local variables and private fields
+- Prefix private fields with underscore (_)
+- Use descriptive names that clearly indicate purpose
+
+### Code Organization
+- Group related functionality into separate controllers
+- Use interfaces for dependency injection
+- Keep UI logic separate from business logic
+- Follow MVVM pattern for UI components
+
+### Documentation
+- Document public APIs with XML comments
+- Include parameter descriptions and return values
+- Document complex logic with inline comments
+- Keep README updated with configuration requirements
+
+## Development Workflow
+
+### Environment Setup
+- Ensure .NET 7 Runtime is installed
+- MobiFlight WASM Module must be in MSFS Community folder
+- Test with both Prosim and GSX Pro running
+- Start application before MSFS or when MSFS is in the main menu
+
+### Testing Process
+- Test each service flow individually
+- Verify synchronization between systems
+- Check edge cases (e.g., service interruptions)
+- Test with various configuration settings
+
+### Debugging Tips
+- Check logs for error messages
+- Verify connections to all systems
+- Monitor state changes during service calls
+- Test with minimal configuration first
+
+## User Preferences
+
+### Configuration
+- Most users prefer automatic service calls
+- Audio control is a highly valued feature
+- Configuration UI should be simple and intuitive
+- Tooltips should explain each option clearly
+
+### Service Flow
+- Pre-flight preparation should be automatic
+- Departure sequence should be predictable
+- Arrival services should initialize automatically
+- Turnaround should work without manual intervention
+
+## Common Pitfalls
+
+### Integration Issues
+- GSX Pro settings can affect integration
+- Prosim Auto-Door and Auto-Jetway must be disabled
+- FS2Crew compatibility issues
+- Audio control limitations between sessions
+
+### Error Handling
+- Gracefully handle connection failures
+- Provide clear error messages
+- Recover from service interruptions
+- Maintain state consistency
+
+## Project-Specific Knowledge
+
+### Critical Paths
+- Service flow orchestration is central to functionality
+- Event handling between systems must be reliable
+- Configuration persistence is essential
+- State synchronization must be accurate
+
+### System Interactions
+- Prosim events trigger service calls
+- GSX Pro services affect Prosim state
+- MSFS provides the environment context
+- MobiFlight extends variable access
+
+### Performance Considerations
+- Minimize CPU usage during flight
+- Avoid blocking UI thread
+- Handle events efficiently
+- Limit unnecessary service calls
+
+## Future Development
+
+### Potential Enhancements
+- Expanded automation capabilities
+- Improved error recovery
+- Enhanced configuration options
+- Better compatibility with other add-ons
+
+### Technical Improvements
+- Refactor for better testability
+- Enhance logging for troubleshooting
+- Optimize performance for resource usage
+- Improve error handling and recovery
