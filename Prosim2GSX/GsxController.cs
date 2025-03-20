@@ -1,8 +1,10 @@
 ﻿﻿﻿﻿using CoreAudio;
+using Microsoft.FlightSimulator.SimConnect;
 using Microsoft.Win32;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing.Text;
 using System.IO;
@@ -102,6 +104,13 @@ namespace Prosim2GSX
         private ServiceModel Model;
         private FlightPlan FlightPlan;
 
+        // State tracking variables
+        private double cateringState = 0;
+        private double serviceToggle = 0;
+
+        // Dictionary to map service toggle LVAR names to door operations
+        private readonly Dictionary<string, Action> serviceToggles = new Dictionary<string, Action>();
+
         public int Interval { get; set; } = 1000;
 
         public GsxController(ServiceModel model, ProsimController prosimController, FlightPlan flightPlan)
@@ -134,8 +143,8 @@ namespace Prosim2GSX
             SimConnect.SubscribeLvar("FSDT_GSX_OPERATESTAIRS_STATE");
             SimConnect.SubscribeLvar("FSDT_GSX_BYPASS_PIN");
             SimConnect.SubscribeLvar("FSDT_VAR_Frozen");
-            SimConnect.SubscribeLvar("FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE");
-            SimConnect.SubscribeLvar("FSDT_GSX_AIRCRAFT_SERVICE_2_TOGGLE");
+            //SimConnect.SubscribeLvar("FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE");
+            //SimConnect.SubscribeLvar("FSDT_GSX_AIRCRAFT_SERVICE_2_TOGGLE", OnServiceToggleChanged);
             SimConnect.SubscribeLvar("S_MIP_PARKING_BRAKE");
             SimConnect.SubscribeLvar("S_OH_EXT_LT_BEACON");
             SimConnect.SubscribeLvar("I_OH_ELEC_EXT_PWR_L");
@@ -151,6 +160,19 @@ namespace Prosim2GSX
             SimConnect.SubscribeLvar("A_FC_THROTTLE_RIGHT_INPUT");
             SimConnect.SubscribeSimVar("GPS GROUND SPEED", "Meters per second");
             SimConnect.SubscribeEnvVar("ZULU TIME", "Seconds");
+
+            // Initialize the service toggle mapping
+            serviceToggles.Add("FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE", () => OperateFrontDoor());
+            serviceToggles.Add("FSDT_GSX_AIRCRAFT_SERVICE_2_TOGGLE", () => OperateAftDoor());
+            serviceToggles.Add("FSDT_GSX_AIRCRAFT_CARGO_1_TOGGLE", () => OperateFrontCargoDoor());
+            serviceToggles.Add("FSDT_GSX_AIRCRAFT_CARGO_2_TOGGLE", () => OperateAftCargoDoor());
+
+
+            // Subscribe to all service toggle LVARs
+            foreach (var toggleLvar in serviceToggles.Keys)
+            {
+                SimConnect.SubscribeLvar(toggleLvar, OnServiceToggleChanged);
+            }
 
             if (!string.IsNullOrEmpty(Model.Vhf1VolumeApp))
                 lastVhf1App = Model.Vhf1VolumeApp;
@@ -1473,5 +1495,56 @@ namespace Prosim2GSX
 
             return (zfwChanged, towChanged, paxChanged, macZfwChanged, macTowChanged, fuelChanged, hasChanged);
         }
+
+        /// <summary>
+        /// Handler for catering state changes
+        /// </summary>
+        private void OnCateringStateChanged(double newValue)
+        {
+            cateringState = newValue;
+            // CheckDoorConditions();
+        }
+
+        /// <summary>
+        /// Handler for service toggle changes
+        /// </summary>
+        private void OnServiceToggleChanged(float newValue, float oldValue, string lvarName)
+        {
+            // Store previous value to detect transitions
+            double previousValue = serviceToggle;
+            serviceToggle = newValue;
+
+            // Check for 0->1 transition
+            if (previousValue == 0 && serviceToggle == 1)
+            {
+                // CheckDoorConditions();
+                Logger.Log(LogLevel.Debug, "GsxController:OnServiceToggleChanged", $"serviceToggle changed: {previousValue} -> {serviceToggle}");
+            }
+        }
+
+        private void OperateFrontDoor()
+        {
+            // Operate front door based on catering state
+            Logger.Log(LogLevel.Debug, "GsxController:OperateFrontDoor", $"Command to operate Front Door");
+        }
+
+        private void OperateAftDoor()
+        {
+            // Operate aft door based on catering state
+            Logger.Log(LogLevel.Debug, "GsxController:OperateAftDoor", $"Command to operate Aft Door");
+        }
+
+        private void OperateFrontCargoDoor()
+        {
+            // Operate front door based on catering state
+            Logger.Log(LogLevel.Debug, "GsxController:OperateFrontCargoDoor", $"Command to operate Front Cargo Door");
+        }
+
+        private void OperateAftCargoDoor()
+        {
+            // Operate aft door based on catering state
+            Logger.Log(LogLevel.Debug, "GsxController:OperateAftCargoDoor", $"Command to operate Aft Cargo Door");
+        }
+
     }
 }
