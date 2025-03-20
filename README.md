@@ -2,6 +2,8 @@
 <img src="img/icon.png" width="196"><br/>
 Full and proper GSX Integration and Automation for the Prosim A320! <br/>
 
+> **Note:** Version 0.4.0 has been updated to .NET 8. Please ensure you have the .NET 8 Runtime installed before updating.
+
 - The Refuel Service fill's the Tanks as planned (or more correctly GSX and Prosim are "synched")
 - Calling Boarding load's Passengers and Cargo, as does Deboarding for unloading (or more correctly GSX and Prosim are "synched")
 - Ground Equipment (GPU, Chocks, PCA) is automatically set or removed
@@ -13,7 +15,7 @@ Full and proper GSX Integration and Automation for the Prosim A320! <br/>
 
 ## Requirements
 - Windows 10/11
-- [.NET 7](https://dotnet.microsoft.com/en-us/download/dotnet/7.0) x64 Runtime (.NET Runtime and .NET Desktop Runtime. Do not confuse it with arm64!) installed & updated. Reboot when installing the Runtimes for the first Time.
+- [.NET 8](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) x64 Runtime (.NET Runtime and .NET Desktop Runtime. Do not confuse it with arm64!) installed & updated. Reboot when installing the Runtimes for the first Time.
 - MobiFlight [WASM Module](https://github.com/MobiFlight/MobiFlight-WASM-Module/releases) installed in your Community Folder
 - MSFS, Prosim, GSX Pro :wink:
 
@@ -22,7 +24,7 @@ Full and proper GSX Integration and Automation for the Prosim A320! <br/>
 Extract it anywhere you want, but do not use Application-Folders, User-Folders or even C:\\ <br/>
 Please remove the old Version completely before updating.<br/>
 It may be blocked by Windows Security or your AV-Scanner, try if unblocking and/or setting an Exception helps.<br/>
-You can check if the .NET Runtimes are correctly installed by running the Command `dotnet --list-runtimes` - the Version you downloaded should show up there.<br/><br/>
+You can check if the .NET Runtimes are correctly installed by running the Command `dotnet --list-runtimes` - .NET 8 should show up in the list.<br/><br/>
 
 If you own a registered Copy of FSUIPC, you can start it automatically through that. Add this to your FSUIPC7.ini:
 ```
