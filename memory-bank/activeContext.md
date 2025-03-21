@@ -1,28 +1,31 @@
 # Active Context: Prosim2GSX
 
 ## Current Focus
-The current focus is on initializing the memory bank for the Prosim2GSX project. This involves creating the core documentation files to establish a baseline understanding of the project.
+The current focus is on upgrading the Prosim2GSX application from .NET 7 to .NET 8. This involves updating the target framework, dependencies, and ensuring compatibility with the new runtime.
 
 ## Recent Changes
-- Created memory bank structure with core documentation files
-- Established project brief, product context, system patterns, and technical context
+- Migrated the application from .NET 7 to .NET 8
+- Updated NuGet packages to their latest versions compatible with .NET 8
+- Updated the application version from 0.3.0 to 0.4.0
+- Updated the copyright year to 2025
+- Updated memory bank documentation to reflect the .NET 8 migration
 
 ## Active Decisions
-- Determining the appropriate level of detail for initial documentation
-- Establishing a consistent documentation structure
-- Identifying key components and relationships within the system
+- Choosing to update to .NET 8 for improved performance and extended support
+- Updating all NuGet packages to ensure compatibility with .NET 8
+- Incrementing the version number to reflect the significant update
 
 ## Current Challenges
-- Limited direct access to implementation details
-- Need to infer system architecture from available information
-- Balancing comprehensive documentation with practical utility
+- Ensuring compatibility of all components with .NET 8
+- Verifying that updated NuGet packages work correctly with the application
+- Testing the application thoroughly after the migration
 
 ## Next Steps
-1. Complete the initial memory bank setup
-2. Review the codebase to validate architectural assumptions
-3. Update documentation with more specific implementation details
-4. Identify potential areas for improvement or enhancement
-5. Establish development priorities based on user needs
+1. Perform thorough testing of all application features
+2. Verify integration with Prosim A320 and GSX Pro
+3. Test service synchronization and audio control features
+4. Create release notes documenting the migration to .NET 8
+5. Consider further improvements leveraging new .NET 8 features
 
 ## Open Questions
 - What are the most common issues users encounter?
@@ -35,7 +38,7 @@ The current focus is on initializing the memory bank for the Prosim2GSX project.
 The project appears to be a functional integration tool that successfully bridges Prosim A320 and GSX Pro. The architecture seems well-structured with clear separation of concerns and appropriate use of design patterns. The documentation provides a good overview of the system's purpose and functionality.
 
 ## Development Environment
-The development environment is set up with the necessary tools and dependencies. The project structure follows standard .NET conventions with appropriate organization of components.
+The development environment now requires .NET 8 SDK for building the application. The project structure follows standard .NET conventions with appropriate organization of components.
 
 ## User Feedback
 No specific user feedback has been documented yet. This section will be updated as feedback is received and analyzed.
