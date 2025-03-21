@@ -35,6 +35,18 @@ namespace Prosim2GSX
         protected Dictionary<string, uint> addressToIndex = new();
         protected Dictionary<uint, float> simVars = new();
 
+        // Define a delegate for LVAR change callbacks
+        public delegate void LvarChangedCallback(float newValue, float oldValue, string lvarName);
+
+        // Add dictionary to track callbacks for each LVAR
+        private Dictionary<string, List<LvarChangedCallback>> lvarCallbacks = new Dictionary<string, List<LvarChangedCallback>>();
+
+        // Dictionary to track previous values - using address as key
+        private Dictionary<string, float> previousLvarValues = new Dictionary<string, float>();
+
+        // Maintain a reverse mapping from ID to address for looking up in callbacks
+        private Dictionary<uint, string> indexToAddress = new Dictionary<uint, string>();
+
         public MobiSimConnect()
         {
             
@@ -203,7 +215,48 @@ namespace Prosim2GSX
                     var simData = (ClientDataValue)data.dwData[0];
                     if (simVars.ContainsKey(data.dwRequestID))
                     {
-                        simVars[data.dwRequestID] = simData.data;
+                        // Get the old value before updating
+                        float oldValue = simVars[data.dwRequestID];
+                        float newValue = simData.data;
+
+                        // Update the stored value
+                        simVars[data.dwRequestID] = newValue;
+
+                        // Check if this is an LVAR and if we have callbacks registered
+                        if (indexToAddress.ContainsKey(data.dwRequestID))
+                        {
+                            string fullAddress = indexToAddress[data.dwRequestID];
+
+                            // Check if it's an LVAR (starts with "(L:")
+                            if (fullAddress.StartsWith("(L:") && fullAddress.EndsWith(")"))
+                            {
+                                // Extract the LVAR name without the "(L:" and ")" wrapper
+                                string lvarName = fullAddress.Substring(3, fullAddress.Length - 4);
+
+                                // Only invoke callbacks if value changed
+                                if (Math.Abs(oldValue - newValue) > float.Epsilon)
+                                {
+                                    // If callbacks exist for this LVAR, invoke them
+                                    if (lvarCallbacks.ContainsKey(lvarName) && lvarCallbacks[lvarName].Count > 0)
+                                    {
+                                        foreach (var callback in lvarCallbacks[lvarName])
+                                        {
+                                            try
+                                            {
+                                                // Pass the LVAR name to the callback
+                                                callback(newValue, oldValue, lvarName);
+                                            }
+                                            catch (Exception callbackEx)
+                                            {
+                                                // Log callback exceptions
+                                                Logger.Log(LogLevel.Error, "MobiSimConnect:LvarCallback",
+                                                    $"Exception in callback for LVAR '{lvarName}'! (Exception: {callbackEx.GetType()}) (Message: {callbackEx.Message})");
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     else
                         Logger.Log(LogLevel.Warning, "MobiSimConnect:SimConnect_OnClientData", $"The received ID '{data.dwRequestID}' is not subscribed! (Data: {data})");
@@ -294,6 +347,25 @@ namespace Prosim2GSX
                 Logger.Log(LogLevel.Error, "MobiSimConnect:SimConnect_OnException", $"Exception received: (Exception: {data.dwException})");
         }
 
+        // Overloaded method that accepts a callback
+        public void SubscribeLvar(string address, LvarChangedCallback callback)
+        {
+            // First ensure the LVAR is subscribed in SimConnect
+            SubscribeLvar(address);
+
+            // Format the address as it's stored internally
+            string formattedAddress = $"(L:{address})";
+
+            // Store the callback
+            if (!lvarCallbacks.ContainsKey(address))
+            {
+                lvarCallbacks[address] = new List<LvarChangedCallback>();
+                previousLvarValues[address] = 0.0f; // Initialize previous value
+            }
+
+            lvarCallbacks[address].Add(callback);
+        }
+
         public void SubscribeLvar(string address)
         {
             SubscribeVariable($"(L:{address})");
@@ -318,7 +390,7 @@ namespace Prosim2GSX
                     RegisterVariable(nextID, address);
                     simVars.Add(nextID, 0.0f);
                     addressToIndex.Add(address, nextID);
-
+                    indexToAddress.Add(nextID, address); // Add to reverse mapping
                     nextID++;
                 }
                 else
@@ -353,6 +425,15 @@ namespace Prosim2GSX
             );
 
             SendClientWasmCmd($"MF.SimVars.Add.{address}");
+        }
+
+        // Method to unsubscribe a specific callback
+        public void UnsubscribeLvar(string address, LvarChangedCallback callback)
+        {
+            if (lvarCallbacks.ContainsKey(address) && lvarCallbacks[address].Contains(callback))
+            {
+                lvarCallbacks[address].Remove(callback);
+            }
         }
 
         public void UnsubscribeAll()
