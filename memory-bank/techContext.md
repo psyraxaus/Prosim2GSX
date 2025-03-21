@@ -3,7 +3,7 @@
 ## Technology Stack
 
 ### Core Technologies
-- **C# / .NET 7**: Primary development language and framework
+- **C# / .NET 8**: Primary development language and framework
 - **WPF (Windows Presentation Foundation)**: UI framework for Windows desktop applications
 - **XAML**: Markup language for defining WPF user interfaces
 
@@ -14,14 +14,14 @@
 
 ### Development Tools
 - **Visual Studio**: Primary IDE for development
-- **.NET 7 SDK**: Required for building the application
+- **.NET 8 SDK**: Required for building the application
 - **Git**: Version control system
 
 ## System Requirements
 
 ### Runtime Requirements
 - **Operating System**: Windows 10/11
-- **.NET 7 x64 Runtime**: Both .NET Runtime and .NET Desktop Runtime
+- **.NET 8 x64 Runtime**: Both .NET Runtime and .NET Desktop Runtime
 - **Microsoft Flight Simulator**: Current version
 - **Prosim A320**: Current version
 - **GSX Pro**: Current version
@@ -53,7 +53,7 @@
 
 ### Required Software
 - Visual Studio 2022 or newer
-- .NET 7 SDK
+- .NET 8 SDK
 - Git for version control
 
 ### Project Structure
@@ -109,10 +109,10 @@
 - Limited error recovery for certain edge cases
 
 ### Future Technical Considerations
-- Potential migration to newer .NET versions
 - Adaptation to MSFS and GSX Pro updates
 - Expansion of automation capabilities
 - Improved error handling and recovery
+- Keeping up with .NET updates and new features
 
 ## Development Practices
 
