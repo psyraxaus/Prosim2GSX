@@ -1,24 +1,30 @@
 # Progress Tracking: Prosim2GSX
 
 ## Project Status
-The Prosim2GSX project is in a functional state with the core integration between Prosim A320 and GSX Pro working as expected. The application has been successfully migrated from .NET 7 to .NET 8, with all dependencies updated to their latest compatible versions.
+The Prosim2GSX project is in a functional state with the core integration between Prosim A320 and GSX Pro working as expected. Recent improvements to the LVAR subscription system and door operation handling have enhanced the responsiveness and reliability of the application. The application has been successfully migrated from .NET 7 to .NET 8, with all dependencies updated to their latest compatible versions.
 
 ## Implemented Features
 
 ### Framework and Infrastructure
+- ✅ Implemented callback-based LVAR subscription system
+- ✅ Added dictionary-based service toggle handling
+- ✅ Enhanced error handling for callbacks
 - ✅ Migration from .NET 7 to .NET 8
 - ✅ Updated NuGet packages to latest versions
 - ✅ Version updated to 0.4.0
 
 ### Core Integration
 - ✅ Basic connectivity between Prosim A320 and GSX Pro
-- ✅ Event monitoring and synchronization
+- ✅ Event monitoring and synchronization with callback support
 - ✅ Configuration persistence
+- ✅ Improved door operation based on service states
 
 ### Service Synchronization
 - ✅ Refueling synchronization between GSX and Prosim
 - ✅ Passenger and cargo boarding/deboarding synchronization
 - ✅ Ground equipment automation (GPU, Chocks, PCA)
+- ✅ Enhanced cargo door operation based on loading percentage
+- ✅ Improved catering state management
 
 ### Automation
 - ✅ Automatic service calls (except Push-Back, De-Ice, Gate-Selection)
@@ -35,10 +41,14 @@ The Prosim2GSX project is in a functional state with the core integration betwee
 - ✅ Persistent settings
 
 ## In Progress Features
+- 🔄 Testing of the new LVAR subscription system
+- 🔄 Testing of enhanced door operation functionality
 - 🔄 Testing of the .NET 8 migration to ensure all functionality works as expected
 
 ## Planned Features
-No specific planned features are documented at this time.
+- 📋 Extending the callback pattern to other parts of the application
+- 📋 Optimizing performance of the callback system
+- 📋 Further improvements to service state synchronization
 
 ## Known Issues
 Based on the README, there are some known considerations:
@@ -72,15 +82,17 @@ Initial build testing of the .NET 8 migration has been completed successfully. C
 ## Next Development Priorities
 Current development priorities include:
 
-1. Thorough testing of the .NET 8 migration
-2. Creating release notes for the .NET 8 update
-3. Addressing known issues with FS2Crew compatibility
-4. Improving audio control persistence between sessions
-5. Adding support for the "Extreme" passenger density setting
-6. Expanding automation capabilities to include Push-Back, De-Ice, and Gate-Selection
-7. Enhancing error handling and recovery mechanisms
-8. Adding more configuration options for advanced users
-9. Exploring new features available in .NET 8
+1. Thorough testing of the new LVAR subscription system
+2. Verifying door operation synchronization with GSX services
+3. Thorough testing of the .NET 8 migration
+4. Creating release notes for the recent updates
+5. Addressing known issues with FS2Crew compatibility
+6. Improving audio control persistence between sessions
+7. Adding support for the "Extreme" passenger density setting
+8. Expanding automation capabilities to include Push-Back, De-Ice, and Gate-Selection
+9. Enhancing error handling and recovery mechanisms
+10. Adding more configuration options for advanced users
+11. Exploring new features available in .NET 8
 
 ## Deployment Status
 The project is in a deployable state following the .NET 8 migration. The README will need to be updated to reflect the new .NET 8 runtime requirement before the next release.

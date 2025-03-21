@@ -95,6 +95,15 @@ The system uses events and event handlers extensively to communicate state chang
 - Controllers subscribe to events from external systems
 - UI components observe changes in ViewModels
 - Services react to state changes in the aircraft
+- LVAR changes trigger registered callbacks through the MobiSimConnect callback system
+
+### Callback Pattern
+The system implements a callback pattern for LVAR value changes:
+
+- Components register callbacks for specific LVAR changes via MobiSimConnect
+- When an LVAR value changes, registered callbacks are invoked with old and new values
+- Callbacks are used to implement reactive behavior to simulator state changes
+- Error handling is built into the callback execution to prevent crashes
 
 ### State Machine
 The service flow follows a state machine pattern:
@@ -116,6 +125,14 @@ Some components are implemented as singletons to ensure a single instance:
 - Configuration manager
 - Logger
 - Communication interfaces
+
+### Dictionary-Based Action Mapping
+The system uses dictionary-based action mapping for service toggles:
+
+- Service toggle LVAR names are mapped to specific door operation actions
+- This approach centralizes the mapping logic and improves maintainability
+- Actions are triggered based on LVAR state changes
+- The pattern allows for easy addition of new service toggle mappings
 
 ## Component Relationships
 
@@ -140,6 +157,7 @@ Some components are implemented as singletons to ensure a single instance:
 3. Service status flows from GSX to Prosim2GSX
 4. Synchronized state flows from Prosim2GSX to Prosim
 5. Configuration flows bidirectionally between UI and ConfigurationFile
+6. LVAR changes flow from MSFS to registered callbacks via MobiSimConnect
 
 ## Error Handling
 
@@ -148,3 +166,5 @@ Some components are implemented as singletons to ensure a single instance:
 - Logging of errors for troubleshooting
 - User notifications for critical issues
 - Recovery procedures for common failure scenarios
+- Exception handling in LVAR callbacks to prevent cascading failures
+- Value change validation to prevent unnecessary callback executions

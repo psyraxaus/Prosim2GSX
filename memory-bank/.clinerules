@@ -13,17 +13,20 @@
 - Use interfaces for dependency injection
 - Keep UI logic separate from business logic
 - Follow MVVM pattern for UI components
+- Use callback pattern for LVAR value changes
+- Implement dictionary-based action mapping for service toggles
 
 ### Documentation
 - Document public APIs with XML comments
 - Include parameter descriptions and return values
 - Document complex logic with inline comments
 - Keep README updated with configuration requirements
+- Document callback parameters and expected behavior
 
 ## Development Workflow
 
 ### Environment Setup
-- Ensure .NET 7 Runtime is installed
+- Ensure .NET 8 Runtime is installed
 - MobiFlight WASM Module must be in MSFS Community folder
 - Test with both Prosim and GSX Pro running
 - Start application before MSFS or when MSFS is in the main menu
@@ -33,6 +36,8 @@
 - Verify synchronization between systems
 - Check edge cases (e.g., service interruptions)
 - Test with various configuration settings
+- Verify callback execution with different LVAR change scenarios
+- Test door operations with different service states
 
 ### Debugging Tips
 - Check logs for error messages
@@ -67,6 +72,8 @@
 - Provide clear error messages
 - Recover from service interruptions
 - Maintain state consistency
+- Implement try-catch blocks in callbacks to prevent cascading failures
+- Validate value changes before triggering callbacks
 
 ## Project-Specific Knowledge
 
@@ -81,12 +88,16 @@
 - GSX Pro services affect Prosim state
 - MSFS provides the environment context
 - MobiFlight extends variable access
+- LVAR changes trigger registered callbacks
+- Service toggle changes trigger door operations
 
 ### Performance Considerations
 - Minimize CPU usage during flight
 - Avoid blocking UI thread
 - Handle events efficiently
 - Limit unnecessary service calls
+- Only trigger callbacks when values actually change
+- Use efficient dictionary lookups for action mapping
 
 ## Future Development
 
@@ -101,3 +112,5 @@
 - Enhance logging for troubleshooting
 - Optimize performance for resource usage
 - Improve error handling and recovery
+- Extend callback pattern to other parts of the application
+- Optimize callback performance
