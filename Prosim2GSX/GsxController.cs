@@ -110,6 +110,7 @@ namespace Prosim2GSX
         // Define constants for different service states
         private const float GSX_WAITING_STATE = 4;
         private const float GSX_FINISHED_STATE = 5;
+        private const float GSX_COMPLETED_STATE = 6;
         private const float SERVICE_TOGGLE_ON = 1;
         private const float SERVICE_TOGGLE_OFF = 0;
 
@@ -1509,7 +1510,7 @@ namespace Prosim2GSX
             Logger.Log(LogLevel.Debug, "GsxController:OperateFrontCargoDoor", $"Command to operate Front Cargo Door");
             if (Model.SetOpenCargoDoors)
             {
-                if (cateringState == GSX_FINISHED_STATE)
+                if (cateringState == GSX_COMPLETED_STATE)
                 {
                     ProsimController.SetForwardCargoDoor(true);
                 }
@@ -1522,7 +1523,7 @@ namespace Prosim2GSX
             Logger.Log(LogLevel.Debug, "GsxController:OperateAftCargoDoor", $"Command to operate Aft Cargo Door");
             if (Model.SetOpenCargoDoors)
             {
-                if (cateringState == GSX_FINISHED_STATE)
+                if (cateringState == GSX_COMPLETED_STATE)
                 {
                     ProsimController.SetAftCargoDoor(true);
                 }
