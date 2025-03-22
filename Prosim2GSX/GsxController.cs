@@ -114,6 +114,9 @@ namespace Prosim2GSX
         private const float SERVICE_TOGGLE_ON = 1;
         private const float SERVICE_TOGGLE_OFF = 0;
 
+        private bool cockpitDoorStateChanged = false;
+        private int lastCockpitDoorState = -1;
+
         // Dictionary to map service toggle LVAR names to door operations
         private readonly Dictionary<string, Action> serviceToggles = new Dictionary<string, Action>();
 
@@ -129,6 +132,7 @@ namespace Prosim2GSX
             SimConnect.SubscribeSimVar("SIM ON GROUND", "Bool");
             SimConnect.SubscribeLvar("FSDT_GSX_DEBOARDING_STATE");
             SimConnect.SubscribeLvar("FSDT_GSX_CATERING_STATE", OnCateringStateChanged);
+            SimConnect.SubscribeLvar("FSDT_GSX_COCKPIT_DOOR_OPEN");
             SimConnect.SubscribeLvar("FSDT_GSX_REFUELING_STATE");
             SimConnect.SubscribeLvar("FSDT_GSX_BOARDING_STATE");
             SimConnect.SubscribeLvar("FSDT_GSX_DEPARTURE_STATE");
@@ -423,6 +427,8 @@ namespace Prosim2GSX
         {
             bool simOnGround = SimConnect.ReadSimVar("SIM ON GROUND", "Bool") != 0.0f;
             ProsimController.Update(false);
+
+            SyncCockpitDoorSound();
 
             if (operatorWasSelected)
             {
@@ -1631,5 +1637,31 @@ namespace Prosim2GSX
 
         }
 
+        private void SyncCockpitDoorSound()
+        {
+            try
+            {
+                // Read the current state of the Prosim cockpit door
+                var currentDoorState = ProsimController.GetStatusFunction("system.switches.S_DOORS_COCKPIT");
+
+                // Check if the door state has changed
+                if (currentDoorState != lastCockpitDoorState)
+                {
+                    // Update the GSX Pro LVAR to match the door state
+                    SimConnect.WriteLvar("FSDT_GSX_COCKPIT_DOOR_OPEN", currentDoorState);
+
+                    // Store the current state for next comparison
+                    lastCockpitDoorState = (int)currentDoorState;
+
+                    Logger.Log(LogLevel.Information, "GsxController:SyncCockpitDoorSound",
+                        $"Cockpit door state changed to: {currentDoorState} - Updated GSX cabin sound LVAR");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "GsxController:SyncCockpitDoorSound",
+                    $"Error syncing cockpit door sound: {ex.Message}");
+            }
+        }
     }
 }
