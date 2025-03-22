@@ -140,7 +140,7 @@ namespace Prosim2GSX
             SimConnect.SubscribeLvar("FSDT_GSX_DEBOARDING_CARGO");
             SimConnect.SubscribeLvar("FSDT_GSX_BOARDING_CARGO_PERCENT");
             SimConnect.SubscribeLvar("FSDT_GSX_DEBOARDING_CARGO_PERCENT");
-            SimConnect.SubscribeLvar("FSDT_GSX_FUELHOSE_CONNECTED");
+            SimConnect.SubscribeLvar("FSDT_GSX_FUELHOSE_CONNECTED", OnFuelHoseStateChanged);
             SimConnect.SubscribeLvar("FSDT_VAR_EnginesStopped");
             SimConnect.SubscribeLvar("FSDT_GSX_COUATL_STARTED");
             SimConnect.SubscribeLvar("FSDT_GSX_JETWAY");
@@ -754,22 +754,24 @@ namespace Prosim2GSX
             if (!refueling && !refuelFinished && refuelState == 5)
             {
                 refueling = true;
-                refuelPaused = true;
+                refuelPaused = true; // Start in paused state until hose is connected
                 Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Fuel Service active");
                 ProsimController.RefuelStart();
+
+                // Check initial state of the fuel hose
+                if (SimConnect.ReadLvar("FSDT_GSX_FUELHOSE_CONNECTED") == 1)
+                {
+                    Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices",
+                        $"Fuel hose already connected - starting fuel transfer");
+                    refuelPaused = false;
+                    ProsimController.RefuelResume();
+                }
             }
             else if (refueling)
             {
-
-                if (SimConnect.ReadLvar("FSDT_GSX_FUELHOSE_CONNECTED") == 1)
+                // Only perform active refueling when not paused
+                if (!refuelPaused && SimConnect.ReadLvar("FSDT_GSX_FUELHOSE_CONNECTED") == 1)
                 {
-                    if (refuelPaused)
-                    {
-                        Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Fuel Hose connected - refueling");
-
-                        refuelPaused = false;
-                    }
-
                     if (ProsimController.Refuel())
                     {
                         refueling = false;
@@ -777,14 +779,6 @@ namespace Prosim2GSX
                         refuelPaused = false;
                         ProsimController.RefuelStop();
                         Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Refuel completed");
-                    }
-                }
-                else
-                {
-                    if (!refuelPaused && !refuelFinished)
-                    {
-                        Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Fuel Hose disconnected - waiting for next Truck");
-                        refuelPaused = true;
                     }
                 }
             }
@@ -1447,6 +1441,35 @@ namespace Prosim2GSX
         {
             cateringState = newValue;
             Logger.Log(LogLevel.Information, "GSXController", $"Catering state changed to {newValue}");
+        }
+
+        /// <summary>
+        /// Handler for fuel hose state changes
+        /// </summary>
+        private void OnFuelHoseStateChanged(float newValue, float oldValue, string lvarName)
+        {
+            Logger.Log(LogLevel.Information, "GsxController:OnFuelHoseStateChanged",
+                $"Fuel hose state changed from {oldValue} to {newValue}");
+
+            if (refueling)
+            {
+                if (newValue == 1 && oldValue == 0)
+                {
+                    // Fuel hose was just connected
+                    Logger.Log(LogLevel.Information, "GsxController:OnFuelHoseStateChanged",
+                        $"Fuel hose connected - starting fuel transfer");
+                    refuelPaused = false;
+                    ProsimController.RefuelResume();
+                }
+                else if (newValue == 0 && oldValue == 1)
+                {
+                    // Fuel hose was just disconnected
+                    Logger.Log(LogLevel.Information, "GsxController:OnFuelHoseStateChanged",
+                        $"Fuel hose disconnected - pausing fuel transfer");
+                    refuelPaused = true;
+                    ProsimController.RefuelPause();
+                }
+            }
         }
 
         /// <summary>
