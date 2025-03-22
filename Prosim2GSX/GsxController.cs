@@ -814,7 +814,7 @@ namespace Prosim2GSX
 
             if (refuelFinished && !boardingRequested)
             {
-                Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices",
+                Logger.Log(LogLevel.Debug, "GsxController:RunLoadingServices",
                     $"Refueling finished. AutoBoarding: {Model.AutoBoarding}, CateringFinished: {cateringFinished}, CallCatering: {Model.CallCatering}, DelayCounter: {delayCounter}");
             }
 
@@ -1475,7 +1475,7 @@ namespace Prosim2GSX
         private void OnCateringStateChanged(float newValue, float oldValue, string lvarName)
         {
             cateringState = newValue;
-            Logger.Log(LogLevel.Information, "GSXController", $"Catering state changed to {newValue}");
+            Logger.Log(LogLevel.Debug, "GSXController", $"Catering state changed to {newValue}");
 
             // Set cateringFinished when catering reaches completed state (typically state 6)
             if (newValue == 6 && !cateringFinished)
@@ -1519,7 +1519,7 @@ namespace Prosim2GSX
         /// </summary>
         private void OnServiceToggleChanged(float newValue, float oldValue, string lvarName)
         {
-            Logger.Log(LogLevel.Information, "GSXController", $"Service toggle {lvarName} changed from {oldValue} to {newValue}");
+            Logger.Log(LogLevel.Debug, "GSXController", $"Service toggle {lvarName} changed from {oldValue} to {newValue}");
 
             // Check if this is one of our monitored service toggles
             if (serviceToggles.ContainsKey(lvarName))
@@ -1539,11 +1539,11 @@ namespace Prosim2GSX
             Logger.Log(LogLevel.Debug, "GsxController:OperateFrontDoor", $"Command to operate Front Door");
             if (Model.SetOpenCateringDoor)
             {
-                if (cateringState == GSX_WAITING_STATE)
+                if (cateringState == GSX_WAITING_STATE || (cateringState == GSX_FINISHED_STATE && ProsimController.GetForwardRightDoor() == "closed"))
                 {
                     ProsimController.SetForwardRightDoor(true);
                 }
-                else if (cateringState == GSX_FINISHED_STATE)
+                else if (cateringState == GSX_FINISHED_STATE && ProsimController.GetForwardRightDoor() == "open")
                 {
                     ProsimController.SetForwardRightDoor(false);
                 }
@@ -1557,11 +1557,11 @@ namespace Prosim2GSX
             Logger.Log(LogLevel.Debug, "GsxController:OperateAftDoor", $"Command to operate Aft Door");
             if (Model.SetOpenCateringDoor)
             {
-                if (cateringState == GSX_WAITING_STATE)
+                if (cateringState == GSX_WAITING_STATE || (cateringState == GSX_FINISHED_STATE && ProsimController.GetAftRightDoor() == "closed"))
                 {
                     ProsimController.SetAftRightDoor(true);
                 }
-                else if (cateringState == GSX_FINISHED_STATE)
+                else if (cateringState == GSX_FINISHED_STATE && ProsimController.GetAftRightDoor() == "open")
                 {
                     ProsimController.SetAftRightDoor(false);
                 }

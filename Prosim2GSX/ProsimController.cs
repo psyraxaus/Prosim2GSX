@@ -791,11 +791,27 @@ namespace Prosim2GSX
             Interface.SetProsimVariable("doors.entry.right.aft", open);
             Logger.Log(LogLevel.Information, "ProsimController:SetAftRightDoor", $"Aft right door {(open ? "opened" : "closed")}");
         }
-        
+
+        public string GetAftRightDoor()
+        {
+            bool doorStatus = Interface.ReadDataRef("doors.entry.right.aft");
+            string status = doorStatus ? "open" : "closed";
+            Logger.Log(LogLevel.Debug, "ProsimController:GetForwardRightDoorStatus", $"Forward right door {status}");
+            return status;
+        }
+
         public void SetForwardRightDoor(bool open)
         {
             Interface.SetProsimVariable("doors.entry.right.fwd", open);
             Logger.Log(LogLevel.Information, "ProsimController:SetForwardRightDoor", $"Forward right door {(open ? "opened" : "closed")}");
+        }
+
+        public string GetForwardRightDoor()
+        {
+            bool doorStatus = Interface.ReadDataRef("doors.entry.right.fwd");
+            string status = doorStatus ? "open" : "closed";
+            Logger.Log(LogLevel.Debug, "ProsimController:GetForwardRightDoorStatus", $"Forward right door {status}");
+            return status;
         }
 
         public void SetForwardCargoDoor(bool open)
