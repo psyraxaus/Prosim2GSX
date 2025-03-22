@@ -105,6 +105,30 @@ The system implements a callback pattern for LVAR value changes:
 - Callbacks are used to implement reactive behavior to simulator state changes
 - Specific callbacks handle critical state changes like fuel hose connection/disconnection
 - The refueling process uses callbacks to pause/resume based on fuel hose state
+- Catering service state changes are monitored via dedicated callbacks:
+  ```csharp
+  private void OnCateringStateChanged(float newValue, float oldValue, string lvarName)
+  {
+      cateringState = newValue;
+      Logger.Log(LogLevel.Debug, "GSXController", $"Catering state changed to {newValue}");
+      
+      if (newValue == 6 && !cateringFinished)
+      {
+          cateringFinished = true;
+          Logger.Log(LogLevel.Information, "GSXController", $"Catering service completed");
+      }
+  }
+  ```
+- Service toggle changes trigger door operations via callbacks:
+  ```csharp
+  private void OnServiceToggleChanged(float newValue, float oldValue, string lvarName)
+  {
+      if (serviceToggles.ContainsKey(lvarName) && oldValue == SERVICE_TOGGLE_OFF && newValue == SERVICE_TOGGLE_ON)
+      {
+          serviceToggles[lvarName]();
+      }
+  }
+  ```
 - Error handling is built into the callback execution to prevent crashes
 
 ### State Machine
@@ -138,6 +162,17 @@ The system uses dictionary-based action mapping for service toggles:
 - Actions are triggered based on LVAR state changes
 - The pattern allows for easy addition of new service toggle mappings
 - Similar mapping approach is used for other state-based actions like refueling control
+- Catering service door operations are implemented using this pattern:
+  ```csharp
+  // Dictionary to map service toggle LVAR names to door operations
+  private readonly Dictionary<string, Action> serviceToggles = new Dictionary<string, Action>();
+  
+  // Initialization in constructor
+  serviceToggles.Add("FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE", () => OperateFrontDoor());
+  serviceToggles.Add("FSDT_GSX_AIRCRAFT_SERVICE_2_TOGGLE", () => OperateAftDoor());
+  serviceToggles.Add("FSDT_GSX_AIRCRAFT_CARGO_1_TOGGLE", () => OperateFrontCargoDoor());
+  serviceToggles.Add("FSDT_GSX_AIRCRAFT_CARGO_2_TOGGLE", () => OperateAftCargoDoor());
+  ```
 
 ## Component Relationships
 
@@ -164,6 +199,17 @@ The system uses dictionary-based action mapping for service toggles:
 5. Refueling continues until target fuel level is reached or GSX reports completion
 6. Center of gravity calculations are performed for accurate loadsheet data
 
+### Catering Service Door Flow
+1. GSXController monitors catering service state via LVAR callbacks
+2. When catering service enters waiting state (state 4), passenger doors can be opened
+3. Service toggle LVARs trigger door operation callbacks when changed from 0 to 1
+4. Door operations are executed based on the current catering state:
+   - During waiting state: Doors are opened to allow catering service
+   - During finished state: Doors are closed if they were open
+   - During completed state: Cargo doors can be opened for loading
+5. Cargo doors are automatically closed when cargo loading reaches 100%
+6. ProsimController executes the actual door operations in Prosim A320
+
 ### Data Flow
 1. Flight plan data flows from Prosim to Prosim2GSX
 2. Service requests flow from Prosim2GSX to GSX
@@ -171,6 +217,7 @@ The system uses dictionary-based action mapping for service toggles:
 4. Synchronized state flows from Prosim2GSX to Prosim
 5. Configuration flows bidirectionally between UI and ConfigurationFile
 6. LVAR changes flow from MSFS to registered callbacks via MobiSimConnect
+7. Door operation commands flow from GSXController to ProsimController
 
 ## Error Handling
 
