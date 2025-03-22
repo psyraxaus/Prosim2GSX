@@ -28,6 +28,7 @@ namespace Prosim2GSX
         private double fuelCurrent = 0;
         private double fuelPlanned = 0;
         private string fuelUnits = "KG";
+        private double fuelTarget;
 
         private bool[] paxPlanned;
         private int[] paxSeats;
@@ -533,31 +534,42 @@ namespace Prosim2GSX
             Interface.SetProsimVariable("aircraft.refuel.refuelingPower", false);
 
             // Round up planned fuel to the nearest 100
-            double roundedFuelPlanned = Math.Ceiling(fuelPlanned / 100.0) * 100.0;
-            Logger.Log(LogLevel.Debug, "ProsimController:RefuelStart", $"Rounding fuel from {fuelPlanned} to {roundedFuelPlanned}");
+            fuelTarget = Math.Ceiling(fuelPlanned / 100.0) * 100.0;
+            Logger.Log(LogLevel.Debug, "ProsimController:RefuelStart",
+                $"Rounding fuel from {fuelPlanned} to {fuelTarget}");
 
             if (fuelUnits == "KG")
-                Interface.SetProsimVariable("aircraft.refuel.fuelTarget", roundedFuelPlanned);
+                Interface.SetProsimVariable("aircraft.refuel.fuelTarget", fuelTarget);
             else
-                Interface.SetProsimVariable("aircraft.refuel.fuelTarget", roundedFuelPlanned * weightConversion);
+                Interface.SetProsimVariable("aircraft.refuel.fuelTarget", fuelTarget * weightConversion);
 
-            // Update the fuelPlanned value to the rounded value
-            fuelPlanned = roundedFuelPlanned;
+            Logger.Log(LogLevel.Debug, "ProsimController:RefuelStart",
+                $"Fuel target set to {fuelTarget} kg. Current fuel: {fuelCurrent} kg");
         }
 
         public bool Refuel()
         {
             float step = Model.GetFuelRateKGS();
 
-            if (fuelCurrent + step < fuelPlanned)
+            Logger.Log(LogLevel.Debug, "ProsimController:Refuel",
+                $"Refueling step: Current={fuelCurrent}, Target={fuelTarget}, Step={step}");
+
+            if (fuelCurrent + step < fuelTarget)
+            {
                 fuelCurrent += step;
+                Logger.Log(LogLevel.Debug, "ProsimController:Refuel",
+                    $"Refueling in progress: {fuelCurrent}/{fuelTarget} kg");
+            }
             else
-                fuelCurrent = fuelPlanned;
+            {
+                fuelCurrent = fuelTarget;
+                Logger.Log(LogLevel.Information, "ProsimController:Refuel",
+                    $"Refueling complete: {fuelCurrent}/{fuelTarget} kg");
+            }
 
             Interface.SetProsimVariable("aircraft.fuel.total.amount.kg", fuelCurrent);
-            //Interface.SetProsimVariable("aircraft.fuel.total.amount", fuelCurrent);
 
-            return Math.Abs(fuelCurrent - fuelPlanned) < 1.0; // Allow for small floating point differences
+            return Math.Abs(fuelCurrent - fuelTarget) < 1.0;
         }
 
         public void RefuelStop()

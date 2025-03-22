@@ -695,6 +695,13 @@ namespace Prosim2GSX
         private void RunLoadingServices(int refuelState, int cateringState)
         {
             Interval = 1000;
+
+            if (Model.CallCatering && !cateringFinished && cateringState == 6)
+            {
+                cateringFinished = true;
+                Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Catering service completed (state 6)");
+            }
+
             if (Model.AutoRefuel)
             {
                 if (!initialFuelSet)
@@ -737,7 +744,10 @@ namespace Prosim2GSX
                         Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Waiting 90s before calling Boarding");
 
                     if (delayCounter < 90)
+                    {
                         delayCounter++;
+                        Logger.Log(LogLevel.Debug, "GsxController:RunLoadingServices", $"Boarding delay counter: {delayCounter}/90");
+                    }
                     else
                     {
                         Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Calling Boarding Service");
@@ -748,6 +758,11 @@ namespace Prosim2GSX
                         boardingRequested = true;
                     }
                     return;
+                }
+                else if (!boardingRequested)
+                {
+                    Logger.Log(LogLevel.Debug, "GsxController:RunLoadingServices",
+                        $"Not ready for boarding yet. Refuel finished: {refuelFinished}, Catering finished: {cateringFinished}, Call catering: {Model.CallCatering}");
                 }
             }
 
@@ -781,6 +796,26 @@ namespace Prosim2GSX
                         Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Refuel completed");
                     }
                 }
+
+                // Add state transition check for GSX refueling state
+                int currentRefuelState = (int)SimConnect.ReadLvar("FSDT_GSX_REFUELING_STATE");
+                if (currentRefuelState == 6) // Check if GSX considers refueling completed
+                {
+                    if (!refuelFinished)
+                    {
+                        Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"GSX reports refueling completed (state 6)");
+                        refueling = false;
+                        refuelFinished = true;
+                        refuelPaused = false;
+                        ProsimController.RefuelStop();
+                    }
+                }
+            }
+
+            if (refuelFinished && !boardingRequested)
+            {
+                Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices",
+                    $"Refueling finished. AutoBoarding: {Model.AutoBoarding}, CateringFinished: {cateringFinished}, CallCatering: {Model.CallCatering}, DelayCounter: {delayCounter}");
             }
 
             if (!boarding && !boardFinished && SimConnect.ReadLvar("FSDT_GSX_BOARDING_STATE") >= 4)
@@ -1441,6 +1476,13 @@ namespace Prosim2GSX
         {
             cateringState = newValue;
             Logger.Log(LogLevel.Information, "GSXController", $"Catering state changed to {newValue}");
+
+            // Set cateringFinished when catering reaches completed state (typically state 6)
+            if (newValue == 6 && !cateringFinished)
+            {
+                cateringFinished = true;
+                Logger.Log(LogLevel.Information, "GSXController", $"Catering service completed");
+            }
         }
 
         /// <summary>
