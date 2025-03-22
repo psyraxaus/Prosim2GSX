@@ -28,6 +28,7 @@ namespace Prosim2GSX
         private double fuelCurrent = 0;
         private double fuelPlanned = 0;
         private string fuelUnits = "KG";
+        private double fuelTarget;
 
         private bool[] paxPlanned;
         private int[] paxSeats;
@@ -528,42 +529,69 @@ namespace Prosim2GSX
         }
         public void RefuelStart()
         {
+            // Initialize refueling with power off initially
             Interface.SetProsimVariable("aircraft.refuel.refuelingRate", 0.0D);
-            Interface.SetProsimVariable("aircraft.refuel.refuelingPower", true);
+            Interface.SetProsimVariable("aircraft.refuel.refuelingPower", false);
 
             // Round up planned fuel to the nearest 100
-            double roundedFuelPlanned = Math.Ceiling(fuelPlanned / 100.0) * 100.0;
-            Logger.Log(LogLevel.Debug, "ProsimController:RefuelStart", $"Rounding fuel from {fuelPlanned} to {roundedFuelPlanned}");
-            
-            if (fuelUnits == "KG")
-                Interface.SetProsimVariable("aircraft.refuel.fuelTarget", roundedFuelPlanned);
-            else
-                Interface.SetProsimVariable("aircraft.refuel.fuelTarget", roundedFuelPlanned * weightConversion);
+            fuelTarget = Math.Ceiling(fuelPlanned / 100.0) * 100.0;
+            Logger.Log(LogLevel.Debug, "ProsimController:RefuelStart",
+                $"Rounding fuel from {fuelPlanned} to {fuelTarget}");
 
-            // Update the fuelPlanned value to the rounded value
-            fuelPlanned = roundedFuelPlanned;
+            if (fuelUnits == "KG")
+                Interface.SetProsimVariable("aircraft.refuel.fuelTarget", fuelTarget);
+            else
+                Interface.SetProsimVariable("aircraft.refuel.fuelTarget", fuelTarget * weightConversion);
+
+            Logger.Log(LogLevel.Debug, "ProsimController:RefuelStart",
+                $"Fuel target set to {fuelTarget} kg. Current fuel: {fuelCurrent} kg");
         }
 
         public bool Refuel()
         {
             float step = Model.GetFuelRateKGS();
 
-            if (fuelCurrent + step < fuelPlanned)
+            Logger.Log(LogLevel.Debug, "ProsimController:Refuel",
+                $"Refueling step: Current={fuelCurrent}, Target={fuelTarget}, Step={step}");
+
+            if (fuelCurrent + step < fuelTarget)
+            {
                 fuelCurrent += step;
+                Logger.Log(LogLevel.Debug, "ProsimController:Refuel",
+                    $"Refueling in progress: {fuelCurrent}/{fuelTarget} kg");
+            }
             else
-                fuelCurrent = fuelPlanned;
+            {
+                fuelCurrent = fuelTarget;
+                Logger.Log(LogLevel.Information, "ProsimController:Refuel",
+                    $"Refueling complete: {fuelCurrent}/{fuelTarget} kg");
+            }
 
             Interface.SetProsimVariable("aircraft.fuel.total.amount.kg", fuelCurrent);
-            //Interface.SetProsimVariable("aircraft.fuel.total.amount", fuelCurrent);
 
-            return Math.Abs(fuelCurrent - fuelPlanned) < 1.0; // Allow for small floating point differences
+            return Math.Abs(fuelCurrent - fuelTarget) < 1.0;
         }
 
         public void RefuelStop()
         {
             Logger.Log(LogLevel.Information, "ProsimController:RefuelStop", $"RefuelStop Requested");
-
             Interface.SetProsimVariable("aircraft.refuel.refuelingPower", false);
+        }
+
+        public void RefuelPause()
+        {
+            Logger.Log(LogLevel.Information, "ProsimController:RefuelPause", $"Refueling paused - hose disconnected");
+            // Turn off power when hose disconnected
+            Interface.SetProsimVariable("aircraft.refuel.refuelingPower", false);
+            Interface.SetProsimVariable("aircraft.refuel.refuelingRate", 0.0D);
+        }
+
+        public void RefuelResume()
+        {
+            Logger.Log(LogLevel.Information, "ProsimController:RefuelResume", $"Refueling resumed - hose connected");
+            // Turn on power when hose connected
+            Interface.SetProsimVariable("aircraft.refuel.refuelingPower", true);
+            Interface.SetProsimVariable("aircraft.refuel.refuelingRate", Model.GetFuelRateKGS());
 
         }
 

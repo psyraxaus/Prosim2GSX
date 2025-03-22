@@ -1,9 +1,13 @@
 # Active Context: Prosim2GSX
 
 ## Current Focus
-The current focus is on improving the LVAR subscription system and door operation handling in the Prosim2GSX application. This involves implementing a callback-based approach for LVAR changes and enhancing the synchronization between GSX services and Prosim door operations.
+The current focus is on enhancing the refueling process and improving the LVAR subscription system in the Prosim2GSX application. This involves implementing a callback-based approach for LVAR changes, improving fuel hose state management, and enhancing the synchronization between GSX services and Prosim.
 
 ## Recent Changes
+- Enhanced the refueling process with fuel hose state management via callbacks
+- Implemented pause/resume functionality for refueling based on fuel hose connection state
+- Improved center of gravity calculations for more accurate MACZFW and MACTOW values
+- Added better fuel target calculation with rounding to nearest 100
 - Implemented a callback-based system for LVAR value changes in MobiSimConnect.cs
 - Added a dictionary-based approach to map service toggle LVAR names to door operations
 - Enhanced cargo loading integration with automatic door operation
@@ -17,6 +21,8 @@ The current focus is on improving the LVAR subscription system and door operatio
 - Implementing a callback pattern for LVAR changes to improve responsiveness
 - Using a dictionary-based approach for service toggle handling to improve code organization
 - Enhancing door operation logic based on service states
+- Implementing fuel hose state management to improve refueling realism
+- Enhancing center of gravity calculations for more accurate loadsheet data
 - Previously: Choosing to update to .NET 8 for improved performance and extended support
 
 ## Current Challenges
@@ -24,13 +30,18 @@ The current focus is on improving the LVAR subscription system and door operatio
 - Managing the lifecycle of callbacks to prevent memory leaks
 - Coordinating the timing of door operations with GSX service states
 - Testing the new LVAR subscription system thoroughly
+- Ensuring accurate fuel synchronization between GSX and Prosim
+- Handling edge cases in the refueling process (disconnection, reconnection)
 
 ## Next Steps
-1. Perform thorough testing of the new LVAR subscription system
-2. Verify door operation synchronization with GSX services
-3. Consider extending the callback pattern to other parts of the application
-4. Optimize performance of the callback system
-5. Document the new callback pattern for future development
+1. Perform thorough testing of the enhanced refueling process
+2. Verify fuel synchronization between GSX and Prosim
+3. Test center of gravity calculations with various aircraft loading scenarios
+4. Perform thorough testing of the new LVAR subscription system
+5. Verify door operation synchronization with GSX services
+6. Consider extending the callback pattern to other parts of the application
+7. Optimize performance of the callback system
+8. Document the new callback pattern and refueling enhancements for future development
 
 ## Open Questions
 - What are the most common issues users encounter?

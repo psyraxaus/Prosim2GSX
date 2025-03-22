@@ -140,7 +140,7 @@ namespace Prosim2GSX
             SimConnect.SubscribeLvar("FSDT_GSX_DEBOARDING_CARGO");
             SimConnect.SubscribeLvar("FSDT_GSX_BOARDING_CARGO_PERCENT");
             SimConnect.SubscribeLvar("FSDT_GSX_DEBOARDING_CARGO_PERCENT");
-            SimConnect.SubscribeLvar("FSDT_GSX_FUELHOSE_CONNECTED");
+            SimConnect.SubscribeLvar("FSDT_GSX_FUELHOSE_CONNECTED", OnFuelHoseStateChanged);
             SimConnect.SubscribeLvar("FSDT_VAR_EnginesStopped");
             SimConnect.SubscribeLvar("FSDT_GSX_COUATL_STARTED");
             SimConnect.SubscribeLvar("FSDT_GSX_JETWAY");
@@ -695,6 +695,13 @@ namespace Prosim2GSX
         private void RunLoadingServices(int refuelState, int cateringState)
         {
             Interval = 1000;
+
+            if (Model.CallCatering && !cateringFinished && cateringState == 6)
+            {
+                cateringFinished = true;
+                Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Catering service completed (state 6)");
+            }
+
             if (Model.AutoRefuel)
             {
                 if (!initialFuelSet)
@@ -737,7 +744,10 @@ namespace Prosim2GSX
                         Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Waiting 90s before calling Boarding");
 
                     if (delayCounter < 90)
+                    {
                         delayCounter++;
+                        Logger.Log(LogLevel.Debug, "GsxController:RunLoadingServices", $"Boarding delay counter: {delayCounter}/90");
+                    }
                     else
                     {
                         Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Calling Boarding Service");
@@ -749,27 +759,34 @@ namespace Prosim2GSX
                     }
                     return;
                 }
+                else if (!boardingRequested)
+                {
+                    Logger.Log(LogLevel.Debug, "GsxController:RunLoadingServices",
+                        $"Not ready for boarding yet. Refuel finished: {refuelFinished}, Catering finished: {cateringFinished}, Call catering: {Model.CallCatering}");
+                }
             }
 
             if (!refueling && !refuelFinished && refuelState == 5)
             {
                 refueling = true;
-                refuelPaused = true;
+                refuelPaused = true; // Start in paused state until hose is connected
                 Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Fuel Service active");
                 ProsimController.RefuelStart();
+
+                // Check initial state of the fuel hose
+                if (SimConnect.ReadLvar("FSDT_GSX_FUELHOSE_CONNECTED") == 1)
+                {
+                    Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices",
+                        $"Fuel hose already connected - starting fuel transfer");
+                    refuelPaused = false;
+                    ProsimController.RefuelResume();
+                }
             }
             else if (refueling)
             {
-
-                if (SimConnect.ReadLvar("FSDT_GSX_FUELHOSE_CONNECTED") == 1)
+                // Only perform active refueling when not paused
+                if (!refuelPaused && SimConnect.ReadLvar("FSDT_GSX_FUELHOSE_CONNECTED") == 1)
                 {
-                    if (refuelPaused)
-                    {
-                        Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Fuel Hose connected - refueling");
-
-                        refuelPaused = false;
-                    }
-
                     if (ProsimController.Refuel())
                     {
                         refueling = false;
@@ -779,14 +796,26 @@ namespace Prosim2GSX
                         Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Refuel completed");
                     }
                 }
-                else
+
+                // Add state transition check for GSX refueling state
+                int currentRefuelState = (int)SimConnect.ReadLvar("FSDT_GSX_REFUELING_STATE");
+                if (currentRefuelState == 6) // Check if GSX considers refueling completed
                 {
-                    if (!refuelPaused && !refuelFinished)
+                    if (!refuelFinished)
                     {
-                        Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"Fuel Hose disconnected - waiting for next Truck");
-                        refuelPaused = true;
+                        Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices", $"GSX reports refueling completed (state 6)");
+                        refueling = false;
+                        refuelFinished = true;
+                        refuelPaused = false;
+                        ProsimController.RefuelStop();
                     }
                 }
+            }
+
+            if (refuelFinished && !boardingRequested)
+            {
+                Logger.Log(LogLevel.Information, "GsxController:RunLoadingServices",
+                    $"Refueling finished. AutoBoarding: {Model.AutoBoarding}, CateringFinished: {cateringFinished}, CallCatering: {Model.CallCatering}, DelayCounter: {delayCounter}");
             }
 
             if (!boarding && !boardFinished && SimConnect.ReadLvar("FSDT_GSX_BOARDING_STATE") >= 4)
@@ -1447,6 +1476,42 @@ namespace Prosim2GSX
         {
             cateringState = newValue;
             Logger.Log(LogLevel.Information, "GSXController", $"Catering state changed to {newValue}");
+
+            // Set cateringFinished when catering reaches completed state (typically state 6)
+            if (newValue == 6 && !cateringFinished)
+            {
+                cateringFinished = true;
+                Logger.Log(LogLevel.Information, "GSXController", $"Catering service completed");
+            }
+        }
+
+        /// <summary>
+        /// Handler for fuel hose state changes
+        /// </summary>
+        private void OnFuelHoseStateChanged(float newValue, float oldValue, string lvarName)
+        {
+            Logger.Log(LogLevel.Information, "GsxController:OnFuelHoseStateChanged",
+                $"Fuel hose state changed from {oldValue} to {newValue}");
+
+            if (refueling)
+            {
+                if (newValue == 1 && oldValue == 0)
+                {
+                    // Fuel hose was just connected
+                    Logger.Log(LogLevel.Information, "GsxController:OnFuelHoseStateChanged",
+                        $"Fuel hose connected - starting fuel transfer");
+                    refuelPaused = false;
+                    ProsimController.RefuelResume();
+                }
+                else if (newValue == 0 && oldValue == 1)
+                {
+                    // Fuel hose was just disconnected
+                    Logger.Log(LogLevel.Information, "GsxController:OnFuelHoseStateChanged",
+                        $"Fuel hose disconnected - pausing fuel transfer");
+                    refuelPaused = true;
+                    ProsimController.RefuelPause();
+                }
+            }
         }
 
         /// <summary>
