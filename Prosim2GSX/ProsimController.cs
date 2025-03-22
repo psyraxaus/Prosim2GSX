@@ -820,10 +820,24 @@ namespace Prosim2GSX
             Logger.Log(LogLevel.Information, "ProsimController:SetForwardCargoDoor", $"Forward cargo door {(open ? "opened" : "closed")}");
         }
 
+        public string GetForwardCargoDoor()
+        {
+            bool doorStatus = Interface.ReadDataRef("doors.cargo.forward");
+            string status = doorStatus ? "open" : "closed";
+            return status;
+        }
+
         public void SetAftCargoDoor(bool open)
         {
             Interface.SetProsimVariable("doors.cargo.aft", open);
             Logger.Log(LogLevel.Information, "ProsimController:SetAftCargoDoor", $"Aft cargo door {(open ? "opened" : "closed")}");
+        }
+
+        public string GetAftCargoDoor()
+        {
+            bool doorStatus = Interface.ReadDataRef("doors.cargo.aft");
+            string status = doorStatus ? "open" : "closed";
+            return status;
         }
 
         public dynamic GetStatusFunction(string dataRef)

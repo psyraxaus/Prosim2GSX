@@ -136,8 +136,8 @@ namespace Prosim2GSX
             SimConnect.SubscribeLvar("FSDT_GSX_NUMPASSENGERS");
             SimConnect.SubscribeLvar("FSDT_GSX_NUMPASSENGERS_BOARDING_TOTAL");
             SimConnect.SubscribeLvar("FSDT_GSX_NUMPASSENGERS_DEBOARDING_TOTAL");
-            SimConnect.SubscribeLvar("FSDT_GSX_BOARDING_CARGO");
-            SimConnect.SubscribeLvar("FSDT_GSX_DEBOARDING_CARGO");
+            SimConnect.SubscribeLvar("FSDT_GSX_BOARDING_CARGO", OnCargoLoadingChanged);
+            SimConnect.SubscribeLvar("FSDT_GSX_DEBOARDING_CARGO", OnCargoLoadingChanged);
             SimConnect.SubscribeLvar("FSDT_GSX_BOARDING_CARGO_PERCENT");
             SimConnect.SubscribeLvar("FSDT_GSX_DEBOARDING_CARGO_PERCENT");
             SimConnect.SubscribeLvar("FSDT_GSX_FUELHOSE_CONNECTED", OnFuelHoseStateChanged);
@@ -1529,6 +1529,41 @@ namespace Prosim2GSX
                 {
                     // Trigger the appropriate door operation based on the current catering state
                     serviceToggles[lvarName]();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Handler for cargo loading percentage changes
+        /// </summary>
+        private void OnCargoLoadingChanged(float newValue, float oldValue, string lvarName)
+        {
+            Logger.Log(LogLevel.Debug, "GSXController", $"Cargo loading changed from {oldValue}% to {newValue}%");
+
+            if (newValue == 1)
+            {
+                // Cargo service is running
+                Logger.Log(LogLevel.Information, "GSXController", $"Cargo loading in progress");
+            } 
+            else if (newValue == 0)
+            {
+                // Cargo service completed
+                Logger.Log(LogLevel.Information, "GSXController", $"Cargo loading complete, automatically closing cargo doors");
+
+                // Close forward cargo door if it's open
+                if (ProsimController.GetForwardCargoDoor() == "open")
+                {
+                    ProsimController.SetForwardCargoDoor(false);
+                    forwardCargoDoorOpened = false;
+                    Logger.Log(LogLevel.Information, "GSXController", $"Automatically closed forward cargo door after loading completion");
+                }
+
+                // Close aft cargo door if it's open
+                if (ProsimController.GetAftCargoDoor() == "open")
+                {
+                    ProsimController.SetAftCargoDoor(false);
+                    aftCargoDoorOpened = false;
+                    Logger.Log(LogLevel.Information, "GSXController", $"Automatically closed aft cargo door after loading completion");
                 }
             }
         }
