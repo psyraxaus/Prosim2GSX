@@ -1490,7 +1490,7 @@ namespace Prosim2GSX
         /// </summary>
         private void OnFuelHoseStateChanged(float newValue, float oldValue, string lvarName)
         {
-            Logger.Log(LogLevel.Information, "GsxController:OnFuelHoseStateChanged",
+            Logger.Log(LogLevel.Debug, "GsxController:OnFuelHoseStateChanged",
                 $"Fuel hose state changed from {oldValue} to {newValue}");
 
             if (refueling)

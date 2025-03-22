@@ -4,6 +4,9 @@
 The current focus has been on enhancing the cargo door logic and catering service door operation in the Prosim2GSX application. This involved implementing a dictionary-based approach for service toggle handling, improving door operations based on service states, and enhancing the synchronization between GSX services and Prosim. The implementation of automatic cargo door management based on loading status and catering state has been completed and thoroughly tested. Additionally, the refueling process has been enhanced with fuel hose state management via callbacks.
 
 ## Recent Changes
+- Completed thorough testing of the enhanced refueling process, confirming proper functionality
+- Completed verification of fuel synchronization between GSX and Prosim
+- Completed testing of the new LVAR subscription system, confirming proper functionality
 - Enhanced the cargo door logic with automatic operation based on loading status and catering state
 - Completed thorough testing of cargo door integration with GSX, confirming proper opening and closing behavior
 - Completed thorough testing of catering service door operation, verifying correct functionality
@@ -44,16 +47,13 @@ The current focus has been on enhancing the cargo door logic and catering servic
 - Testing the automatic door operations with various service scenarios
 
 ## Next Steps
-1. Perform thorough testing of the enhanced refueling process
-2. Verify fuel synchronization between GSX and Prosim
-3. Test center of gravity calculations with various aircraft loading scenarios
-4. Perform thorough testing of the new LVAR subscription system
-5. Consider extending the callback pattern to other parts of the application
-6. Optimize performance of the callback system
-7. Document the new callback pattern, door operation logic, and refueling enhancements for future development
-8. Explore potential improvements to error handling for edge cases
-9. Consider adding more configuration options for door operation behavior
-10. Evaluate performance impact of the callback system under heavy load
+1. Complete thorough testing of center of gravity calculations with various aircraft loading scenarios
+2. Consider extending the callback pattern to other parts of the application
+3. Optimize performance of the callback system
+4. Document the new callback pattern, door operation logic, and refueling enhancements for future development
+5. Explore potential improvements to error handling for edge cases
+6. Consider adding more configuration options for door operation behavior
+7. Evaluate performance impact of the callback system under heavy load
 
 ## Open Questions
 - What are the most common issues users encounter?

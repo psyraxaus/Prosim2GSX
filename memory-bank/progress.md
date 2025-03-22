@@ -34,6 +34,9 @@ The Prosim2GSX project is in a functional state with the core integration betwee
 - ✅ Completed testing of enhanced catering service door logic
 - ✅ Completed verification of door operation synchronization with GSX catering and cargo services
 - ✅ Completed testing of automatic cargo door closing when cargo loading reaches 100%
+- ✅ Completed testing of the enhanced refueling process
+- ✅ Completed verification of fuel synchronization between GSX and Prosim
+- ✅ Completed testing of the new LVAR subscription system
 
 ### Automation
 - ✅ Automatic service calls (except Push-Back, De-Ice, Gate-Selection)
@@ -50,10 +53,7 @@ The Prosim2GSX project is in a functional state with the core integration betwee
 - ✅ Persistent settings
 
 ## In Progress Features
-- 🔄 Testing of the enhanced refueling process
-- 🔄 Verification of fuel synchronization between GSX and Prosim
 - 🔄 Testing of center of gravity calculations with various aircraft loading scenarios
-- 🔄 Testing of the new LVAR subscription system
 - 🔄 Testing of the .NET 8 migration to ensure all functionality works as expected
 
 ## Planned Features
@@ -93,19 +93,16 @@ Initial build testing of the .NET 8 migration has been completed successfully. C
 ## Next Development Priorities
 Current development priorities include:
 
-1. Thorough testing of the enhanced refueling process
-2. Verifying fuel synchronization between GSX and Prosim
-3. Testing center of gravity calculations with various aircraft loading scenarios
-4. Thorough testing of the new LVAR subscription system
-5. Thorough testing of the .NET 8 migration
-6. Creating release notes for the recent updates
-7. Addressing known issues with FS2Crew compatibility
-8. Improving audio control persistence between sessions
-9. Adding support for the "Extreme" passenger density setting
-10. Expanding automation capabilities to include Push-Back, De-Ice, and Gate-Selection
-11. Enhancing error handling and recovery mechanisms
-12. Adding more configuration options for advanced users
-13. Exploring new features available in .NET 8
+1. Thorough testing of center of gravity calculations with various aircraft loading scenarios
+2. Thorough testing of the .NET 8 migration
+3. Creating release notes for the recent updates
+4. Addressing known issues with FS2Crew compatibility
+5. Improving audio control persistence between sessions
+6. Adding support for the "Extreme" passenger density setting
+7. Expanding automation capabilities to include Push-Back, De-Ice, and Gate-Selection
+8. Enhancing error handling and recovery mechanisms
+9. Adding more configuration options for advanced users
+10. Exploring new features available in .NET 8
 
 ## Deployment Status
 The project is in a deployable state following the .NET 8 migration. The README will need to be updated to reflect the new .NET 8 runtime requirement before the next release.
