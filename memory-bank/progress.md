@@ -1,7 +1,7 @@
 # Progress Tracking: Prosim2GSX
 
 ## Project Status
-The Prosim2GSX project is in a functional state with the core integration between Prosim A320 and GSX Pro working as expected. Recent improvements to the LVAR subscription system and door operation handling have enhanced the responsiveness and reliability of the application. The application has been successfully migrated from .NET 7 to .NET 8, with all dependencies updated to their latest compatible versions.
+The Prosim2GSX project is in a functional state with the core integration between Prosim A320 and GSX Pro working as expected. Recent enhancements to the refueling process and improvements to the LVAR subscription system have significantly improved the realism and reliability of the application. The refueling process now properly handles fuel hose connection states and provides more accurate center of gravity calculations. The application has been successfully migrated from .NET 7 to .NET 8, with all dependencies updated to their latest compatible versions.
 
 ## Implemented Features
 
@@ -20,7 +20,10 @@ The Prosim2GSX project is in a functional state with the core integration betwee
 - ✅ Improved door operation based on service states
 
 ### Service Synchronization
-- ✅ Refueling synchronization between GSX and Prosim
+- ✅ Enhanced refueling process with fuel hose state management
+- ✅ Implemented pause/resume functionality for refueling based on fuel hose connection
+- ✅ Improved center of gravity calculations for accurate MACZFW and MACTOW values
+- ✅ Added better fuel target calculation with rounding to nearest 100
 - ✅ Passenger and cargo boarding/deboarding synchronization
 - ✅ Ground equipment automation (GPU, Chocks, PCA)
 - ✅ Enhanced cargo door operation based on loading percentage
@@ -41,6 +44,9 @@ The Prosim2GSX project is in a functional state with the core integration betwee
 - ✅ Persistent settings
 
 ## In Progress Features
+- 🔄 Testing of the enhanced refueling process
+- 🔄 Verification of fuel synchronization between GSX and Prosim
+- 🔄 Testing of center of gravity calculations with various aircraft loading scenarios
 - 🔄 Testing of the new LVAR subscription system
 - 🔄 Testing of enhanced door operation functionality
 - 🔄 Testing of the .NET 8 migration to ensure all functionality works as expected
@@ -82,11 +88,14 @@ Initial build testing of the .NET 8 migration has been completed successfully. C
 ## Next Development Priorities
 Current development priorities include:
 
-1. Thorough testing of the new LVAR subscription system
-2. Verifying door operation synchronization with GSX services
-3. Thorough testing of the .NET 8 migration
-4. Creating release notes for the recent updates
-5. Addressing known issues with FS2Crew compatibility
+1. Thorough testing of the enhanced refueling process
+2. Verifying fuel synchronization between GSX and Prosim
+3. Testing center of gravity calculations with various aircraft loading scenarios
+4. Thorough testing of the new LVAR subscription system
+5. Verifying door operation synchronization with GSX services
+6. Thorough testing of the .NET 8 migration
+7. Creating release notes for the recent updates
+8. Addressing known issues with FS2Crew compatibility
 6. Improving audio control persistence between sessions
 7. Adding support for the "Extreme" passenger density setting
 8. Expanding automation capabilities to include Push-Back, De-Ice, and Gate-Selection

@@ -103,6 +103,8 @@ The system implements a callback pattern for LVAR value changes:
 - Components register callbacks for specific LVAR changes via MobiSimConnect
 - When an LVAR value changes, registered callbacks are invoked with old and new values
 - Callbacks are used to implement reactive behavior to simulator state changes
+- Specific callbacks handle critical state changes like fuel hose connection/disconnection
+- The refueling process uses callbacks to pause/resume based on fuel hose state
 - Error handling is built into the callback execution to prevent crashes
 
 ### State Machine
@@ -111,6 +113,8 @@ The service flow follows a state machine pattern:
 - Each flight phase has defined states (pre-flight, boarding, departure, etc.)
 - Transitions between states are triggered by specific events
 - Actions are performed when entering or exiting states
+- The refueling process implements a mini-state machine with states for active, paused, and completed
+- State transitions are triggered by both GSX events and fuel hose connection status
 
 ### Dependency Injection
 Components are designed with loose coupling in mind:
@@ -133,6 +137,7 @@ The system uses dictionary-based action mapping for service toggles:
 - This approach centralizes the mapping logic and improves maintainability
 - Actions are triggered based on LVAR state changes
 - The pattern allows for easy addition of new service toggle mappings
+- Similar mapping approach is used for other state-based actions like refueling control
 
 ## Component Relationships
 
@@ -150,6 +155,14 @@ The system uses dictionary-based action mapping for service toggles:
 3. GsxController executes the service call to GSX
 4. System monitors for service completion
 5. When service completes, state is synchronized between systems
+
+### Refueling Process Flow
+1. GSXController initiates refueling by calling the GSX refueling service
+2. ProsimController initializes refueling with target fuel calculation
+3. Fuel hose connection state is monitored via LVAR callbacks
+4. When hose is connected, refueling is active; when disconnected, refueling is paused
+5. Refueling continues until target fuel level is reached or GSX reports completion
+6. Center of gravity calculations are performed for accurate loadsheet data
 
 ### Data Flow
 1. Flight plan data flows from Prosim to Prosim2GSX
