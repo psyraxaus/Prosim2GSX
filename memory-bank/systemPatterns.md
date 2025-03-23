@@ -96,6 +96,36 @@ The system uses events and event handlers extensively to communicate state chang
 - UI components observe changes in ViewModels
 - Services react to state changes in the aircraft
 - LVAR changes trigger registered callbacks through the MobiSimConnect callback system
+- Prosim dataref changes trigger registered callbacks through the ProsimController dataref subscription system
+
+### Dataref Subscription Pattern
+The system implements a comprehensive subscription pattern for Prosim dataref changes:
+
+- Components register handlers for specific Prosim dataref changes via ProsimController
+- A dedicated monitoring system periodically checks for changes in subscribed datarefs
+- When a dataref value changes, all registered handlers are invoked with old and new values
+- Thread-safe implementation ensures reliable operation in a multi-threaded environment
+- Proper lifecycle management prevents memory leaks and resource exhaustion
+- Multiple handlers can be registered for the same dataref, enabling flexible event handling
+- Error handling is built into the monitoring system to prevent cascading failures
+- Example of dataref subscription for cockpit door state:
+  ```csharp
+  // Register a handler for cockpit door state changes
+  ProsimController.SubscribeToDataRef("system.switches.S_PED_COCKPIT_DOOR", cockpitDoorHandler);
+  
+  // Handler implementation
+  private void OnCockpitDoorStateChanged(string dataRef, dynamic oldValue, dynamic newValue)
+  {
+      if (dataRef == "system.switches.S_PED_COCKPIT_DOOR")
+      {
+          // Determine door state based on switch position
+          bool doorOpen = (int)newValue == 1;
+          
+          // Update GSX LVAR to match door state
+          SimConnect.WriteLvar("FSDT_GSX_COCKPIT_DOOR_OPEN", doorOpen ? 1 : 0);
+      }
+  }
+  ```
 
 ### Callback Pattern
 The system implements a callback pattern for LVAR value changes:
@@ -175,6 +205,14 @@ The system uses dictionary-based action mapping for service toggles:
   ```
 
 ## Component Relationships
+
+### Cockpit Door State Flow
+1. ProsimController monitors the cockpit door switch state via dataref subscription
+2. When the cockpit door switch changes, the OnCockpitDoorStateChanged handler is invoked
+3. The handler determines the door state based on the switch position (0=Normal/Closed, 1=Unlock/Open, 2=Lock/Closed)
+4. The GSX LVAR (FSDT_GSX_COCKPIT_DOOR_OPEN) is updated to match the door state (0=closed, 1=open)
+5. GSX uses this LVAR to control cabin sound muffling when the cockpit door is closed
+6. The cockpit door indicator in Prosim is also updated to reflect the current state
 
 ### Initialization Flow
 1. Application starts and initializes core components

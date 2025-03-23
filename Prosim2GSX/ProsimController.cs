@@ -14,7 +14,7 @@ using System.Globalization;
 
 namespace Prosim2GSX
 {
-    public class ProsimController
+    public partial class ProsimController
     {
         public ProsimInterface Interface;
         protected ServiceModel Model;
@@ -844,6 +844,28 @@ namespace Prosim2GSX
         {
             var value = Interface.ReadDataRef(dataRef);
             return value;
+        }
+
+        public void DebugCheckCockpitDoorState()
+        {
+            try
+            {
+                var switchValue = Interface.ReadDataRef("system.switches.S_PED_COCKPIT_DOOR");
+                var indicatorValue = Interface.ReadDataRef("system.indicators.I_PED_COCKPIT_DOOR_U");
+
+                Logger.Log(LogLevel.Debug, "ProsimController:DebugCheckCockpitDoorState",
+                    $"Current cockpit door switch: {switchValue} (0=Normal, 1=Unlock, 2=Lock)");
+                Logger.Log(LogLevel.Debug, "ProsimController:DebugCheckCockpitDoorState",
+                    $"Current cockpit door indicator: {indicatorValue}");
+
+                // Verify these values can be read correctly
+                return;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "ProsimController:DebugCheckCockpitDoorState",
+                    $"Error reading cockpit door state: {ex.Message}");
+            }
         }
     }
 }

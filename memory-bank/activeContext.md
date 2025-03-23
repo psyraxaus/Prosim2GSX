@@ -1,12 +1,18 @@
 # Active Context: Prosim2GSX
 
 ## Current Focus
-The current focus has been on enhancing the cargo door logic and catering service door operation in the Prosim2GSX application. This involved implementing a dictionary-based approach for service toggle handling, improving door operations based on service states, and enhancing the synchronization between GSX services and Prosim. The implementation of automatic cargo door management based on loading status and catering state has been completed and thoroughly tested. Additionally, the refueling process has been enhanced with fuel hose state management via callbacks.
+The current focus has been on implementing a new Prosim dataref subscription system and enhancing the cockpit door integration between Prosim and GSX. This involved creating a callback-based monitoring system for Prosim datarefs and implementing synchronization between the cockpit door state in Prosim and the corresponding LVAR in GSX. The implementation allows the cockpit door to muffle cabin sounds when closed, enhancing the realism of the simulation. Additionally, the previous work on cargo door logic, catering service door operation, and refueling process enhancements has been thoroughly tested and verified.
 
 ## Recent Changes
+- Implemented a comprehensive dataref subscription system in ProsimController for monitoring Prosim dataref changes
+- Added a callback-based pattern for handling Prosim dataref value changes
+- Implemented cockpit door state synchronization between Prosim and GSX
+- Added functionality to update the GSX FSDT_GSX_COCKPIT_DOOR_OPEN LVAR based on cockpit door state
+- Implemented sound muffling effect when the cockpit door is closed
+- Added robust error handling in the dataref monitoring system
+- Completed successful testing of the new dataref subscription system with the cockpit door switch
 - Completed thorough testing of the enhanced refueling process, confirming proper functionality
 - Completed verification of fuel synchronization between GSX and Prosim
-- Completed testing of the new LVAR subscription system, confirming proper functionality
 - Enhanced the cargo door logic with automatic operation based on loading status and catering state
 - Completed thorough testing of cargo door integration with GSX, confirming proper opening and closing behavior
 - Completed thorough testing of catering service door operation, verifying correct functionality
@@ -27,6 +33,10 @@ The current focus has been on enhancing the cargo door logic and catering servic
 - Previously: Updated the application version from 0.3.0 to 0.4.0
 
 ## Active Decisions
+- Implementing a comprehensive dataref subscription system for Prosim to improve integration capabilities
+- Creating a thread-safe monitoring system with proper lifecycle management
+- Supporting multiple handlers per dataref to enable flexible event handling
+- Implementing cockpit door state synchronization to enhance realism with sound muffling
 - Implementing a callback pattern for LVAR changes to improve responsiveness
 - Using a dictionary-based approach for service toggle handling to improve code organization
 - Enhancing door operation logic based on service states (waiting, finished, completed)
@@ -37,23 +47,30 @@ The current focus has been on enhancing the cargo door logic and catering servic
 - Previously: Choosing to update to .NET 8 for improved performance and extended support
 
 ## Current Challenges
+- Ensuring the dataref subscription system handles all edge cases properly
+- Managing the lifecycle of dataref monitors to prevent memory leaks
+- Balancing monitoring frequency with performance considerations
+- Ensuring thread safety in the dataref monitoring system
+- Handling potential exceptions in dataref callbacks without affecting the main application
 - Ensuring the callback system handles all edge cases properly
 - Managing the lifecycle of callbacks to prevent memory leaks
 - Coordinating the timing of door operations with GSX service states
-- Testing the new LVAR subscription system thoroughly
 - Ensuring accurate fuel synchronization between GSX and Prosim
 - Handling edge cases in the refueling process (disconnection, reconnection)
 - Ensuring proper door operation timing based on catering and cargo loading states
 - Testing the automatic door operations with various service scenarios
 
 ## Next Steps
-1. Complete thorough testing of center of gravity calculations with various aircraft loading scenarios
-2. Consider extending the callback pattern to other parts of the application
-3. Optimize performance of the callback system
-4. Document the new callback pattern, door operation logic, and refueling enhancements for future development
-5. Explore potential improvements to error handling for edge cases
-6. Consider adding more configuration options for door operation behavior
-7. Evaluate performance impact of the callback system under heavy load
+1. Identify additional Prosim datarefs that could benefit from the subscription system
+2. Explore extending the dataref subscription pattern to other simulation variables
+3. Optimize the monitoring interval for different types of datarefs
+4. Consider implementing priority levels for different dataref monitors
+5. Complete thorough testing of center of gravity calculations with various aircraft loading scenarios
+6. Optimize performance of the callback system
+7. Document the new dataref subscription system and cockpit door integration for future development
+8. Explore potential improvements to error handling for edge cases
+9. Consider adding more configuration options for door operation behavior
+10. Evaluate performance impact of the dataref monitoring system under heavy load
 
 ## Open Questions
 - What are the most common issues users encounter?
