@@ -15,6 +15,8 @@
 - Follow MVVM pattern for UI components
 - Use callback pattern for LVAR value changes
 - Implement dictionary-based action mapping for service toggles
+- Use dataref subscription pattern for Prosim state monitoring
+- Implement partial classes for organizing related functionality (e.g., ProsimController.DataRefMonitor.cs)
 
 ### Documentation
 - Document public APIs with XML comments
@@ -22,6 +24,7 @@
 - Document complex logic with inline comments
 - Keep README updated with configuration requirements
 - Document callback parameters and expected behavior
+- Document dataref subscription handlers with clear purpose and behavior
 
 ## Development Workflow
 
@@ -38,6 +41,8 @@
 - Test with various configuration settings
 - Verify callback execution with different LVAR change scenarios
 - Test door operations with different service states
+- Test dataref subscription with various change frequencies
+- Verify thread safety of dataref monitoring system
 
 ### Debugging Tips
 - Check logs for error messages
@@ -74,6 +79,8 @@
 - Maintain state consistency
 - Implement try-catch blocks in callbacks to prevent cascading failures
 - Validate value changes before triggering callbacks
+- Handle exceptions in dataref handlers to prevent monitoring system failures
+- Log detailed information for debugging dataref subscription issues
 
 ## Project-Specific Knowledge
 
@@ -90,6 +97,8 @@
 - MobiFlight extends variable access
 - LVAR changes trigger registered callbacks
 - Service toggle changes trigger door operations
+- Prosim dataref changes trigger registered handlers
+- Cockpit door state changes update GSX sound muffling
 
 ### Performance Considerations
 - Minimize CPU usage during flight
@@ -98,6 +107,9 @@
 - Limit unnecessary service calls
 - Only trigger callbacks when values actually change
 - Use efficient dictionary lookups for action mapping
+- Balance dataref monitoring frequency with performance impact
+- Use appropriate monitoring intervals for different types of datarefs
+- Consider thread synchronization overhead in multi-threaded monitoring
 
 ## Future Development
 
@@ -114,3 +126,6 @@
 - Improve error handling and recovery
 - Extend callback pattern to other parts of the application
 - Optimize callback performance
+- Identify additional datarefs that could benefit from subscription
+- Implement priority levels for different dataref monitors
+- Optimize monitoring intervals based on dataref change frequency
