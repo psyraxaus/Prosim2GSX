@@ -33,6 +33,8 @@ namespace Prosim2GSX
         private readonly string gsxProcess = "Couatl64_MSFS";
         private string menuFile = "";
 
+        private DataRefChangedHandler cockpitDoorHandler;
+
         private FlightState state = FlightState.PREFLIGHT;
         
         /// <summary>
@@ -127,6 +129,7 @@ namespace Prosim2GSX
             Model = model;
             ProsimController = prosimController;
             FlightPlan = flightPlan;
+            cockpitDoorHandler = new DataRefChangedHandler(OnCockpitDoorStateChanged);
 
             SimConnect = IPCManager.SimConnect;
             SimConnect.SubscribeSimVar("SIM ON GROUND", "Bool");
@@ -168,6 +171,8 @@ namespace Prosim2GSX
             SimConnect.SubscribeLvar("A_FC_THROTTLE_RIGHT_INPUT");
             SimConnect.SubscribeSimVar("GPS GROUND SPEED", "Meters per second");
             SimConnect.SubscribeEnvVar("ZULU TIME", "Seconds");
+
+            ProsimController.SubscribeToDataRef("system.switches.S_DOORS_COCKPIT", cockpitDoorHandler);
 
             // Initialize the service toggle mapping
             serviceToggles.Add("FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE", () => OperateFrontDoor());
@@ -428,7 +433,7 @@ namespace Prosim2GSX
             bool simOnGround = SimConnect.ReadSimVar("SIM ON GROUND", "Bool") != 0.0f;
             ProsimController.Update(false);
 
-            SyncCockpitDoorSound();
+            FallbackSyncCockpitDoorSound();
 
             if (operatorWasSelected)
             {
@@ -1637,29 +1642,64 @@ namespace Prosim2GSX
 
         }
 
-        private void SyncCockpitDoorSound()
+        private void OnCockpitDoorStateChanged(string dataRef, dynamic oldValue, dynamic newValue)
+        {
+            if (dataRef == "system.switches.S_PED_COCKPIT_DOOR")
+            {
+                Logger.Log(LogLevel.Information, "GsxController:OnCockpitDoorStateChanged",
+                    $"Cockpit door switch changed from {oldValue} to {newValue}");
+
+                // Determine door state based on switch position
+                // 0=Normal (Door Closed), 1=Unlock (Door Open), 2=Lock (Door Closed)
+                bool doorOpen = (int)newValue == 1; // Only open when in "Unlock" position
+
+                // Update the GSX Pro LVAR to match the door state (0=closed, 1=open)
+                int gsxDoorState = doorOpen ? 1 : 0;
+                SimConnect.WriteLvar("FSDT_GSX_COCKPIT_DOOR_OPEN", gsxDoorState);
+
+                // Update the cockpit door indicator (using byte type)
+                // Value 1 when door is unlocked/open, 0 when door is closed/locked
+                byte indicatorState = doorOpen ? (byte)1 : (byte)0;
+                ProsimController.Interface.SetProsimVariable("system.indicators.I_PED_COCKPIT_DOOR_U", indicatorState);
+
+                Logger.Log(LogLevel.Debug, "GsxController:OnCockpitDoorStateChanged",
+                    $"Door is {(doorOpen ? "open" : "closed")} - Set GSX LVAR to {gsxDoorState}, indicator to {indicatorState}");
+            }
+        }
+
+        public void FallbackSyncCockpitDoorSound()
         {
             try
             {
-                // Read the current state of the Prosim cockpit door
-                var currentDoorState = ProsimController.GetStatusFunction("system.switches.S_DOORS_COCKPIT");
+                // Read the current state of the Prosim cockpit door switch
+                var currentSwitchState = ProsimController.GetStatusFunction("system.switches.S_PED_COCKPIT_DOOR");
+
+                // Determine door state based on switch position
+                // 0=Normal (Door Closed), 1=Unlock (Door Open), 2=Lock (Door Closed)
+                bool doorOpen = (int)currentSwitchState == 1; // Only open when in "Unlock" position
+                int gsxDoorState = doorOpen ? 1 : 0;
 
                 // Check if the door state has changed
-                if (currentDoorState != lastCockpitDoorState)
+                if (gsxDoorState != lastCockpitDoorState)
                 {
                     // Update the GSX Pro LVAR to match the door state
-                    SimConnect.WriteLvar("FSDT_GSX_COCKPIT_DOOR_OPEN", currentDoorState);
+                    SimConnect.WriteLvar("FSDT_GSX_COCKPIT_DOOR_OPEN", gsxDoorState);
+
+                    // Update the cockpit door indicator (using byte type)
+                    int indicatorState = doorOpen ? (int)1 : (int)0;
+                    ProsimController.Interface.SetProsimVariable("system.indicators.I_PED_COCKPIT_DOOR_U", indicatorState);
 
                     // Store the current state for next comparison
-                    lastCockpitDoorState = (int)currentDoorState;
+                    lastCockpitDoorState = gsxDoorState;
 
-                    Logger.Log(LogLevel.Information, "GsxController:SyncCockpitDoorSound",
-                        $"Cockpit door state changed to: {currentDoorState} - Updated GSX cabin sound LVAR");
+                    Logger.Log(LogLevel.Information, "GsxController:FallbackSyncCockpitDoorSound",
+                        $"Cockpit door state changed to: {(doorOpen ? "Open" : "Closed")} - " +
+                        $"Switch position: {currentSwitchState}, Updated GSX LVAR to {gsxDoorState}");
                 }
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, "GsxController:SyncCockpitDoorSound",
+                Logger.Log(LogLevel.Error, "GsxController:FallbackSyncCockpitDoorSound",
                     $"Error syncing cockpit door sound: {ex.Message}");
             }
         }
