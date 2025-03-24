@@ -1,7 +1,7 @@
 # Progress Tracking: Prosim2GSX
 
 ## Project Status
-The Prosim2GSX project is in a functional state with the core integration between Prosim A320 and GSX Pro working as expected. Recent implementation of a comprehensive Prosim dataref subscription system and cockpit door integration has further enhanced the application's capabilities and realism. The dataref subscription system provides a robust foundation for monitoring Prosim state changes, while the cockpit door integration allows for realistic sound muffling when the cockpit door is closed. Previous enhancements to the refueling process and improvements to the LVAR subscription system have also significantly improved the realism and reliability of the application. The application has been successfully migrated from .NET 7 to .NET 8, with all dependencies updated to their latest compatible versions.
+The Prosim2GSX project is in a functional state with the core integration between Prosim A320 and GSX Pro working as expected. Recent implementation of sophisticated center of gravity (CG) calculation methods has significantly improved the accuracy of loadsheet data, providing realistic MACZFW and MACTOW values through temporary fuel state manipulation. The comprehensive Prosim dataref subscription system and cockpit door integration have further enhanced the application's capabilities and realism. The dataref subscription system provides a robust foundation for monitoring Prosim state changes, while the cockpit door integration allows for realistic sound muffling when the cockpit door is closed. Previous enhancements to the refueling process and improvements to the LVAR subscription system have also significantly improved the realism and reliability of the application. The application has been successfully migrated from .NET 7 to .NET 8, with all dependencies updated to their latest compatible versions.
 
 ## Implemented Features
 
@@ -28,7 +28,11 @@ The Prosim2GSX project is in a functional state with the core integration betwee
 ### Service Synchronization
 - ✅ Enhanced refueling process with fuel hose state management
 - ✅ Implemented pause/resume functionality for refueling based on fuel hose connection
-- ✅ Improved center of gravity calculations for accurate MACZFW and MACTOW values
+- ✅ Implemented sophisticated center of gravity calculation methods for accurate MACZFW and MACTOW values
+- ✅ Added temporary fuel tank manipulation to get precise CG readings from Prosim
+- ✅ Implemented proper fuel distribution logic for MACTOW calculations based on A320 fuel loading patterns
+- ✅ Added safeguards to restore original fuel states after CG calculations
+- ✅ Implemented tolerance-based comparison for detecting significant CG changes between preliminary and final loadsheets
 - ✅ Added better fuel target calculation with rounding to nearest 100
 - ✅ Passenger and cargo boarding/deboarding synchronization
 - ✅ Ground equipment automation (GPU, Chocks, PCA)
@@ -44,6 +48,7 @@ The Prosim2GSX project is in a functional state with the core integration betwee
 - ✅ Completed verification of fuel synchronization between GSX and Prosim
 - ✅ Completed testing of the new LVAR subscription system
 - ✅ Completed successful testing of the Prosim dataref subscription system with cockpit door switch
+- ✅ Completed thorough testing of center of gravity calculations with various aircraft loading scenarios
 
 ### Automation
 - ✅ Automatic service calls (except Push-Back, De-Ice, Gate-Selection)
@@ -60,7 +65,6 @@ The Prosim2GSX project is in a functional state with the core integration betwee
 - ✅ Persistent settings
 
 ## In Progress Features
-- 🔄 Testing of center of gravity calculations with various aircraft loading scenarios
 - 🔄 Testing of the .NET 8 migration to ensure all functionality works as expected
 - 🔄 Identifying additional Prosim datarefs that could benefit from the subscription system
 
@@ -106,16 +110,15 @@ Current development priorities include:
 
 1. Identifying additional Prosim datarefs that could benefit from the subscription system
 2. Optimizing the monitoring interval for different types of datarefs
-3. Thorough testing of center of gravity calculations with various aircraft loading scenarios
-4. Thorough testing of the .NET 8 migration
-5. Creating release notes for the recent updates
-6. Addressing known issues with FS2Crew compatibility
-7. Improving audio control persistence between sessions
-8. Adding support for the "Extreme" passenger density setting
-9. Expanding automation capabilities to include Push-Back, De-Ice, and Gate-Selection
-10. Enhancing error handling and recovery mechanisms
-11. Adding more configuration options for advanced users
-12. Exploring new features available in .NET 8
+3. Thorough testing of the .NET 8 migration
+4. Creating release notes for the recent updates
+5. Addressing known issues with FS2Crew compatibility
+6. Improving audio control persistence between sessions
+7. Adding support for the "Extreme" passenger density setting
+8. Expanding automation capabilities to include Push-Back, De-Ice, and Gate-Selection
+9. Enhancing error handling and recovery mechanisms
+10. Adding more configuration options for advanced users
+11. Exploring new features available in .NET 8
 
 ## Deployment Status
 The project is in a deployable state following the .NET 8 migration. The README will need to be updated to reflect the new .NET 8 runtime requirement before the next release.

@@ -1,7 +1,7 @@
 # Active Context: Prosim2GSX
 
 ## Current Focus
-The current focus has been on implementing a new Prosim dataref subscription system and enhancing the cockpit door integration between Prosim and GSX. This involved creating a callback-based monitoring system for Prosim datarefs and implementing synchronization between the cockpit door state in Prosim and the corresponding LVAR in GSX. The implementation allows the cockpit door to muffle cabin sounds when closed, enhancing the realism of the simulation. Additionally, the previous work on cargo door logic, catering service door operation, and refueling process enhancements has been thoroughly tested and verified.
+The current focus has been on enhancing the center of gravity (CG) calculations for more accurate loadsheet data, as well as implementing a new Prosim dataref subscription system and enhancing the cockpit door integration between Prosim and GSX. The CG calculation improvements involve sophisticated methods to accurately determine the Zero Fuel Weight Center of Gravity (MACZFW) and Take Off Weight Center of Gravity (MACTOW) by temporarily manipulating fuel states and reading values directly from Prosim. The dataref subscription system involved creating a callback-based monitoring system for Prosim datarefs and implementing synchronization between the cockpit door state in Prosim and the corresponding LVAR in GSX. The implementation allows the cockpit door to muffle cabin sounds when closed, enhancing the realism of the simulation. Additionally, the previous work on cargo door logic, catering service door operation, and refueling process enhancements has been thoroughly tested and verified.
 
 ## Recent Changes
 - Implemented a comprehensive dataref subscription system in ProsimController for monitoring Prosim dataref changes
@@ -20,7 +20,10 @@ The current focus has been on implementing a new Prosim dataref subscription sys
 - Added constants for different service states (GSX_WAITING_STATE, GSX_FINISHED_STATE, GSX_COMPLETED_STATE)
 - Enhanced the refueling process with fuel hose state management via callbacks
 - Implemented pause/resume functionality for refueling based on fuel hose connection state
-- Improved center of gravity calculations for more accurate MACZFW and MACTOW values
+- Implemented sophisticated center of gravity calculation methods for accurate MACZFW and MACTOW values
+- Added temporary fuel tank manipulation to get precise CG readings from Prosim
+- Implemented proper fuel distribution logic for MACTOW calculations based on A320 fuel loading patterns
+- Added safeguards to restore original fuel states after CG calculations
 - Added better fuel target calculation with rounding to nearest 100
 - Implemented a callback-based system for LVAR value changes in MobiSimConnect.cs
 - Added a dictionary-based approach to map service toggle LVAR names to door operations
@@ -42,7 +45,10 @@ The current focus has been on implementing a new Prosim dataref subscription sys
 - Enhancing door operation logic based on service states (waiting, finished, completed)
 - Implementing automatic door operations for catering and cargo services
 - Implementing fuel hose state management to improve refueling realism
-- Enhancing center of gravity calculations for more accurate loadsheet data
+- Implementing sophisticated center of gravity calculation methods with temporary fuel state manipulation
+- Using proper A320 fuel loading patterns for accurate MACTOW calculations
+- Implementing safeguards to restore original fuel states after CG calculations
+- Ensuring accurate CG data for both preliminary and final loadsheets
 - Using constants for service states to improve code readability and maintainability
 - Previously: Choosing to update to .NET 8 for improved performance and extended support
 
@@ -65,7 +71,7 @@ The current focus has been on implementing a new Prosim dataref subscription sys
 2. Explore extending the dataref subscription pattern to other simulation variables
 3. Optimize the monitoring interval for different types of datarefs
 4. Consider implementing priority levels for different dataref monitors
-5. Complete thorough testing of center of gravity calculations with various aircraft loading scenarios
+5. Evaluate the accuracy of center of gravity calculations with additional aircraft loading scenarios
 6. Optimize performance of the callback system
 7. Document the new dataref subscription system and cockpit door integration for future development
 8. Explore potential improvements to error handling for edge cases

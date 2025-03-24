@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using CoreAudio;
+﻿﻿using CoreAudio;
 using Microsoft.FlightSimulator.SimConnect;
 using Microsoft.Win32;
 using Prosim2GSX.Models;
@@ -1414,11 +1414,12 @@ namespace Prosim2GSX
         /// <summary>
         /// Compares preliminary and final loadsheet values and marks changes with "//"
         /// </summary>
+
         private (string, string, string, string, string, string, bool) GetLoadSheetDifferences(double prezfw, double preTow, int prePax, double preMacZfw, double preMacTow, double prefuel, double finalZfw, double finalTow, int finalPax, double finalMacZfw, double finalMacTow, double finalfuel)
         {
             // Tolerance values for detecting changes
-            const double WeightTolerance = 1000.0; // 100 kg tolerance for weight values
-            const double MacTolerance = 0.1;     // 0.1% tolerance for MAC values
+            const double WeightTolerance = 1000.0; // 1000 kg tolerance for weight values
+            const double MacTolerance = 0.5;     // 0.5% tolerance for MAC values - more sensitive to detect GSX randomization effects
             
             string zfwChanged = "";
             string towChanged = "";
@@ -1457,13 +1458,13 @@ namespace Prosim2GSX
             if (hasMacZfwChanged)
             {
                 macZfwChanged = "//";
-                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"MACZFW changed: {preMacZfw} -> {finalMacZfw}");
+                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"MACZFW changed: {preMacZfw:F2}% -> {finalMacZfw:F2}%");
             }
 
             if (hasMacTowChanged)
             {
                 macTowChanged = "//";
-                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"MACTOW changed: {preMacTow} -> {finalMacTow}");
+                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"MACTOW changed: {preMacTow:F2}% -> {finalMacTow:F2}%");
             }
 
             if (hasFuelChanged)

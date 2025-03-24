@@ -226,6 +226,15 @@ namespace Prosim2GSX
             
             try
             {
+                // Ensure passenger seating is properly loaded
+                if (!randomizePaxSeat)
+                {
+                    paxPlanned = RandomizePaxSeating(FlightPlan.Passenger);
+                    Logger.Log(LogLevel.Debug, "ProsimController:GetZfwCG", $"Randomizing passenger seating for MACZFW calculation");
+                    Interface.SetProsimVariable("aircraft.passengers.seatOccupation", paxPlanned);
+                    randomizePaxSeat = true;
+                }
+                
                 // Set all fuel tanks to zero
                 Interface.SetProsimVariable("aircraft.fuel.ACT1.amount.kg", 0);
                 Interface.SetProsimVariable("aircraft.fuel.ACT2.amount.kg", 0);
@@ -236,23 +245,15 @@ namespace Prosim2GSX
                 // Add a small delay to allow the simulator to recalculate the CG properly
                 Thread.Sleep(100);
                 
-                // Get the CG with zero fuel
+                // Get the CG with zero fuel directly from Prosim
                 macZfwCG = Interface.ReadDataRef("aircraft.cg");
                 
-                // For the specific case of ZFW around 57863 kg, apply a correction factor
-                // to match the expected MACZFW of 28.4% instead of 25.9%
-                if (macZfwCG > 25.5 && macZfwCG < 26.5)
-                {
-                    macZfwCG = 28.4;
-                    Logger.Log(LogLevel.Debug, "ProsimController:GetZfwCG", $"Applied correction to MACZFW: {macZfwCG}%");
-                }
-                
                 // Log the calculated value
-                Logger.Log(LogLevel.Debug, "ProsimController:GetZfwCG", $"Calculated MACZFW: {macZfwCG}%");
+                Logger.Log(LogLevel.Debug, "ProsimController:GetZfwCG", $"Read MACZFW from Prosim: {macZfwCG}%");
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, "ProsimController:GetZfwCG", $"Error calculating MACZFW: {ex.Message}");
+                Logger.Log(LogLevel.Error, "ProsimController:GetZfwCG", $"Error reading MACZFW: {ex.Message}");
             }
             finally
             {
@@ -278,8 +279,14 @@ namespace Prosim2GSX
             
             try
             {
-                // Get the current CG with the current fuel load
-                macTowCG = Interface.ReadDataRef("aircraft.cg");
+                // Ensure passenger seating is properly loaded (should already be done by GetZfwCG)
+                if (!randomizePaxSeat)
+                {
+                    paxPlanned = RandomizePaxSeating(FlightPlan.Passenger);
+                    Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Randomizing passenger seating for MACTOW calculation");
+                    Interface.SetProsimVariable("aircraft.passengers.seatOccupation", paxPlanned);
+                    randomizePaxSeat = true;
+                }
                 
                 // Get current fuel amount and planned fuel amount
                 double totalFuel = Interface.ReadDataRef("aircraft.fuel.total.amount.kg");
@@ -292,29 +299,8 @@ namespace Prosim2GSX
                 var leftTankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.left.amount.kg");
                 var rightTankFuelCurrent = Interface.ReadDataRef("aircraft.fuel.right.amount.kg");
                 
-                // Check if we need to recalculate the CG
-                bool needsRecalculation = false;
-                
-                // Case 1: Empty or near-empty tanks (less than 100kg)
-                if (totalFuel < 100)
-                {
-                    Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Fuel tanks nearly empty ({totalFuel}kg), recalculating with planned fuel");
-                    needsRecalculation = true;
-                }
-                // Case 2: Fuel significantly different from planned fuel (±10%)
-                else if (Math.Abs(totalFuel - plannedFuel) > plannedFuel * 0.1)
-                {
-                    Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Current fuel ({totalFuel}kg) differs significantly from planned fuel ({plannedFuel}kg), recalculating");
-                    needsRecalculation = true;
-                }
-                // Case 3: Using saved fuel from previous flight (check if distribution is uneven)
-                else if (Model.SetSaveFuel && (
-                    Math.Abs(leftTankFuelCurrent - rightTankFuelCurrent) > 500 || // Uneven wing tanks
-                    (centerTankFuelCurrent > 0 && (leftTankFuelCurrent < 6000 || rightTankFuelCurrent < 6000)))) // Center tank used before wing tanks full
-                {
-                    Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Using saved fuel with non-standard distribution, recalculating");
-                    needsRecalculation = true;
-                }
+                // Check if we need to set the planned fuel
+                bool needsRecalculation = Math.Abs(totalFuel - plannedFuel) > plannedFuel * 0.1;
                 
                 if (needsRecalculation)
                 {
@@ -324,19 +310,7 @@ namespace Prosim2GSX
                         const double wingTankCapacity = 6264.0; // per side
                         
                         // Calculate how much fuel goes in each tank based on A320 fuel loading pattern
-                        // A320 fills wing tanks first before using center tank
                         double fuelToUse = plannedFuel;
-                        
-                        // If current fuel is above planned and not too different, use current fuel amount
-                        if (totalFuel > plannedFuel && totalFuel < plannedFuel * 1.2)
-                        {
-                            fuelToUse = totalFuel;
-                            Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Using current fuel amount ({fuelToUse}kg) for calculation");
-                        }
-                        else
-                        {
-                            Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Using planned fuel amount ({fuelToUse}kg) for calculation");
-                        }
                         
                         // Calculate how much fuel goes in each tank
                         double leftWingFuel = Math.Min(fuelToUse / 2, wingTankCapacity);
@@ -356,19 +330,10 @@ namespace Prosim2GSX
                         // Add a small delay to allow the simulator to recalculate the CG properly
                         Thread.Sleep(100);
                         
-                        // Get the CG with properly distributed fuel
+                        // Get the CG with properly distributed fuel directly from Prosim
                         macTowCG = Interface.ReadDataRef("aircraft.cg");
                         
-                        // For the specific case of TOW around 67272 kg, apply a correction factor
-                        // to match the expected MACTOW of 26.0% instead of 27.5%
-                        /*
-                        if (macTowCG > 27.0 && macTowCG < 28.0)
-                        {
-                            macTowCG = 26.0;
-                            Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Applied correction to MACTOW: {macTowCG}%");
-                        }
-                        */
-                        Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Calculated MACTOW with adjusted fuel: {macTowCG}%");
+                        Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Read MACTOW from Prosim with adjusted fuel: {macTowCG}%");
                     }
                     finally
                     {
@@ -382,12 +347,14 @@ namespace Prosim2GSX
                 }
                 else
                 {
-                    Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Using current CG for MACTOW: {macTowCG}%");
+                    // Get the current CG directly from Prosim
+                    macTowCG = Interface.ReadDataRef("aircraft.cg");
+                    Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Read MACTOW from Prosim with current fuel: {macTowCG}%");
                 }
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, "ProsimController:GetTowCG", $"Error calculating MACTOW: {ex.Message}");
+                Logger.Log(LogLevel.Error, "ProsimController:GetTowCG", $"Error reading MACTOW: {ex.Message}");
             }
             
             return macTowCG;

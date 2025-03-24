@@ -231,11 +231,39 @@ The system uses dictionary-based action mapping for service toggles:
 
 ### Refueling Process Flow
 1. GSXController initiates refueling by calling the GSX refueling service
-2. ProsimController initializes refueling with target fuel calculation
+2. ProsimController initializes refueling with target fuel calculation (rounded to nearest 100)
 3. Fuel hose connection state is monitored via LVAR callbacks
 4. When hose is connected, refueling is active; when disconnected, refueling is paused
 5. Refueling continues until target fuel level is reached or GSX reports completion
-6. Center of gravity calculations are performed for accurate loadsheet data
+6. Center of gravity calculations are performed for accurate loadsheet data using the GetZfwCG() and GetTowCG() methods
+
+### Center of Gravity Calculation Flow
+1. **Zero Fuel Weight CG (MACZFW) Calculation:**
+   - Current fuel values are stored for later restoration
+   - All fuel tanks are temporarily set to zero (ACT1, ACT2, center, left, right)
+   - A small delay allows the simulator to recalculate the CG
+   - The CG value is read directly from Prosim via the "aircraft.cg" dataref
+   - Original fuel values are restored to all tanks
+   - The MACZFW value is returned as a percentage
+
+2. **Take Off Weight CG (MACTOW) Calculation:**
+   - System checks if current fuel amount is close to planned fuel amount
+   - If fuel amounts are similar, current CG is used directly
+   - If recalculation is needed:
+     - Current fuel values are stored
+     - Fuel is distributed according to A320 fuel loading pattern:
+       - Wing tanks are filled first (up to capacity)
+       - Remaining fuel goes to center tank
+       - ACT tanks are left empty
+     - A small delay allows the simulator to recalculate the CG
+     - The CG value is read directly from Prosim
+     - Original fuel values are restored
+   - The MACTOW value is returned as a percentage
+
+3. **CG Values Usage:**
+   - CG values are included in both preliminary and final loadsheets
+   - Changes in CG values between preliminary and final loadsheets are marked with "//"
+   - A tolerance threshold is used to determine significant CG changes (0.5% for MAC values)
 
 ### Catering Service Door Flow
 1. GSXController monitors catering service state via LVAR callbacks
@@ -256,6 +284,8 @@ The system uses dictionary-based action mapping for service toggles:
 5. Configuration flows bidirectionally between UI and ConfigurationFile
 6. LVAR changes flow from MSFS to registered callbacks via MobiSimConnect
 7. Door operation commands flow from GSXController to ProsimController
+8. CG calculation data flows from ProsimController to GsxController for loadsheet generation
+9. Loadsheet data flows from GsxController to ACARS system (when enabled)
 
 ## Error Handling
 
