@@ -15,6 +15,7 @@ namespace Prosim2GSX.Events
     public enum ServiceStatus
     {
         Inactive,
+        Requested,
         Waiting,
         Active,
         Completed
