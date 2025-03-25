@@ -19,7 +19,7 @@
 - Implement partial classes for organizing related functionality (e.g., ProsimController.DataRefMonitor.cs)
 
 ### Documentation
-- Document public APIs with XML comments
+- Document public APIs with limited comments that are concise and to the point
 - Include parameter descriptions and return values
 - Document complex logic with inline comments
 - Keep README updated with configuration requirements
