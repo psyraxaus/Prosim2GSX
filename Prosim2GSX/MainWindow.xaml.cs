@@ -1,4 +1,6 @@
-﻿﻿using System;
+﻿﻿using Prosim2GSX.Events;
+using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -14,6 +16,7 @@ namespace Prosim2GSX
         protected ServiceModel serviceModel;
         protected DispatcherTimer timer;
         protected int lineCounter = 0;
+        private List<SubscriptionToken> _subscriptionTokens = new List<SubscriptionToken>();
 
         public MainWindow(NotifyIconViewModel notifyModel, ServiceModel serviceModel)
         {
@@ -26,6 +29,150 @@ namespace Prosim2GSX
                 Interval = TimeSpan.FromSeconds(1)
             };
             timer.Tick += OnTick;
+            
+            // Subscribe to events
+            SubscribeToEvents();
+        }
+        
+        private void SubscribeToEvents()
+        {
+            // Subscribe to connection status events
+            _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<ConnectionStatusChangedEvent>(OnConnectionStatusChanged));
+            
+            // Subscribe to service status events
+            _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<ServiceStatusChangedEvent>(OnServiceStatusChanged));
+            
+            // Subscribe to flight phase events
+            _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<FlightPhaseChangedEvent>(OnFlightPhaseChanged));
+        }
+        
+        private void OnConnectionStatusChanged(ConnectionStatusChangedEvent evt)
+        {
+            // Update UI based on connection status
+            Dispatcher.Invoke(() => {
+                switch (evt.ConnectionName)
+                {
+                    case "MSFS":
+                        MsfsStatusIndicator.Fill = evt.IsConnected ? 
+                            new SolidColorBrush(Colors.Green) : 
+                            new SolidColorBrush(Colors.Red);
+                        break;
+                    case "SimConnect":
+                        SimConnectStatusIndicator.Fill = evt.IsConnected ? 
+                            new SolidColorBrush(Colors.Green) : 
+                            new SolidColorBrush(Colors.Red);
+                        break;
+                    case "Prosim":
+                        ProsimStatusIndicator.Fill = evt.IsConnected ? 
+                            new SolidColorBrush(Colors.Green) : 
+                            new SolidColorBrush(Colors.Red);
+                        break;
+                    case "Session":
+                        SessionStatusIndicator.Fill = evt.IsConnected ? 
+                            new SolidColorBrush(Colors.Green) : 
+                            new SolidColorBrush(Colors.Red);
+                        break;
+                }
+            });
+        }
+        
+        private void OnServiceStatusChanged(ServiceStatusChangedEvent evt)
+        {
+            // Update UI based on service status
+            Dispatcher.Invoke(() => {
+                SolidColorBrush brush;
+                switch (evt.Status)
+                {
+                    case ServiceStatus.Completed:
+                        brush = new SolidColorBrush(Colors.Green);
+                        break;
+                    case ServiceStatus.Active:
+                        brush = new SolidColorBrush(Colors.Gold);
+                        break;
+                    case ServiceStatus.Waiting:
+                        brush = new SolidColorBrush(Colors.Blue);
+                        break;
+                    default:
+                        brush = new SolidColorBrush(Colors.LightGray);
+                        break;
+                }
+                
+                // Update the appropriate indicator
+                switch (evt.ServiceName)
+                {
+                    case "Jetway":
+                        JetwayStatusIndicator.Fill = brush;
+                        break;
+                    case "Stairs":
+                        StairsStatusIndicator.Fill = brush;
+                        break;
+                    case "Refuel":
+                        RefuelStatusIndicator.Fill = brush;
+                        break;
+                    case "Catering":
+                        CateringStatusIndicator.Fill = brush;
+                        break;
+                    case "Boarding":
+                        BoardingStatusIndicator.Fill = brush;
+                        break;
+                    case "Deboarding":
+                        DeboardingStatusIndicator.Fill = brush;
+                        break;
+                    case "GPU":
+                        GPUStatusIndicator.Fill = brush;
+                        break;
+                    case "PCA":
+                        PCAStatusIndicator.Fill = brush;
+                        break;
+                    case "Pushback":
+                        PushbackStatusIndicator.Fill = brush;
+                        break;
+                    case "Chocks":
+                        ChocksStatusIndicator.Fill = brush;
+                        break;
+                }
+            });
+        }
+        
+        private void OnFlightPhaseChanged(FlightPhaseChangedEvent evt)
+        {
+            // Update flight phase display
+            Dispatcher.Invoke(() => {
+                switch (evt.NewState)
+                {
+                    case FlightState.PREFLIGHT:
+                    case FlightState.DEPARTURE:
+                        lblFlightPhase.Content = "AT GATE";
+                        lblFlightPhase.Foreground = new SolidColorBrush(Colors.RoyalBlue);
+                        HighlightFlightPhaseSection(0);
+                        break;
+                    case FlightState.TAXIOUT:
+                        lblFlightPhase.Content = "TAXI OUT";
+                        lblFlightPhase.Foreground = new SolidColorBrush(Colors.Gold);
+                        HighlightFlightPhaseSection(1);
+                        break;
+                    case FlightState.FLIGHT:
+                        lblFlightPhase.Content = "IN FLIGHT";
+                        lblFlightPhase.Foreground = new SolidColorBrush(Colors.Green);
+                        HighlightFlightPhaseSection(2);
+                        break;
+                    case FlightState.TAXIIN:
+                    case FlightState.ARRIVAL:
+                        lblFlightPhase.Content = "APPROACH";
+                        lblFlightPhase.Foreground = new SolidColorBrush(Colors.Purple);
+                        HighlightFlightPhaseSection(3);
+                        break;
+                    case FlightState.TURNAROUND:
+                        lblFlightPhase.Content = "ARRIVED";
+                        lblFlightPhase.Foreground = new SolidColorBrush(Colors.Teal);
+                        HighlightFlightPhaseSection(4);
+                        break;
+                    default:
+                        lblFlightPhase.Content = "UNKNOWN";
+                        lblFlightPhase.Foreground = new SolidColorBrush(Colors.Gray);
+                        break;
+                }
+            });
         }
 
         protected void LoadSettings()
@@ -365,201 +512,10 @@ namespace Prosim2GSX
 
         protected void UpdateStatus()
         {
-            // Update MSFS status indicator
-            MsfsStatusIndicator.Fill = serviceModel.IsSimRunning 
-                ? new SolidColorBrush(Colors.Green) 
-                : new SolidColorBrush(Colors.Red);
-
-            // Update SimConnect status indicator
-            SimConnectStatusIndicator.Fill = (IPCManager.SimConnect != null && IPCManager.SimConnect.IsReady) 
-                ? new SolidColorBrush(Colors.Green) 
-                : new SolidColorBrush(Colors.Red);
-
-            // Update Prosim status indicator
-            ProsimStatusIndicator.Fill = serviceModel.IsProsimRunning 
-                ? new SolidColorBrush(Colors.Green) 
-                : new SolidColorBrush(Colors.Red);
-
-            // Update Session status indicator
-            SessionStatusIndicator.Fill = serviceModel.IsSessionRunning 
-                ? new SolidColorBrush(Colors.Green) 
-                : new SolidColorBrush(Colors.Red);
-        
             // Update current date/time
             CurrentDateTime.Text = DateTime.Now.ToString("dd.MM.yyyy");
-        
-            // Update flight phase display
-            UpdateFlightPhaseDisplay();
-    
-            // Update ground services status
-            UpdateGroundServicesStatus();
-        }
-
-        /// <summary>
-        /// Updates the ground services status indicators based on the current state
-        /// </summary>
-        protected void UpdateGroundServicesStatus()
-        {
-            // If SimConnect is not available, set all indicators to gray
-            if (IPCManager.SimConnect == null || !IPCManager.SimConnect.IsReady)
-            {
-                SetAllGroundServiceIndicators(Colors.LightGray);
-                return;
-            }
-    
-            var simConnect = IPCManager.SimConnect;
-    
-            // Jetway status
-            JetwayStatusIndicator.Fill = new SolidColorBrush(
-                simConnect.ReadLvar("FSDT_GSX_JETWAY") == 5 ? Colors.Green : 
-                simConnect.ReadLvar("FSDT_GSX_OPERATEJETWAYS_STATE") >= 3 ? Colors.Gold : 
-                Colors.LightGray);
-    
-            // Stairs status
-            StairsStatusIndicator.Fill = new SolidColorBrush(
-                simConnect.ReadLvar("FSDT_GSX_STAIRS") == 5 ? Colors.Green : 
-                simConnect.ReadLvar("FSDT_GSX_OPERATESTAIRS_STATE") >= 3 ? Colors.Gold : 
-                Colors.LightGray);
-    
-            // Refueling status
-            float refuelState = simConnect.ReadLvar("FSDT_GSX_REFUELING_STATE");
-            RefuelStatusIndicator.Fill = new SolidColorBrush(
-                refuelState == 6 ? Colors.Green : 
-                refuelState == 5 ? Colors.Gold : 
-                Colors.LightGray);
-    
-            // Catering status
-            float cateringState = simConnect.ReadLvar("FSDT_GSX_CATERING_STATE");
-            CateringStatusIndicator.Fill = new SolidColorBrush(
-                cateringState == 6 ? Colors.Green : 
-                cateringState >= 4 ? Colors.Gold : 
-                Colors.LightGray);
-    
-            // Boarding status
-            float boardingState = simConnect.ReadLvar("FSDT_GSX_BOARDING_STATE");
-            BoardingStatusIndicator.Fill = new SolidColorBrush(
-                boardingState == 6 ? Colors.Green : 
-                boardingState >= 4 ? Colors.Gold : 
-                Colors.LightGray);
-    
-            // Deboarding status
-            float deboardingState = simConnect.ReadLvar("FSDT_GSX_DEBOARDING_STATE");
-            DeboardingStatusIndicator.Fill = new SolidColorBrush(
-                deboardingState == 6 ? Colors.Green : 
-                deboardingState >= 4 ? Colors.Gold : 
-                Colors.LightGray);
-    
-            // GPU status - use ProsimController if available
-/*
-            if (IPCManager.ProsimController != null)
-            {
-                GPUStatusIndicator.Fill = new SolidColorBrush(
-                    IPCManager.ProsimController.GetServiceGPU() ? Colors.Green : Colors.LightGray);
-
-                // PCA status
-                PCAStatusIndicator.Fill = new SolidColorBrush(
-                    IPCManager.ProsimController.GetServicePCA() ? Colors.Green : Colors.LightGray);
             
-                // Chocks status
-                ChocksStatusIndicator.Fill = new SolidColorBrush(
-                    IPCManager.ProsimController.GetServiceChocks() ? Colors.Green : Colors.LightGray);
-            }
-            else
-            {
-                // Fallback to gray if ProsimController is not available
-                GPUStatusIndicator.Fill = new SolidColorBrush(Colors.LightGray);
-                PCAStatusIndicator.Fill = new SolidColorBrush(Colors.LightGray);
-                ChocksStatusIndicator.Fill = new SolidColorBrush(Colors.LightGray);
-            }
-*/           
-            // Pushback status
-            float departureState = simConnect.ReadLvar("FSDT_GSX_DEPARTURE_STATE");
-            PushbackStatusIndicator.Fill = new SolidColorBrush(
-                departureState == 6 ? Colors.Green : 
-                departureState >= 4 ? Colors.Gold : 
-                Colors.LightGray);
-        }
-
-        /// <summary>
-        /// Sets all ground service indicators to the specified color
-        /// </summary>
-        private void SetAllGroundServiceIndicators(Color color)
-        {
-            var brush = new SolidColorBrush(color);
-            JetwayStatusIndicator.Fill = brush;
-            StairsStatusIndicator.Fill = brush;
-            RefuelStatusIndicator.Fill = brush;
-            CateringStatusIndicator.Fill = brush;
-            BoardingStatusIndicator.Fill = brush;
-            DeboardingStatusIndicator.Fill = brush;
-            GPUStatusIndicator.Fill = brush;
-            PCAStatusIndicator.Fill = brush;
-            PushbackStatusIndicator.Fill = brush;
-            ChocksStatusIndicator.Fill = brush;
-        }
-        
-        /// <summary>
-        /// Updates the flight phase display with the current phase and appropriate color
-        /// </summary>
-        protected void UpdateFlightPhaseDisplay()
-        {
-            if (IPCManager.GsxController == null)
-            {
-                lblFlightPhase.Content = "NO PHASE";
-                lblFlightPhase.Foreground = new SolidColorBrush(Colors.Gray);
-        
-                // Reset all progress bar sections to inactive
-                ResetFlightPhaseProgressBar();
-                return;
-            }
-    
-            // Get the current flight state from GsxController
-            FlightState currentState = IPCManager.GsxController.CurrentFlightState;
-    
-            // Reset all progress bar sections to inactive
-            ResetFlightPhaseProgressBar();
-    
-            // Set the label text and color based on the current flight state
-            // Also highlight the appropriate section in the progress bar
-            switch (currentState)
-            {
-                case FlightState.PREFLIGHT:
-                case FlightState.DEPARTURE:
-                    lblFlightPhase.Content = "AT GATE";
-                    lblFlightPhase.Foreground = new SolidColorBrush(Colors.RoyalBlue);
-                    // Highlight the first section of the progress bar
-                    HighlightFlightPhaseSection(0);
-                    break;
-                case FlightState.TAXIOUT:
-                    lblFlightPhase.Content = "TAXI OUT";
-                    lblFlightPhase.Foreground = new SolidColorBrush(Colors.Gold);
-                    // Highlight the second section of the progress bar
-                    HighlightFlightPhaseSection(1);
-                    break;
-                case FlightState.FLIGHT:
-                    lblFlightPhase.Content = "IN FLIGHT";
-                    lblFlightPhase.Foreground = new SolidColorBrush(Colors.Green);
-                    // Highlight the third section of the progress bar
-                    HighlightFlightPhaseSection(2);
-                    break;
-                case FlightState.TAXIIN:
-                case FlightState.ARRIVAL:
-                    lblFlightPhase.Content = "APPROACH";
-                    lblFlightPhase.Foreground = new SolidColorBrush(Colors.Purple);
-                    // Highlight the fourth section of the progress bar
-                    HighlightFlightPhaseSection(3);
-                    break;
-                case FlightState.TURNAROUND:
-                    lblFlightPhase.Content = "ARRIVED";
-                    lblFlightPhase.Foreground = new SolidColorBrush(Colors.Teal);
-                    // Highlight the fifth section of the progress bar
-                    HighlightFlightPhaseSection(4);
-                    break;
-                default:
-                    lblFlightPhase.Content = "UNKNOWN";
-                    lblFlightPhase.Foreground = new SolidColorBrush(Colors.Gray);
-                    break;
-            }
+            // Note: Connection status, service status, and flight phase are now updated via events
         }
 
         /// <summary>
@@ -599,6 +555,13 @@ namespace Prosim2GSX
         {
             e.Cancel = true;
             Hide();
+            
+            // Unsubscribe from all events
+            foreach (var token in _subscriptionTokens)
+            {
+                EventAggregator.Instance.Unsubscribe<EventBase>(token);
+            }
+            _subscriptionTokens.Clear();
         }
 
         protected void Window_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)

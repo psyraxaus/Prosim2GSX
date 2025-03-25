@@ -1,9 +1,32 @@
 # Active Context: Prosim2GSX
 
 ## Current Focus
-The current focus has been on enhancing the center of gravity (CG) calculations for more accurate loadsheet data, as well as implementing a new Prosim dataref subscription system and enhancing the cockpit door integration between Prosim and GSX. The CG calculation improvements involve sophisticated methods to accurately determine the Zero Fuel Weight Center of Gravity (MACZFW) and Take Off Weight Center of Gravity (MACTOW) by temporarily manipulating fuel states and reading values directly from Prosim. The dataref subscription system involved creating a callback-based monitoring system for Prosim datarefs and implementing synchronization between the cockpit door state in Prosim and the corresponding LVAR in GSX. The implementation allows the cockpit door to muffle cabin sounds when closed, enhancing the realism of the simulation. Additionally, the previous work on cargo door logic, catering service door operation, and refueling process enhancements has been thoroughly tested and verified.
+The current focus has been on implementing an event aggregator system to improve the UI responsiveness and decouple components in the application. This implementation follows the publisher-subscriber pattern, allowing different parts of the application to communicate without direct dependencies. The event aggregator system enables real-time updates to the UI when monitored items change, such as service statuses, connection states, and flight phases.
+
+Additionally, previous work focused on enhancing the center of gravity (CG) calculations for more accurate loadsheet data, implementing a new Prosim dataref subscription system, and enhancing the cockpit door integration between Prosim and GSX. The CG calculation improvements involve sophisticated methods to accurately determine the Zero Fuel Weight Center of Gravity (MACZFW) and Take Off Weight Center of Gravity (MACTOW) by temporarily manipulating fuel states and reading values directly from Prosim. The dataref subscription system involved creating a callback-based monitoring system for Prosim datarefs and implementing synchronization between the cockpit door state in Prosim and the corresponding LVAR in GSX. The implementation allows the cockpit door to muffle cabin sounds when closed, enhancing the realism of the simulation. Additionally, the previous work on cargo door logic, catering service door operation, and refueling process enhancements has been thoroughly tested and verified.
 
 ## Recent Changes
+- Removed redundant functions from MainWindow.xaml.cs that are now replaced by the event aggregator system:
+  - Removed the commented-out UpdateGroundServicesStatus() method
+  - Removed the UpdateFlightPhaseDisplay() method (replaced by OnFlightPhaseChanged event handler)
+  - Removed the SetAllGroundServiceIndicators() helper method
+- Implemented an event aggregator system using the publisher-subscriber pattern
+- Created a base event class (EventBase) for all events in the system
+- Implemented an event aggregator interface (IEventAggregator) with publish/subscribe methods
+- Created a subscription token system for managing event subscriptions
+- Implemented a singleton event aggregator with thread-safe operations
+- Created specific event types for different aspects of the application:
+  - ServiceStatusChangedEvent for ground service status changes
+  - ConnectionStatusChangedEvent for connection status changes
+  - FlightPhaseChangedEvent for flight phase transitions
+  - DataRefChangedEvent for Prosim dataref changes
+  - LvarChangedEvent for MSFS LVAR changes
+- Modified GsxController to publish events when status changes occur
+- Added a new UpdateGroundServicesStatus method to regularly check and publish status changes
+- Updated MainWindow to subscribe to events and update UI elements in response
+- Implemented thread-safe event handling with Dispatcher.Invoke for UI updates
+- Added proper event subscription cleanup in the MainWindow's closing handler
+- Decoupled the UI update logic from the service controllers
 - Implemented a comprehensive dataref subscription system in ProsimController for monitoring Prosim dataref changes
 - Added a callback-based pattern for handling Prosim dataref value changes
 - Implemented cockpit door state synchronization between Prosim and GSX
@@ -36,6 +59,13 @@ The current focus has been on enhancing the center of gravity (CG) calculations 
 - Previously: Updated the application version from 0.3.0 to 0.4.0
 
 ## Active Decisions
+- Implementing an event aggregator system to decouple components and improve UI responsiveness
+- Using a publisher-subscriber pattern for event-based communication
+- Creating a thread-safe singleton implementation of the event aggregator
+- Using a token-based subscription system for managing event subscriptions
+- Implementing specific event types for different aspects of the application
+- Using Dispatcher.Invoke for thread-safe UI updates from event handlers
+- Implementing proper event subscription cleanup to prevent memory leaks
 - Implementing a comprehensive dataref subscription system for Prosim to improve integration capabilities
 - Creating a thread-safe monitoring system with proper lifecycle management
 - Supporting multiple handlers per dataref to enable flexible event handling
@@ -53,6 +83,13 @@ The current focus has been on enhancing the center of gravity (CG) calculations 
 - Previously: Choosing to update to .NET 8 for improved performance and extended support
 
 ## Current Challenges
+- Ensuring the event aggregator system handles all edge cases properly
+- Managing the lifecycle of event subscriptions to prevent memory leaks
+- Balancing event publishing frequency with performance considerations
+- Ensuring thread safety in the event aggregator system
+- Handling potential exceptions in event handlers without affecting the main application
+- Ensuring proper cleanup of event subscriptions when components are disposed
+- Coordinating the timing of UI updates with event publishing
 - Ensuring the dataref subscription system handles all edge cases properly
 - Managing the lifecycle of dataref monitors to prevent memory leaks
 - Balancing monitoring frequency with performance considerations
@@ -67,16 +104,21 @@ The current focus has been on enhancing the center of gravity (CG) calculations 
 - Testing the automatic door operations with various service scenarios
 
 ## Next Steps
-1. Identify additional Prosim datarefs that could benefit from the subscription system
-2. Explore extending the dataref subscription pattern to other simulation variables
-3. Optimize the monitoring interval for different types of datarefs
-4. Consider implementing priority levels for different dataref monitors
-5. Evaluate the accuracy of center of gravity calculations with additional aircraft loading scenarios
-6. Optimize performance of the callback system
-7. Document the new dataref subscription system and cockpit door integration for future development
-8. Explore potential improvements to error handling for edge cases
-9. Consider adding more configuration options for door operation behavior
-10. Evaluate performance impact of the dataref monitoring system under heavy load
+1. Extend the event aggregator system to cover more aspects of the application
+2. Implement additional event types for other state changes in the system
+3. Optimize event publishing frequency for different types of events
+4. Consider implementing event filtering to reduce unnecessary UI updates
+5. Evaluate the performance impact of the event aggregator system under heavy load
+6. Identify additional Prosim datarefs that could benefit from the subscription system
+7. Explore extending the dataref subscription pattern to other simulation variables
+8. Optimize the monitoring interval for different types of datarefs
+9. Consider implementing priority levels for different dataref monitors
+10. Evaluate the accuracy of center of gravity calculations with additional aircraft loading scenarios
+11. Optimize performance of the callback system
+12. Document the new event aggregator system and dataref subscription system for future development
+13. Explore potential improvements to error handling for edge cases
+14. Consider adding more configuration options for door operation behavior
+15. Evaluate performance impact of the dataref monitoring system under heavy load
 
 ## Open Questions
 - What are the most common issues users encounter?

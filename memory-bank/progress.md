@@ -1,11 +1,21 @@
 # Progress Tracking: Prosim2GSX
 
 ## Project Status
-The Prosim2GSX project is in a functional state with the core integration between Prosim A320 and GSX Pro working as expected. Recent implementation of sophisticated center of gravity (CG) calculation methods has significantly improved the accuracy of loadsheet data, providing realistic MACZFW and MACTOW values through temporary fuel state manipulation. The comprehensive Prosim dataref subscription system and cockpit door integration have further enhanced the application's capabilities and realism. The dataref subscription system provides a robust foundation for monitoring Prosim state changes, while the cockpit door integration allows for realistic sound muffling when the cockpit door is closed. Previous enhancements to the refueling process and improvements to the LVAR subscription system have also significantly improved the realism and reliability of the application. The application has been successfully migrated from .NET 7 to .NET 8, with all dependencies updated to their latest compatible versions.
+The Prosim2GSX project is in a functional state with the core integration between Prosim A320 and GSX Pro working as expected. The recent implementation of an event aggregator system has significantly improved the UI responsiveness and decoupled components in the application. This implementation follows the publisher-subscriber pattern, allowing different parts of the application to communicate without direct dependencies. The event aggregator system enables real-time updates to the UI when monitored items change, such as service statuses, connection states, and flight phases.
+
+Previous implementation of sophisticated center of gravity (CG) calculation methods has significantly improved the accuracy of loadsheet data, providing realistic MACZFW and MACTOW values through temporary fuel state manipulation. The comprehensive Prosim dataref subscription system and cockpit door integration have further enhanced the application's capabilities and realism. The dataref subscription system provides a robust foundation for monitoring Prosim state changes, while the cockpit door integration allows for realistic sound muffling when the cockpit door is closed. Previous enhancements to the refueling process and improvements to the LVAR subscription system have also significantly improved the realism and reliability of the application. The application has been successfully migrated from .NET 7 to .NET 8, with all dependencies updated to their latest compatible versions.
 
 ## Implemented Features
 
 ### Framework and Infrastructure
+- ✅ Implemented event aggregator system using the publisher-subscriber pattern
+- ✅ Created base event class (EventBase) for all events in the system
+- ✅ Implemented event aggregator interface (IEventAggregator) with publish/subscribe methods
+- ✅ Created subscription token system for managing event subscriptions
+- ✅ Implemented singleton event aggregator with thread-safe operations
+- ✅ Created specific event types for different aspects of the application
+- ✅ Implemented thread-safe event handling with Dispatcher.Invoke for UI updates
+- ✅ Added proper event subscription cleanup to prevent memory leaks
 - ✅ Implemented comprehensive Prosim dataref subscription system
 - ✅ Added thread-safe monitoring for Prosim datarefs with proper lifecycle management
 - ✅ Implemented support for multiple handlers per dataref
@@ -24,6 +34,10 @@ The Prosim2GSX project is in a functional state with the core integration betwee
 - ✅ Improved door operation based on service states
 - ✅ Implemented cockpit door state synchronization between Prosim and GSX
 - ✅ Added sound muffling effect when cockpit door is closed
+- ✅ Decoupled UI updates from service controllers using event aggregator
+- ✅ Implemented real-time UI updates for service status changes
+- ✅ Added connection status monitoring and UI updates via events
+- ✅ Implemented flight phase change notifications via events
 
 ### Service Synchronization
 - ✅ Enhanced refueling process with fuel hose state management
@@ -63,12 +77,21 @@ The Prosim2GSX project is in a functional state with the core integration betwee
 - ✅ System tray icon for configuration access
 - ✅ Configuration UI with tooltips
 - ✅ Persistent settings
+- ✅ Improved UI responsiveness with event-based updates
+- ✅ Thread-safe UI updates using Dispatcher.Invoke
+- ✅ Decoupled UI from direct controller dependencies
 
 ## In Progress Features
+- 🔄 Testing of the event aggregator system with various service scenarios
+- 🔄 Extending the event aggregator to cover more aspects of the application
 - 🔄 Testing of the .NET 8 migration to ensure all functionality works as expected
 - 🔄 Identifying additional Prosim datarefs that could benefit from the subscription system
 
 ## Planned Features
+- 📋 Implementing additional event types for other state changes in the system
+- 📋 Optimizing event publishing frequency for different types of events
+- 📋 Implementing event filtering to reduce unnecessary UI updates
+- 📋 Evaluating the performance impact of the event aggregator system under heavy load
 - 📋 Extending the dataref subscription pattern to other simulation variables
 - 📋 Optimizing the monitoring interval for different types of datarefs
 - 📋 Implementing priority levels for different dataref monitors
@@ -108,17 +131,22 @@ Initial build testing of the .NET 8 migration has been completed successfully. C
 ## Next Development Priorities
 Current development priorities include:
 
-1. Identifying additional Prosim datarefs that could benefit from the subscription system
-2. Optimizing the monitoring interval for different types of datarefs
-3. Thorough testing of the .NET 8 migration
-4. Creating release notes for the recent updates
-5. Addressing known issues with FS2Crew compatibility
-6. Improving audio control persistence between sessions
-7. Adding support for the "Extreme" passenger density setting
-8. Expanding automation capabilities to include Push-Back, De-Ice, and Gate-Selection
-9. Enhancing error handling and recovery mechanisms
-10. Adding more configuration options for advanced users
-11. Exploring new features available in .NET 8
+1. Extending the event aggregator system to cover more aspects of the application
+2. Implementing additional event types for other state changes in the system
+3. Optimizing event publishing frequency for different types of events
+4. Implementing event filtering to reduce unnecessary UI updates
+5. Evaluating the performance impact of the event aggregator system under heavy load
+6. Identifying additional Prosim datarefs that could benefit from the subscription system
+7. Optimizing the monitoring interval for different types of datarefs
+8. Thorough testing of the .NET 8 migration
+9. Creating release notes for the recent updates
+10. Addressing known issues with FS2Crew compatibility
+11. Improving audio control persistence between sessions
+12. Adding support for the "Extreme" passenger density setting
+13. Expanding automation capabilities to include Push-Back, De-Ice, and Gate-Selection
+14. Enhancing error handling and recovery mechanisms
+15. Adding more configuration options for advanced users
+16. Exploring new features available in .NET 8
 
 ## Deployment Status
 The project is in a deployable state following the .NET 8 migration. The README will need to be updated to reflect the new .NET 8 runtime requirement before the next release.

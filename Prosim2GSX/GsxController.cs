@@ -1,6 +1,7 @@
 ﻿﻿using CoreAudio;
 using Microsoft.FlightSimulator.SimConnect;
 using Microsoft.Win32;
+using Prosim2GSX.Events;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
 using System;
@@ -36,6 +37,19 @@ namespace Prosim2GSX
         private DataRefChangedHandler cockpitDoorHandler;
 
         private FlightState state = FlightState.PREFLIGHT;
+        private FlightState _previousState = FlightState.PREFLIGHT;
+        
+        // Status tracking variables for services
+        private bool _previousJetwayStatus = false;
+        private bool _previousStairsStatus = false;
+        private bool _previousRefuelStatus = false;
+        private bool _previousCateringStatus = false;
+        private bool _previousBoardingStatus = false;
+        private bool _previousDeboardingStatus = false;
+        private bool _previousGpuStatus = false;
+        private bool _previousPcaStatus = false;
+        private bool _previousPushbackStatus = false;
+        private bool _previousChocksStatus = false;
         
         /// <summary>
         /// Gets the current flight state
@@ -432,6 +446,9 @@ namespace Prosim2GSX
         {
             bool simOnGround = SimConnect.ReadSimVar("SIM ON GROUND", "Bool") != 0.0f;
             ProsimController.Update(false);
+            
+            // Update ground services status and publish events
+            UpdateGroundServicesStatus();
 
             if (operatorWasSelected)
             {
@@ -1639,6 +1656,129 @@ namespace Prosim2GSX
                 }
             }
 
+        }
+
+        /// <summary>
+        /// Updates the ground services status and publishes events for changes
+        /// </summary>
+        private void UpdateGroundServicesStatus()
+        {
+            // Check if SimConnect is available
+            if (SimConnect == null || !SimConnect.IsReady)
+                return;
+                
+            // Check for flight state changes
+            if (state != _previousState)
+            {
+                EventAggregator.Instance.Publish(new FlightPhaseChangedEvent(_previousState, state));
+                _previousState = state;
+            }
+            
+            // Check for connection status changes
+            bool msfsConnected = Model.IsSimRunning;
+            bool simConnectConnected = (IPCManager.SimConnect != null && IPCManager.SimConnect.IsReady);
+            bool prosimConnected = Model.IsProsimRunning;
+            bool sessionConnected = Model.IsSessionRunning;
+            
+            // Publish connection status events
+            EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("MSFS", msfsConnected));
+            EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("SimConnect", simConnectConnected));
+            EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("Prosim", prosimConnected));
+            EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("Session", sessionConnected));
+            
+            // Check for service status changes
+            bool jetwayStatus = SimConnect.ReadLvar("FSDT_GSX_JETWAY") == 5;
+            if (jetwayStatus != _previousJetwayStatus)
+            {
+                ServiceStatus status = jetwayStatus ? ServiceStatus.Completed : 
+                    (SimConnect.ReadLvar("FSDT_GSX_OPERATEJETWAYS_STATE") >= 3 ? ServiceStatus.Active : ServiceStatus.Inactive);
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Jetway", status));
+                _previousJetwayStatus = jetwayStatus;
+            }
+            
+            bool stairsStatus = SimConnect.ReadLvar("FSDT_GSX_STAIRS") == 5;
+            if (stairsStatus != _previousStairsStatus)
+            {
+                ServiceStatus status = stairsStatus ? ServiceStatus.Completed : 
+                    (SimConnect.ReadLvar("FSDT_GSX_OPERATESTAIRS_STATE") >= 3 ? ServiceStatus.Active : ServiceStatus.Inactive);
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Stairs", status));
+                _previousStairsStatus = stairsStatus;
+            }
+            
+            float refuelState = SimConnect.ReadLvar("FSDT_GSX_REFUELING_STATE");
+            bool refuelStatus = refuelState == 6;
+            if (refuelStatus != _previousRefuelStatus)
+            {
+                ServiceStatus status = refuelState == 6 ? ServiceStatus.Completed : 
+                    (refuelState == 5 ? ServiceStatus.Active : ServiceStatus.Inactive);
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Refuel", status));
+                _previousRefuelStatus = refuelStatus;
+            }
+            
+            float cateringStateValue = SimConnect.ReadLvar("FSDT_GSX_CATERING_STATE");
+            bool cateringStatus = cateringStateValue == 6;
+            if (cateringStatus != _previousCateringStatus)
+            {
+                ServiceStatus status = cateringStateValue == 6 ? ServiceStatus.Completed : 
+                    (cateringStateValue >= 4 ? ServiceStatus.Active : ServiceStatus.Inactive);
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Catering", status));
+                _previousCateringStatus = cateringStatus;
+            }
+            
+            float boardingState = SimConnect.ReadLvar("FSDT_GSX_BOARDING_STATE");
+            bool boardingStatus = boardingState == 6;
+            if (boardingStatus != _previousBoardingStatus)
+            {
+                ServiceStatus status = boardingState == 6 ? ServiceStatus.Completed : 
+                    (boardingState >= 4 ? ServiceStatus.Active : ServiceStatus.Inactive);
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Boarding", status));
+                _previousBoardingStatus = boardingStatus;
+            }
+            
+            float deboardingState = SimConnect.ReadLvar("FSDT_GSX_DEBOARDING_STATE");
+            bool deboardingStatus = deboardingState == 6;
+            if (deboardingStatus != _previousDeboardingStatus)
+            {
+                ServiceStatus status = deboardingState == 6 ? ServiceStatus.Completed : 
+                    (deboardingState >= 4 ? ServiceStatus.Active : ServiceStatus.Inactive);
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Deboarding", status));
+                _previousDeboardingStatus = deboardingStatus;
+            }
+            
+            // Check for GPU status changes
+            bool gpuStatus = ProsimController.GetStatusFunction("groundservice.groundpower") != 0;
+            if (gpuStatus != _previousGpuStatus)
+            {
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("GPU", gpuStatus ? ServiceStatus.Completed : ServiceStatus.Inactive));
+                _previousGpuStatus = gpuStatus;
+            }
+            
+            // Check for PCA status changes
+            bool pcaStatus = ProsimController.GetStatusFunction("groundservice.preconditionedAir") != 0;
+            if (pcaStatus != _previousPcaStatus)
+            {
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("PCA", pcaStatus ? ServiceStatus.Completed : ServiceStatus.Inactive));
+                _previousPcaStatus = pcaStatus;
+            }
+            
+            // Check for pushback status changes
+            float departureState = SimConnect.ReadLvar("FSDT_GSX_DEPARTURE_STATE");
+            bool pushbackStatus = departureState == 6;
+            if (pushbackStatus != _previousPushbackStatus)
+            {
+                ServiceStatus status = departureState == 6 ? ServiceStatus.Completed : 
+                    (departureState >= 4 ? ServiceStatus.Active : ServiceStatus.Inactive);
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Pushback", status));
+                _previousPushbackStatus = pushbackStatus;
+            }
+            
+            // Check for chocks status changes
+            bool chocksStatus = ProsimController.GetStatusFunction("efb.chocks") != 0;
+            if (chocksStatus != _previousChocksStatus)
+            {
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Chocks", chocksStatus ? ServiceStatus.Completed : ServiceStatus.Inactive));
+                _previousChocksStatus = chocksStatus;
+            }
         }
 
         private void OnCockpitDoorStateChanged(string dataRef, dynamic oldValue, dynamic newValue)
