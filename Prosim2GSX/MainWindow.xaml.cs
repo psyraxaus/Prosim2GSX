@@ -93,7 +93,10 @@ namespace Prosim2GSX
                         brush = new SolidColorBrush(Colors.Blue);
                         break;
                     case ServiceStatus.Requested:
-                        brush = new SolidColorBrush(Colors.Yellow);
+                        brush = new SolidColorBrush(Colors.Blue);
+                        break;
+                    case ServiceStatus.Disconnected:
+                        brush = new SolidColorBrush(Colors.Red);
                         break;
                     default:
                         brush = new SolidColorBrush(Colors.LightGray);

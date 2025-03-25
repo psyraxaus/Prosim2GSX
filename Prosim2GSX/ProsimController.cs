@@ -11,6 +11,7 @@ using Microsoft.FlightSimulator.SimConnect;
 using Prosim2GSX.Models;
 using System.Drawing.Text;
 using System.Globalization;
+using Prosim2GSX.Events;
 
 namespace Prosim2GSX
 {

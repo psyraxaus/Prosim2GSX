@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Threading;
+using Microsoft.FlightSimulator.SimConnect;
+using Prosim2GSX.Events;
 using Prosim2GSX.Models;
 
 namespace Prosim2GSX
@@ -59,19 +61,24 @@ namespace Prosim2GSX
                 return false;
             else
                 Model.IsSimRunning = true;
+                EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("MSFS", Model.IsSimRunning));
 
             if (!IPCManager.WaitForConnection(Model))
                 return false;
+            else
+                EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("SimConnect", true));
 
             if (!ProsimController.IsProsimConnectionAvailable(Model))
                 return false;
             else
                 Model.IsProsimRunning = true;
+                EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("Prosim", Model.IsProsimRunning));
 
             if (!IPCManager.WaitForSessionReady(Model))
                 return false;
             else
                 Model.IsSessionRunning = true;
+                EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("Session", Model.IsSessionRunning));
 
             return true;
         }

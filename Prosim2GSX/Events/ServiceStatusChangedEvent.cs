@@ -16,6 +16,7 @@ namespace Prosim2GSX.Events
     {
         Inactive,
         Requested,
+        Disconnected,
         Waiting,
         Active,
         Completed
