@@ -82,6 +82,13 @@
 - Handle exceptions in dataref handlers to prevent monitoring system failures
 - Log detailed information for debugging dataref subscription issues
 
+### Event Timing Patterns
+- Be aware of event subscription timing issues - events published before subscribers are registered won't be received
+- Re-publish critical status events in ServiceController.ServiceLoop() to ensure UI components receive them
+- Use Dispatcher.Invoke for thread-safe UI updates from event handlers
+- Consider the lifecycle of components when publishing and subscribing to events
+- Ensure proper cleanup of event subscriptions to prevent memory leaks
+
 ## Project-Specific Knowledge
 
 ### Critical Paths

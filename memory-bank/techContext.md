@@ -6,6 +6,8 @@
 - **C# / .NET 8**: Primary development language and framework
 - **WPF (Windows Presentation Foundation)**: UI framework for Windows desktop applications
 - **XAML**: Markup language for defining WPF user interfaces
+- **WPF Styles and Templates**: Used for creating the modern EFB-style UI
+- **WPF Resources**: Used for defining reusable styles and templates
 
 ### External Dependencies
 - **SimConnect SDK**: Microsoft Flight Simulator's API for external applications

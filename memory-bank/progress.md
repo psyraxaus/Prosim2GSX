@@ -1,11 +1,32 @@
 # Progress Tracking: Prosim2GSX
 
 ## Project Status
-The Prosim2GSX project is in a functional state with the core integration between Prosim A320 and GSX Pro working as expected. The recent implementation of an event aggregator system has significantly improved the UI responsiveness and decoupled components in the application. This implementation follows the publisher-subscriber pattern, allowing different parts of the application to communicate without direct dependencies. The event aggregator system enables real-time updates to the UI when monitored items change, such as service statuses, connection states, and flight phases.
+The Prosim2GSX project is in a functional state with the core integration between Prosim A320 and GSX Pro working as expected. The user interface has been updated to a new Electronic Flight Bag (EFB) look, providing a more modern and intuitive interface for users. This UI redesign improves the visual appearance and usability of the application while maintaining all the existing functionality. The new EFB-style interface follows design patterns common in modern aviation applications, making the tool more familiar to pilots who use similar interfaces in their flight operations.
+
+Prior to this UI update, the implementation of an event aggregator system has significantly improved the UI responsiveness and decoupled components in the application. This implementation follows the publisher-subscriber pattern, allowing different parts of the application to communicate without direct dependencies. The event aggregator system enables real-time updates to the UI when monitored items change, such as service statuses, connection states, and flight phases.
 
 Previous implementation of sophisticated center of gravity (CG) calculation methods has significantly improved the accuracy of loadsheet data, providing realistic MACZFW and MACTOW values through temporary fuel state manipulation. The comprehensive Prosim dataref subscription system and cockpit door integration have further enhanced the application's capabilities and realism. The dataref subscription system provides a robust foundation for monitoring Prosim state changes, while the cockpit door integration allows for realistic sound muffling when the cockpit door is closed. Previous enhancements to the refueling process and improvements to the LVAR subscription system have also significantly improved the realism and reliability of the application. The application has been successfully migrated from .NET 7 to .NET 8, with all dependencies updated to their latest compatible versions.
 
 ## Implemented Features
+
+### User Interface
+- ✅ Updated the UI to a new Electronic Flight Bag (EFB) look
+- ✅ Redesigned the main window with a modern blue header bar
+- ✅ Added a date display in the header
+- ✅ Implemented navigation icons in the header (settings and help)
+- ✅ Reorganized the content into a tabbed interface with "FLIGHT STATUS" and "SETTINGS" tabs
+- ✅ Created modern styles for all UI elements (buttons, labels, checkboxes, etc.)
+- ✅ Implemented a visual flight phase progress bar
+- ✅ Redesigned the connection status indicators with colored circles
+- ✅ Improved the ground services status display with clear visual indicators
+- ✅ Enhanced the log messages area with better formatting
+- ✅ Reorganized settings into logical categories with clear headers
+- ✅ Improved the overall spacing and alignment for better readability
+- ✅ Added rounded corners and modern styling to all UI elements
+- ✅ Updated the window title to "Prosim2GSX EFB"
+- ✅ Added handlers for the new navigation buttons
+- ✅ Implemented the flight phase progress bar highlighting
+- ✅ Updated the event handlers to work with the new UI elements
 
 ### Framework and Infrastructure
 - ✅ Implemented event aggregator system using the publisher-subscriber pattern
@@ -105,6 +126,11 @@ Based on the README, there are some known considerations:
 - ⚠️ Potential issues when used with FS2Crew (specifically "FS2Crew: Prosim A320 Edition")
 - ⚠️ GSX audio may stay muted when switching to another plane if it was muted during the session
 - ⚠️ Extreme passenger density setting in GSX breaks boarding functionality
+
+## Recently Fixed Issues
+- ✅ Fixed an issue with MSFS connection status not showing correctly in the UI despite simRunning being true
+  - Root cause: Connection status events were published before the UI had subscribed to them
+  - Solution: Added code to re-publish connection status events in ServiceController.ServiceLoop() method
 
 ## Configuration Requirements
 The following configuration requirements are noted:

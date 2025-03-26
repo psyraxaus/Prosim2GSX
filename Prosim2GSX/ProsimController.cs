@@ -152,6 +152,7 @@ namespace Prosim2GSX
 
             bool isProsimReady = Interface.IsProsimReady();
             Logger.Log(LogLevel.Debug, "ProsimController:IsProsimConnectionAvailable", $"Prosim Available: {isProsimReady}");
+            EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("Prosim", isProsimReady));
 
             while (Model.IsSimRunning && !isProsimReady && !model.CancellationRequested)
             {

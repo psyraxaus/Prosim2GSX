@@ -143,6 +143,27 @@ The UI components follow the MVVM pattern, separating the user interface (View) 
 - **ViewModels**: NotifyIconViewModel and others
 - **Views**: MainWindow.xaml and other UI components
 
+### EFB-Style UI Design Pattern
+The application implements an Electronic Flight Bag (EFB) style user interface design pattern, which is common in modern aviation applications:
+
+- **Header Bar**: A prominent blue header bar with application title and navigation controls
+- **Tabbed Interface**: Content organized into logical tabs (FLIGHT STATUS and SETTINGS)
+- **Status Indicators**: Visual indicators using color-coded circles to show connection and service states
+- **Flight Phase Visualization**: A progress bar showing the current flight phase with clear visual feedback
+- **Categorized Settings**: Settings organized into logical categories with clear headers
+- **Modern Styling**: Consistent use of rounded corners, proper spacing, and modern color scheme
+- **Responsive Layout**: UI elements that adapt to different states and provide clear visual feedback
+- **Navigation Icons**: Simplified navigation using icon-based buttons in the header
+- **Date Display**: Current date displayed in the header for situational awareness
+- **Consistent Visual Language**: Uniform styling of UI elements (buttons, checkboxes, text fields, etc.)
+
+This design pattern enhances usability by:
+- Providing clear visual hierarchy and organization
+- Using familiar aviation-style interface elements
+- Offering immediate visual feedback on system status
+- Maintaining consistency across all UI components
+- Improving readability and reducing visual clutter
+
 ### Observer Pattern
 The system uses events and event handlers extensively to communicate state changes between components:
 

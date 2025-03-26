@@ -581,6 +581,24 @@ namespace Prosim2GSX
             else
             {
                 LoadSettings();
+
+                // Directly update connection status indicators based on current model state
+                MsfsStatusIndicator.Fill = serviceModel.IsSimRunning ?
+                    new SolidColorBrush(Colors.Green) :
+                    new SolidColorBrush(Colors.Red);
+
+                ProsimStatusIndicator.Fill = serviceModel.IsProsimRunning ?
+                    new SolidColorBrush(Colors.Green) :
+                    new SolidColorBrush(Colors.Red);
+
+                SimConnectStatusIndicator.Fill = IPCManager.SimConnect?.IsConnected == true ?
+                    new SolidColorBrush(Colors.Green) :
+                    new SolidColorBrush(Colors.Red);
+
+                SessionStatusIndicator.Fill = serviceModel.IsSessionRunning ?
+                    new SolidColorBrush(Colors.Green) :
+                    new SolidColorBrush(Colors.Red);
+
                 timer.Start();
             }
         }

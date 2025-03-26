@@ -1,62 +1,76 @@
 # Active Context: Prosim2GSX
 
 ## Current Focus
-The current focus has been on implementing an event aggregator system to improve the UI responsiveness and decouple components in the application. This implementation follows the publisher-subscriber pattern, allowing different parts of the application to communicate without direct dependencies. The event aggregator system enables real-time updates to the UI when monitored items change, such as service statuses, connection states, and flight phases.
+The current focus has been on updating the user interface to a new Electronic Flight Bag (EFB) look, providing a more modern and intuitive interface for users. This UI redesign improves the visual appearance and usability of the application while maintaining all the existing functionality. The new EFB-style interface follows design patterns common in modern aviation applications, making the tool more familiar to pilots who use similar interfaces in their flight operations.
+
+Prior to this UI update, the focus was on implementing an event aggregator system to improve the UI responsiveness and decouple components in the application. This implementation follows the publisher-subscriber pattern, allowing different parts of the application to communicate without direct dependencies. The event aggregator system enables real-time updates to the UI when monitored items change, such as service statuses, connection states, and flight phases.
 
 Additionally, previous work focused on enhancing the center of gravity (CG) calculations for more accurate loadsheet data, implementing a new Prosim dataref subscription system, and enhancing the cockpit door integration between Prosim and GSX. The CG calculation improvements involve sophisticated methods to accurately determine the Zero Fuel Weight Center of Gravity (MACZFW) and Take Off Weight Center of Gravity (MACTOW) by temporarily manipulating fuel states and reading values directly from Prosim. The dataref subscription system involved creating a callback-based monitoring system for Prosim datarefs and implementing synchronization between the cockpit door state in Prosim and the corresponding LVAR in GSX. The implementation allows the cockpit door to muffle cabin sounds when closed, enhancing the realism of the simulation. Additionally, the previous work on cargo door logic, catering service door operation, and refueling process enhancements has been thoroughly tested and verified.
 
 ## Recent Changes
-- Removed redundant functions from MainWindow.xaml.cs that are now replaced by the event aggregator system:
-  - Removed the commented-out UpdateGroundServicesStatus() method
-  - Removed the UpdateFlightPhaseDisplay() method (replaced by OnFlightPhaseChanged event handler)
-  - Removed the SetAllGroundServiceIndicators() helper method
-- Implemented an event aggregator system using the publisher-subscriber pattern
-- Created a base event class (EventBase) for all events in the system
-- Implemented an event aggregator interface (IEventAggregator) with publish/subscribe methods
-- Created a subscription token system for managing event subscriptions
-- Implemented a singleton event aggregator with thread-safe operations
-- Created specific event types for different aspects of the application:
-  - ServiceStatusChangedEvent for ground service status changes
-  - ConnectionStatusChangedEvent for connection status changes
-  - FlightPhaseChangedEvent for flight phase transitions
-  - DataRefChangedEvent for Prosim dataref changes
-  - LvarChangedEvent for MSFS LVAR changes
-- Modified GsxController to publish events when status changes occur
-- Added a new UpdateGroundServicesStatus method to regularly check and publish status changes
-- Updated MainWindow to subscribe to events and update UI elements in response
-- Implemented thread-safe event handling with Dispatcher.Invoke for UI updates
-- Added proper event subscription cleanup in the MainWindow's closing handler
-- Decoupled the UI update logic from the service controllers
-- Implemented a comprehensive dataref subscription system in ProsimController for monitoring Prosim dataref changes
-- Added a callback-based pattern for handling Prosim dataref value changes
-- Implemented cockpit door state synchronization between Prosim and GSX
-- Added functionality to update the GSX FSDT_GSX_COCKPIT_DOOR_OPEN LVAR based on cockpit door state
-- Implemented sound muffling effect when the cockpit door is closed
-- Added robust error handling in the dataref monitoring system
-- Completed successful testing of the new dataref subscription system with the cockpit door switch
-- Completed thorough testing of the enhanced refueling process, confirming proper functionality
-- Completed verification of fuel synchronization between GSX and Prosim
-- Enhanced the cargo door logic with automatic operation based on loading status and catering state
-- Completed thorough testing of cargo door integration with GSX, confirming proper opening and closing behavior
-- Completed thorough testing of catering service door operation, verifying correct functionality
-- Implemented dedicated door operation methods in GSXController (OperateFrontDoor, OperateAftDoor, OperateFrontCargoDoor, OperateAftCargoDoor)
-- Added constants for different service states (GSX_WAITING_STATE, GSX_FINISHED_STATE, GSX_COMPLETED_STATE)
-- Enhanced the refueling process with fuel hose state management via callbacks
-- Implemented pause/resume functionality for refueling based on fuel hose connection state
-- Implemented sophisticated center of gravity calculation methods for accurate MACZFW and MACTOW values
-- Added temporary fuel tank manipulation to get precise CG readings from Prosim
-- Implemented proper fuel distribution logic for MACTOW calculations based on A320 fuel loading patterns
-- Added safeguards to restore original fuel states after CG calculations
-- Added better fuel target calculation with rounding to nearest 100
-- Implemented a callback-based system for LVAR value changes in MobiSimConnect.cs
-- Added a dictionary-based approach to map service toggle LVAR names to door operations
-- Enhanced cargo loading integration with automatic door operation
-- Improved catering state management with dedicated callbacks
-- Added better error handling for LVAR callbacks
-- Added automatic cargo door closing when cargo loading reaches 100%
-- Previously: Migrated the application from .NET 7 to .NET 8
-- Previously: Updated NuGet packages to their latest versions compatible with .NET 8
-- Previously: Updated the application version from 0.3.0 to 0.4.0
+- Fixed an issue with MSFS connection status not showing correctly in the UI:
+  - Added code to re-publish connection status events in ServiceController.ServiceLoop() method
+  - This ensures that UI indicators are properly updated when the service loop starts
+  - Fixed a timing issue where events were published before the UI had subscribed to them
+
+- Updated the UI to a new Electronic Flight Bag (EFB) look:
+  - Redesigned the main window with a modern blue header bar
+  - Added a date display in the header
+  - Implemented navigation icons in the header (settings and help)
+  - Reorganized the content into a tabbed interface with "FLIGHT STATUS" and "SETTINGS" tabs
+  - Created modern styles for all UI elements (buttons, labels, checkboxes, etc.)
+  - Implemented a visual flight phase progress bar
+  - Redesigned the connection status indicators with colored circles
+  - Improved the ground services status display with clear visual indicators
+  - Enhanced the log messages area with better formatting
+  - Reorganized settings into logical categories with clear headers
+  - Improved the overall spacing and alignment for better readability
+  - Added rounded corners and modern styling to all UI elements
+  - Updated the window title to "Prosim2GSX EFB"
+- Updated the MainWindow.xaml.cs code to support the new UI:
+  - Added handlers for the new navigation buttons
+  - Implemented the flight phase progress bar highlighting
+  - Updated the event handlers to work with the new UI elements
+  - Added proper cleanup of event subscriptions in the window closing handler
+- Previous changes:
+  - Removed redundant functions from MainWindow.xaml.cs that are now replaced by the event aggregator system
+  - Implemented an event aggregator system using the publisher-subscriber pattern
+  - Created a base event class (EventBase) for all events in the system
+  - Implemented an event aggregator interface (IEventAggregator) with publish/subscribe methods
+  - Created a subscription token system for managing event subscriptions
+  - Implemented a singleton event aggregator with thread-safe operations
+  - Created specific event types for different aspects of the application
+  - Modified GsxController to publish events when status changes occur
+  - Added a new UpdateGroundServicesStatus method to regularly check and publish status changes
+  - Updated MainWindow to subscribe to events and update UI elements in response
+  - Implemented thread-safe event handling with Dispatcher.Invoke for UI updates
+  - Added proper event subscription cleanup in the MainWindow's closing handler
+  - Decoupled the UI update logic from the service controllers
+  - Implemented a comprehensive dataref subscription system in ProsimController
+  - Added a callback-based pattern for handling Prosim dataref value changes
+  - Implemented cockpit door state synchronization between Prosim and GSX
+  - Added functionality to update the GSX FSDT_GSX_COCKPIT_DOOR_OPEN LVAR based on cockpit door state
+  - Implemented sound muffling effect when the cockpit door is closed
+  - Added robust error handling in the dataref monitoring system
+  - Enhanced the cargo door logic with automatic operation based on loading status and catering state
+  - Implemented dedicated door operation methods in GSXController
+  - Added constants for different service states
+  - Enhanced the refueling process with fuel hose state management via callbacks
+  - Implemented pause/resume functionality for refueling based on fuel hose connection state
+  - Implemented sophisticated center of gravity calculation methods for accurate MACZFW and MACTOW values
+  - Added temporary fuel tank manipulation to get precise CG readings from Prosim
+  - Implemented proper fuel distribution logic for MACTOW calculations based on A320 fuel loading patterns
+  - Added safeguards to restore original fuel states after CG calculations
+  - Added better fuel target calculation with rounding to nearest 100
+  - Implemented a callback-based system for LVAR value changes in MobiSimConnect.cs
+  - Added a dictionary-based approach to map service toggle LVAR names to door operations
+  - Enhanced cargo loading integration with automatic door operation
+  - Improved catering state management with dedicated callbacks
+  - Added better error handling for LVAR callbacks
+  - Added automatic cargo door closing when cargo loading reaches 100%
+  - Previously: Migrated the application from .NET 7 to .NET 8
+  - Previously: Updated NuGet packages to their latest versions compatible with .NET 8
+  - Previously: Updated the application version from 0.3.0 to 0.4.0
 
 ## Active Decisions
 - Implementing an event aggregator system to decouple components and improve UI responsiveness
