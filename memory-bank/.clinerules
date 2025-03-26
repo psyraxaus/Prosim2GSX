@@ -19,7 +19,7 @@
 - Implement partial classes for organizing related functionality (e.g., ProsimController.DataRefMonitor.cs)
 
 ### Documentation
-- Document public APIs with XML comments
+- Document public APIs with limited comments that are concise and to the point
 - Include parameter descriptions and return values
 - Document complex logic with inline comments
 - Keep README updated with configuration requirements
@@ -81,6 +81,13 @@
 - Validate value changes before triggering callbacks
 - Handle exceptions in dataref handlers to prevent monitoring system failures
 - Log detailed information for debugging dataref subscription issues
+
+### Event Timing Patterns
+- Be aware of event subscription timing issues - events published before subscribers are registered won't be received
+- Re-publish critical status events in ServiceController.ServiceLoop() to ensure UI components receive them
+- Use Dispatcher.Invoke for thread-safe UI updates from event handlers
+- Consider the lifecycle of components when publishing and subscribing to events
+- Ensure proper cleanup of event subscriptions to prevent memory leaks
 
 ## Project-Specific Knowledge
 

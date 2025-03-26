@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Prosim2GSX.Events;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -243,6 +244,9 @@ namespace Prosim2GSX
                     {
                         dynamic oldValue = monitor.LastValue;
                         monitor.LastValue = currentValue;
+
+                        // Publish event through the aggregator
+                        EventAggregator.Instance.Publish(new DataRefChangedEvent(dataRef, oldValue, currentValue));
 
                         // Call all registered handlers
                         List<DataRefChangedHandler> handlers;

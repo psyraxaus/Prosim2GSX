@@ -11,6 +11,7 @@ using Microsoft.FlightSimulator.SimConnect;
 using Prosim2GSX.Models;
 using System.Drawing.Text;
 using System.Globalization;
+using Prosim2GSX.Events;
 
 namespace Prosim2GSX
 {
@@ -151,6 +152,7 @@ namespace Prosim2GSX
 
             bool isProsimReady = Interface.IsProsimReady();
             Logger.Log(LogLevel.Debug, "ProsimController:IsProsimConnectionAvailable", $"Prosim Available: {isProsimReady}");
+            EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("Prosim", isProsimReady));
 
             while (Model.IsSimRunning && !isProsimReady && !model.CancellationRequested)
             {
@@ -807,10 +809,34 @@ namespace Prosim2GSX
             return status;
         }
 
-        public dynamic GetStatusFunction(string dataRef)
+        public int GetStatusFunction(string dataRef)
         {
             var value = Interface.ReadDataRef(dataRef);
-            return value;
+
+            // Convert boolean values to integers
+            if (value is bool boolValue)
+            {
+                return boolValue ? 1 : 0;
+            }
+
+            // Try to convert to integer if it's not already
+            if (value is int intValue)
+            {
+                return intValue;
+            }
+
+            // For other numeric types, convert to int
+            try
+            {
+                return Convert.ToInt32(value);
+            }
+            catch
+            {
+                // Log the issue and return 0 as a fallback
+                Logger.Log(LogLevel.Warning, "ProsimController:GetStatusFunction",
+                    $"Could not convert value of type {value?.GetType().Name ?? "null"} to int for dataRef {dataRef}");
+                return 0;
+            }
         }
 
         public void DebugCheckCockpitDoorState()

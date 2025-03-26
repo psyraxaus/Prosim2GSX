@@ -1,6 +1,7 @@
 ﻿﻿using CoreAudio;
 using Microsoft.FlightSimulator.SimConnect;
 using Microsoft.Win32;
+using Prosim2GSX.Events;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
 using System;
@@ -9,6 +10,7 @@ using System.Diagnostics;
 using System.Drawing.Text;
 using System.IO;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading;
 
@@ -34,13 +36,31 @@ namespace Prosim2GSX
         private string menuFile = "";
 
         private DataRefChangedHandler cockpitDoorHandler;
+        private DataRefChangedHandler onGPUStateChanged;
+        private DataRefChangedHandler onPCAStateChanged;
+        private DataRefChangedHandler onChocksStateChanged;
 
-        private FlightState state = FlightState.PREFLIGHT;
+        private FlightState _state = FlightState.PREFLIGHT;
+        private FlightState _previousState = FlightState.PREFLIGHT;
         
         /// <summary>
-        /// Gets the current flight state
+        /// Gets or sets the current flight state
         /// </summary>
-        public FlightState CurrentFlightState => state;
+        public FlightState CurrentFlightState
+        {
+            get => _state;
+            private set
+            {
+                if (_state != value)
+                {
+                    FlightState oldState = _state;
+                    _state = value;
+                    // Publish the event when the state changes
+                    EventAggregator.Instance.Publish(new FlightPhaseChangedEvent(oldState, _state));
+                    Logger.Log(LogLevel.Information, "GsxController", $"State Change: {oldState} -> {_state}");
+                }
+            }
+        }
 
         private bool aftCargoDoorOpened = false;
         private bool aftRightDoorOpened = false;
@@ -110,9 +130,13 @@ namespace Prosim2GSX
         private float cateringState = 0;
 
         // Define constants for different service states
-        private const float GSX_WAITING_STATE = 4;
-        private const float GSX_FINISHED_STATE = 5;
-        private const float GSX_COMPLETED_STATE = 6;
+        private const float GSX_SERVICE_AVAILABLE = 1;
+        private const float GSX_SERVICE_UNAVAILABLE = 2;
+        private const float GSX_SERVICE_BYPASSED = 3;
+        private const float GSX_SERVICE_REQUESTED = 4;
+        private const float GSX_SERVICE_ACTIVE = 5;
+        private const float GSX_SERVICE_COMPLETED = 6;
+
         private const float SERVICE_TOGGLE_ON = 1;
         private const float SERVICE_TOGGLE_OFF = 0;
 
@@ -130,15 +154,18 @@ namespace Prosim2GSX
             ProsimController = prosimController;
             FlightPlan = flightPlan;
             cockpitDoorHandler = new DataRefChangedHandler(OnCockpitDoorStateChanged);
+            onGPUStateChanged = new DataRefChangedHandler(OnGPUStateChanged);
+            onPCAStateChanged = new DataRefChangedHandler(OnPCAStateChanged);
+            onChocksStateChanged = new DataRefChangedHandler(OnChocksStateChanged);
 
             SimConnect = IPCManager.SimConnect;
             SimConnect.SubscribeSimVar("SIM ON GROUND", "Bool");
-            SimConnect.SubscribeLvar("FSDT_GSX_DEBOARDING_STATE");
+            SimConnect.SubscribeLvar("FSDT_GSX_DEBOARDING_STATE", OnDeboardingStateChanged);
             SimConnect.SubscribeLvar("FSDT_GSX_CATERING_STATE", OnCateringStateChanged);
             SimConnect.SubscribeLvar("FSDT_GSX_COCKPIT_DOOR_OPEN");
-            SimConnect.SubscribeLvar("FSDT_GSX_REFUELING_STATE");
-            SimConnect.SubscribeLvar("FSDT_GSX_BOARDING_STATE");
-            SimConnect.SubscribeLvar("FSDT_GSX_DEPARTURE_STATE");
+            SimConnect.SubscribeLvar("FSDT_GSX_REFUELING_STATE", OnRefuelingStateChanged);
+            SimConnect.SubscribeLvar("FSDT_GSX_BOARDING_STATE", OnBoardingStateChanged);
+            SimConnect.SubscribeLvar("FSDT_GSX_DEPARTURE_STATE", OnDepartureStateChanged);
             SimConnect.SubscribeLvar("FSDT_GSX_DEICING_STATE");
             SimConnect.SubscribeLvar("FSDT_GSX_NUMPASSENGERS");
             SimConnect.SubscribeLvar("FSDT_GSX_NUMPASSENGERS_BOARDING_TOTAL");
@@ -150,9 +177,9 @@ namespace Prosim2GSX
             SimConnect.SubscribeLvar("FSDT_GSX_FUELHOSE_CONNECTED", OnFuelHoseStateChanged);
             SimConnect.SubscribeLvar("FSDT_VAR_EnginesStopped");
             SimConnect.SubscribeLvar("FSDT_GSX_COUATL_STARTED");
-            SimConnect.SubscribeLvar("FSDT_GSX_JETWAY");
+            SimConnect.SubscribeLvar("FSDT_GSX_JETWAY", OnJetwayStateChanged);
             SimConnect.SubscribeLvar("FSDT_GSX_OPERATEJETWAYS_STATE");
-            SimConnect.SubscribeLvar("FSDT_GSX_STAIRS");
+            SimConnect.SubscribeLvar("FSDT_GSX_STAIRS", OnStairsStateChanged);
             SimConnect.SubscribeLvar("FSDT_GSX_OPERATESTAIRS_STATE");
             SimConnect.SubscribeLvar("FSDT_GSX_BYPASS_PIN");
             SimConnect.SubscribeLvar("FSDT_VAR_Frozen");
@@ -173,6 +200,11 @@ namespace Prosim2GSX
             SimConnect.SubscribeEnvVar("ZULU TIME", "Seconds");
 
             ProsimController.SubscribeToDataRef("system.switches.S_PED_COCKPIT_DOOR", cockpitDoorHandler);
+            ProsimController.SubscribeToDataRef("groundservice.groundpower", onGPUStateChanged);
+            ProsimController.SubscribeToDataRef("groundservice.preconditionedAir", onPCAStateChanged);
+            ProsimController.SubscribeToDataRef("efb.chocks", onChocksStateChanged);
+            
+
 
             // Initialize the service toggle mapping
             serviceToggles.Add("FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE", () => OperateFrontDoor());
@@ -442,7 +474,7 @@ namespace Prosim2GSX
 
 
             //PREPARATION (On-Ground and Engines not running)
-            if (state == FlightState.PREFLIGHT && simOnGround && !ProsimController.enginesRunning && ProsimController.Interface.ReadDataRef("system.switches.S_OH_ELEC_BAT1") == 1)
+            if (_state == FlightState.PREFLIGHT && simOnGround && !ProsimController.enginesRunning && ProsimController.Interface.ReadDataRef("system.switches.S_OH_ELEC_BAT1") == 1)
             {
                 if (Model.UseAcars && !opsCallsignSet)
                 {
@@ -459,9 +491,9 @@ namespace Prosim2GSX
                     }
 
                 }
-                if (Model.TestArrival)
+            if (Model.TestArrival)
                 {
-                    state = FlightState.FLIGHT;
+                    CurrentFlightState = FlightState.FLIGHT;
                     ProsimController.Update(true);
                     Logger.Log(LogLevel.Information, "GsxController:RunServices", $"Test Arrival - Plane is in 'Flight'");
                     return;
@@ -528,7 +560,7 @@ namespace Prosim2GSX
 
                 if (ProsimController.IsFlightplanLoaded())
                 {
-                    state = FlightState.DEPARTURE;
+                    CurrentFlightState = FlightState.DEPARTURE;
                     flightPlanID = ProsimController.flightPlanID;
                     SetPassengers(ProsimController.GetPaxPlanned());
                     if (!prelimFlightData)
@@ -545,12 +577,12 @@ namespace Prosim2GSX
 
             }
             //Special Case: loaded in Flight or with Engines Running
-            if (state == FlightState.PREFLIGHT && (!simOnGround || ProsimController.enginesRunning))
+            if (_state == FlightState.PREFLIGHT && (!simOnGround || ProsimController.enginesRunning))
             {
                 ProsimController.Update(true);
                 flightPlanID = ProsimController.flightPlanID;
 
-                state = FlightState.FLIGHT;
+                CurrentFlightState = FlightState.FLIGHT;
                 Interval = 180000;
                 Logger.Log(LogLevel.Information, "GsxController:RunServices", $"Current State is Flight.");
 
@@ -565,7 +597,7 @@ namespace Prosim2GSX
             }
 
             //DEPARTURE - Get sim Zulu Time and send Prelim Loadsheet
-            if (state == FlightState.DEPARTURE && !prelimLoadsheet)
+            if (_state == FlightState.DEPARTURE && !prelimLoadsheet)
             {
 
                 var simTime = SimConnect.ReadEnvVar("ZULU TIME", "Seconds");
@@ -597,7 +629,7 @@ namespace Prosim2GSX
             //DEPARTURE - Boarding & Refueling
             int refuelState = (int)SimConnect.ReadLvar("FSDT_GSX_REFUELING_STATE");
             int cateringState = (int)SimConnect.ReadLvar("FSDT_GSX_CATERING_STATE");
-            if (state == FlightState.DEPARTURE && (!refuelFinished || !boardFinished))
+            if (_state == FlightState.DEPARTURE && (!refuelFinished || !boardFinished))
             {
                 RunLoadingServices(refuelState, cateringState);
 
@@ -605,25 +637,25 @@ namespace Prosim2GSX
             }
 
             //DEPARTURE - Loadsheet & Ground-Equipment
-            if (state == FlightState.DEPARTURE && refuelFinished && boardFinished)
+            if (_state == FlightState.DEPARTURE && refuelFinished && boardFinished)
             {
                 RunDEPARTUREServices();
 
                 return;
             }
 
-            if (state <= FlightState.FLIGHT)
+            if (_state <= FlightState.FLIGHT)
             {
                 //TAXIOUT -> FLIGHT
-                if (state <= FlightState.TAXIOUT && !simOnGround)
+                if (_state <= FlightState.TAXIOUT && !simOnGround)
                 {
-                    if (state <= FlightState.DEPARTURE) //in flight restart
+                    if (_state <= FlightState.DEPARTURE) //in flight restart
                     {
                         Logger.Log(LogLevel.Information, "GsxController:RunServices", $"In-Flight restart detected");
                         ProsimController.Update(true);
                         flightPlanID = ProsimController.flightPlanID;
                     }
-                    state = FlightState.FLIGHT;
+                    CurrentFlightState = FlightState.FLIGHT;
                     Logger.Log(LogLevel.Information, "GsxController:RunServices", $"State Change: Taxi-Out -> Flight");
                     Interval = 180000;
 
@@ -631,9 +663,9 @@ namespace Prosim2GSX
                 }
 
                 //FLIGHT -> TAXIIN
-                if (state == FlightState.FLIGHT && simOnGround)
+                if (_state == FlightState.FLIGHT && simOnGround)
                 {
-                    state = FlightState.TAXIIN;
+                    CurrentFlightState = FlightState.TAXIIN;
                     Logger.Log(LogLevel.Information, "GsxController:RunServices", $"State Change: Flight -> Taxi-In (Waiting for Engines stopped and Beacon off)");
 
                     Interval = 2500;
@@ -648,7 +680,7 @@ namespace Prosim2GSX
 
             //TAXIIN -> ARRIVAL - Ground Equipment
             int deboard_state = (int)SimConnect.ReadLvar("FSDT_GSX_DEBOARDING_STATE");
-            if (state == FlightState.TAXIIN && SimConnect.ReadLvar("FSDT_VAR_EnginesStopped") == 1 && SimConnect.ReadLvar("S_MIP_PARKING_BRAKE") == 1 && SimConnect.ReadLvar("S_OH_EXT_LT_BEACON") == 0)
+            if (_state == FlightState.TAXIIN && SimConnect.ReadLvar("FSDT_VAR_EnginesStopped") == 1 && SimConnect.ReadLvar("S_MIP_PARKING_BRAKE") == 1 && SimConnect.ReadLvar("S_OH_EXT_LT_BEACON") == 0)
             {
                 RunArrivalServices(deboard_state);
 
@@ -656,13 +688,13 @@ namespace Prosim2GSX
             }
 
             //ARRIVAL - Deboarding
-            if (state == FlightState.ARRIVAL && deboard_state >= 4)
+            if (_state == FlightState.ARRIVAL && deboard_state >= 4)
             {
                 RunDeboardingService(deboard_state);
             }
 
             //Pre-Flight - Turn-Around
-            if (state == FlightState.TURNAROUND)
+            if (_state == FlightState.TURNAROUND)
             {
                 if (ProsimController.IsFlightplanLoaded() && ProsimController.flightPlanID != flightPlanID)
                 {
@@ -671,7 +703,7 @@ namespace Prosim2GSX
                     {
                         AcarsClient.SetCallsign(FlightCallsignToOpsCallsign(ProsimController.flightNumber));
                     }
-                    state = FlightState.DEPARTURE;
+                    CurrentFlightState = FlightState.DEPARTURE;
                     planePositioned = true;
                     connectCalled = true;
                     pcaCalled = true;
@@ -891,7 +923,6 @@ namespace Prosim2GSX
                 bool apuBleedOn = ProsimController.GetStatusFunction("system.switches.S_OH_PNEUMATIC_APU_BLEED") != 0;
                 bool beaconOn = ProsimController.GetStatusFunction("system.switches.S_OH_EXT_LT_BEACON") != 0;
                 bool extPowerAvail = ProsimController.GetStatusFunction("system.indicators.I_OH_ELEC_EXT_PWR_L") == 0;
-                
                 if (apuStarted && apuBleedOn && beaconOn && extPowerAvail)
                 {
                     ProsimController.SetServicePCA(false);
@@ -1009,7 +1040,12 @@ namespace Prosim2GSX
             }
             else //DEPARTURE -> TAXIOUT
             {
-                state = FlightState.TAXIOUT;
+                CurrentFlightState = FlightState.TAXIOUT;
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("GPU", ServiceStatus.Inactive));
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("PCA", ServiceStatus.Inactive));
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Chocks", ServiceStatus.Inactive));
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Refuel", ServiceStatus.Inactive));
+                refuelFinished = false; // Reset the flag when transitioning to TAXIOUT
                 Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"State Change: DEPARTURE -> Taxi-Out");
                 delay = 0;
                 delayCounter = 0;
@@ -1052,7 +1088,7 @@ namespace Prosim2GSX
             ProsimController.SetServiceGPU(true);
             SetPassengers(ProsimController.GetPaxPlanned());
 
-            state = FlightState.ARRIVAL;
+            CurrentFlightState = FlightState.ARRIVAL;
             Logger.Log(LogLevel.Information, "GsxController:RunArrivalServices", $"State Change: Taxi-In -> Arrival (Waiting for Deboarding)");
 
             if (Model.AutoDeboarding && deboard_state < 4)
@@ -1105,7 +1141,7 @@ namespace Prosim2GSX
                     Logger.Log(LogLevel.Information, "GsxController:RunDeboardingService", $"Deboarding finished (GSX State {deboard_state})");
                     ProsimController.DeboardingStop();
                     Logger.Log(LogLevel.Information, "GsxController:RunDeboardingService", $"State Change: Arrival -> Turn-Around (Waiting for new Flightplan)");
-                    state = FlightState.TURNAROUND;
+                    CurrentFlightState = FlightState.TURNAROUND;
                     Interval = 10000;
                     return;
                 }
@@ -1486,12 +1522,121 @@ namespace Prosim2GSX
         {
             cateringState = newValue;
             Logger.Log(LogLevel.Debug, "GSXController", $"Catering state changed to {newValue}");
-
+            if (newValue != oldValue)
+            {
+                ServiceStatus status = newValue == 6 ? ServiceStatus.Completed :
+                                       newValue == 5 ? ServiceStatus.Active :
+                                       newValue == 4 ? ServiceStatus.Requested :
+                                       ServiceStatus.Inactive;
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Catering", status));
+            }
             // Set cateringFinished when catering reaches completed state (typically state 6)
             if (newValue == 6 && !cateringFinished)
             {
                 cateringFinished = true;
                 Logger.Log(LogLevel.Information, "GSXController", $"Catering service completed");
+            }
+        }
+
+        /// <summary>
+        /// Handler for refueling state changes
+        /// </summary>
+        private void OnRefuelingStateChanged(float newValue, float oldValue, string lvarName)
+        {
+            Logger.Log(LogLevel.Debug, "GSXController", $"Refueling state changed to {newValue}");
+            if (newValue != oldValue)
+            {
+                ServiceStatus status = newValue == 6 ? ServiceStatus.Completed :
+                                       newValue == 5 ? ServiceStatus.Active :
+                                       newValue == 4 ? ServiceStatus.Requested :
+                                       ServiceStatus.Inactive;
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Refuel", status));
+            }
+            // Fallback if the refueling GSX service LVAR doesnt get set to completed 
+            if (refuelFinished)
+            {
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Refuel", ServiceStatus.Completed));
+            }
+        }
+
+        /// <summary>
+        /// Handler for boarding state changes
+        /// </summary>
+        private void OnBoardingStateChanged(float newValue, float oldValue, string lvarName)
+        {
+            Logger.Log(LogLevel.Debug, "GSXController", $"Boarding state changed to {newValue}");
+            if (newValue != oldValue)
+            {
+                ServiceStatus status = newValue == 6 ? ServiceStatus.Completed :
+                                       newValue == 5 ? ServiceStatus.Active :
+                                       newValue == 4 ? ServiceStatus.Requested :
+                                       ServiceStatus.Inactive;
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Boarding", status));
+            }
+        }
+
+        /// <summary>
+        /// Handler for deboarding state changes
+        /// </summary>
+        private void OnDeboardingStateChanged(float newValue, float oldValue, string lvarName)
+        {
+            Logger.Log(LogLevel.Debug, "GSXController", $"Deboarding state changed to {newValue}");
+            if (newValue != oldValue)
+            {
+                ServiceStatus status = newValue == 6 ? ServiceStatus.Completed :
+                                       newValue == 5 ? ServiceStatus.Active :
+                                       newValue == 4 ? ServiceStatus.Requested :
+                                       ServiceStatus.Inactive;
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Deboarding", status));
+            }
+        }
+
+        /// <summary>
+        /// Handler for departure state changes
+        /// </summary>
+        private void OnDepartureStateChanged(float newValue, float oldValue, string lvarName)
+        {
+            Logger.Log(LogLevel.Debug, "GSXController", $"Departure state changed to {newValue}");
+
+            if (newValue != oldValue)
+            {
+                ServiceStatus status = newValue == 6 ? ServiceStatus.Completed :
+                                       newValue == 5 ? ServiceStatus.Active :
+                                       newValue == 4 ? ServiceStatus.Requested :
+                                       ServiceStatus.Inactive;
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Pushback", status));
+            }
+        }
+
+        /// <summary>
+        /// Handler for departure state changes
+        /// </summary>
+        private void OnJetwayStateChanged(float newValue, float oldValue, string lvarName)
+        {
+            Logger.Log(LogLevel.Debug, "GSXController", $"Jetway state changed to {newValue}");
+
+            if (newValue != oldValue)
+            {
+                ServiceStatus status = newValue == 5 ? ServiceStatus.Completed :
+                                       newValue == 1 ? ServiceStatus.Disconnected :
+                                       ServiceStatus.Inactive;
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Jetway", status));
+            }
+        }
+
+        /// <summary>
+        /// Handler for Stairs state changes
+        /// </summary>
+        private void OnStairsStateChanged(float newValue, float oldValue, string lvarName)
+        {
+            Logger.Log(LogLevel.Debug, "GSXController", $"Stairs state changed to {newValue}");
+
+            if (newValue != oldValue)
+            {
+                ServiceStatus status = newValue == 5 ? ServiceStatus.Completed :
+                                       newValue == 1 ? ServiceStatus.Disconnected :
+                                       ServiceStatus.Inactive;
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Stairs", status));
             }
         }
 
@@ -1584,11 +1729,11 @@ namespace Prosim2GSX
             Logger.Log(LogLevel.Debug, "GsxController:OperateFrontDoor", $"Command to operate Front Door");
             if (Model.SetOpenCateringDoor)
             {
-                if (cateringState == GSX_WAITING_STATE || (cateringState == GSX_FINISHED_STATE && ProsimController.GetForwardRightDoor() == "closed"))
+                if (cateringState == GSX_SERVICE_REQUESTED || (cateringState == GSX_SERVICE_ACTIVE && ProsimController.GetForwardRightDoor() == "closed"))
                 {
                     ProsimController.SetForwardRightDoor(true);
                 }
-                else if (cateringState == GSX_FINISHED_STATE && ProsimController.GetForwardRightDoor() == "open")
+                else if (cateringState == GSX_SERVICE_ACTIVE && ProsimController.GetForwardRightDoor() == "open")
                 {
                     ProsimController.SetForwardRightDoor(false);
                 }
@@ -1602,11 +1747,11 @@ namespace Prosim2GSX
             Logger.Log(LogLevel.Debug, "GsxController:OperateAftDoor", $"Command to operate Aft Door");
             if (Model.SetOpenCateringDoor)
             {
-                if (cateringState == GSX_WAITING_STATE || (cateringState == GSX_FINISHED_STATE && ProsimController.GetAftRightDoor() == "closed"))
+                if (cateringState == GSX_SERVICE_REQUESTED || (cateringState == GSX_SERVICE_ACTIVE && ProsimController.GetAftRightDoor() == "closed"))
                 {
                     ProsimController.SetAftRightDoor(true);
                 }
-                else if (cateringState == GSX_FINISHED_STATE && ProsimController.GetAftRightDoor() == "open")
+                else if (cateringState == GSX_SERVICE_ACTIVE && ProsimController.GetAftRightDoor() == "open")
                 {
                     ProsimController.SetAftRightDoor(false);
                 }
@@ -1620,7 +1765,7 @@ namespace Prosim2GSX
             Logger.Log(LogLevel.Debug, "GsxController:OperateFrontCargoDoor", $"Command to operate Front Cargo Door");
             if (Model.SetOpenCargoDoors)
             {
-                if (cateringState == GSX_COMPLETED_STATE)
+                if (cateringState == GSX_SERVICE_COMPLETED)
                 {
                     ProsimController.SetForwardCargoDoor(true);
                 }
@@ -1633,7 +1778,7 @@ namespace Prosim2GSX
             Logger.Log(LogLevel.Debug, "GsxController:OperateAftCargoDoor", $"Command to operate Aft Cargo Door");
             if (Model.SetOpenCargoDoors)
             {
-                if (cateringState == GSX_COMPLETED_STATE)
+                if (cateringState == GSX_SERVICE_COMPLETED)
                 {
                     ProsimController.SetAftCargoDoor(true);
                 }
@@ -1663,6 +1808,30 @@ namespace Prosim2GSX
 
                 Logger.Log(LogLevel.Debug, "GsxController:OnCockpitDoorStateChanged",
                     $"Door is {(doorOpen ? "open" : "closed")} - Set GSX LVAR to {gsxDoorState}, indicator to {indicatorState}");
+            }
+        }
+
+        private void OnGPUStateChanged(string dataRef, dynamic oldValue, dynamic newValue)
+        {
+            if (newValue != oldValue)
+            {
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("GPU", newValue ? ServiceStatus.Completed : ServiceStatus.Disconnected));
+            }
+        }
+
+        private void OnPCAStateChanged(string dataRef, dynamic oldValue, dynamic newValue)
+        {
+            if (newValue != oldValue)
+            {
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("PCA", newValue ? ServiceStatus.Completed : ServiceStatus.Disconnected));
+            }
+        }
+
+        private void OnChocksStateChanged(string dataRef, dynamic oldValue, dynamic newValue)
+        {
+            if (newValue != oldValue)
+            {
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Chocks", newValue ? ServiceStatus.Completed : ServiceStatus.Disconnected));
             }
         }
     }

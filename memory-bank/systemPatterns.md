@@ -82,12 +82,87 @@ graph TD
 
 ## Design Patterns
 
+### Event Aggregator Pattern
+The system implements an event aggregator pattern to decouple components and improve UI responsiveness:
+
+- **Core Components**:
+  - `EventBase`: Abstract base class for all events
+  - `IEventAggregator`: Interface defining publish/subscribe methods
+  - `EventAggregator`: Singleton implementation with thread-safe operations
+  - `SubscriptionToken`: Token-based system for managing subscriptions
+
+- **Event Types**:
+  - `ServiceStatusChangedEvent`: For ground service status changes
+  - `ConnectionStatusChangedEvent`: For connection status changes
+  - `FlightPhaseChangedEvent`: For flight phase transitions
+  - `DataRefChangedEvent`: For Prosim dataref changes
+  - `LvarChangedEvent`: For MSFS LVAR changes
+
+- **Implementation**:
+  - Publishers call `EventAggregator.Instance.Publish<TEvent>(event)` to broadcast events
+  - Subscribers call `EventAggregator.Instance.Subscribe<TEvent>(handler)` to register handlers
+  - Subscribers receive a token that can be used to unsubscribe later
+  - Thread-safe implementation ensures reliable operation in a multi-threaded environment
+  - UI components use `Dispatcher.Invoke` to update UI elements from event handlers
+  - Proper cleanup is implemented to prevent memory leaks
+
+- **Example**:
+  ```csharp
+  // Publishing an event
+  EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Jetway", ServiceStatus.Active));
+  
+  // Subscribing to events
+  _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<ServiceStatusChangedEvent>(OnServiceStatusChanged));
+  
+  // Handling events
+  private void OnServiceStatusChanged(ServiceStatusChangedEvent evt)
+  {
+      Dispatcher.Invoke(() => {
+          // Update UI based on service status
+          switch (evt.ServiceName)
+          {
+              case "Jetway":
+                  JetwayStatusIndicator.Fill = GetBrushForStatus(evt.Status);
+                  break;
+              // Other cases...
+          }
+      });
+  }
+  
+  // Unsubscribing from events
+  foreach (var token in _subscriptionTokens)
+  {
+      EventAggregator.Instance.Unsubscribe<EventBase>(token);
+  }
+  ```
+
 ### MVVM (Model-View-ViewModel)
 The UI components follow the MVVM pattern, separating the user interface (View) from the business logic (ViewModel) and data (Model).
 
 - **Models**: ServiceModel and other data structures
 - **ViewModels**: NotifyIconViewModel and others
 - **Views**: MainWindow.xaml and other UI components
+
+### EFB-Style UI Design Pattern
+The application implements an Electronic Flight Bag (EFB) style user interface design pattern, which is common in modern aviation applications:
+
+- **Header Bar**: A prominent blue header bar with application title and navigation controls
+- **Tabbed Interface**: Content organized into logical tabs (FLIGHT STATUS and SETTINGS)
+- **Status Indicators**: Visual indicators using color-coded circles to show connection and service states
+- **Flight Phase Visualization**: A progress bar showing the current flight phase with clear visual feedback
+- **Categorized Settings**: Settings organized into logical categories with clear headers
+- **Modern Styling**: Consistent use of rounded corners, proper spacing, and modern color scheme
+- **Responsive Layout**: UI elements that adapt to different states and provide clear visual feedback
+- **Navigation Icons**: Simplified navigation using icon-based buttons in the header
+- **Date Display**: Current date displayed in the header for situational awareness
+- **Consistent Visual Language**: Uniform styling of UI elements (buttons, checkboxes, text fields, etc.)
+
+This design pattern enhances usability by:
+- Providing clear visual hierarchy and organization
+- Using familiar aviation-style interface elements
+- Offering immediate visual feedback on system status
+- Maintaining consistency across all UI components
+- Improving readability and reducing visual clutter
 
 ### Observer Pattern
 The system uses events and event handlers extensively to communicate state changes between components:
@@ -97,6 +172,7 @@ The system uses events and event handlers extensively to communicate state chang
 - Services react to state changes in the aircraft
 - LVAR changes trigger registered callbacks through the MobiSimConnect callback system
 - Prosim dataref changes trigger registered callbacks through the ProsimController dataref subscription system
+- The event aggregator system extends this pattern with a centralized publish/subscribe mechanism
 
 ### Dataref Subscription Pattern
 The system implements a comprehensive subscription pattern for Prosim dataref changes:
@@ -206,6 +282,18 @@ The system uses dictionary-based action mapping for service toggles:
 
 ## Component Relationships
 
+### UI Update Flow with Event Aggregator
+1. GsxController monitors service states, connection statuses, and flight phases
+2. When a state change is detected, GsxController publishes an appropriate event through the EventAggregator
+3. MainWindow, which has subscribed to these events, receives the event notification
+4. Event handlers in MainWindow update the UI elements using Dispatcher.Invoke for thread safety
+5. This decoupled approach allows the UI to be updated without direct dependencies on the controllers
+6. Example flow for service status updates:
+   - GsxController detects a change in jetway status
+   - GsxController publishes a ServiceStatusChangedEvent
+   - MainWindow's OnServiceStatusChanged handler is invoked
+   - The handler updates the JetwayStatusIndicator with the appropriate color
+
 ### Cockpit Door State Flow
 1. ProsimController monitors the cockpit door switch state via dataref subscription
 2. When the cockpit door switch changes, the OnCockpitDoorStateChanged handler is invoked
@@ -213,6 +301,7 @@ The system uses dictionary-based action mapping for service toggles:
 4. The GSX LVAR (FSDT_GSX_COCKPIT_DOOR_OPEN) is updated to match the door state (0=closed, 1=open)
 5. GSX uses this LVAR to control cabin sound muffling when the cockpit door is closed
 6. The cockpit door indicator in Prosim is also updated to reflect the current state
+7. Additionally, a DataRefChangedEvent is published through the EventAggregator
 
 ### Initialization Flow
 1. Application starts and initializes core components
@@ -286,6 +375,7 @@ The system uses dictionary-based action mapping for service toggles:
 7. Door operation commands flow from GSXController to ProsimController
 8. CG calculation data flows from ProsimController to GsxController for loadsheet generation
 9. Loadsheet data flows from GsxController to ACARS system (when enabled)
+10. Events flow from controllers to UI components via the EventAggregator
 
 ## Error Handling
 
@@ -296,3 +386,5 @@ The system uses dictionary-based action mapping for service toggles:
 - Recovery procedures for common failure scenarios
 - Exception handling in LVAR callbacks to prevent cascading failures
 - Value change validation to prevent unnecessary callback executions
+- Exception handling in event handlers to prevent event propagation failures
+- Thread-safe event publishing and subscription management

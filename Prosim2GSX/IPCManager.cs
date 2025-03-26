@@ -1,13 +1,14 @@
 ﻿using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Prosim2GSX.Events;
 using Prosim2GSX.Models;
 
 namespace Prosim2GSX
 {
     public static class IPCManager
     {
-        public static readonly int waitDuration = 30000;
+        public static readonly int waitDuration = 10000;
 
         public static MobiSimConnect SimConnect { get; set; } = null;
         public static GsxController GsxController { get; set; } = null;
@@ -15,6 +16,15 @@ namespace Prosim2GSX
         public static bool WaitForSimulator(ServiceModel model)
         {
             bool simRunning = IsSimRunning();
+
+            // Publish event immediately when simulator is detected
+            if (simRunning)
+            {
+                model.IsSimRunning = true;
+                EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("MSFS", simRunning));
+                Logger.Log(LogLevel.Information, "IPCManager:WaitForSimulator", $"Simulator started {simRunning}");
+            }
+
             if (!simRunning && model.WaitForConnect)
             {
                 do
@@ -29,7 +39,8 @@ namespace Prosim2GSX
             }
             else if (simRunning)
             {
-                Logger.Log(LogLevel.Information, "IPCManager:WaitForSimulator", $"Simulator started");
+                EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("MSFS", simRunning));
+                Logger.Log(LogLevel.Information, "IPCManager:WaitForSimulator", $"Simulator started {simRunning}");
                 return true;
             }
             else
@@ -73,6 +84,7 @@ namespace Prosim2GSX
             }
             else
             {
+                EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("SimConnect", SimConnect.IsConnected));
                 Logger.Log(LogLevel.Information, "IPCManager:WaitForConnection", $"SimConnect is opened");
                 return true;
             }
@@ -96,7 +108,7 @@ namespace Prosim2GSX
                 Logger.Log(LogLevel.Error, "IPCManager:WaitForSessionReady", $"SimConnect or Simulator not available - aborting");
                 return false;
             }
-
+            EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("Session", isReady));
             return true;
         }
 

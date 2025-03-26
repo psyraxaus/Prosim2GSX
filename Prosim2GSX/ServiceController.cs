@@ -1,5 +1,7 @@
-﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Threading;
+using Microsoft.FlightSimulator.SimConnect;
+using Prosim2GSX.Events;
 using Prosim2GSX.Models;
 
 namespace Prosim2GSX
@@ -32,6 +34,10 @@ namespace Prosim2GSX
                     {
                         if (!IPCManager.IsSimRunning())
                         {
+                            // Update MSFS status
+                            Model.IsSimRunning = false;
+                            EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("MSFS", Model.IsSimRunning));
+                            
                             Model.CancellationRequested = true;
                             Model.ServiceExited = true;
                             Logger.Log(LogLevel.Critical, "ServiceController:Run", $"Session aborted, Retry not possible - exiting Program");
@@ -82,8 +88,20 @@ namespace Prosim2GSX
             {
                 IPCManager.SimConnect?.Disconnect();
                 IPCManager.SimConnect = null;
+                
+                // Update session status
                 Model.IsSessionRunning = false;
+                EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("Session", Model.IsSessionRunning));
+                
+                // Update Prosim status
                 Model.IsProsimRunning = false;
+                EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("Prosim", Model.IsProsimRunning));
+                
+                // Update SimConnect status
+                EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("SimConnect", false));
+                
+                // We don't set Model.IsSimRunning to false here because the simulator might still be running
+                // We'll check again in the next iteration of the main loop
             }
             catch (Exception ex)
             {
@@ -96,6 +114,12 @@ namespace Prosim2GSX
             var gsxController = new GsxController(Model, ProsimController, FlightPlan);
             // Store the GsxController in IPCManager so it can be accessed by the MainWindow
             IPCManager.GsxController = gsxController;
+            
+            // Re-publish connection status events to ensure UI is updated
+            EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("MSFS", Model.IsSimRunning));
+            EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("Prosim", Model.IsProsimRunning));
+            EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("SimConnect", IPCManager.SimConnect?.IsConnected == true));
+            EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("Session", Model.IsSessionRunning));
             
             int elapsedMS = gsxController.Interval;
             int delay = 100;
@@ -125,6 +149,20 @@ namespace Prosim2GSX
 
             Logger.Log(LogLevel.Information, "ServiceController:ServiceLoop", "ServiceLoop ended");
 
+            // Check and publish connection status changes that might have caused the loop to exit
+            bool isSimRunning = IPCManager.IsSimRunning();
+            if (Model.IsSimRunning != isSimRunning)
+            {
+                Model.IsSimRunning = isSimRunning;
+                EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("MSFS", Model.IsSimRunning));
+            }
+            
+            if (!IPCManager.IsCamReady())
+            {
+                EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("Session", false));
+                Model.IsSessionRunning = false;
+            }
+            
             if (Model.GsxVolumeControl || Model.IsVhf1Controllable())
             {
                 Logger.Log(LogLevel.Information, "ServiceController:ServiceLoop", "Resetting GSX/VHF1 Audio");

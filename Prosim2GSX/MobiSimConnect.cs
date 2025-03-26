@@ -1,4 +1,5 @@
 ﻿using Microsoft.FlightSimulator.SimConnect;
+using Prosim2GSX.Events;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -236,6 +237,9 @@ namespace Prosim2GSX
                                 // Only invoke callbacks if value changed
                                 if (Math.Abs(oldValue - newValue) > float.Epsilon)
                                 {
+                                    // Publish event through the aggregator
+                                    EventAggregator.Instance.Publish(new LvarChangedEvent(lvarName, oldValue, newValue));
+                                    
                                     // If callbacks exist for this LVAR, invoke them
                                     if (lvarCallbacks.ContainsKey(lvarName) && lvarCallbacks[lvarName].Count > 0)
                                     {
