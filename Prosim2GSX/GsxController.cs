@@ -1041,6 +1041,11 @@ namespace Prosim2GSX
             else //DEPARTURE -> TAXIOUT
             {
                 CurrentFlightState = FlightState.TAXIOUT;
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("GPU", ServiceStatus.Inactive));
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("PCA", ServiceStatus.Inactive));
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Chocks", ServiceStatus.Inactive));
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Refuel", ServiceStatus.Inactive));
+                refuelFinished = false; // Reset the flag when transitioning to TAXIOUT
                 Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"State Change: DEPARTURE -> Taxi-Out");
                 delay = 0;
                 delayCounter = 0;
