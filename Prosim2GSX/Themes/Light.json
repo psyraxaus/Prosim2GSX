@@ -1,0 +1,25 @@
+{
+  "name": "Light",
+  "description": "Default Light Theme",
+  "colors": {
+    "primaryColor": "#1E90FF",
+    "secondaryColor": "#0078D7",
+    "accentColor": "#FF4500",
+    
+    "headerBackground": "#1E90FF",
+    "contentBackground": "#F8F8F8",
+    "sectionBackground": "#FFFFFF",
+    
+    "headerText": "#FFFFFF",
+    "contentText": "#333333",
+    "categoryText": "#1E90FF",
+    
+    "flightPhaseColors": {
+      "atGate": "#1E90FF",
+      "taxiOut": "#FF9800",
+      "inFlight": "#4CAF50",
+      "approach": "#9C27B0",
+      "arrived": "#009688"
+    }
+  }
+}

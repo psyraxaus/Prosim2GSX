@@ -1,0 +1,25 @@
+{
+  "name": "Delta",
+  "description": "Delta Airlines Theme",
+  "colors": {
+    "primaryColor": "#003366",
+    "secondaryColor": "#0039A6",
+    "accentColor": "#FF4500",
+    
+    "headerBackground": "#003366",
+    "contentBackground": "#F8F8F8",
+    "sectionBackground": "#FFFFFF",
+    
+    "headerText": "#FFFFFF",
+    "contentText": "#333333",
+    "categoryText": "#003366",
+    
+    "flightPhaseColors": {
+      "atGate": "#003366",
+      "taxiOut": "#FF9800",
+      "inFlight": "#4CAF50",
+      "approach": "#9C27B0",
+      "arrived": "#009688"
+    }
+  }
+}

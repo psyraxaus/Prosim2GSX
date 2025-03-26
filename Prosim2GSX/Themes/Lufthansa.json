@@ -1,0 +1,25 @@
+{
+  "name": "Lufthansa",
+  "description": "Lufthansa Airlines Theme",
+  "colors": {
+    "primaryColor": "#05164D",
+    "secondaryColor": "#FFAD00",
+    "accentColor": "#FF4500",
+    
+    "headerBackground": "#05164D",
+    "contentBackground": "#F8F8F8",
+    "sectionBackground": "#FFFFFF",
+    
+    "headerText": "#FFFFFF",
+    "contentText": "#333333",
+    "categoryText": "#05164D",
+    
+    "flightPhaseColors": {
+      "atGate": "#FFAD00",
+      "taxiOut": "#FF9800",
+      "inFlight": "#4CAF50",
+      "approach": "#9C27B0",
+      "arrived": "#009688"
+    }
+  }
+}

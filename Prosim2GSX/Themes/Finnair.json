@@ -1,0 +1,25 @@
+{
+  "name": "Finnair",
+  "description": "Finnair Airlines Theme",
+  "colors": {
+    "primaryColor": "#0B1560",
+    "secondaryColor": "#6EC4E8",
+    "accentColor": "#FF4500",
+    
+    "headerBackground": "#0B1560",
+    "contentBackground": "#F8F8F8",
+    "sectionBackground": "#FFFFFF",
+    
+    "headerText": "#FFFFFF",
+    "contentText": "#333333",
+    "categoryText": "#0B1560",
+    
+    "flightPhaseColors": {
+      "atGate": "#0B1560",
+      "taxiOut": "#FF9800",
+      "inFlight": "#4CAF50",
+      "approach": "#9C27B0",
+      "arrived": "#009688"
+    }
+  }
+}

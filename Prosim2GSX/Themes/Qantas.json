@@ -1,0 +1,25 @@
+{
+  "name": "Qantas",
+  "description": "Qantas Airlines Theme",
+  "colors": {
+    "primaryColor": "#E40000",
+    "secondaryColor": "#B00000",
+    "accentColor": "#FF4500",
+    
+    "headerBackground": "#E40000",
+    "contentBackground": "#F8F8F8",
+    "sectionBackground": "#FFFFFF",
+    
+    "headerText": "#FFFFFF",
+    "contentText": "#333333",
+    "categoryText": "#E40000",
+    
+    "flightPhaseColors": {
+      "atGate": "#E40000",
+      "taxiOut": "#FF9800",
+      "inFlight": "#4CAF50",
+      "approach": "#9C27B0",
+      "arrived": "#009688"
+    }
+  }
+}

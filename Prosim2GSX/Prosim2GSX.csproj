@@ -60,6 +60,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Themes\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Update="chromiumembeddedframework.runtime.win-arm64" Version="123.0.60" />
   </ItemGroup>
 

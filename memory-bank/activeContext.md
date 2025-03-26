@@ -8,6 +8,17 @@ Prior to this UI update, the focus was on implementing an event aggregator syste
 Additionally, previous work focused on enhancing the center of gravity (CG) calculations for more accurate loadsheet data, implementing a new Prosim dataref subscription system, and enhancing the cockpit door integration between Prosim and GSX. The CG calculation improvements involve sophisticated methods to accurately determine the Zero Fuel Weight Center of Gravity (MACZFW) and Take Off Weight Center of Gravity (MACTOW) by temporarily manipulating fuel states and reading values directly from Prosim. The dataref subscription system involved creating a callback-based monitoring system for Prosim datarefs and implementing synchronization between the cockpit door state in Prosim and the corresponding LVAR in GSX. The implementation allows the cockpit door to muffle cabin sounds when closed, enhancing the realism of the simulation. Additionally, the previous work on cargo door logic, catering service door operation, and refueling process enhancements has been thoroughly tested and verified.
 
 ## Recent Changes
+- Implemented a dynamic airline theming system:
+  - Created a Theme class structure to represent theme data
+  - Implemented a ThemeManager class to handle loading and applying themes
+  - Added ThemeResources.xaml with default theme resources
+  - Created JSON theme files for Light, Dark, Qantas, Delta, Lufthansa, and Finnair
+  - Fixed color parsing issues in theme files by implementing a hex-to-color conversion system
+  - Added a theme selection UI in the Settings tab
+  - Implemented theme refresh functionality
+  - Made the UI fully themeable with dynamic resources
+  - Updated the project file to copy theme files to the output directory
+
 - Fixed an issue with MSFS connection status not showing correctly in the UI:
   - Added code to re-publish connection status events in ServiceController.ServiceLoop() method
   - This ensures that UI indicators are properly updated when the service loop starts

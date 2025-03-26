@@ -10,7 +10,7 @@
         ResizeMode="NoResize" 
         IsVisibleChanged="Window_IsVisibleChanged" 
         Closing="Window_Closing"
-        Background="#F0F0F0">
+        Background="{DynamicResource ContentBackground}">
     <Window.Resources>
         <!-- Modern styles for controls -->
         <Style x:Key="TabButtonStyle" TargetType="Button">
@@ -68,24 +68,24 @@
         <Style x:Key="CategoryHeaderStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="16"/>
             <Setter Property="FontWeight" Value="DemiBold"/>
-            <Setter Property="Foreground" Value="#404040"/>
+            <Setter Property="Foreground" Value="{DynamicResource CategoryText}"/>
             <Setter Property="Margin" Value="0,10,0,5"/>
         </Style>
 
         <Style x:Key="ModernCheckboxStyle" TargetType="CheckBox">
             <Setter Property="Margin" Value="0,8,0,8"/>
-            <Setter Property="Foreground" Value="#404040"/>
+            <Setter Property="Foreground" Value="{DynamicResource ContentText}"/>
             <Setter Property="FontSize" Value="14"/>
         </Style>
 
         <Style x:Key="ModernRadioButtonStyle" TargetType="RadioButton">
             <Setter Property="Margin" Value="0,8,15,8"/>
-            <Setter Property="Foreground" Value="#404040"/>
+            <Setter Property="Foreground" Value="{DynamicResource ContentText}"/>
             <Setter Property="FontSize" Value="14"/>
         </Style>
 
         <Style x:Key="SectionBorderStyle" TargetType="Border">
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource SectionBackground}"/>
             <Setter Property="BorderBrush" Value="#E0E0E0"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="6"/>
@@ -118,12 +118,12 @@
         </Grid.RowDefinitions>
 
         <!-- Top Bar with App Name and Navigation -->
-        <Border Background="#1E90FF" Grid.Row="0">
+        <Border Background="{DynamicResource HeaderBackground}" Grid.Row="0">
             <DockPanel LastChildFill="False">
                 <TextBlock Text="PROSIM2GSX" 
                            FontWeight="Bold" 
                            FontSize="18" 
-                           Foreground="White" 
+                           Foreground="{DynamicResource HeaderText}" 
                            VerticalAlignment="Center"
                            Margin="20,0,0,0"
                            DockPanel.Dock="Left"/>
@@ -131,11 +131,11 @@
                 <TextBlock x:Name="CurrentDateTime" 
                            Text="17.11.2023" 
                            FontSize="14" 
-                           Foreground="White" 
+                           Foreground="{DynamicResource HeaderText}" 
                            VerticalAlignment="Center"
                            HorizontalAlignment="Center"
                            Padding="10,5"
-                           Background="#167CCB"
+                           Background="{DynamicResource SecondaryColor}"
                            DockPanel.Dock="Right"
                            Margin="0,0,15,0"/>
 
@@ -145,13 +145,13 @@
                             Margin="0,0,20,0"
                             VerticalAlignment="Center">
                     <Button Style="{StaticResource TabButtonStyle}" 
-                            Foreground="White"
+                            Foreground="{DynamicResource HeaderText}"
                             Content="⚙" 
                             FontSize="16" 
                             x:Name="btnSettings"
                             Click="btnSettings_Click"/>
                     <Button Style="{StaticResource TabButtonStyle}" 
-                            Foreground="White"
+                            Foreground="{DynamicResource HeaderText}"
                             Content="?" 
                             FontSize="16" 
                             x:Name="btnHelp"
@@ -204,7 +204,7 @@
                                        FontSize="18" 
                                        FontWeight="Bold" 
                                        HorizontalAlignment="Center"
-                                       Foreground="#1E90FF"/>
+                                       Foreground="{DynamicResource AtGatePhase}"/>
 
                                 <!-- Progress Bar representing flight phases -->
                                 <Grid Name="progressBar" Margin="0,0,0,0">
@@ -216,11 +216,11 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <Border Grid.Column="0" Background="#1E90FF" Height="8" CornerRadius="4,0,0,4" Margin="0,0,2,0"/>
-                                    <Border Grid.Column="1" Background="#E0E0E0" Height="8" Margin="2,0"/>
-                                    <Border Grid.Column="2" Background="#E0E0E0" Height="8" Margin="2,0"/>
-                                    <Border Grid.Column="3" Background="#E0E0E0" Height="8" Margin="2,0"/>
-                                    <Border Grid.Column="4" Background="#E0E0E0" Height="8" CornerRadius="0,4,4,0" Margin="2,0,0,0"/>
+                                    <Border Grid.Column="0" Background="{DynamicResource AtGatePhase}" Height="8" CornerRadius="4,0,0,4" Margin="0,0,2,0"/>
+                                    <Border Grid.Column="1" Background="{DynamicResource InactiveStatus}" Height="8" Margin="2,0"/>
+                                    <Border Grid.Column="2" Background="{DynamicResource InactiveStatus}" Height="8" Margin="2,0"/>
+                                    <Border Grid.Column="3" Background="{DynamicResource InactiveStatus}" Height="8" Margin="2,0"/>
+                                    <Border Grid.Column="4" Background="{DynamicResource InactiveStatus}" Height="8" CornerRadius="0,4,4,0" Margin="2,0,0,0"/>
 
                                     <TextBlock Grid.Column="0" Text="AT GATE" HorizontalAlignment="Center" Margin="0,25,0,0" FontSize="11"/>
                                     <TextBlock Grid.Column="1" Text="TAXI OUT" HorizontalAlignment="Center" Margin="0,25,0,0" FontSize="11"/>
@@ -522,6 +522,34 @@
                                               Margin="8,0,0,0"
                                               Foreground="#808080"/>
                                 </StackPanel>
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- Appearance Settings -->
+                        <TextBlock Text="APPEARANCE" Style="{StaticResource CategoryHeaderStyle}"/>
+                        <Border Style="{StaticResource SectionBorderStyle}">
+                            <StackPanel>
+                                <TextBlock Text="Theme:" Margin="0,0,0,8"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <ComboBox x:Name="cboTheme" 
+                                              Width="200" 
+                                              HorizontalAlignment="Left"
+                                              SelectionChanged="cboTheme_SelectionChanged"/>
+                                    <Button x:Name="btnRefreshThemes" 
+                                            Content="Refresh" 
+                                            Margin="10,0,0,0"
+                                            Click="btnRefreshThemes_Click"/>
+                                </StackPanel>
+                                
+                                <TextBlock Text="Theme files are stored in:" Margin="0,10,0,5"/>
+                                <TextBlock x:Name="txtThemesPath" 
+                                           Text="[Themes Directory Path]" 
+                                           Foreground="#808080"/>
+                                
+                                <TextBlock Text="Create new themes by adding .json files to this directory." 
+                                           TextWrapping="Wrap" 
+                                           Margin="0,5,0,0" 
+                                           Foreground="#808080"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
