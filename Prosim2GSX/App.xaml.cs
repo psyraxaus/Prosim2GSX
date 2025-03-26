@@ -2,6 +2,7 @@
 using CefSharp.OffScreen;
 using H.NotifyIcon;
 using Prosim2GSX.Models;
+using Prosim2GSX.Themes;
 using Serilog;
 using System;
 using System.Diagnostics;
@@ -59,6 +60,10 @@ namespace Prosim2GSX
             InitLog();
             InitSystray();
             InitCef();
+            
+            // Initialize theme manager
+            ThemeManager.Instance.SetServiceModel(Model);
+            ThemeManager.Instance.Initialize();
 
             Controller = new(Model);
             Task.Run(Controller.Run);

@@ -6,7 +6,8 @@
              >
     <Application.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="ThemeResources.xaml" />
                 <ResourceDictionary Source="NotifyIconResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>

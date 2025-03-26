@@ -1,0 +1,32 @@
+<ResourceDictionary 
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- Default theme colors (will be overridden by ThemeManager) -->
+    <SolidColorBrush x:Key="PrimaryColor" Color="#1E90FF"/>
+    <SolidColorBrush x:Key="SecondaryColor" Color="#0078D7"/>
+    <SolidColorBrush x:Key="AccentColor" Color="#FF4500"/>
+    
+    <SolidColorBrush x:Key="HeaderBackground" Color="#1E90FF"/>
+    <SolidColorBrush x:Key="ContentBackground" Color="#F8F8F8"/>
+    <SolidColorBrush x:Key="SectionBackground" Color="#FFFFFF"/>
+    
+    <SolidColorBrush x:Key="HeaderText" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="ContentText" Color="#333333"/>
+    <SolidColorBrush x:Key="CategoryText" Color="#1E90FF"/>
+    
+    <!-- Flight Phase Colors -->
+    <SolidColorBrush x:Key="AtGatePhase" Color="#1E90FF"/>
+    <SolidColorBrush x:Key="TaxiOutPhase" Color="#FF9800"/>
+    <SolidColorBrush x:Key="InFlightPhase" Color="#4CAF50"/>
+    <SolidColorBrush x:Key="ApproachPhase" Color="#9C27B0"/>
+    <SolidColorBrush x:Key="ArrivedPhase" Color="#009688"/>
+    
+    <!-- Status Colors (consistent across themes) -->
+    <SolidColorBrush x:Key="ActiveStatus" Color="Green"/>
+    <SolidColorBrush x:Key="CompletedStatus" Color="Gold"/>
+    <SolidColorBrush x:Key="WaitingStatus" Color="Blue"/>
+    <SolidColorBrush x:Key="DisconnectedStatus" Color="Red"/>
+    <SolidColorBrush x:Key="InactiveStatus" Color="LightGray"/>
+    
+</ResourceDictionary>

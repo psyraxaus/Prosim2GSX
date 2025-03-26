@@ -143,19 +143,112 @@ The UI components follow the MVVM pattern, separating the user interface (View) 
 - **ViewModels**: NotifyIconViewModel and others
 - **Views**: MainWindow.xaml and other UI components
 
+### Dynamic Theming System
+The application implements a dynamic theming system that allows customization of the UI based on airline themes:
+
+- **Core Components**:
+  - `Theme`: Class representing a theme with name, description, and colors
+  - `ThemeColors`: Class containing color properties for various UI elements
+  - `FlightPhaseColors`: Class containing colors for different flight phases
+  - `ThemeManager`: Singleton class that handles loading, applying, and switching themes
+  - `ThemeResources.xaml`: ResourceDictionary containing default theme resources
+
+- **Theme Storage**:
+  - Themes are stored as JSON files in the Themes directory
+  - Each theme file contains color definitions for all UI elements
+  - JSON format allows for easy creation and modification of themes
+  - Theme files are loaded dynamically at runtime
+  - Theme files are automatically copied to the output directory during build
+  - The project file includes a wildcard pattern to ensure all theme JSON files are included
+
+- **Color Conversion**:
+  - Hex color strings in JSON (e.g., "#1E90FF") are converted to System.Windows.Media.Color objects
+  - Conversion is handled by helper methods in the Theme classes
+  - This approach allows for human-readable color definitions in theme files
+
+- **Theme Application**:
+  - ThemeManager loads all available themes from the Themes directory
+  - The current theme is stored in application settings
+  - When a theme is applied, all UI resources are updated with the theme's colors
+  - The UI automatically updates to reflect the new theme
+
+- **User Interface**:
+  - Theme selection is available in the Settings tab
+  - Users can switch between themes at runtime
+  - A refresh button allows reloading themes without restarting the application
+  - The theme directory path is displayed for users who want to create custom themes
+
+- **Default Themes**:
+  - Light: Default light theme with blue accents
+  - Dark: Dark theme with blue accents on dark backgrounds
+  - Airline Themes: Qantas (red), Delta (blue), Lufthansa (yellow), Finnair (blue)
+  - Custom themes can be added by creating new JSON files in the Themes directory
+
+- **Implementation**:
+  ```csharp
+  // Loading themes
+  private void LoadThemesFromDirectory(string directory)
+  {
+      _themes.Clear();
+      
+      foreach (string file in Directory.GetFiles(directory, "*.json"))
+      {
+          try
+          {
+              string json = File.ReadAllText(file);
+              Theme theme = JsonSerializer.Deserialize<Theme>(json, new JsonSerializerOptions 
+              { 
+                  PropertyNameCaseInsensitive = true
+              });
+              
+              if (theme != null && !string.IsNullOrEmpty(theme.Name))
+              {
+                  _themes[theme.Name] = theme;
+              }
+          }
+          catch (Exception ex)
+          {
+              Logger.Log(LogLevel.Warning, "ThemeManager", $"Failed to load theme file {file}: {ex.Message}");
+          }
+      }
+  }
+  
+  // Applying a theme
+  public void ApplyTheme(string themeName)
+  {
+      if (_themes.ContainsKey(themeName))
+      {
+          _currentTheme = _themes[themeName];
+          _serviceModel.SetSetting("currentTheme", themeName);
+          ApplyThemeToResources();
+      }
+  }
+  
+  // Updating UI resources
+  private void ApplyThemeToResources()
+  {
+      var resources = Application.Current.Resources;
+      
+      resources["PrimaryColor"] = new SolidColorBrush(_currentTheme.Colors.GetPrimaryColor());
+      resources["SecondaryColor"] = new SolidColorBrush(_currentTheme.Colors.GetSecondaryColor());
+      // ... other color resources
+  }
+  ```
+
 ### EFB-Style UI Design Pattern
 The application implements an Electronic Flight Bag (EFB) style user interface design pattern, which is common in modern aviation applications:
 
-- **Header Bar**: A prominent blue header bar with application title and navigation controls
+- **Header Bar**: A prominent header bar with application title and navigation controls (color based on theme)
 - **Tabbed Interface**: Content organized into logical tabs (FLIGHT STATUS and SETTINGS)
 - **Status Indicators**: Visual indicators using color-coded circles to show connection and service states
 - **Flight Phase Visualization**: A progress bar showing the current flight phase with clear visual feedback
 - **Categorized Settings**: Settings organized into logical categories with clear headers
-- **Modern Styling**: Consistent use of rounded corners, proper spacing, and modern color scheme
+- **Modern Styling**: Consistent use of rounded corners, proper spacing, and theme-based color scheme
 - **Responsive Layout**: UI elements that adapt to different states and provide clear visual feedback
 - **Navigation Icons**: Simplified navigation using icon-based buttons in the header
 - **Date Display**: Current date displayed in the header for situational awareness
 - **Consistent Visual Language**: Uniform styling of UI elements (buttons, checkboxes, text fields, etc.)
+- **Dynamic Theming**: UI colors change based on the selected theme, allowing airline-specific branding
 
 This design pattern enhances usability by:
 - Providing clear visual hierarchy and organization
@@ -163,6 +256,7 @@ This design pattern enhances usability by:
 - Offering immediate visual feedback on system status
 - Maintaining consistency across all UI components
 - Improving readability and reducing visual clutter
+- Allowing personalization through theme selection
 
 ### Observer Pattern
 The system uses events and event handlers extensively to communicate state changes between components:

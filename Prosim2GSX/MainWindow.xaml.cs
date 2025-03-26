@@ -1,7 +1,9 @@
 ﻿﻿using Prosim2GSX.Events;
+using Prosim2GSX.Themes;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -570,6 +572,63 @@ namespace Prosim2GSX
             _subscriptionTokens.Clear();
         }
 
+        private void LoadThemes()
+        {
+            try
+            {
+                // Clear existing items
+                cboTheme.Items.Clear();
+                
+                // Add available themes
+                foreach (string themeName in ThemeManager.Instance.AvailableThemes)
+                {
+                    cboTheme.Items.Add(themeName);
+                }
+                
+                // Select current theme
+                if (ThemeManager.Instance.CurrentTheme != null)
+                {
+                    cboTheme.SelectedItem = ThemeManager.Instance.CurrentTheme.Name;
+                }
+                
+                // Show themes directory path
+                txtThemesPath.Text = Path.Combine(App.AppDir, "Themes");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Warning, "MainWindow", $"Error loading themes: {ex.Message}");
+            }
+        }
+
+        private void cboTheme_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            try
+            {
+                if (cboTheme.SelectedItem != null)
+                {
+                    string themeName = cboTheme.SelectedItem.ToString();
+                    ThemeManager.Instance.ApplyTheme(themeName);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Warning, "MainWindow", $"Error changing theme: {ex.Message}");
+            }
+        }
+
+        private void btnRefreshThemes_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                ThemeManager.Instance.RefreshThemes();
+                LoadThemes();
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Warning, "MainWindow", $"Error refreshing themes: {ex.Message}");
+            }
+        }
+        
         protected void Window_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
             if (!IsVisible)
@@ -581,7 +640,8 @@ namespace Prosim2GSX
             else
             {
                 LoadSettings();
-
+                LoadThemes(); // Load available themes
+                
                 // Directly update connection status indicators based on current model state
                 MsfsStatusIndicator.Fill = serviceModel.IsSimRunning ?
                     new SolidColorBrush(Colors.Green) :
