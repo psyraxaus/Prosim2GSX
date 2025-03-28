@@ -74,6 +74,24 @@ namespace Prosim2GSX
             else
                 Model.IsProsimRunning = true;
 
+            // Initialize FlightPlan after Prosim is connected
+            if (FlightPlan == null)
+            {
+                // Get SimBrief ID from ProsimController
+                ProsimController.SetSimBriefID(Model);
+
+                // Create and load FlightPlan
+                FlightPlan = new FlightPlan(Model);
+                if (!FlightPlan.Load())
+                {
+                    Logger.Log(LogLevel.Error, "ServiceController:Wait", "Could not load Flightplan");
+                    Thread.Sleep(5000);
+                }
+
+                // Make FlightPlan available to ProsimController
+                ProsimController.SetFlightPlan(FlightPlan);
+            }
+
             if (!IPCManager.WaitForSessionReady(Model))
                 return false;
             else

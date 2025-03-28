@@ -634,7 +634,7 @@ namespace Prosim2GSX
                     var maxWeights = ProsimController.GetMaxWeights();
                     var simulatorDateTime = ProsimController.Interface.ReadDataRef("aircraft.time");
                     string timeIn24HourFormat = simulatorDateTime.ToString("HHmm");
-                    string prelimLoadsheetString = _loadsheetFormatter.FormatLoadSheet("prelim", simulatorDateTime, prelimData,flightNumber, FlightPlan.TailNumber, FlightPlan.DayOfFlight, FlightPlan.DateOfFlight,FlightPlan.Origin, FlightPlan.Destination,maxWeights.Item1, maxWeights.Item2, maxWeights.Item3,0);
+                    string prelimLoadsheetString = _loadsheetFormatter.FormatLoadSheet("prelim", timeIn24HourFormat, prelimData,flightNumber, FlightPlan.TailNumber, FlightPlan.DayOfFlight, FlightPlan.DateOfFlight,FlightPlan.Origin, FlightPlan.Destination,maxWeights.Item1, maxWeights.Item2, maxWeights.Item3,0);
 
                     try
                     {
@@ -1023,9 +1023,7 @@ namespace Prosim2GSX
                         var maxWeights = ProsimController.GetMaxWeights();
                         var simulatorDateTime = ProsimController.Interface.ReadDataRef("aircraft.time");
                         string timeIn24HourFormat = simulatorDateTime.ToString("HHmm");
-                        string finalLoadsheetString = _loadsheetFormatter.FormatLoadSheet(
-                            "final", timeIn24HourFormat, finalData,ProsimController.GetFMSFlightNumber(), FlightPlan.TailNumber,FlightPlan.DayOfFlight, FlightPlan.DateOfFlight,FlightPlan.Origin, FlightPlan.Destination,maxWeights.Item1, maxWeights.Item2, maxWeights.Item3,0, prelimData);
-
+                        string finalLoadsheetString = _loadsheetFormatter.FormatLoadSheet("final", timeIn24HourFormat, finalData,ProsimController.GetFMSFlightNumber(), FlightPlan.TailNumber,FlightPlan.DayOfFlight, FlightPlan.DateOfFlight,FlightPlan.Origin, FlightPlan.Destination,maxWeights.Item1, maxWeights.Item2, maxWeights.Item3,0, prelimData);
                         System.Threading.Tasks.Task task = AcarsClient.SendMessageToAcars(
                             ProsimController.GetFMSFlightNumber(), "telex", finalLoadsheetString);
                     }

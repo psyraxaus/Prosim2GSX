@@ -58,8 +58,8 @@ namespace Prosim2GSX.Services.WeightAndBalance
                 sb.AppendLine($"LAW  {lawWhole}  MAX  {maxLawWhole}  {lawLimited}");
                 sb.AppendLine($"UNDLO  {undloWhole}");
                 sb.AppendLine($"PAX/{paxInfants}/{loadData.TotalPassengers} TTL {paxInfants + loadData.TotalPassengers}");
-                sb.AppendLine($"MACZFW  {loadData.ZeroFuelWeightMac:F2}");
-                sb.AppendLine($"MACTOW  {loadData.TakeoffWeightMac:F2}");
+                sb.AppendLine($"MACZFW  {loadData.ZeroFuelWeightMac:F1}");
+                sb.AppendLine($"MACTOW  {loadData.TakeoffWeightMac:F1}");
                 sb.AppendLine($"A{paxZoneA}  B{paxZoneB}  C{paxZoneC}");
                 sb.AppendLine("CABIN SECTION TRIM");
                 sb.AppendLine("SI SERVICE WEIGHT");
@@ -116,8 +116,8 @@ namespace Prosim2GSX.Services.WeightAndBalance
                 sb.AppendLine($"ZFW  {finalZfwWhole}  {zfwChanged}");
                 sb.AppendLine($"TOW  {finalTowWhole}  {towChanged}");
                 sb.AppendLine($"PAX  {paxDiffString}");
-                sb.AppendLine($"MACZFW  {loadData.ZeroFuelWeightMac:F2}  {macZfwChanged}");
-                sb.AppendLine($"MACTOW  {loadData.TakeoffWeightMac:F2}  {macTowChanged}");
+                sb.AppendLine($"MACZFW  {loadData.ZeroFuelWeightMac:F1}  {macZfwChanged}");
+                sb.AppendLine($"MACTOW  {loadData.TakeoffWeightMac:F1}  {macTowChanged}");
                 sb.AppendLine($"FUEL IN TANKS  {finalFuelWhole}  {fuelChanged}");
                 sb.Append("END");
             }

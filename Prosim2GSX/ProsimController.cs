@@ -167,14 +167,7 @@ namespace Prosim2GSX
                 Logger.Log(LogLevel.Error, "ProsimController:IsProsimConnectionAvailable", $"Prosim not available - aborting");
                 return false;
             }
-            SetSimBriefID(model);
-            FlightPlan = new(Model);
 
-            if (!FlightPlan.Load())
-            {
-                Logger.Log(LogLevel.Error, "ProsimController:IsProsimConnectionAvailable", "Could not load Flightplan");
-                Thread.Sleep(5000);
-            }
             return true;
         }
 
@@ -874,6 +867,11 @@ namespace Prosim2GSX
             // For example:
             double tripFuel = Interface.ReadDataRef("aircraft.tripfuel.weight");
             return tripFuel > 0 ? tripFuel : 5000; // Default 5000kg if not set
+        }
+
+        public void SetFlightPlan(FlightPlan flightPlan)
+        {
+            this.FlightPlan = flightPlan;
         }
     }
 }
