@@ -484,7 +484,7 @@ namespace Prosim2GSX
 
 
             //PREPARATION (On-Ground and Engines not running)
-            if (_state == FlightState.PREFLIGHT && simOnGround && !ProsimController.enginesRunning && ProsimController.Interface.ReadDataRef("system.switches.S_OH_ELEC_BAT1") == 1)
+            if (_state == FlightState.PREFLIGHT && simOnGround && !ProsimController.enginesRunning && ProsimController.Interface.ReadProsimVariable("system.switches.S_OH_ELEC_BAT1") == 1)
             {
                 if (Model.UseAcars && !opsCallsignSet)
                 {
@@ -632,7 +632,7 @@ namespace Prosim2GSX
 
                     // Format loadsheet
                     var maxWeights = ProsimController.GetMaxWeights();
-                    var simulatorDateTime = ProsimController.Interface.ReadDataRef("aircraft.time");
+                    var simulatorDateTime = ProsimController.Interface.ReadProsimVariable("aircraft.time");
                     string timeIn24HourFormat = simulatorDateTime.ToString("HHmm");
                     string prelimLoadsheetString = _loadsheetFormatter.FormatLoadSheet("prelim", timeIn24HourFormat, prelimData,flightNumber, FlightPlan.TailNumber, FlightPlan.DayOfFlight, FlightPlan.DateOfFlight,FlightPlan.Origin, FlightPlan.Destination,maxWeights.Item1, maxWeights.Item2, maxWeights.Item3,0);
 
@@ -1021,25 +1021,12 @@ namespace Prosim2GSX
 
                         // Format loadsheet with comparison to preliminary
                         var maxWeights = ProsimController.GetMaxWeights();
-                        var simulatorDateTime = ProsimController.Interface.ReadDataRef("aircraft.time");
+                        var simulatorDateTime = ProsimController.Interface.ReadProsimVariable("aircraft.time");
                         string timeIn24HourFormat = simulatorDateTime.ToString("HHmm");
                         string finalLoadsheetString = _loadsheetFormatter.FormatLoadSheet("final", timeIn24HourFormat, finalData,ProsimController.GetFMSFlightNumber(), FlightPlan.TailNumber,FlightPlan.DayOfFlight, FlightPlan.DateOfFlight,FlightPlan.Origin, FlightPlan.Destination,maxWeights.Item1, maxWeights.Item2, maxWeights.Item3,0, prelimData);
                         System.Threading.Tasks.Task task = AcarsClient.SendMessageToAcars(
                             ProsimController.GetFMSFlightNumber(), "telex", finalLoadsheetString);
                     }
-                    /*
-                                        Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Transmitting Final Loadsheet ...");
-                                        ProsimController.TriggerFinal();
-                                        finalLoadsheetSend = true;
-                                        Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Final Loadsheet sent to ACARS");
-                                        if (Model.UseAcars)
-                                        {
-                                            var finalLoadedData = ProsimController.GetLoadedData("final");
-                                            string finalLoadsheet = FormatLoadSheet("final", finalLoadedData.Item1, finalLoadedData.Item2, finalLoadedData.Item3, finalLoadedData.Item4, finalLoadedData.Item5, finalLoadedData.Item6, finalLoadedData.Item7, finalLoadedData.Item8, finalLoadedData.Item9, finalLoadedData.Item10, finalLoadedData.Item11, finalLoadedData.Item12, finalLoadedData.Item13, finalLoadedData.Item14, finalLoadedData.Item15, finalLoadedData.Item16, finalLoadedData.Item17, finalLoadedData.Item18, finalLoadedData.Item19, finalLoadedData.Item20, finalLoadedData.Item21);
-                                            System.Threading.Tasks.Task task = AcarsClient.SendMessageToAcars(ProsimController.GetFMSFlightNumber(), "telex", finalLoadsheet);
-
-                                        }
-                    */
                 }
             }
             //EQUIPMENT

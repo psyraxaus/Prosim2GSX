@@ -45,7 +45,7 @@ namespace Prosim2GSX
             }
         }
 
-        public dynamic ReadDataRef(string _dataRef)
+        public dynamic ReadProsimVariable(string _dataRef)
         {
             //Logger.Log(LogLevel.Debug, "ProsimInterface:ReadDataRef", $"Dataref {_dataRef} - typeof {Connection.ReadDataRef(_dataRef).GetType()}");
             try
@@ -54,7 +54,7 @@ namespace Prosim2GSX
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, "ProsimInterface:ReadDataRef", $"There was an error setting {_dataRef} - exception {ex.ToString()}");
+                Logger.Log(LogLevel.Error, "ProsimInterface:ReadDataRef", $"There was an error reading {_dataRef} - exception {ex.ToString()}");
                 return null;
             }
 

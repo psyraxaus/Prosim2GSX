@@ -40,11 +40,15 @@ namespace Prosim2GSX.Services.WeightAndBalance
         public LoadsheetData CalculatePreliminaryLoadsheet(FlightPlan flightPlan)
         {
             // Get zone capacities
-            int zone1Capacity = _prosimController.Interface.ReadDataRef("aircraft.passengers.zone1.capacity");
-            int zone2Capacity = _prosimController.Interface.ReadDataRef("aircraft.passengers.zone2.capacity");
-            int zone3Capacity = _prosimController.Interface.ReadDataRef("aircraft.passengers.zone3.capacity");
-            int zone4Capacity = _prosimController.Interface.ReadDataRef("aircraft.passengers.zone4.capacity");
+            int zone1Capacity = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone1.capacity");
+            int zone2Capacity = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone2.capacity");
+            int zone3Capacity = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone3.capacity");
+            int zone4Capacity = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone4.capacity");
             int totalCapacity = zone1Capacity + zone2Capacity + zone3Capacity + zone4Capacity;
+
+            // Get cargo hold capacities
+            double fwdCargoCapacity = _prosimController.Interface.ReadProsimVariable("aircraft.cargo.forward.capacity");
+            double aftCargoCapacity = _prosimController.Interface.ReadProsimVariable("aircraft.cargo.aft.capacity");
 
             // Get planned values from flight plan
             //int totalPax = flightPlan.PassengerCount;
@@ -75,12 +79,28 @@ namespace Prosim2GSX.Services.WeightAndBalance
 
             // Rest of cargo and fuel calculations
             double totalCargo = flightPlan.CargoTotal;
-            double plannedFuel = flightPlan.Fuel;
 
-            // Distribute cargo according to capacity with slight randomization
+            // Distribute cargo according to capacity with slight randomization, but respect capacity limits
             double fwdCargoRatio = 0.45 + (rnd.NextDouble() * 0.05 - 0.025); // 45% ±2.5%
-            double fwdCargoWeight = totalCargo * fwdCargoRatio;
-            double aftCargoWeight = totalCargo - fwdCargoWeight;
+            double fwdCargoWeight = Math.Min(totalCargo * fwdCargoRatio, fwdCargoCapacity);
+
+            // If forward cargo is at capacity, put the rest in aft (up to its capacity)
+            double aftCargoWeight = Math.Min(totalCargo - fwdCargoWeight, aftCargoCapacity);
+
+            // Check if we exceeded total capacity and log a warning if needed
+            double totalCargoCapacity = fwdCargoCapacity + aftCargoCapacity;
+            if (totalCargo > totalCargoCapacity)
+            {
+                Logger.Log(LogLevel.Warning, "A320WeightAndBalance:CalculatePreliminaryLoadsheet",
+                    $"Warning: Total cargo ({totalCargo:F0} kg) exceeds combined cargo hold capacity ({totalCargoCapacity:F0} kg). " +
+                    $"Limiting to maximum capacity.");
+
+                // Adjust the actual cargo to fit within limits
+                double excessCargo = totalCargo - totalCargoCapacity;
+                totalCargo = totalCargoCapacity;
+            }
+
+            double plannedFuel = flightPlan.Fuel;
 
             // Distribute fuel with standard ratios
             double centerTankRatio = 0.35;
@@ -92,7 +112,7 @@ namespace Prosim2GSX.Services.WeightAndBalance
             double rightTankFuel = plannedFuel * rightTankRatio * randomFactor;
 
             // Operating empty weight parameters
-            double emptyWeight = _prosimController.Interface.ReadDataRef("aircraft.weight.empty");
+            double emptyWeight = _prosimController.Interface.ReadProsimVariable("aircraft.weight.empty");
             double emptyCG = OperatingEmptyCG;
 
             // Calculate moments
@@ -169,7 +189,7 @@ namespace Prosim2GSX.Services.WeightAndBalance
                 $"TOW: {towWeight:F0} kg, CG: {towCG:F2} m, MAC: {towMacPercentage:F2}%\n" +
                 $"Pax zones: 1:{zone1Pax}/{zone1Capacity}, 2:{zone2Pax}/{zone2Capacity}, " +
                 $"3:{zone3Pax}/{zone3Capacity}, 4:{zone4Pax}/{zone4Capacity}\n" +
-                $"Cargo: Forward:{fwdCargoWeight:F0} kg, Aft:{aftCargoWeight:F0} kg\n" +
+                $"Cargo: Forward:{fwdCargoWeight:F0} kg/{fwdCargoCapacity:F0} kg, Aft:{aftCargoWeight:F0} kg/{aftCargoCapacity:F0} kg\n" +
                 $"Fuel: Center:{centerTankFuel:F0} kg, Left:{leftTankFuel:F0} kg, Right:{rightTankFuel:F0} kg");
 
             return result;
@@ -178,34 +198,51 @@ namespace Prosim2GSX.Services.WeightAndBalance
         public LoadsheetData CalculateFinalLoadsheet()
         {
             // Get actual passenger distribution from aircraft datarefs
-            int zone1Pax = _prosimController.Interface.ReadDataRef("aircraft.passengers.zone1.amount");
-            int zone2Pax = _prosimController.Interface.ReadDataRef("aircraft.passengers.zone2.amount");
-            int zone3Pax = _prosimController.Interface.ReadDataRef("aircraft.passengers.zone3.amount");
-            int zone4Pax = _prosimController.Interface.ReadDataRef("aircraft.passengers.zone4.amount");
+            int zone1Pax = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone1.amount");
+            int zone2Pax = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone2.amount");
+            int zone3Pax = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone3.amount");
+            int zone4Pax = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone4.amount");
 
             // Get zone capacities for validation/logging
-            int zone1Capacity = _prosimController.Interface.ReadDataRef("aircraft.passengers.zone1.capacity");
-            int zone2Capacity = _prosimController.Interface.ReadDataRef("aircraft.passengers.zone2.capacity");
-            int zone3Capacity = _prosimController.Interface.ReadDataRef("aircraft.passengers.zone3.capacity");
-            int zone4Capacity = _prosimController.Interface.ReadDataRef("aircraft.passengers.zone4.capacity");
+            int zone1Capacity = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone1.capacity");
+            int zone2Capacity = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone2.capacity");
+            int zone3Capacity = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone3.capacity");
+            int zone4Capacity = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone4.capacity");
+
+            // Get cargo capacities for validation
+            double fwdCargoCapacity = _prosimController.Interface.ReadProsimVariable("aircraft.cargo.forward.capacity");
+            double aftCargoCapacity = _prosimController.Interface.ReadProsimVariable("aircraft.cargo.aft.capacity");
 
             int totalPax = zone1Pax + zone2Pax + zone3Pax + zone4Pax;
 
             // Get cargo weights from aircraft datarefs
-            double fwdCargoWeight = _prosimController.Interface.ReadDataRef("aircraft.cargo.forward.weight");
-            double aftCargoWeight = _prosimController.Interface.ReadDataRef("aircraft.cargo.aft.weight");
+            double fwdCargoWeight = _prosimController.Interface.ReadProsimVariable("aircraft.cargo.forward.amount"); // kg
+            double aftCargoWeight = _prosimController.Interface.ReadProsimVariable("aircraft.cargo.aft.amount"); // kg
+
+            // Validate cargo weights against capacities
+            if (fwdCargoWeight > fwdCargoCapacity)
+            {
+                Logger.Log(LogLevel.Warning, "A320WeightAndBalance:CalculateFinalLoadsheet",
+                    $"Warning: Forward cargo ({fwdCargoWeight:F0} kg) exceeds capacity ({fwdCargoCapacity:F0} kg).");
+                fwdCargoWeight = fwdCargoCapacity;
+            }
+
+            if (aftCargoWeight > aftCargoCapacity)
+            {
+                Logger.Log(LogLevel.Warning, "A320WeightAndBalance:CalculateFinalLoadsheet",
+                    $"Warning: Aft cargo ({aftCargoWeight:F0} kg) exceeds capacity ({aftCargoCapacity:F0} kg).");
+                aftCargoWeight = aftCargoCapacity;
+            }
 
             // Get actual fuel quantities
-            double centerTankFuel = _prosimController.Interface.ReadDataRef("aircraft.fuel.center.amount.kg");
-            double leftTankFuel = _prosimController.Interface.ReadDataRef("aircraft.fuel.left.amount.kg");
-            double rightTankFuel = _prosimController.Interface.ReadDataRef("aircraft.fuel.right.amount.kg");
-            double leftAuxTankFuel = _prosimController.Interface.ReadDataRef("aircraft.fuel.ACT1.amount.kg");
-            double rightAuxTankFuel = _prosimController.Interface.ReadDataRef("aircraft.fuel.ACT2.amount.kg");
-            double totalFuel = centerTankFuel + leftTankFuel + rightTankFuel + leftAuxTankFuel + rightAuxTankFuel;
+            double centerTankFuel = _prosimController.Interface.ReadProsimVariable("aircraft.fuel.center.amount.kg");
+            double leftTankFuel = _prosimController.Interface.ReadProsimVariable("aircraft.fuel.left.amount.kg");
+            double rightTankFuel = _prosimController.Interface.ReadProsimVariable("aircraft.fuel.right.amount.kg");
+            double totalFuel = centerTankFuel + leftTankFuel + rightTankFuel;
 
             // Operating empty weight parameters
-            double emptyWeight = _prosimController.Interface.ReadDataRef("aircraft.weight.empty");
-            double emptyCG = OperatingEmptyCG; 
+            double emptyWeight = _prosimController.Interface.ReadProsimVariable("aircraft.weight.empty");
+            double emptyCG = OperatingEmptyCG;
 
             // Calculate moments
             double emptyMoment = emptyWeight * emptyCG;
@@ -279,7 +316,7 @@ namespace Prosim2GSX.Services.WeightAndBalance
                 $"TOW: {towWeight:F0} kg, CG: {towCG:F2} m, MAC: {towMacPercentage:F2}%\n" +
                 $"Pax zones: 1:{zone1Pax}/{zone1Capacity}, 2:{zone2Pax}/{zone2Capacity}, " +
                 $"3:{zone3Pax}/{zone3Capacity}, 4:{zone4Pax}/{zone4Capacity}\n" +
-                $"Cargo: Forward:{fwdCargoWeight:F0} kg, Aft:{aftCargoWeight:F0} kg\n" +
+                $"Cargo: Forward:{fwdCargoWeight:F0} kg/{fwdCargoCapacity:F0} kg, Aft:{aftCargoWeight:F0} kg/{aftCargoCapacity:F0} kg\n" +
                 $"Fuel: Center:{centerTankFuel:F0} kg, Left:{leftTankFuel:F0} kg, Right:{rightTankFuel:F0} kg");
 
             return result;
