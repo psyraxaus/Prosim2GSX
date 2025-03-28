@@ -103,7 +103,7 @@ namespace Prosim2GSX
                 Flight = sbOFP["general"]["icao_airline"].InnerText + sbOFP["general"]["flight_number"].InnerText;
                 FlightPlanID = sbOFP["params"]["request_id"].InnerText;
                 Fuel = Convert.ToDouble(sbOFP["fuel"]["plan_ramp"].InnerText, new RealInvariantFormat(sbOFP["fuel"]["plan_ramp"].InnerText));
-                FuelLanding = Fuel = Convert.ToDouble(sbOFP["fuel"]["plan_landing"].InnerText, new RealInvariantFormat(sbOFP["fuel"]["plan_ramp"].InnerText));
+                FuelLanding = Convert.ToDouble(sbOFP["fuel"]["plan_landing"].InnerText, new RealInvariantFormat(sbOFP["fuel"]["plan_ramp"].InnerText));
                 MaxmimumLandingWeight = Convert.ToInt32(sbOFP["weights"]["max_ldw"].InnerText, new RealInvariantFormat(sbOFP["weights"]["max_ldw"].InnerText));
                 MaximumTakeOffWeight = Convert.ToInt32(sbOFP["weights"]["max_tow"].InnerText, new RealInvariantFormat(sbOFP["weights"]["max_tow"].InnerText));
                 MaximumZeroFuelWeight = Convert.ToInt32(sbOFP["weights"]["max_zfw"].InnerText, new RealInvariantFormat(sbOFP["weights"]["max_zfw"].InnerText));
