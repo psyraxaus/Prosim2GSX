@@ -636,9 +636,8 @@ namespace Prosim2GSX
 
         public double GetPlannedTripFuel()
         {
-            // Get trip fuel from flight plan or FMS
-            // For example:
-            double tripFuel = Interface.GetProsimVariable("aircraft.tripfuel.weight");
+            // Calculate trip fuel from flight plan
+            double tripFuel = FlightPlan.Fuel - FlightPlan.FuelLanding;
             return tripFuel > 0 ? tripFuel : 5000; // Default 5000kg if not set
         }
 
