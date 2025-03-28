@@ -860,5 +860,20 @@ namespace Prosim2GSX
                     $"Error reading cockpit door state: {ex.Message}");
             }
         }
+
+        // Add to ProsimController class if not already present
+        public (double, double, double) GetMaxWeights()
+        {
+            // Return max ZFW, max TOW, max LAW
+            return (Interface.ReadDataRef("aircraft.weight.zfwMax"), Interface.ReadDataRef("aircraft.weight.grossMax"), 66000);  // A320 typical values
+        }
+
+        public double GetPlannedTripFuel()
+        {
+            // Get trip fuel from flight plan or FMS
+            // For example:
+            double tripFuel = Interface.ReadDataRef("aircraft.tripfuel.weight");
+            return tripFuel > 0 ? tripFuel : 5000; // Default 5000kg if not set
+        }
     }
 }
