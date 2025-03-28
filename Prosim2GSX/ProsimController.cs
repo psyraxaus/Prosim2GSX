@@ -65,15 +65,15 @@ namespace Prosim2GSX
         {
             try
             {
-                double engine1 = Interface.ReadProsimVariable("aircraft.engine1.raw");
-                double engine2 = Interface.ReadProsimVariable("aircraft.engine2.raw");
+                double engine1 = Interface.GetProsimVariable("aircraft.engine1.raw");
+                double engine2 = Interface.GetProsimVariable("aircraft.engine2.raw");
                 enginesRunning = engine1 > 18.0D || engine2 > 18.0D;
 
-                fuelCurrent = Interface.ReadProsimVariable("aircraft.fuel.total.amount.kg");
+                fuelCurrent = Interface.GetProsimVariable("aircraft.fuel.total.amount.kg");
 
                 useZeroFuel = Model.SetZeroFuel;
 
-                fuelUnits = Interface.ReadProsimVariable("system.config.Units.Weight");
+                fuelUnits = Interface.GetProsimVariable("system.config.Units.Weight");
                 if (fuelUnits == "LBS")
                     fuelPlanned /= weightConversion;
 
@@ -87,10 +87,10 @@ namespace Prosim2GSX
                         paxPlanned = RandomizePaxSeating(FlightPlan.Passenger);
                         Logger.Log(LogLevel.Debug, "ProsimController:Update", $"seatOccupation bool: {string.Join(", ", paxPlanned)}");
                         Interface.SetProsimVariable("aircraft.passengers.seatOccupation", paxPlanned); // string.Join(", ", paxPlanned));
-                        paxZone1 = Interface.ReadProsimVariable("aircraft.passengers.zone1.amount");
-                        paxZone2 = Interface.ReadProsimVariable("aircraft.passengers.zone2.amount");
-                        paxZone3 = Interface.ReadProsimVariable("aircraft.passengers.zone3.amount");
-                        paxZone4 = Interface.ReadProsimVariable("aircraft.passengers.zone4.amount");
+                        paxZone1 = Interface.GetProsimVariable("aircraft.passengers.zone1.amount");
+                        paxZone2 = Interface.GetProsimVariable("aircraft.passengers.zone2.amount");
+                        paxZone3 = Interface.GetProsimVariable("aircraft.passengers.zone3.amount");
+                        paxZone4 = Interface.GetProsimVariable("aircraft.passengers.zone4.amount");
 
                         Interface.SetProsimVariable("aircraft.cargo.aft.amount", Convert.ToDouble(FlightPlan.CargoTotal / 2));
                         Interface.SetProsimVariable("aircraft.cargo.forward.amount", Convert.ToDouble(FlightPlan.CargoTotal / 2));
@@ -111,18 +111,18 @@ namespace Prosim2GSX
                 }
                 else
                 {
-                    fuelPlanned = Interface.ReadProsimVariable("aircraft.refuel.fuelTarget");
+                    fuelPlanned = Interface.GetProsimVariable("aircraft.refuel.fuelTarget");
 
-                    string str = (string)Interface.ReadProsimVariable("efb.loading");
+                    string str = (string)Interface.GetProsimVariable("efb.loading");
                     if (!string.IsNullOrWhiteSpace(str))
                         int.TryParse(str[1..], out cargoPlanned);
 
-                    paxPlanned = Interface.ReadProsimVariable("efb.passengers.booked");
+                    paxPlanned = Interface.GetProsimVariable("efb.passengers.booked");
                     if (forceCurrent)
                         paxCurrent = paxPlanned;
 
 
-                    JObject result = JObject.Parse((string)Interface.ReadProsimVariable("efb.flightTimestampJSON"));
+                    JObject result = JObject.Parse((string)Interface.GetProsimVariable("efb.flightTimestampJSON"));
                     string innerJson = result.ToString();
                     result = JObject.Parse(innerJson);
                     innerJson = result["ProsimTimes"]["PRELIM_EDNO"].ToString();
@@ -142,8 +142,9 @@ namespace Prosim2GSX
 
         public void SetSimBriefID(ServiceModel model)
         {
-            model.SimBriefID = (string)Interface.ReadProsimVariable("efb.simbrief.id");
+            model.SimBriefID = (string)Interface.GetProsimVariable("efb.simbrief.id");
         }
+
         public bool IsProsimConnectionAvailable(ServiceModel model)
         {
             Thread.Sleep(250);
@@ -175,11 +176,11 @@ namespace Prosim2GSX
         {
             if (Model.FlightPlanType == "MCDU")
             {
-                return !string.IsNullOrEmpty((string)Interface.ReadProsimVariable("aircraft.fms.destination"));
+                return !string.IsNullOrEmpty((string)Interface.GetProsimVariable("aircraft.fms.destination"));
             }
             else
             {
-                return !string.IsNullOrEmpty((string)Interface.ReadProsimVariable("efb.prelimloadsheet"));
+                return !string.IsNullOrEmpty((string)Interface.GetProsimVariable("efb.prelimloadsheet"));
             }
         }
 
@@ -193,216 +194,10 @@ namespace Prosim2GSX
             return paxCurrent.Count(i => i);
         }
 
-        public double GetFuelPlanned()
-        {
-            return fuelPlanned;
-        }
-
-        public double GetFuelCurrent()
-        {
-            return fuelCurrent;
-        }
-
-        /// <summary>
-        /// Gets the Zero Fuel Weight Center of Gravity (MACZFW)
-        /// This is the aircraft center of gravity with passengers and cargo but without fuel
-        /// </summary>
-        /// <returns>The MACZFW value as a percentage</returns>
-        public double GetZfwCG()
-        {
-            var macZfwCG = 00.0d;
-            
-            // Store current fuel values
-            var act1TankFuelCurrent = Interface.ReadProsimVariable("aircraft.fuel.ACT1.amount.kg");
-            var act2TankFuelCurrent = Interface.ReadProsimVariable("aircraft.fuel.ACT2.amount.kg");
-            var centerTankFuelCurrent = Interface.ReadProsimVariable("aircraft.fuel.center.amount.kg");
-            var leftTankFuelCurrent = Interface.ReadProsimVariable("aircraft.fuel.left.amount.kg");
-            var rightTankFuelCurrent = Interface.ReadProsimVariable("aircraft.fuel.right.amount.kg");
-            
-            try
-            {
-                // Ensure passenger seating is properly loaded
-                if (!randomizePaxSeat)
-                {
-                    paxPlanned = RandomizePaxSeating(FlightPlan.Passenger);
-                    Logger.Log(LogLevel.Debug, "ProsimController:GetZfwCG", $"Randomizing passenger seating for MACZFW calculation");
-                    Interface.SetProsimVariable("aircraft.passengers.seatOccupation", paxPlanned);
-                    randomizePaxSeat = true;
-                }
-                
-                // Set all fuel tanks to zero
-                Interface.SetProsimVariable("aircraft.fuel.ACT1.amount.kg", 0);
-                Interface.SetProsimVariable("aircraft.fuel.ACT2.amount.kg", 0);
-                Interface.SetProsimVariable("aircraft.fuel.center.amount.kg", 0);
-                Interface.SetProsimVariable("aircraft.fuel.left.amount.kg", 0);
-                Interface.SetProsimVariable("aircraft.fuel.right.amount.kg", 0);
-                
-                // Add a small delay to allow the simulator to recalculate the CG properly
-                Thread.Sleep(100);
-                
-                // Get the CG with zero fuel directly from Prosim
-                macZfwCG = Interface.ReadProsimVariable("aircraft.cg");
-                
-                // Log the calculated value
-                Logger.Log(LogLevel.Debug, "ProsimController:GetZfwCG", $"Read MACZFW from Prosim: {macZfwCG}%");
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Error, "ProsimController:GetZfwCG", $"Error reading MACZFW: {ex.Message}");
-            }
-            finally
-            {
-                // Restore original fuel values
-                Interface.SetProsimVariable("aircraft.fuel.ACT1.amount.kg", act1TankFuelCurrent);
-                Interface.SetProsimVariable("aircraft.fuel.ACT2.amount.kg", act2TankFuelCurrent);
-                Interface.SetProsimVariable("aircraft.fuel.center.amount.kg", centerTankFuelCurrent);
-                Interface.SetProsimVariable("aircraft.fuel.left.amount.kg", leftTankFuelCurrent);
-                Interface.SetProsimVariable("aircraft.fuel.right.amount.kg", rightTankFuelCurrent);
-            }
-            
-            return macZfwCG;
-        }
-        
-        /// <summary>
-        /// Gets the Take Off Weight Center of Gravity (MACTOW)
-        /// This is the aircraft center of gravity with fuel, passengers, and cargo
-        /// </summary>
-        /// <returns>The MACTOW value as a percentage</returns>
-        public double GetTowCG()
-        {
-            double macTowCG = 00.0d;
-            
-            try
-            {
-                // Ensure passenger seating is properly loaded (should already be done by GetZfwCG)
-                if (!randomizePaxSeat)
-                {
-                    paxPlanned = RandomizePaxSeating(FlightPlan.Passenger);
-                    Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Randomizing passenger seating for MACTOW calculation");
-                    Interface.SetProsimVariable("aircraft.passengers.seatOccupation", paxPlanned);
-                    randomizePaxSeat = true;
-                }
-                
-                // Get current fuel amount and planned fuel amount
-                double totalFuel = Interface.ReadProsimVariable("aircraft.fuel.total.amount.kg");
-                double plannedFuel = GetFuelPlanned();
-                
-                // Store current fuel values
-                var act1TankFuelCurrent = Interface.ReadProsimVariable("aircraft.fuel.ACT1.amount.kg");
-                var act2TankFuelCurrent = Interface.ReadProsimVariable("aircraft.fuel.ACT2.amount.kg");
-                var centerTankFuelCurrent = Interface.ReadProsimVariable("aircraft.fuel.center.amount.kg");
-                var leftTankFuelCurrent = Interface.ReadProsimVariable("aircraft.fuel.left.amount.kg");
-                var rightTankFuelCurrent = Interface.ReadProsimVariable("aircraft.fuel.right.amount.kg");
-                
-                // Check if we need to set the planned fuel
-                bool needsRecalculation = Math.Abs(totalFuel - plannedFuel) > plannedFuel * 0.1;
-                
-                if (needsRecalculation)
-                {
-                    try
-                    {
-                        // A320 wing tanks capacity (approximate)
-                        const double wingTankCapacity = 6264.0; // per side
-                        
-                        // Calculate how much fuel goes in each tank based on A320 fuel loading pattern
-                        double fuelToUse = plannedFuel;
-                        
-                        // Calculate how much fuel goes in each tank
-                        double leftWingFuel = Math.Min(fuelToUse / 2, wingTankCapacity);
-                        double rightWingFuel = Math.Min(fuelToUse / 2, wingTankCapacity);
-                        
-                        // If there's fuel left after filling wing tanks, put it in center tank
-                        double remainingFuel = Math.Max(0, fuelToUse - leftWingFuel - rightWingFuel);
-                        double centerTankFuel = remainingFuel;
-                        
-                        // Set the fuel values
-                        Interface.SetProsimVariable("aircraft.fuel.left.amount.kg", leftWingFuel);
-                        Interface.SetProsimVariable("aircraft.fuel.right.amount.kg", rightWingFuel);
-                        Interface.SetProsimVariable("aircraft.fuel.center.amount.kg", centerTankFuel);
-                        Interface.SetProsimVariable("aircraft.fuel.ACT1.amount.kg", 0);
-                        Interface.SetProsimVariable("aircraft.fuel.ACT2.amount.kg", 0);
-                        
-                        // Add a small delay to allow the simulator to recalculate the CG properly
-                        Thread.Sleep(100);
-                        
-                        // Get the CG with properly distributed fuel directly from Prosim
-                        macTowCG = Interface.ReadProsimVariable("aircraft.cg");
-                        
-                        Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Read MACTOW from Prosim with adjusted fuel: {macTowCG}%");
-                    }
-                    finally
-                    {
-                        // Restore original fuel values
-                        Interface.SetProsimVariable("aircraft.fuel.ACT1.amount.kg", act1TankFuelCurrent);
-                        Interface.SetProsimVariable("aircraft.fuel.ACT2.amount.kg", act2TankFuelCurrent);
-                        Interface.SetProsimVariable("aircraft.fuel.center.amount.kg", centerTankFuelCurrent);
-                        Interface.SetProsimVariable("aircraft.fuel.left.amount.kg", leftTankFuelCurrent);
-                        Interface.SetProsimVariable("aircraft.fuel.right.amount.kg", rightTankFuelCurrent);
-                    }
-                }
-                else
-                {
-                    // Get the current CG directly from Prosim
-                    macTowCG = Interface.ReadProsimVariable("aircraft.cg");
-                    Logger.Log(LogLevel.Debug, "ProsimController:GetTowCG", $"Read MACTOW from Prosim with current fuel: {macTowCG}%");
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Error, "ProsimController:GetTowCG", $"Error reading MACTOW: {ex.Message}");
-            }
-            
-            return macTowCG;
-        }
-
-        public (string, string, string, string, string, string, string, double, double, double, double, double, double, int, int, double, double, int, int, int, double) GetLoadedData(string loadsheetType)
-        {
-            double estZfw;
-            double maxZfw;
-            double estTow;
-            double maxTow;
-            double estLaw;
-            double maxLaw;
-            int paxAdults;
-            int paxInfants;
-            double macTow = GetTowCG();
-            double macZfw = GetZfwCG();
-            int paxZoneA = Interface.ReadProsimVariable("aircraft.passengers.zone1.amount");
-            int paxZoneB = Interface.ReadProsimVariable("aircraft.passengers.zone2.amount");
-            int paxZoneC = Interface.ReadProsimVariable("aircraft.passengers.zone3.amount") + Interface.ReadProsimVariable("aircraft.passengers.zone4.amount");
-            double fuelInTanks;
-            //DateTime simulatorDateTime = DateTime.Parse(Interface.ReadDataRef("aircraft.time"));
-            var simulatorDateTime = Interface.ReadProsimVariable("aircraft.time");
-            string timeIn24HourFormat = simulatorDateTime.ToString("HHmm");
-
-            if (loadsheetType == "prelim")
-            {
-                estZfw = FlightPlan.EstimatedZeroFuelWeight;
-                estTow = FlightPlan.EstimatedTakeOffWeight;
-                paxAdults = FlightPlan.Passenger;
-                fuelInTanks = FlightPlan.Fuel;
-            }
-            else
-            {
-                estZfw = Interface.ReadProsimVariable("aircraft.weight.zfw");
-                estTow = Interface.ReadProsimVariable("aircraft.weight.gross");
-                paxAdults = Interface.ReadProsimVariable("aircraft.passengers.zone1.amount") + Interface.ReadProsimVariable("aircraft.passengers.zone2.amount") + Interface.ReadProsimVariable("aircraft.passengers.zone3.amount") + Interface.ReadProsimVariable("aircraft.passengers.zone4.amount");
-                fuelInTanks = Interface.ReadProsimVariable("aircraft.weight.fuel");
-            }
-
-            maxZfw = Interface.ReadProsimVariable("aircraft.weight.zfwMax");
-            maxTow = FlightPlan.MaximumTakeOffWeight;
-            estLaw = FlightPlan.EstimatedLandingWeight;
-            maxLaw = FlightPlan.MaxmimumLandingWeight;
-            paxInfants = 0;
-
-            return (timeIn24HourFormat, FlightPlan.Flight, FlightPlan.TailNumber, FlightPlan.DayOfFlight, FlightPlan.DateOfFlight, FlightPlan.Origin, FlightPlan.Destination, estZfw, maxZfw, estTow, maxTow, estLaw, maxLaw, paxInfants, paxAdults, macZfw, macTow, paxZoneA, paxZoneB, paxZoneC, fuelInTanks);
-        }
-
         public string GetFMSFlightNumber()
         {
             string flightNumber;
-            var fmsXmlstr = Interface.ReadProsimVariable("aircraft.fms.flightPlanXml");
+            var fmsXmlstr = Interface.GetProsimVariable("aircraft.fms.flightPlanXml");
             XmlDocument xmlDoc = new XmlDocument();
             xmlDoc.LoadXml(fmsXmlstr);
             XmlNode flightNumberNode = xmlDoc.SelectSingleNode("/fms/routeData/flightNumber");
@@ -422,7 +217,7 @@ namespace Prosim2GSX
 
         public double GetFuelAmount()
         {
-            double arrivalFuel = Interface.ReadProsimVariable("aircraft.fuel.total.amount.kg");
+            double arrivalFuel = Interface.GetProsimVariable("aircraft.fuel.total.amount.kg");
             return arrivalFuel;
         }
 
@@ -487,7 +282,7 @@ namespace Prosim2GSX
 
         public (double, double, double) GetHydraulicFluidValues()
         {
-            return (Model.HydaulicsBlueAmount = Interface.ReadProsimVariable("aircraft.hydraulics.blue.quantity"), Model.HydaulicsGreenAmount = Interface.ReadProsimVariable("aircraft.hydraulics.green.quantity"), Model.HydaulicsYellowAmount = Interface.ReadProsimVariable("aircraft.hydraulics.yellow.quantity"));
+            return (Model.HydaulicsBlueAmount = Interface.GetProsimVariable("aircraft.hydraulics.blue.quantity"), Model.HydaulicsGreenAmount = Interface.GetProsimVariable("aircraft.hydraulics.green.quantity"), Model.HydaulicsYellowAmount = Interface.GetProsimVariable("aircraft.hydraulics.yellow.quantity"));
         }
         public void RefuelStart()
         {
@@ -756,7 +551,7 @@ namespace Prosim2GSX
 
         public string GetAftRightDoor()
         {
-            bool doorStatus = Interface.ReadProsimVariable("doors.entry.right.aft");
+            bool doorStatus = Interface.GetProsimVariable("doors.entry.right.aft");
             string status = doorStatus ? "open" : "closed";
             Logger.Log(LogLevel.Debug, "ProsimController:GetForwardRightDoorStatus", $"Forward right door {status}");
             return status;
@@ -770,7 +565,7 @@ namespace Prosim2GSX
 
         public string GetForwardRightDoor()
         {
-            bool doorStatus = Interface.ReadProsimVariable("doors.entry.right.fwd");
+            bool doorStatus = Interface.GetProsimVariable("doors.entry.right.fwd");
             string status = doorStatus ? "open" : "closed";
             Logger.Log(LogLevel.Debug, "ProsimController:GetForwardRightDoorStatus", $"Forward right door {status}");
             return status;
@@ -784,7 +579,7 @@ namespace Prosim2GSX
 
         public string GetForwardCargoDoor()
         {
-            bool doorStatus = Interface.ReadProsimVariable("doors.cargo.forward");
+            bool doorStatus = Interface.GetProsimVariable("doors.cargo.forward");
             string status = doorStatus ? "open" : "closed";
             return status;
         }
@@ -797,14 +592,14 @@ namespace Prosim2GSX
 
         public string GetAftCargoDoor()
         {
-            bool doorStatus = Interface.ReadProsimVariable("doors.cargo.aft");
+            bool doorStatus = Interface.GetProsimVariable("doors.cargo.aft");
             string status = doorStatus ? "open" : "closed";
             return status;
         }
 
         public int GetStatusFunction(string dataRef)
         {
-            var value = Interface.ReadProsimVariable(dataRef);
+            var value = Interface.GetProsimVariable(dataRef);
 
             // Convert boolean values to integers
             if (value is bool boolValue)
@@ -832,40 +627,18 @@ namespace Prosim2GSX
             }
         }
 
-        public void DebugCheckCockpitDoorState()
-        {
-            try
-            {
-                var switchValue = Interface.ReadProsimVariable("system.switches.S_PED_COCKPIT_DOOR");
-                var indicatorValue = Interface.ReadProsimVariable("system.indicators.I_PED_COCKPIT_DOOR_U");
-
-                Logger.Log(LogLevel.Debug, "ProsimController:DebugCheckCockpitDoorState",
-                    $"Current cockpit door switch: {switchValue} (0=Normal, 1=Unlock, 2=Lock)");
-                Logger.Log(LogLevel.Debug, "ProsimController:DebugCheckCockpitDoorState",
-                    $"Current cockpit door indicator: {indicatorValue}");
-
-                // Verify these values can be read correctly
-                return;
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Error, "ProsimController:DebugCheckCockpitDoorState",
-                    $"Error reading cockpit door state: {ex.Message}");
-            }
-        }
-
         // Add to ProsimController class if not already present
         public (double, double, double) GetMaxWeights()
         {
             // Return max ZFW, max TOW, max LAW
-            return (Interface.ReadProsimVariable("aircraft.weight.zfwMax"), Interface.ReadProsimVariable("aircraft.weight.grossMax"), 66000);  // A320 typical values
+            return (Interface.GetProsimVariable("aircraft.weight.zfwMax"), Interface.GetProsimVariable("aircraft.weight.grossMax"), 66000);  // A320 typical values
         }
 
         public double GetPlannedTripFuel()
         {
             // Get trip fuel from flight plan or FMS
             // For example:
-            double tripFuel = Interface.ReadProsimVariable("aircraft.tripfuel.weight");
+            double tripFuel = Interface.GetProsimVariable("aircraft.tripfuel.weight");
             return tripFuel > 0 ? tripFuel : 5000; // Default 5000kg if not set
         }
 

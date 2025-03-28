@@ -40,15 +40,15 @@ namespace Prosim2GSX.Services.WeightAndBalance
         public LoadsheetData CalculatePreliminaryLoadsheet(FlightPlan flightPlan)
         {
             // Get zone capacities
-            int zone1Capacity = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone1.capacity");
-            int zone2Capacity = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone2.capacity");
-            int zone3Capacity = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone3.capacity");
-            int zone4Capacity = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone4.capacity");
+            int zone1Capacity = _prosimController.Interface.GetProsimVariable("aircraft.passengers.zone1.capacity");
+            int zone2Capacity = _prosimController.Interface.GetProsimVariable("aircraft.passengers.zone2.capacity");
+            int zone3Capacity = _prosimController.Interface.GetProsimVariable("aircraft.passengers.zone3.capacity");
+            int zone4Capacity = _prosimController.Interface.GetProsimVariable("aircraft.passengers.zone4.capacity");
             int totalCapacity = zone1Capacity + zone2Capacity + zone3Capacity + zone4Capacity;
 
             // Get cargo hold capacities
-            double fwdCargoCapacity = _prosimController.Interface.ReadProsimVariable("aircraft.cargo.forward.capacity");
-            double aftCargoCapacity = _prosimController.Interface.ReadProsimVariable("aircraft.cargo.aft.capacity");
+            double fwdCargoCapacity = _prosimController.Interface.GetProsimVariable("aircraft.cargo.forward.capacity");
+            double aftCargoCapacity = _prosimController.Interface.GetProsimVariable("aircraft.cargo.aft.capacity");
 
             // Get planned values from flight plan
             //int totalPax = flightPlan.PassengerCount;
@@ -112,7 +112,7 @@ namespace Prosim2GSX.Services.WeightAndBalance
             double rightTankFuel = plannedFuel * rightTankRatio * randomFactor;
 
             // Operating empty weight parameters
-            double emptyWeight = _prosimController.Interface.ReadProsimVariable("aircraft.weight.empty");
+            double emptyWeight = _prosimController.Interface.GetProsimVariable("aircraft.weight.empty");
             double emptyCG = OperatingEmptyCG;
 
             // Calculate moments
@@ -198,26 +198,26 @@ namespace Prosim2GSX.Services.WeightAndBalance
         public LoadsheetData CalculateFinalLoadsheet()
         {
             // Get actual passenger distribution from aircraft datarefs
-            int zone1Pax = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone1.amount");
-            int zone2Pax = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone2.amount");
-            int zone3Pax = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone3.amount");
-            int zone4Pax = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone4.amount");
+            int zone1Pax = _prosimController.Interface.GetProsimVariable("aircraft.passengers.zone1.amount");
+            int zone2Pax = _prosimController.Interface.GetProsimVariable("aircraft.passengers.zone2.amount");
+            int zone3Pax = _prosimController.Interface.GetProsimVariable("aircraft.passengers.zone3.amount");
+            int zone4Pax = _prosimController.Interface.GetProsimVariable("aircraft.passengers.zone4.amount");
 
             // Get zone capacities for validation/logging
-            int zone1Capacity = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone1.capacity");
-            int zone2Capacity = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone2.capacity");
-            int zone3Capacity = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone3.capacity");
-            int zone4Capacity = _prosimController.Interface.ReadProsimVariable("aircraft.passengers.zone4.capacity");
+            int zone1Capacity = _prosimController.Interface.GetProsimVariable("aircraft.passengers.zone1.capacity");
+            int zone2Capacity = _prosimController.Interface.GetProsimVariable("aircraft.passengers.zone2.capacity");
+            int zone3Capacity = _prosimController.Interface.GetProsimVariable("aircraft.passengers.zone3.capacity");
+            int zone4Capacity = _prosimController.Interface.GetProsimVariable("aircraft.passengers.zone4.capacity");
 
             // Get cargo capacities for validation
-            double fwdCargoCapacity = _prosimController.Interface.ReadProsimVariable("aircraft.cargo.forward.capacity");
-            double aftCargoCapacity = _prosimController.Interface.ReadProsimVariable("aircraft.cargo.aft.capacity");
+            double fwdCargoCapacity = _prosimController.Interface.GetProsimVariable("aircraft.cargo.forward.capacity");
+            double aftCargoCapacity = _prosimController.Interface.GetProsimVariable("aircraft.cargo.aft.capacity");
 
             int totalPax = zone1Pax + zone2Pax + zone3Pax + zone4Pax;
 
             // Get cargo weights from aircraft datarefs
-            double fwdCargoWeight = _prosimController.Interface.ReadProsimVariable("aircraft.cargo.forward.amount"); // kg
-            double aftCargoWeight = _prosimController.Interface.ReadProsimVariable("aircraft.cargo.aft.amount"); // kg
+            double fwdCargoWeight = _prosimController.Interface.GetProsimVariable("aircraft.cargo.forward.amount"); // kg
+            double aftCargoWeight = _prosimController.Interface.GetProsimVariable("aircraft.cargo.aft.amount"); // kg
 
             // Validate cargo weights against capacities
             if (fwdCargoWeight > fwdCargoCapacity)
@@ -235,13 +235,13 @@ namespace Prosim2GSX.Services.WeightAndBalance
             }
 
             // Get actual fuel quantities
-            double centerTankFuel = _prosimController.Interface.ReadProsimVariable("aircraft.fuel.center.amount.kg");
-            double leftTankFuel = _prosimController.Interface.ReadProsimVariable("aircraft.fuel.left.amount.kg");
-            double rightTankFuel = _prosimController.Interface.ReadProsimVariable("aircraft.fuel.right.amount.kg");
+            double centerTankFuel = _prosimController.Interface.GetProsimVariable("aircraft.fuel.center.amount.kg");
+            double leftTankFuel = _prosimController.Interface.GetProsimVariable("aircraft.fuel.left.amount.kg");
+            double rightTankFuel = _prosimController.Interface.GetProsimVariable("aircraft.fuel.right.amount.kg");
             double totalFuel = centerTankFuel + leftTankFuel + rightTankFuel;
 
             // Operating empty weight parameters
-            double emptyWeight = _prosimController.Interface.ReadProsimVariable("aircraft.weight.empty");
+            double emptyWeight = _prosimController.Interface.GetProsimVariable("aircraft.weight.empty");
             double emptyCG = OperatingEmptyCG;
 
             // Calculate moments

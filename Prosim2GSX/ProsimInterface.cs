@@ -45,9 +45,9 @@ namespace Prosim2GSX
             }
         }
 
-        public dynamic ReadProsimVariable(string _dataRef)
+        public dynamic GetProsimVariable(string _dataRef)
         {
-            //Logger.Log(LogLevel.Debug, "ProsimInterface:ReadDataRef", $"Dataref {_dataRef} - typeof {Connection.ReadDataRef(_dataRef).GetType()}");
+            Logger.Log(LogLevel.Debug, "ProsimInterface:GetProsimVariable", $"Attempting to get dataref: {_dataRef}");
             try
             {
                 return Connection.ReadDataRef(_dataRef);
@@ -57,13 +57,12 @@ namespace Prosim2GSX
                 Logger.Log(LogLevel.Error, "ProsimInterface:ReadDataRef", $"There was an error reading {_dataRef} - exception {ex.ToString()}");
                 return null;
             }
-
-            //            return Connection.ReadDataRef(_dataRef);
         }
 
         public void SetProsimVariable(string _dataRef, object value)
         {
             DataRef dataRef = new DataRef(_dataRef, 100, Connection);
+            Logger.Log(LogLevel.Debug, "ProsimInterface:SetProsimVariable", $"Attempting to set dataref: {_dataRef}");
             try
             {
                 dataRef.value = value;
@@ -72,16 +71,6 @@ namespace Prosim2GSX
             {
                 Logger.Log(LogLevel.Error, "ProsimInterface:SetProsimSetVariable", $"There was an error setting {_dataRef} value {value} - exception {ex.ToString()}");
             }
-        }
-
-        public object GetProsimVariable(string _dataRef)
-        {
-            Logger.Log(LogLevel.Debug, "ProsimInterface:GetProsimVariable", $"Attempting to get {_dataRef}");
-            //Connection.ReadDataRef( _dataRef );
-            DataRef dataRef = new DataRef(_dataRef, 100, Connection);
-            Logger.Log(LogLevel.Debug, "ProsimInterface:GetProsimVariable", $"Dataref {(string)dataRef.value}");
-            return dataRef.value;
-
         }
     }
 }

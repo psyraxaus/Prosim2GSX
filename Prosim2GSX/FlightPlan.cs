@@ -133,23 +133,5 @@ namespace Prosim2GSX
             else
                 return false;
         }
-        /*
-        public void SetPassengersGSX()
-        {
-            FSUIPCConnection.WriteLVar("FSDT_GSX_NUMPASSENGERS", Passenger);
-            if (Model.NoCrewBoarding)
-            {
-                FSUIPCConnection.WriteLVar("FSDT_GSX_CREW_NOT_DEBOARDING", 1);
-                FSUIPCConnection.WriteLVar("FSDT_GSX_CREW_NOT_BOARDING", 1);
-                FSUIPCConnection.WriteLVar("FSDT_GSX_PILOTS_NOT_DEBOARDING", 1);
-                FSUIPCConnection.WriteLVar("FSDT_GSX_PILOTS_NOT_BOARDING", 1);
-                FSUIPCConnection.WriteLVar("FSDT_GSX_NUMCREW", 9);
-                FSUIPCConnection.WriteLVar("FSDT_GSX_NUMPILOTS", 3);
-                Logger.Log(LogLevel.Information, "FlightPlan:SetPassengersGSX", $"GSX Passengers set to {Passenger} (Crew Boarding disabled)");
-            }
-            else
-                Logger.Log(LogLevel.Information, "FlightPlan:SetPassengersGSX", $"GSX Passengers set to {Passenger}");
-        }
-        */
     }
 }
