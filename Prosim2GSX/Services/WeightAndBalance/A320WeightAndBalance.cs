@@ -241,11 +241,11 @@ namespace Prosim2GSX.Services.WeightAndBalance
             double totalFuel = centerTankFuel + leftTankFuel + rightTankFuel;
 
             // Operating empty weight parameters
-            double emptyWeight = _prosimController.Interface.GetProsimVariable("aircraft.weight.empty");
+            double zfwWeight = _prosimController.Interface.GetProsimVariable("aircraft.weight.zfw");
             double emptyCG = OperatingEmptyCG;
 
             // Calculate moments
-            double emptyMoment = emptyWeight * emptyCG;
+            double emptyMoment = zfwWeight * emptyCG;
 
             double zone1Moment = zone1Pax * PassengerWeight * Zone1Arm;
             double zone2Moment = zone2Pax * PassengerWeight * Zone2Arm;
@@ -259,11 +259,6 @@ namespace Prosim2GSX.Services.WeightAndBalance
             double leftTankMoment = leftTankFuel * LeftTankArm;
             double rightTankMoment = rightTankFuel * RightTankArm;
 
-            // Calculate ZFW (zero fuel weight)
-            double passengerWeight = (zone1Pax + zone2Pax + zone3Pax + zone4Pax) * PassengerWeight;
-            double cargoWeight = fwdCargoWeight + aftCargoWeight;
-
-            double zfwWeight = emptyWeight + passengerWeight + cargoWeight;
             double zfwMoment = emptyMoment + zone1Moment + zone2Moment + zone3Moment + zone4Moment + fwdCargoMoment + aftCargoMoment;
 
             // Calculate TOW (take-off weight)
