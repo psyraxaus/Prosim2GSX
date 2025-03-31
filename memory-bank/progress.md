@@ -1,11 +1,13 @@
 # Progress Tracking: Prosim2GSX
 
 ## Project Status
-The Prosim2GSX project is in a functional state with the core integration between Prosim A320 and GSX Pro working as expected. The user interface has been updated to a new Electronic Flight Bag (EFB) look, providing a more modern and intuitive interface for users. This UI redesign improves the visual appearance and usability of the application while maintaining all the existing functionality. The new EFB-style interface follows design patterns common in modern aviation applications, making the tool more familiar to pilots who use similar interfaces in their flight operations.
+The Prosim2GSX project is in a functional state with the core integration between Prosim A320 and GSX Pro working as expected. Recent enhancements to the center of gravity (CG) calculations have significantly improved the accuracy of loadsheet data. The implementation of a dedicated A320WeightAndBalance calculator provides sophisticated methods to accurately determine the Zero Fuel Weight Center of Gravity (MACZFW) and Take Off Weight Center of Gravity (MACTOW). The CG calculation improvements ensure more realistic loadsheet data, enhancing the overall simulation experience.
+
+The user interface has been updated to a new Electronic Flight Bag (EFB) look, providing a more modern and intuitive interface for users. This UI redesign improves the visual appearance and usability of the application while maintaining all the existing functionality. The new EFB-style interface follows design patterns common in modern aviation applications, making the tool more familiar to pilots who use similar interfaces in their flight operations.
 
 Prior to this UI update, the implementation of an event aggregator system has significantly improved the UI responsiveness and decoupled components in the application. This implementation follows the publisher-subscriber pattern, allowing different parts of the application to communicate without direct dependencies. The event aggregator system enables real-time updates to the UI when monitored items change, such as service statuses, connection states, and flight phases.
 
-Previous implementation of sophisticated center of gravity (CG) calculation methods has significantly improved the accuracy of loadsheet data, providing realistic MACZFW and MACTOW values through temporary fuel state manipulation. The comprehensive Prosim dataref subscription system and cockpit door integration have further enhanced the application's capabilities and realism. The dataref subscription system provides a robust foundation for monitoring Prosim state changes, while the cockpit door integration allows for realistic sound muffling when the cockpit door is closed. Previous enhancements to the refueling process and improvements to the LVAR subscription system have also significantly improved the realism and reliability of the application. The application has been successfully migrated from .NET 7 to .NET 8, with all dependencies updated to their latest compatible versions.
+The comprehensive Prosim dataref subscription system and cockpit door integration have further enhanced the application's capabilities and realism. The dataref subscription system provides a robust foundation for monitoring Prosim state changes, while the cockpit door integration allows for realistic sound muffling when the cockpit door is closed. Previous enhancements to the refueling process and improvements to the LVAR subscription system have also significantly improved the realism and reliability of the application. The application has been successfully migrated from .NET 7 to .NET 8, with all dependencies updated to their latest compatible versions.
 
 ## Implemented Features
 
@@ -61,13 +63,16 @@ Previous implementation of sophisticated center of gravity (CG) calculation meth
 - ✅ Implemented flight phase change notifications via events
 
 ### Service Synchronization
+- ✅ Enhanced center of gravity (CG) calculations for more accurate loadsheet data
+- ✅ Implemented a dedicated A320WeightAndBalance calculator class
+- ✅ Used proper A320 reference values for MAC calculations
+- ✅ Improved the comparison between preliminary and final loadsheet values
+- ✅ Added tolerance-based detection of significant changes (0.5% for MAC values)
+- ✅ Enhanced the loadsheet formatting with proper marking of changes
+- ✅ Implemented sophisticated weight distribution across cabin zones, cargo compartments, and fuel tanks
+- ✅ Integrated the CG calculations with Prosim and GSX for accurate data synchronization
 - ✅ Enhanced refueling process with fuel hose state management
 - ✅ Implemented pause/resume functionality for refueling based on fuel hose connection
-- ✅ Implemented sophisticated center of gravity calculation methods for accurate MACZFW and MACTOW values
-- ✅ Added temporary fuel tank manipulation to get precise CG readings from Prosim
-- ✅ Implemented proper fuel distribution logic for MACTOW calculations based on A320 fuel loading patterns
-- ✅ Added safeguards to restore original fuel states after CG calculations
-- ✅ Implemented tolerance-based comparison for detecting significant CG changes between preliminary and final loadsheets
 - ✅ Added better fuel target calculation with rounding to nearest 100
 - ✅ Passenger and cargo boarding/deboarding synchronization
 - ✅ Ground equipment automation (GPU, Chocks, PCA)
@@ -103,12 +108,17 @@ Previous implementation of sophisticated center of gravity (CG) calculation meth
 - ✅ Decoupled UI from direct controller dependencies
 
 ## In Progress Features
+- 🔄 Further refinement of CG calculation methods for edge cases
+- 🔄 Additional validation for weight distribution calculations
 - 🔄 Testing of the event aggregator system with various service scenarios
 - 🔄 Extending the event aggregator to cover more aspects of the application
 - 🔄 Testing of the .NET 8 migration to ensure all functionality works as expected
 - 🔄 Identifying additional Prosim datarefs that could benefit from the subscription system
 
 ## Planned Features
+- 📋 Implementing additional aircraft types for weight and balance calculations
+- 📋 Optimizing the performance of the CG calculation methods
+- 📋 Adding more detailed logging for CG calculations to aid in troubleshooting
 - 📋 Implementing additional event types for other state changes in the system
 - 📋 Optimizing event publishing frequency for different types of events
 - 📋 Implementing event filtering to reduce unnecessary UI updates
@@ -157,22 +167,26 @@ Initial build testing of the .NET 8 migration has been completed successfully. C
 ## Next Development Priorities
 Current development priorities include:
 
-1. Extending the event aggregator system to cover more aspects of the application
-2. Implementing additional event types for other state changes in the system
-3. Optimizing event publishing frequency for different types of events
-4. Implementing event filtering to reduce unnecessary UI updates
-5. Evaluating the performance impact of the event aggregator system under heavy load
-6. Identifying additional Prosim datarefs that could benefit from the subscription system
-7. Optimizing the monitoring interval for different types of datarefs
-8. Thorough testing of the .NET 8 migration
-9. Creating release notes for the recent updates
-10. Addressing known issues with FS2Crew compatibility
-11. Improving audio control persistence between sessions
-12. Adding support for the "Extreme" passenger density setting
-13. Expanding automation capabilities to include Push-Back, De-Ice, and Gate-Selection
-14. Enhancing error handling and recovery mechanisms
-15. Adding more configuration options for advanced users
-16. Exploring new features available in .NET 8
+1. Further refining the CG calculation methods for edge cases
+2. Implementing additional validation for weight distribution calculations
+3. Adding more detailed logging for CG calculations to aid in troubleshooting
+4. Considering implementing additional aircraft types for weight and balance calculations
+5. Optimizing the performance of the CG calculation methods
+6. Extending the event aggregator system to cover more aspects of the application
+7. Implementing additional event types for other state changes in the system
+8. Optimizing event publishing frequency for different types of events
+9. Implementing event filtering to reduce unnecessary UI updates
+10. Evaluating the performance impact of the event aggregator system under heavy load
+11. Identifying additional Prosim datarefs that could benefit from the subscription system
+12. Optimizing the monitoring interval for different types of datarefs
+13. Thorough testing of the .NET 8 migration
+14. Creating release notes for the recent updates
+15. Addressing known issues with FS2Crew compatibility
+16. Improving audio control persistence between sessions
+17. Adding support for the "Extreme" passenger density setting
+18. Expanding automation capabilities to include Push-Back, De-Ice, and Gate-Selection
+19. Enhancing error handling and recovery mechanisms
+20. Adding more configuration options for advanced users
 
 ## Deployment Status
 The project is in a deployable state following the .NET 8 migration. The README will need to be updated to reflect the new .NET 8 runtime requirement before the next release.
@@ -187,3 +201,4 @@ No performance metrics are documented. Future updates could include:
 - Synchronization accuracy
 - Resource usage statistics
 - Error rates during operation
+- CG calculation accuracy metrics

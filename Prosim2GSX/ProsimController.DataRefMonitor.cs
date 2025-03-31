@@ -117,7 +117,7 @@ namespace Prosim2GSX
             dynamic currentValue;
             try
             {
-                currentValue = Interface.ReadDataRef(dataRef);
+                currentValue = Interface.GetProsimVariable(dataRef);
                 Logger.Log(LogLevel.Debug, "ProsimController:SubscribeToDataRef",
                     $"Successfully read initial value for '{dataRef}': {currentValue}");
             }
@@ -134,7 +134,7 @@ namespace Prosim2GSX
 
             try
             {
-                currentValue = Interface.ReadDataRef(dataRef);
+                currentValue = Interface.GetProsimVariable(dataRef);
             }
             catch (Exception ex)
             {
@@ -230,7 +230,7 @@ namespace Prosim2GSX
             {
                 try
                 {
-                    dynamic currentValue = Interface.ReadDataRef(dataRef);
+                    dynamic currentValue = Interface.GetProsimVariable(dataRef);
 
                     DataRefMonitor monitor;
                     lock (_monitoredDataRefs)

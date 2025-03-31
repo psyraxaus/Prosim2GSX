@@ -17,6 +17,7 @@
 - Implement dictionary-based action mapping for service toggles
 - Use dataref subscription pattern for Prosim state monitoring
 - Implement partial classes for organizing related functionality (e.g., ProsimController.DataRefMonitor.cs)
+- Use interface-based design for extensibility (e.g., IWeightAndBalanceCalculator)
 
 ### Documentation
 - Document public APIs with limited comments that are concise and to the point
@@ -25,6 +26,7 @@
 - Keep README updated with configuration requirements
 - Document callback parameters and expected behavior
 - Document dataref subscription handlers with clear purpose and behavior
+- Include detailed comments for complex algorithms like CG calculations
 
 ## Development Workflow
 
@@ -43,12 +45,15 @@
 - Test door operations with different service states
 - Test dataref subscription with various change frequencies
 - Verify thread safety of dataref monitoring system
+- Validate CG calculations against known reference values
+- Test CG calculations with various aircraft loading scenarios
 
 ### Debugging Tips
 - Check logs for error messages
 - Verify connections to all systems
 - Monitor state changes during service calls
 - Test with minimal configuration first
+- Use logging to track CG calculation steps and values
 
 ## User Preferences
 
@@ -71,6 +76,7 @@
 - Prosim Auto-Door and Auto-Jetway must be disabled
 - FS2Crew compatibility issues
 - Audio control limitations between sessions
+- Temporary fuel state manipulation for CG calculations may cause brief visual anomalies
 
 ### Error Handling
 - Gracefully handle connection failures
@@ -81,6 +87,7 @@
 - Validate value changes before triggering callbacks
 - Handle exceptions in dataref handlers to prevent monitoring system failures
 - Log detailed information for debugging dataref subscription issues
+- Ensure proper restoration of original fuel states after CG calculations
 
 ### Event Timing Patterns
 - Be aware of event subscription timing issues - events published before subscribers are registered won't be received
@@ -96,6 +103,7 @@
 - Event handling between systems must be reliable
 - Configuration persistence is essential
 - State synchronization must be accurate
+- CG calculations are critical for accurate loadsheet data
 
 ### System Interactions
 - Prosim events trigger service calls
@@ -106,6 +114,9 @@
 - Service toggle changes trigger door operations
 - Prosim dataref changes trigger registered handlers
 - Cockpit door state changes update GSX sound muffling
+- A320WeightAndBalance calculator provides CG calculations
+- CG calculations are used in loadsheet generation
+- Loadsheet data is sent to ACARS system when enabled
 
 ### Performance Considerations
 - Minimize CPU usage during flight
@@ -117,6 +128,21 @@
 - Balance dataref monitoring frequency with performance impact
 - Use appropriate monitoring intervals for different types of datarefs
 - Consider thread synchronization overhead in multi-threaded monitoring
+- Optimize CG calculations to minimize performance impact
+- Use appropriate tolerances for detecting significant changes in loadsheet values
+
+### Weight and Balance Calculation Patterns
+- Use proper A320 reference values for MAC calculations
+- Implement temporary fuel state manipulation for accurate CG readings
+- Always restore original fuel states after CG calculations
+- Use proper A320 fuel loading patterns for accurate MACTOW calculations
+- Implement tolerance-based comparison for detecting significant CG changes
+- Use MAC percentage for standardized CG representation
+- Separate preliminary and final loadsheet calculations
+- Mark significant changes between preliminary and final loadsheets
+- Distribute passengers across cabin zones based on zone capacities
+- Distribute cargo between forward and aft compartments
+- Distribute fuel across center, left, and right tanks
 
 ## Future Development
 
@@ -125,6 +151,7 @@
 - Improved error recovery
 - Enhanced configuration options
 - Better compatibility with other add-ons
+- Support for additional aircraft types in weight and balance calculations
 
 ### Technical Improvements
 - Refactor for better testability
@@ -136,3 +163,7 @@
 - Identify additional datarefs that could benefit from subscription
 - Implement priority levels for different dataref monitors
 - Optimize monitoring intervals based on dataref change frequency
+- Further refine CG calculation methods for edge cases
+- Implement additional validation for weight distribution calculations
+- Add more detailed logging for CG calculations
+- Optimize the performance of CG calculation methods

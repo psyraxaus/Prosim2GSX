@@ -21,6 +21,7 @@ namespace Prosim2GSX
         public string Flight { get; set; } = "";
         public string FlightPlanID { get; set; } = "";
         public double Fuel { get; set; }
+        public double FuelLanding { get; set; }
         public double MaxmimumLandingWeight { get; set; }
         public double MaximumTakeOffWeight { get; set; }
         public double MaximumZeroFuelWeight { get; set; }
@@ -101,7 +102,8 @@ namespace Prosim2GSX
                 EstimatedZeroFuelWeight = Convert.ToDouble(sbOFP["weights"]["est_zfw"].InnerText, new RealInvariantFormat(sbOFP["weights"]["est_ldw"].InnerText));
                 Flight = sbOFP["general"]["icao_airline"].InnerText + sbOFP["general"]["flight_number"].InnerText;
                 FlightPlanID = sbOFP["params"]["request_id"].InnerText;
-                Fuel = Convert.ToDouble(sbOFP["fuel"]["plan_ramp"].InnerText, new RealInvariantFormat(sbOFP["fuel"]["plan_ramp"].InnerText)); ;
+                Fuel = Convert.ToDouble(sbOFP["fuel"]["plan_ramp"].InnerText, new RealInvariantFormat(sbOFP["fuel"]["plan_ramp"].InnerText));
+                FuelLanding = Convert.ToDouble(sbOFP["fuel"]["plan_landing"].InnerText, new RealInvariantFormat(sbOFP["fuel"]["plan_ramp"].InnerText));
                 MaxmimumLandingWeight = Convert.ToInt32(sbOFP["weights"]["max_ldw"].InnerText, new RealInvariantFormat(sbOFP["weights"]["max_ldw"].InnerText));
                 MaximumTakeOffWeight = Convert.ToInt32(sbOFP["weights"]["max_tow"].InnerText, new RealInvariantFormat(sbOFP["weights"]["max_tow"].InnerText));
                 MaximumZeroFuelWeight = Convert.ToInt32(sbOFP["weights"]["max_zfw"].InnerText, new RealInvariantFormat(sbOFP["weights"]["max_zfw"].InnerText));
@@ -133,23 +135,5 @@ namespace Prosim2GSX
             else
                 return false;
         }
-        /*
-        public void SetPassengersGSX()
-        {
-            FSUIPCConnection.WriteLVar("FSDT_GSX_NUMPASSENGERS", Passenger);
-            if (Model.NoCrewBoarding)
-            {
-                FSUIPCConnection.WriteLVar("FSDT_GSX_CREW_NOT_DEBOARDING", 1);
-                FSUIPCConnection.WriteLVar("FSDT_GSX_CREW_NOT_BOARDING", 1);
-                FSUIPCConnection.WriteLVar("FSDT_GSX_PILOTS_NOT_DEBOARDING", 1);
-                FSUIPCConnection.WriteLVar("FSDT_GSX_PILOTS_NOT_BOARDING", 1);
-                FSUIPCConnection.WriteLVar("FSDT_GSX_NUMCREW", 9);
-                FSUIPCConnection.WriteLVar("FSDT_GSX_NUMPILOTS", 3);
-                Logger.Log(LogLevel.Information, "FlightPlan:SetPassengersGSX", $"GSX Passengers set to {Passenger} (Crew Boarding disabled)");
-            }
-            else
-                Logger.Log(LogLevel.Information, "FlightPlan:SetPassengersGSX", $"GSX Passengers set to {Passenger}");
-        }
-        */
     }
 }

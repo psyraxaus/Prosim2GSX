@@ -4,6 +4,7 @@ using Microsoft.Win32;
 using Prosim2GSX.Events;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
+using Prosim2GSX.Services.WeightAndBalance;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -34,6 +35,9 @@ namespace Prosim2GSX
         private readonly string registryValue = @"root";
         private readonly string gsxProcess = "Couatl64_MSFS";
         private string menuFile = "";
+
+        private readonly IWeightAndBalanceCalculator _weightAndBalance;
+        private readonly LoadsheetFormatter _loadsheetFormatter;
 
         private DataRefChangedHandler cockpitDoorHandler;
         private DataRefChangedHandler onGPUStateChanged;
@@ -96,7 +100,6 @@ namespace Prosim2GSX
         private bool pcaCalled = false;
         private bool pcaRemoved = false;
         private bool planePositioned = false;
-        private bool prelimFlightData = false;
         private double prelimFuel = 0d;
         private bool prelimLoadsheet = false;
         private double prelimMacTow = 00.0d;
@@ -158,7 +161,13 @@ namespace Prosim2GSX
             onPCAStateChanged = new DataRefChangedHandler(OnPCAStateChanged);
             onChocksStateChanged = new DataRefChangedHandler(OnChocksStateChanged);
 
+
             SimConnect = IPCManager.SimConnect;
+
+            // Initialize weight and balance calculator and formatter
+            _weightAndBalance = new A320WeightAndBalance(prosimController, SimConnect);
+            _loadsheetFormatter = new LoadsheetFormatter();
+
             SimConnect.SubscribeSimVar("SIM ON GROUND", "Bool");
             SimConnect.SubscribeLvar("FSDT_GSX_DEBOARDING_STATE", OnDeboardingStateChanged);
             SimConnect.SubscribeLvar("FSDT_GSX_CATERING_STATE", OnCateringStateChanged);
@@ -471,10 +480,8 @@ namespace Prosim2GSX
                 operatorWasSelected = false;
             }
 
-
-
             //PREPARATION (On-Ground and Engines not running)
-            if (_state == FlightState.PREFLIGHT && simOnGround && !ProsimController.enginesRunning && ProsimController.Interface.ReadDataRef("system.switches.S_OH_ELEC_BAT1") == 1)
+            if (_state == FlightState.PREFLIGHT && simOnGround && !ProsimController.enginesRunning && ProsimController.Interface.GetProsimVariable("system.switches.S_OH_ELEC_BAT1") == 1)
             {
                 if (Model.UseAcars && !opsCallsignSet)
                 {
@@ -563,14 +570,6 @@ namespace Prosim2GSX
                     CurrentFlightState = FlightState.DEPARTURE;
                     flightPlanID = ProsimController.flightPlanID;
                     SetPassengers(ProsimController.GetPaxPlanned());
-                    if (!prelimFlightData)
-                    {
-                        macZfw = ProsimController.GetZfwCG();
-                        Logger.Log(LogLevel.Information, "GsxController:RunServices", $"MACZFW: {macZfw} %");
-
-                        prelimFlightData = true;
-                    }
-
 
                     Logger.Log(LogLevel.Information, "GsxController:RunServices", $"State Change: Preparation -> DEPARTURE (Waiting for Refueling and Boarding)");
                 }
@@ -606,16 +605,29 @@ namespace Prosim2GSX
 
                 string flightNumber  = ProsimController.GetFMSFlightNumber();
 
-                //string str = time.ToString(@"hh\:mm\:ss");  simTime <= FlightPlan.ScheduledDepartureTime + 15 && 
                 if (Model.UseAcars && !string.IsNullOrEmpty(flightNumber))
                 {
-                    //System.Threading.Tasks.Task task = AcarsClient.SendMessageToAcars(flightNumber, "telex", $"This is a test.\n Newline with MACZFW {macZfw}");                  
-                    var prelimLoadedData = ProsimController.GetLoadedData("prelim");
-                    string prelimLoadsheetString = FormatLoadSheet("prelim", prelimLoadedData.Item1, prelimLoadedData.Item2, prelimLoadedData.Item3, prelimLoadedData.Item4, prelimLoadedData.Item5, prelimLoadedData.Item6, prelimLoadedData.Item7, prelimLoadedData.Item8, prelimLoadedData.Item9, prelimLoadedData.Item10, prelimLoadedData.Item11, prelimLoadedData.Item12, prelimLoadedData.Item13, prelimLoadedData.Item14, prelimLoadedData.Item15, prelimLoadedData.Item16, prelimLoadedData.Item17, prelimLoadedData.Item18, prelimLoadedData.Item19, prelimLoadedData.Item20, prelimLoadedData.Item21);
+                    // Calculate preliminary loadsheet
+                    LoadsheetData prelimData = _weightAndBalance.CalculatePreliminaryLoadsheet(FlightPlan);
+
+                    // Store data for later reference
+                    prelimZfw = prelimData.ZeroFuelWeight;
+                    prelimTow = prelimData.TakeoffWeight;
+                    prelimMacZfw = prelimData.ZeroFuelWeightMac;
+                    prelimMacTow = prelimData.TakeoffWeightMac;
+                    prelimPax = prelimData.TotalPassengers;
+                    prelimFuel = Math.Round(prelimData.FuelWeight);
+
+                    // Format loadsheet
+                    var maxWeights = ProsimController.GetMaxWeights();
+                    var simulatorDateTime = ProsimController.Interface.GetProsimVariable("aircraft.time");
+                    string timeIn24HourFormat = simulatorDateTime.ToString("HHmm");
+                    string prelimLoadsheetString = _loadsheetFormatter.FormatLoadSheet("prelim", timeIn24HourFormat, prelimData,flightNumber, FlightPlan.TailNumber, FlightPlan.DayOfFlight, FlightPlan.DateOfFlight,FlightPlan.Origin, FlightPlan.Destination,maxWeights.Item1, maxWeights.Item2, maxWeights.Item3,0);
+
                     try
                     {
-                        System.Threading.Tasks.Task task = AcarsClient.SendMessageToAcars(ProsimController.GetFMSFlightNumber(), "telex", prelimLoadsheetString);
-
+                        System.Threading.Tasks.Task task = AcarsClient.SendMessageToAcars(
+                            flightNumber, "telex", prelimLoadsheetString);
                         prelimLoadsheet = true;
                     }
                     catch (Exception ex)
@@ -952,14 +964,41 @@ namespace Prosim2GSX
                 {
                     Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Transmitting Final Loadsheet ...");
                     ProsimController.TriggerFinal();
+
+                    // Calculate final loadsheet
+                    LoadsheetData finalData = _weightAndBalance.CalculateFinalLoadsheet();
+
+                    // Store final values
+                    finalZfw = finalData.ZeroFuelWeight;
+                    finalTow = finalData.TakeoffWeight;
+                    finalMacZfw = finalData.ZeroFuelWeightMac;
+                    finalMacTow = finalData.TakeoffWeightMac;
+                    finalPax = finalData.TotalPassengers;
+                    finalFuel = Math.Round(finalData.FuelWeight);
+
                     finalLoadsheetSend = true;
                     Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Final Loadsheet sent to ACARS");
+
                     if (Model.UseAcars)
                     {
-                        var finalLoadedData = ProsimController.GetLoadedData("final");
-                        string finalLoadsheet = FormatLoadSheet("final", finalLoadedData.Item1, finalLoadedData.Item2, finalLoadedData.Item3, finalLoadedData.Item4, finalLoadedData.Item5, finalLoadedData.Item6, finalLoadedData.Item7, finalLoadedData.Item8, finalLoadedData.Item9, finalLoadedData.Item10, finalLoadedData.Item11, finalLoadedData.Item12, finalLoadedData.Item13, finalLoadedData.Item14, finalLoadedData.Item15, finalLoadedData.Item16, finalLoadedData.Item17, finalLoadedData.Item18, finalLoadedData.Item19, finalLoadedData.Item20, finalLoadedData.Item21);
-                        System.Threading.Tasks.Task task = AcarsClient.SendMessageToAcars(ProsimController.GetFMSFlightNumber(), "telex", finalLoadsheet);
+                        // Create preliminary data container for comparison
+                        LoadsheetData prelimData = new LoadsheetData
+                        {
+                            ZeroFuelWeight = prelimZfw,
+                            TakeoffWeight = prelimTow,
+                            ZeroFuelWeightMac = prelimMacZfw,
+                            TakeoffWeightMac = prelimMacTow,
+                            TotalPassengers = prelimPax,
+                            FuelWeight = prelimFuel
+                        };
 
+                        // Format loadsheet with comparison to preliminary
+                        var maxWeights = ProsimController.GetMaxWeights();
+                        var simulatorDateTime = ProsimController.Interface.GetProsimVariable("aircraft.time");
+                        string timeIn24HourFormat = simulatorDateTime.ToString("HHmm");
+                        string finalLoadsheetString = _loadsheetFormatter.FormatLoadSheet("final", timeIn24HourFormat, finalData,ProsimController.GetFMSFlightNumber(), FlightPlan.TailNumber,FlightPlan.DayOfFlight, FlightPlan.DateOfFlight,FlightPlan.Origin, FlightPlan.Destination,maxWeights.Item1, maxWeights.Item2, maxWeights.Item3,0, prelimData);
+                        System.Threading.Tasks.Task task = AcarsClient.SendMessageToAcars(
+                            ProsimController.GetFMSFlightNumber(), "telex", finalLoadsheetString);
                     }
                 }
             }
@@ -1281,172 +1320,7 @@ namespace Prosim2GSX
             while (!SimConnect.IsGsxMenuReady && counter < 1000) { Thread.Sleep(100); counter++; }
             Logger.Log(LogLevel.Debug, "GsxController:MenuWaitReady", $"Wait ended after {counter * 100}ms");
         }
-
-        private string FormatLoadSheet(string loadsheetType, string time, string flightNumber, string tailNumber, string day, string date, string orig, string dest, double est_zfw, double max_zfw, double est_tow, double max_tow, double est_law, double max_law, int paxInfants, int paxAdults, double macZfw, double macTow, int paxZoneA, int paxZoneB, int paxZoneC, double fuelInTanks)
-        {
-            string formattedLoadSheet = "";
-            var limitedBy = GetWeightLimitation(est_zfw, max_zfw, est_tow, max_tow, est_law, max_law);
-
-
-            if (loadsheetType == "prelim")
-            {
-                prelimZfw = est_zfw;
-                prelimTow = est_tow;
-                prelimMacZfw = macZfw;
-                prelimMacTow = macTow;
-                prelimPax = paxAdults;
-                prelimFuel = Math.Round(fuelInTanks);
-                string zfwLimited = limitedBy.Item1;
-                string towLimited = limitedBy.Item2;
-                string lawLimited = limitedBy.Item3;
-                // Format weights as whole numbers
-                int zfwWhole = (int)Math.Round(est_zfw);
-                int towWhole = (int)Math.Round(est_tow);
-                int lawWhole = (int)Math.Round(est_law);
-                int maxZfwWhole = (int)Math.Round(max_zfw);
-                int maxTowWhole = (int)Math.Round(max_tow);
-                int maxLawWhole = (int)Math.Round(max_law);
-                int tofWhole = (int)Math.Round(est_tow - est_zfw);
-                int tifWhole = (int)Math.Round(est_tow - est_law);
-                int undloWhole = (int)Math.Round(max_law - est_law);
-                int fuelInTanksWhole = (int)Math.Round(fuelInTanks);
-
-                formattedLoadSheet = $"- LOADSHEET PRELIM {time}\nEDNO 1\n{flightNumber}/{day} {date}\n{orig} {dest} {tailNumber} 2/4\nZFW  {zfwWhole}  MAX  {maxZfwWhole}  {zfwLimited}\nTOF  {tofWhole}\nTOW  {towWhole}  MAX  {maxTowWhole}  {towLimited}\nTIF {tifWhole}\nLAW  {lawWhole}  MAX  {maxLawWhole}  {lawLimited}\nUNDLO  {undloWhole}\nPAX/{paxInfants}/{paxAdults} TTL {paxInfants + paxAdults}\nMACZFW  {macZfw}\nMACTOW  {macTow}\nA{paxZoneA}  B{paxZoneB}  C{paxZoneC}\nCABIN SECTION TRIM\nSI SERVICE WEIGHT\nADJUSTMENT WEIGHT/INDEX\nADD\n{dest} POTABLE WATER xx/10\n100PCT\n441 -0.5\nDEDUCTIONS\nNIL PANTRY EFFECT 2590/0.0\n......................\nPREPARED BY\n{GetRandomName()} +1 800 555 0199\nLICENCE {GetRandomLicenceNumber()}\nFUEL IN TANKS {fuelInTanksWhole}\nEND";
-            }
-            else if (loadsheetType == "final")
-            {
-                finalZfw = est_zfw;
-                finalTow = est_tow;
-                finalMacZfw = macZfw;
-                finalMacTow = macTow;
-                finalPax = paxAdults;
-                finalFuel = Math.Round(fuelInTanks);
-
-                var differentValues = GetLoadSheetDifferences(prelimZfw, prelimTow, prelimPax, prelimMacZfw, prelimMacTow, prelimFuel, finalZfw, finalTow, finalPax, finalMacZfw, finalMacTow, finalFuel);
-
-                string zfwChanged = differentValues.Item1;
-                string towChanged = differentValues.Item2;
-                string paxChanged = differentValues.Item3;
-                string macZfwChanged = differentValues.Item4;
-                string macTowChanged = differentValues.Item5;
-                string fuelChanged = differentValues.Item6;
-
-                string finalTitle = "";
-
-                if (differentValues.Item7)
-                {
-                    finalTitle = "REVISIONS TO EDNO 1";
-                }
-                else
-                {
-                    finalTitle = "COMPLIANCE WITH EDNO 1";
-                }
-
-                // Calculate the difference between the preliminary and final passenger numbers
-                int paxDifference = finalPax - prelimPax;
-                string paxDiffString = "";
-                // Create the result string based on whether there is an increase or decrease in passengers
-                if (paxDifference > 0)
-                {
-                    paxDiffString = $"{finalPax} plus {paxDifference}";
-                }
-                else if (paxDifference < 0)
-                {
-                    paxDiffString = $"{finalPax} minus {-paxDifference}";
-                }
-                else
-                {
-                    paxDiffString = $"{finalPax} no change";
-                }
-
-                // Format weights as whole numbers
-                int finalZfwWhole = (int)Math.Round(finalZfw);
-                int finalTowWhole = (int)Math.Round(finalTow);
-                int finalFuelWhole = (int)Math.Round(finalFuel);
-
-                formattedLoadSheet = $"{finalTitle}\n{flightNumber}/{day}  {date}\n{orig}  {dest}  {tailNumber}  2/4\n......................\nZFW  {finalZfwWhole}  {zfwChanged}\nTOW  {finalTowWhole}  {towChanged}\nPAX  {paxDiffString}\nMACZFW  {finalMacZfw}  {macZfwChanged}\nMACTOW  {finalMacTow}  {macTowChanged}\nFUEL IN TANKS  {finalFuelWhole}  {fuelChanged}\nEND";
-
-            }
-            return formattedLoadSheet;
-        }
-
-        private string GetRandomName()
-        {
-            // Lists of first names and last names
-            string[] firstNames = {
-            "John", "Jane", "Michael", "Emily", "David",
-            "Sarah", "Christopher", "Jennifer", "Daniel", "Jessica"
-        };
-
-            string[] lastNames = {
-            "Smith", "Johnson", "Williams", "Brown", "Jones",
-            "Garcia", "Miller", "Davis", "Martinez", "Hernandez"
-        };
-
-            // Random number generator
-            Random random = new Random();
-
-            // Select a random first name and last name
-            string firstName = firstNames[random.Next(firstNames.Length)];
-            string lastName = lastNames[random.Next(lastNames.Length)];
-
-            // Return the formatted name
-            return $"{firstName}/{lastName}";
-        }
-
-        static string GetRandomLicenceNumber()
-        {
-            // Random number generator
-            Random random = new Random();
-            // Arrays of uppercase letters and digits
-            char[] letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
-            char[] digits = "0123456789".ToCharArray();
-
-            // Generate 3 random letters
-            char letter1 = letters[random.Next(letters.Length)];
-            char letter2 = letters[random.Next(letters.Length)];
-            char letter3 = letters[random.Next(letters.Length)];
-
-            // Generate 3 random digits
-            char digit1 = digits[random.Next(digits.Length)];
-            char digit2 = digits[random.Next(digits.Length)];
-            char digit3 = digits[random.Next(digits.Length)];
-
-            // Return the formatted license number
-            return $"{letter1}{letter2}{letter3}{digit1}{digit2}{digit3}";
-        }
-
-        private (string, string, string) GetWeightLimitation(double est_zfw, double max_zfw, double est_tow, double max_tow, double est_law, double max_law)
-        {
-            const int WeightThreshold = 1000;
-            string zfwLimited = "";
-            string towLimited = "";
-            string lawLimited = "";
-            bool zfwExceeds = est_zfw > max_zfw;
-            bool towExceeds = est_tow > max_tow;
-            bool lawExceeds = est_law > max_law;
-            bool zfwApproaches = !zfwExceeds && (max_zfw - est_zfw <= WeightThreshold);
-            bool towApproaches = !towExceeds && (max_tow - est_tow <= WeightThreshold);
-            bool lawApproaches = !lawExceeds && (max_law - est_law <= WeightThreshold);
-
-            if (zfwApproaches || zfwExceeds)
-            {
-                zfwLimited = "L";
-            }
-
-            if (towApproaches || towExceeds)
-            {
-                towLimited = "L";
-            }
-
-            if (lawApproaches || lawExceeds)
-            {
-                lawLimited = "L";
-            }
-
-            return (zfwLimited, towLimited, lawLimited);
-        }
-        
+       
         /// <summary>
         /// Compares preliminary and final loadsheet values and marks changes with "//"
         /// </summary>

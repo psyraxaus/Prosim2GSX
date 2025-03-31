@@ -68,6 +68,7 @@ namespace Prosim2GSX
 
             SimConnect = new MobiSimConnect();
             bool mobiRequested = SimConnect.Connect();
+            EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("SimConnect", SimConnect.IsConnected));
 
             if (!SimConnect.IsConnected)
             {
