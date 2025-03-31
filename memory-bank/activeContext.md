@@ -1,13 +1,25 @@
 # Active Context: Prosim2GSX
 
 ## Current Focus
-The current focus has been on updating the user interface to a new Electronic Flight Bag (EFB) look, providing a more modern and intuitive interface for users. This UI redesign improves the visual appearance and usability of the application while maintaining all the existing functionality. The new EFB-style interface follows design patterns common in modern aviation applications, making the tool more familiar to pilots who use similar interfaces in their flight operations.
+The current focus has been on enhancing the center of gravity (CG) calculations for more accurate loadsheet data. These enhancements involve implementing a dedicated A320WeightAndBalance calculator that provides sophisticated methods to accurately determine the Zero Fuel Weight Center of Gravity (MACZFW) and Take Off Weight Center of Gravity (MACTOW). The implementation uses proper A320 reference values and provides accurate calculations for both preliminary and final loadsheets. The CG calculation improvements ensure more realistic loadsheet data, enhancing the overall simulation experience.
 
-Prior to this UI update, the focus was on implementing an event aggregator system to improve the UI responsiveness and decouple components in the application. This implementation follows the publisher-subscriber pattern, allowing different parts of the application to communicate without direct dependencies. The event aggregator system enables real-time updates to the UI when monitored items change, such as service statuses, connection states, and flight phases.
+Prior to these CG calculation enhancements, the focus was on updating the user interface to a new Electronic Flight Bag (EFB) look, providing a more modern and intuitive interface for users. This UI redesign improves the visual appearance and usability of the application while maintaining all the existing functionality. The new EFB-style interface follows design patterns common in modern aviation applications, making the tool more familiar to pilots who use similar interfaces in their flight operations.
 
-Additionally, previous work focused on enhancing the center of gravity (CG) calculations for more accurate loadsheet data, implementing a new Prosim dataref subscription system, and enhancing the cockpit door integration between Prosim and GSX. The CG calculation improvements involve sophisticated methods to accurately determine the Zero Fuel Weight Center of Gravity (MACZFW) and Take Off Weight Center of Gravity (MACTOW) by temporarily manipulating fuel states and reading values directly from Prosim. The dataref subscription system involved creating a callback-based monitoring system for Prosim datarefs and implementing synchronization between the cockpit door state in Prosim and the corresponding LVAR in GSX. The implementation allows the cockpit door to muffle cabin sounds when closed, enhancing the realism of the simulation. Additionally, the previous work on cargo door logic, catering service door operation, and refueling process enhancements has been thoroughly tested and verified.
+Before the UI update, the focus was on implementing an event aggregator system to improve the UI responsiveness and decouple components in the application. This implementation follows the publisher-subscriber pattern, allowing different parts of the application to communicate without direct dependencies. The event aggregator system enables real-time updates to the UI when monitored items change, such as service statuses, connection states, and flight phases.
+
+Previous work also focused on implementing a new Prosim dataref subscription system and enhancing the cockpit door integration between Prosim and GSX. The dataref subscription system involved creating a callback-based monitoring system for Prosim datarefs and implementing synchronization between the cockpit door state in Prosim and the corresponding LVAR in GSX. The implementation allows the cockpit door to muffle cabin sounds when closed, enhancing the realism of the simulation. Additionally, the previous work on cargo door logic, catering service door operation, and refueling process enhancements has been thoroughly tested and verified.
 
 ## Recent Changes
+- Enhanced the center of gravity (CG) calculations for more accurate loadsheet data:
+  - Implemented a dedicated A320WeightAndBalance calculator class
+  - Used proper A320 reference values for MAC calculations
+  - Improved the comparison between preliminary and final loadsheet values
+  - Added tolerance-based detection of significant changes (0.5% for MAC values)
+  - Enhanced the loadsheet formatting with proper marking of changes
+  - Implemented sophisticated weight distribution across cabin zones, cargo compartments, and fuel tanks
+  - Integrated the CG calculations with Prosim and GSX for accurate data synchronization
+  - Improved the preliminary and final loadsheet generation process
+
 - Implemented a dynamic airline theming system:
   - Created a Theme class structure to represent theme data
   - Implemented a ThemeManager class to handle loading and applying themes
@@ -84,6 +96,12 @@ Additionally, previous work focused on enhancing the center of gravity (CG) calc
   - Previously: Updated the application version from 0.3.0 to 0.4.0
 
 ## Active Decisions
+- Implementing a dedicated A320WeightAndBalance calculator for accurate CG calculations
+- Using proper A320 reference values for MAC calculations
+- Implementing tolerance-based detection of significant changes in loadsheet values
+- Enhancing the loadsheet formatting with proper marking of changes
+- Implementing sophisticated weight distribution across cabin zones, cargo compartments, and fuel tanks
+- Integrating the CG calculations with Prosim and GSX for accurate data synchronization
 - Implementing an event aggregator system to decouple components and improve UI responsiveness
 - Using a publisher-subscriber pattern for event-based communication
 - Creating a thread-safe singleton implementation of the event aggregator
@@ -100,14 +118,15 @@ Additionally, previous work focused on enhancing the center of gravity (CG) calc
 - Enhancing door operation logic based on service states (waiting, finished, completed)
 - Implementing automatic door operations for catering and cargo services
 - Implementing fuel hose state management to improve refueling realism
-- Implementing sophisticated center of gravity calculation methods with temporary fuel state manipulation
-- Using proper A320 fuel loading patterns for accurate MACTOW calculations
-- Implementing safeguards to restore original fuel states after CG calculations
-- Ensuring accurate CG data for both preliminary and final loadsheets
 - Using constants for service states to improve code readability and maintainability
 - Previously: Choosing to update to .NET 8 for improved performance and extended support
 
 ## Current Challenges
+- Ensuring the CG calculation methods handle all aircraft loading scenarios correctly
+- Balancing accuracy with performance in the CG calculations
+- Handling edge cases in the weight distribution calculations
+- Ensuring proper synchronization of weight data between Prosim and GSX
+- Validating the accuracy of the MAC percentage calculations
 - Ensuring the event aggregator system handles all edge cases properly
 - Managing the lifecycle of event subscriptions to prevent memory leaks
 - Balancing event publishing frequency with performance considerations
@@ -129,21 +148,25 @@ Additionally, previous work focused on enhancing the center of gravity (CG) calc
 - Testing the automatic door operations with various service scenarios
 
 ## Next Steps
-1. Extend the event aggregator system to cover more aspects of the application
-2. Implement additional event types for other state changes in the system
-3. Optimize event publishing frequency for different types of events
-4. Consider implementing event filtering to reduce unnecessary UI updates
-5. Evaluate the performance impact of the event aggregator system under heavy load
-6. Identify additional Prosim datarefs that could benefit from the subscription system
-7. Explore extending the dataref subscription pattern to other simulation variables
-8. Optimize the monitoring interval for different types of datarefs
-9. Consider implementing priority levels for different dataref monitors
-10. Evaluate the accuracy of center of gravity calculations with additional aircraft loading scenarios
-11. Optimize performance of the callback system
-12. Document the new event aggregator system and dataref subscription system for future development
-13. Explore potential improvements to error handling for edge cases
-14. Consider adding more configuration options for door operation behavior
-15. Evaluate performance impact of the dataref monitoring system under heavy load
+1. Further refine the CG calculation methods for edge cases
+2. Implement additional validation for weight distribution calculations
+3. Add more detailed logging for CG calculations to aid in troubleshooting
+4. Consider implementing additional aircraft types for weight and balance calculations
+5. Optimize the performance of the CG calculation methods
+6. Extend the event aggregator system to cover more aspects of the application
+7. Implement additional event types for other state changes in the system
+8. Optimize event publishing frequency for different types of events
+9. Consider implementing event filtering to reduce unnecessary UI updates
+10. Evaluate the performance impact of the event aggregator system under heavy load
+11. Identify additional Prosim datarefs that could benefit from the subscription system
+12. Explore extending the dataref subscription pattern to other simulation variables
+13. Optimize the monitoring interval for different types of datarefs
+14. Consider implementing priority levels for different dataref monitors
+15. Optimize performance of the callback system
+16. Document the new CG calculation system and weight and balance calculator for future development
+17. Explore potential improvements to error handling for edge cases
+18. Consider adding more configuration options for door operation behavior
+19. Evaluate performance impact of the dataref monitoring system under heavy load
 
 ## Open Questions
 - What are the most common issues users encounter?
