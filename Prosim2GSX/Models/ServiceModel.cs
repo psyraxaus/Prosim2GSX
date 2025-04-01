@@ -24,6 +24,8 @@ namespace Prosim2GSX.Models
         public double HydaulicsBlueAmount { get; set; }
         public double HydaulicsGreenAmount { get; set; }
         public double HydaulicsYellowAmount { get; set; }
+        public string IntVolumeApp { get; set; }
+        public bool IntLatchMute { get; set; }
         public bool IsProsimRunning { get; set; } = false;
         public bool IsSessionRunning { get; set; } = false;
         public bool IsSimRunning { get; set; } = false;
@@ -126,6 +128,8 @@ namespace Prosim2GSX.Models
             HydaulicsBlueAmount = Convert.ToSingle(ConfigurationFile.GetSetting("hydraulicBlueAmount", "0"), new RealInvariantFormat(ConfigurationFile.GetSetting("hydraulicBlueAmount", "0")));
             HydaulicsGreenAmount = Convert.ToSingle(ConfigurationFile.GetSetting("hydraulicGreenAmount", "0"), new RealInvariantFormat(ConfigurationFile.GetSetting("hydraulicGreenAmount", "0")));
             HydaulicsYellowAmount = Convert.ToSingle(ConfigurationFile.GetSetting("hydraulicYellowAmount", "0"), new RealInvariantFormat(ConfigurationFile.GetSetting("hydraulicYellowAmount", "0")));
+            IntVolumeApp = Convert.ToString(ConfigurationFile.GetSetting("intVolumeApp", "Couatl64_MSFS"));
+            IntLatchMute = Convert.ToBoolean(ConfigurationFile.GetSetting("intLatchMute", "true"));
             LogFilePath = Convert.ToString(ConfigurationFile.GetSetting("logFilePath", "Prosim2GSX.log"));
             LogLevel = Convert.ToString(ConfigurationFile.GetSetting("logLevel", "Debug"));
             PcaOnlyJetways = Convert.ToBoolean(ConfigurationFile.GetSetting("pcaOnlyJetway", "true"));
@@ -166,13 +170,14 @@ namespace Prosim2GSX.Models
 
         private void InitializeAudioChannels()
         {
-            // GSX
-            AudioChannels[AudioChannel.GSX] = new AudioChannelConfig
+            // INT
+            AudioChannels[AudioChannel.INT] = new AudioChannelConfig
             {
-                ProcessName = "Couatl64_MSFS",
+                ProcessName = IntVolumeApp,
                 VolumeDataRef = "system.analog.A_ASP_INT_VOLUME",
                 MuteDataRef = "system.indicators.I_ASP_INT_REC",
-                Enabled = GsxVolumeControl
+                Enabled = GsxVolumeControl,
+                LatchMute = IntLatchMute
             };
 
             // VHF1

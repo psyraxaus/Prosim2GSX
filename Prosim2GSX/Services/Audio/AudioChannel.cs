@@ -8,7 +8,7 @@
         /// <summary>
         /// GSX intercom channel
         /// </summary>
-        GSX,
+        INT,
 
         /// <summary>
         /// VHF1 radio channel

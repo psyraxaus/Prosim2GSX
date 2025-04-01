@@ -300,7 +300,7 @@ namespace Prosim2GSX.Services.Audio
             }
 
             // Special handling for GSX Couatl engine
-            if (_audioSources.TryGetValue(AudioChannel.GSX.ToString(), out AudioSource gsxSource) &&
+            if (_audioSources.TryGetValue(AudioChannel.INT.ToString(), out AudioSource gsxSource) &&
                 gsxSource.Session != null &&
                 _simConnect.ReadLvar("FSDT_GSX_COUATL_STARTED") != 1)
             {

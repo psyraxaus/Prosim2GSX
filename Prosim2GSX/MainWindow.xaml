@@ -324,43 +324,187 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="20">
                         <!-- Volume Control -->
-                        <TextBlock Text="VOLUME CONTROL" Style="{StaticResource CategoryHeaderStyle}"/>
+                        <TextBlock Text="AUDIO CONTROL PANEL CHANNELS" Style="{StaticResource CategoryHeaderStyle}"/>
                         <Border Style="{StaticResource SectionBorderStyle}">
                             <StackPanel>
-                                <CheckBox x:Name="chkGsxVolumeControl" 
-                                          Content="Control GSX App Audio Volume via the INT Knob on ACP1" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Click="chkGsxVolumeControl_Click"/>
+                                <!-- INT Channel -->
+                                <Expander Header="INT" IsExpanded="True" Margin="0,5">
+                                    <StackPanel Margin="20,10,0,10">
+                                        <CheckBox x:Name="chkIntVolumeControl" 
+                                            Content="Control INT App Audio Volume via the INT Knob on ACP" 
+                                            Style="{StaticResource ModernCheckboxStyle}"
+                                            Click="chkIntVolumeControl_Click"/>
 
-                                <CheckBox x:Name="chkVhf1VolumeControl" 
-                                          Content="Control Custom App Audio Volume via the VHF1 Knob on ACP1" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Click="chkVhf1VolumeControl_Click"/>
+                                        <CheckBox x:Name="chkIntLatchMute" 
+                                            Content="Use Record Latch to mute/unmute App (push/pull Knob)" 
+                                            Style="{StaticResource ModernCheckboxStyle}"
+                                            Margin="0,5,0,5"
+                                            Click="chkIntLatchMute_Click"/>
 
-                                <CheckBox x:Name="chkVhf1LatchMute" 
-                                          Content="Use Record Latch to mute/unmute App (push/pull Knob)" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Margin="24,5,0,5"
-                                          Click="chkVhf1LatchMute_Click"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                            <TextBlock Text="Process Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                            <TextBox x:Name="txtIntVolumeApp" 
+                                                Style="{StaticResource ModernTextBoxStyle}"
+                                                Width="120" 
+                                                LostFocus="txtIntVolumeApp_LostFocus" 
+                                                KeyUp="txtIntVolumeApp_KeyUp"/>
+                                            <TextBlock Text="(Name of the Binary without .exe Extension)" 
+                                                VerticalAlignment="Center" 
+                                                Margin="8,0,0,0"
+                                                Foreground="#808080"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Expander>
 
-                                <StackPanel Orientation="Horizontal" Margin="24,5,0,0">
-                                    <TextBlock Text="Custom App:" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBox x:Name="txtVhf1VolumeApp" 
-                                             Style="{StaticResource ModernTextBoxStyle}"
-                                             Width="120" 
-                                             LostFocus="txtVhf1VolumeApp_LostFocus" 
-                                             KeyUp="txtVhf1VolumeApp_KeyUp"/>
-                                    <TextBlock Text="(Name of the Binary without .exe Extension)" 
-                                              VerticalAlignment="Center" 
-                                              Margin="8,0,0,0"
-                                              Foreground="#808080"/>
-                                </StackPanel>
+                                <!-- VHF1 Channel -->
+                                <Expander Header="VHF1" IsExpanded="True" Margin="0,5">
+                                    <StackPanel Margin="20,10,0,10">
+                                        <CheckBox x:Name="chkVhf1VolumeControl" 
+                                      Content="Control App Audio Volume via the VHF1 Knob on ACP" 
+                                      Style="{StaticResource ModernCheckboxStyle}"
+                                      Click="chkVhf1VolumeControl_Click"/>
+
+                                        <CheckBox x:Name="chkVhf1LatchMute" 
+                                      Content="Use Record Latch to mute/unmute App (push/pull Knob)" 
+                                      Style="{StaticResource ModernCheckboxStyle}"
+                                      Margin="0,5,0,5"
+                                      Click="chkVhf1LatchMute_Click"/>
+
+                                        <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                            <TextBlock Text="Process Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                            <TextBox x:Name="txtVhf1VolumeApp" 
+                                         Style="{StaticResource ModernTextBoxStyle}"
+                                         Width="120" 
+                                         LostFocus="txtVhf1VolumeApp_LostFocus" 
+                                         KeyUp="txtVhf1VolumeApp_KeyUp"/>
+                                            <TextBlock Text="(Name of the Binary without .exe Extension)" 
+                                          VerticalAlignment="Center" 
+                                          Margin="8,0,0,0"
+                                          Foreground="#808080"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Expander>
+
+                                <!-- VHF2 Channel -->
+                                <Expander Header="VHF2" IsExpanded="True" Margin="0,5">
+                                    <StackPanel Margin="20,10,0,10">
+                                        <CheckBox x:Name="chkVhf2VolumeControl" 
+                                      Content="Control App Audio Volume via the VHF2 Knob on ACP" 
+                                      Style="{StaticResource ModernCheckboxStyle}"
+                                      Click="chkVhf2VolumeControl_Click"/>
+
+                                        <CheckBox x:Name="chkVhf2LatchMute" 
+                                      Content="Use Record Latch to mute/unmute App (push/pull Knob)" 
+                                      Style="{StaticResource ModernCheckboxStyle}"
+                                      Margin="0,5,0,5"
+                                      Click="chkVhf2LatchMute_Click"/>
+
+                                        <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                            <TextBlock Text="Process Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                            <TextBox x:Name="txtVhf2VolumeApp" 
+                                         Style="{StaticResource ModernTextBoxStyle}"
+                                         Width="120" 
+                                         LostFocus="txtVhf2VolumeApp_LostFocus" 
+                                         KeyUp="txtVhf2VolumeApp_KeyUp"/>
+                                            <TextBlock Text="(Name of the Binary without .exe Extension)" 
+                                          VerticalAlignment="Center" 
+                                          Margin="8,0,0,0"
+                                          Foreground="#808080"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Expander>
+
+                                <!-- VHF3 Channel -->
+                                <Expander Header="VHF3" IsExpanded="True" Margin="0,5">
+                                    <StackPanel Margin="20,10,0,10">
+                                        <CheckBox x:Name="chkVhf3VolumeControl" 
+                                      Content="Control App Audio Volume via the VHF3 Knob on ACP" 
+                                      Style="{StaticResource ModernCheckboxStyle}"
+                                      Click="chkVhf3VolumeControl_Click"/>
+
+                                        <CheckBox x:Name="chkVhf3LatchMute" 
+                                      Content="Use Record Latch to mute/unmute App (push/pull Knob)" 
+                                      Style="{StaticResource ModernCheckboxStyle}"
+                                      Margin="0,5,0,5"
+                                      Click="chkVhf3LatchMute_Click"/>
+
+                                        <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                            <TextBlock Text="Process Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                            <TextBox x:Name="txtVhf3VolumeApp" 
+                                         Style="{StaticResource ModernTextBoxStyle}"
+                                         Width="120" 
+                                         LostFocus="txtVhf3VolumeApp_LostFocus" 
+                                         KeyUp="txtVhf3VolumeApp_KeyUp"/>
+                                            <TextBlock Text="(Name of the Binary without .exe Extension)" 
+                                          VerticalAlignment="Center" 
+                                          Margin="8,0,0,0"
+                                          Foreground="#808080"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Expander>
+
+                                <!-- CAB Channel -->
+                                <Expander Header="CAB" IsExpanded="True" Margin="0,5">
+                                    <StackPanel Margin="20,10,0,10">
+                                        <CheckBox x:Name="chkCabVolumeControl" 
+                                      Content="Control App Audio Volume via the CAB Knob on ACP" 
+                                      Style="{StaticResource ModernCheckboxStyle}"
+                                      Click="chkCabVolumeControl_Click"/>
+
+                                        <CheckBox x:Name="chkCabLatchMute" 
+                                      Content="Use Record Latch to mute/unmute App (push/pull Knob)" 
+                                      Style="{StaticResource ModernCheckboxStyle}"
+                                      Margin="0,5,0,5"
+                                      Click="chkCabLatchMute_Click"/>
+
+                                        <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                            <TextBlock Text="Process Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                            <TextBox x:Name="txtCabVolumeApp" 
+                                         Style="{StaticResource ModernTextBoxStyle}"
+                                         Width="120" 
+                                         LostFocus="txtCabVolumeApp_LostFocus" 
+                                         KeyUp="txtCabVolumeApp_KeyUp"/>
+                                            <TextBlock Text="(Name of the Binary without .exe Extension)" 
+                                          VerticalAlignment="Center" 
+                                          Margin="8,0,0,0"
+                                          Foreground="#808080"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Expander>
+
+                                <!-- PA Channel -->
+                                <Expander Header="PA" IsExpanded="True" Margin="0,5">
+                                    <StackPanel Margin="20,10,0,10">
+                                        <CheckBox x:Name="chkPaVolumeControl" 
+                                      Content="Control App Audio Volume via the PA Knob on ACP" 
+                                      Style="{StaticResource ModernCheckboxStyle}"
+                                      Click="chkPaVolumeControl_Click"/>
+
+                                        <CheckBox x:Name="chkPaLatchMute" 
+                                      Content="Use Record Latch to mute/unmute App (push/pull Knob)" 
+                                      Style="{StaticResource ModernCheckboxStyle}"
+                                      Margin="0,5,0,5"
+                                      Click="chkPaLatchMute_Click"/>
+
+                                        <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                            <TextBlock Text="Process Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                            <TextBox x:Name="txtPaVolumeApp" 
+                                         Style="{StaticResource ModernTextBoxStyle}"
+                                         Width="120" 
+                                         LostFocus="txtPaVolumeApp_LostFocus" 
+                                         KeyUp="txtPaVolumeApp_KeyUp"/>
+                                            <TextBlock Text="(Name of the Binary without .exe Extension)" 
+                                          VerticalAlignment="Center" 
+                                          Margin="8,0,0,0"
+                                          Foreground="#808080"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Expander>
                             </StackPanel>
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
-
             <!-- Settings Tab -->
             <TabItem Header="SETTINGS" x:Name="SettingsTab">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">

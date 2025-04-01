@@ -205,7 +205,7 @@ namespace Prosim2GSX
             chkCallCatering.IsChecked = serviceModel.CallCatering;
             chkConnectPCA.IsChecked = serviceModel.ConnectPCA;
             chkDisableCrewBoarding.IsChecked = serviceModel.DisableCrew;
-            chkGsxVolumeControl.IsChecked = serviceModel.GsxVolumeControl;
+            chkIntVolumeControl.IsChecked = serviceModel.GsxVolumeControl;
             chkOpenDoorCatering.IsChecked = serviceModel.SetOpenCateringDoor;
             chkOpenCargoDoors.IsChecked = serviceModel.SetOpenCargoDoors;
             chkPcaOnlyJetway.IsChecked = serviceModel.PcaOnlyJetways;
@@ -213,15 +213,46 @@ namespace Prosim2GSX
             chkSaveFuel.IsChecked = serviceModel.SetSaveFuel;
             chkUseAcars.IsChecked = serviceModel.UseAcars;
             chkUseActualPaxValue.IsChecked = serviceModel.UseActualPaxValue;
-            chkVhf1LatchMute.IsChecked = serviceModel.Vhf1LatchMute;
-            chkVhf1VolumeControl.IsChecked = serviceModel.Vhf1VolumeControl;
             chkZeroFuel.IsChecked = serviceModel.SetZeroFuel;
 
             txtRefuelRate.Text = serviceModel.RefuelRate.ToString(CultureInfo.InvariantCulture);
             txtRepositionDelay.Text = serviceModel.RepositionDelay.ToString(CultureInfo.InvariantCulture);
 
+            // INT settings
+            chkIntVolumeControl.IsChecked = serviceModel.GsxVolumeControl;
+            chkIntLatchMute.IsChecked = serviceModel.IntLatchMute;
+            txtIntVolumeApp.Text = serviceModel.IntVolumeApp;
+            txtIntVolumeApp.IsEnabled = serviceModel.GsxVolumeControl;
+
+            // VHF1 settings
+            chkVhf1VolumeControl.IsChecked = serviceModel.Vhf1VolumeControl;
+            chkVhf1LatchMute.IsChecked = serviceModel.Vhf1LatchMute;
             txtVhf1VolumeApp.IsEnabled = serviceModel.Vhf1VolumeControl;
             txtVhf1VolumeApp.Text = serviceModel.Vhf1VolumeApp;
+
+            // VHF2 settings
+            chkVhf2VolumeControl.IsChecked = serviceModel.Vhf2VolumeControl;
+            chkVhf2LatchMute.IsChecked = serviceModel.Vhf2LatchMute;
+            txtVhf2VolumeApp.IsEnabled = serviceModel.Vhf2VolumeControl;
+            txtVhf2VolumeApp.Text = serviceModel.Vhf2VolumeApp;
+
+            // VHF3 settings
+            chkVhf3VolumeControl.IsChecked = serviceModel.Vhf3VolumeControl;
+            chkVhf3LatchMute.IsChecked = serviceModel.Vhf3LatchMute;
+            txtVhf3VolumeApp.IsEnabled = serviceModel.Vhf3VolumeControl;
+            txtVhf3VolumeApp.Text = serviceModel.Vhf3VolumeApp;
+
+            // CAB settings
+            chkCabVolumeControl.IsChecked = serviceModel.CabVolumeControl;
+            chkCabLatchMute.IsChecked = serviceModel.CabLatchMute;
+            txtCabVolumeApp.IsEnabled = serviceModel.CabVolumeControl;
+            txtCabVolumeApp.Text = serviceModel.CabVolumeApp;
+
+            // PA settings
+            chkPaVolumeControl.IsChecked = serviceModel.PaVolumeControl;
+            chkPaLatchMute.IsChecked = serviceModel.PaLatchMute;
+            txtPaVolumeApp.IsEnabled = serviceModel.PaVolumeControl;
+            txtPaVolumeApp.Text = serviceModel.PaVolumeApp;
 
 
             if (serviceModel.RefuelUnit == "KGS")
@@ -323,9 +354,34 @@ namespace Prosim2GSX
         }
 
 
-        private void chkGsxVolumeControl_Click(object sender, RoutedEventArgs e)
+        private void chkIntVolumeControl_Click(object sender, RoutedEventArgs e)
         {
-            serviceModel.SetSetting("gsxVolumeControl", chkGsxVolumeControl.IsChecked.ToString().ToLower());
+            serviceModel.SetSetting("gsxVolumeControl", chkIntVolumeControl.IsChecked.ToString().ToLower());
+            txtIntVolumeApp.IsEnabled = (bool)chkIntVolumeControl.IsChecked;
+        }
+
+        private void chkIntLatchMute_Click(object sender, RoutedEventArgs e)
+        {
+            serviceModel.SetSetting("intLatchMute", chkIntLatchMute.IsChecked.ToString().ToLower());
+        }
+
+        private void txtIntVolumeApp_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key != System.Windows.Input.Key.Enter || e.Key != System.Windows.Input.Key.Return)
+                return;
+
+            txtIntVolumeApp_Set();
+        }
+
+        private void txtIntVolumeApp_LostFocus(object sender, RoutedEventArgs e)
+        {
+            txtIntVolumeApp_Set();
+        }
+
+        private void txtIntVolumeApp_Set()
+        {
+            if (txtIntVolumeApp?.Text != null)
+                serviceModel.SetSetting("gsxVolumeApp", txtIntVolumeApp.Text);
         }
 
         private void chkDisableCrewBoarding_Click(object sender, RoutedEventArgs e)
@@ -410,6 +466,129 @@ namespace Prosim2GSX
         private void chkVhf1LatchMute_Click(object sender, RoutedEventArgs e)
         {
             serviceModel.SetSetting("vhf1LatchMute", chkVhf1LatchMute.IsChecked.ToString().ToLower());
+        }
+
+        private void chkVhf2VolumeControl_Click(object sender, RoutedEventArgs e)
+        {
+            serviceModel.SetSetting("vhf2VolumeControl", chkVhf2VolumeControl.IsChecked.ToString().ToLower());
+            txtVhf2VolumeApp.IsEnabled = (bool)chkVhf2VolumeControl.IsChecked;
+        }
+
+        private void chkVhf2LatchMute_Click(object sender, RoutedEventArgs e)
+        {
+            serviceModel.SetSetting("vhf2LatchMute", chkVhf2LatchMute.IsChecked.ToString().ToLower());
+        }
+
+        private void txtVhf2VolumeApp_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key != System.Windows.Input.Key.Enter || e.Key != System.Windows.Input.Key.Return)
+                return;
+
+            txtVhf2VolumeApp_Set();
+        }
+
+        private void txtVhf2VolumeApp_LostFocus(object sender, RoutedEventArgs e)
+        {
+            txtVhf2VolumeApp_Set();
+        }
+
+        private void txtVhf2VolumeApp_Set()
+        {
+            if (txtVhf2VolumeApp?.Text != null)
+                serviceModel.SetSetting("vhf2VolumeApp", txtVhf2VolumeApp.Text);
+        }
+
+        // Add these event handlers for VHF3
+        private void chkVhf3VolumeControl_Click(object sender, RoutedEventArgs e)
+        {
+            serviceModel.SetSetting("vhf3VolumeControl", chkVhf3VolumeControl.IsChecked.ToString().ToLower());
+            txtVhf3VolumeApp.IsEnabled = (bool)chkVhf3VolumeControl.IsChecked;
+        }
+
+        private void chkVhf3LatchMute_Click(object sender, RoutedEventArgs e)
+        {
+            serviceModel.SetSetting("vhf3LatchMute", chkVhf3LatchMute.IsChecked.ToString().ToLower());
+        }
+
+        private void txtVhf3VolumeApp_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key != System.Windows.Input.Key.Enter || e.Key != System.Windows.Input.Key.Return)
+                return;
+
+            txtVhf3VolumeApp_Set();
+        }
+
+        private void txtVhf3VolumeApp_LostFocus(object sender, RoutedEventArgs e)
+        {
+            txtVhf3VolumeApp_Set();
+        }
+
+        private void txtVhf3VolumeApp_Set()
+        {
+            if (txtVhf3VolumeApp?.Text != null)
+                serviceModel.SetSetting("vhf3VolumeApp", txtVhf3VolumeApp.Text);
+        }
+
+        // Add these event handlers for CAB
+        private void chkCabVolumeControl_Click(object sender, RoutedEventArgs e)
+        {
+            serviceModel.SetSetting("cabVolumeControl", chkCabVolumeControl.IsChecked.ToString().ToLower());
+            txtCabVolumeApp.IsEnabled = (bool)chkCabVolumeControl.IsChecked;
+        }
+
+        private void chkCabLatchMute_Click(object sender, RoutedEventArgs e)
+        {
+            serviceModel.SetSetting("cabLatchMute", chkCabLatchMute.IsChecked.ToString().ToLower());
+        }
+
+        private void txtCabVolumeApp_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key != System.Windows.Input.Key.Enter || e.Key != System.Windows.Input.Key.Return)
+                return;
+
+            txtCabVolumeApp_Set();
+        }
+
+        private void txtCabVolumeApp_LostFocus(object sender, RoutedEventArgs e)
+        {
+            txtCabVolumeApp_Set();
+        }
+
+        private void txtCabVolumeApp_Set()
+        {
+            if (txtCabVolumeApp?.Text != null)
+                serviceModel.SetSetting("cabVolumeApp", txtCabVolumeApp.Text);
+        }
+
+        // Add these event handlers for PA
+        private void chkPaVolumeControl_Click(object sender, RoutedEventArgs e)
+        {
+            serviceModel.SetSetting("paVolumeControl", chkPaVolumeControl.IsChecked.ToString().ToLower());
+            txtPaVolumeApp.IsEnabled = (bool)chkPaVolumeControl.IsChecked;
+        }
+
+        private void chkPaLatchMute_Click(object sender, RoutedEventArgs e)
+        {
+            serviceModel.SetSetting("paLatchMute", chkPaLatchMute.IsChecked.ToString().ToLower());
+        }
+
+        private void txtPaVolumeApp_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key != System.Windows.Input.Key.Enter || e.Key != System.Windows.Input.Key.Return)
+                return;
+
+            txtPaVolumeApp_Set();
+        }
+
+        private void txtPaVolumeApp_LostFocus(object sender, RoutedEventArgs e)
+        {
+            txtPaVolumeApp_Set();
+        }
+
+        private void txtPaVolumeApp_Set()
+        {
+            if (txtPaVolumeApp?.Text != null)
+                serviceModel.SetSetting("paVolumeApp", txtPaVolumeApp.Text);
         }
 
         private void chkUseActualPaxValue_Click(object sender, RoutedEventArgs e)
