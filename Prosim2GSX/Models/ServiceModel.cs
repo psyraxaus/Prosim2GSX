@@ -1,5 +1,7 @@
 ﻿﻿using Prosim2GSX.Behaviours;
+using Prosim2GSX.Services.Audio;
 using System;
+using System.Collections.Generic;
 
 namespace Prosim2GSX.Models
 {
@@ -51,8 +53,25 @@ namespace Prosim2GSX.Models
         public bool Vhf1LatchMute { get; set; }
         public string Vhf1VolumeApp { get; set; }
         public bool Vhf1VolumeControl { get; set; }
+        public bool Vhf2VolumeControl { get; set; }
+        public string Vhf2VolumeApp { get; set; }
+        public bool Vhf2LatchMute { get; set; }
+
+        public bool Vhf3VolumeControl { get; set; }
+        public string Vhf3VolumeApp { get; set; }
+        public bool Vhf3LatchMute { get; set; }
+
+        public bool CabVolumeControl { get; set; }
+        public string CabVolumeApp { get; set; }
+        public bool CabLatchMute { get; set; }
+
+        public bool PaVolumeControl { get; set; }
+        public string PaVolumeApp { get; set; }
+        public bool PaLatchMute { get; set; }
 
         protected ConfigurationFile ConfigurationFile = new();
+
+        public Dictionary<AudioChannel, AudioChannelConfig> AudioChannels { get; private set; } = new Dictionary<AudioChannel, AudioChannelConfig>();
 
         public ServiceModel()
         {
@@ -63,6 +82,27 @@ namespace Prosim2GSX.Models
         {
             return Vhf1VolumeControl && !string.IsNullOrEmpty(Vhf1VolumeApp);
         }
+
+        public bool IsVhf2Controllable()
+        {
+            return Vhf2VolumeControl && !string.IsNullOrEmpty(Vhf2VolumeApp);
+        }
+
+        public bool IsVhf3Controllable()
+        {
+            return Vhf3VolumeControl && !string.IsNullOrEmpty(Vhf3VolumeApp);
+        }
+
+        public bool IsCabControllable()
+        {
+            return CabVolumeControl && !string.IsNullOrEmpty(CabVolumeApp);
+        }
+
+        public bool IsPaControllable()
+        {
+            return PaVolumeControl && !string.IsNullOrEmpty(PaVolumeApp);
+        }
+
         protected void LoadConfiguration()
         {
             ConfigurationFile.LoadConfiguration();
@@ -75,6 +115,9 @@ namespace Prosim2GSX.Models
             JetwayOnly = Convert.ToBoolean(ConfigurationFile.GetSetting("jetwayOnly", "false"));
             AutoDeboarding = Convert.ToBoolean(ConfigurationFile.GetSetting("autoDeboarding", "true"));
             AutoRefuel = Convert.ToBoolean(ConfigurationFile.GetSetting("autoRefuel", "true"));
+            CabVolumeApp = Convert.ToString(ConfigurationFile.GetSetting("cabVolumeApp", ""));
+            CabVolumeControl = Convert.ToBoolean(ConfigurationFile.GetSetting("cabVolumeControl", "false"));
+            CabLatchMute = Convert.ToBoolean(ConfigurationFile.GetSetting("cabLatchMute", "true"));
             CallCatering = Convert.ToBoolean(ConfigurationFile.GetSetting("callCatering", "true"));
             ConnectPCA = Convert.ToBoolean(ConfigurationFile.GetSetting("connectPCA", "true"));
             DisableCrew = Convert.ToBoolean(ConfigurationFile.GetSetting("disableCrew", "true"));
@@ -86,6 +129,9 @@ namespace Prosim2GSX.Models
             LogFilePath = Convert.ToString(ConfigurationFile.GetSetting("logFilePath", "Prosim2GSX.log"));
             LogLevel = Convert.ToString(ConfigurationFile.GetSetting("logLevel", "Debug"));
             PcaOnlyJetways = Convert.ToBoolean(ConfigurationFile.GetSetting("pcaOnlyJetway", "true"));
+            PaVolumeApp = Convert.ToString(ConfigurationFile.GetSetting("paVolumeApp", ""));
+            PaVolumeControl = Convert.ToBoolean(ConfigurationFile.GetSetting("paVolumeControl", "false"));
+            PaLatchMute = Convert.ToBoolean(ConfigurationFile.GetSetting("paLatchMute", "true"));
             RefuelRate = Convert.ToSingle(ConfigurationFile.GetSetting("refuelRate", "28"), new RealInvariantFormat(ConfigurationFile.GetSetting("refuelRate", "28")));
             RefuelUnit = Convert.ToString(ConfigurationFile.GetSetting("refuelUnit", "KGS"));
             ProsimHostname = Convert.ToString(ConfigurationFile.GetSetting("prosimHostname", "127.0.0.1"));
@@ -107,8 +153,77 @@ namespace Prosim2GSX.Models
             Vhf1VolumeApp = Convert.ToString(ConfigurationFile.GetSetting("vhf1VolumeApp", "vPilot"));
             Vhf1VolumeControl = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf1VolumeControl", "false"));
             Vhf1LatchMute = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf1LatchMute", "true"));
+            Vhf2VolumeApp = Convert.ToString(ConfigurationFile.GetSetting("vhf2VolumeApp", ""));
+            Vhf2VolumeControl = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf2VolumeControl", "false"));
+            Vhf2LatchMute = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf2LatchMute", "true"));
+            Vhf3VolumeApp = Convert.ToString(ConfigurationFile.GetSetting("vhf3VolumeApp", ""));
+            Vhf3VolumeControl = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf3VolumeControl", "false"));
+            Vhf3LatchMute = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf3LatchMute", "true"));
             WaitForConnect = Convert.ToBoolean(ConfigurationFile.GetSetting("waitForConnect", "true"));
 
+            InitializeAudioChannels();
+        }
+
+        private void InitializeAudioChannels()
+        {
+            // GSX
+            AudioChannels[AudioChannel.GSX] = new AudioChannelConfig
+            {
+                ProcessName = "Couatl64_MSFS",
+                VolumeDataRef = "system.analog.A_ASP_INT_VOLUME",
+                MuteDataRef = "system.indicators.I_ASP_INT_REC",
+                Enabled = GsxVolumeControl
+            };
+
+            // VHF1
+            AudioChannels[AudioChannel.VHF1] = new AudioChannelConfig
+            {
+                ProcessName = Vhf1VolumeApp,
+                VolumeDataRef = "system.analog.A_ASP_VHF_1_VOLUME",
+                MuteDataRef = "system.indicators.I_ASP_VHF_1_REC",
+                Enabled = IsVhf1Controllable(),
+                LatchMute = Vhf1LatchMute
+            };
+
+            // VHF2
+            AudioChannels[AudioChannel.VHF2] = new AudioChannelConfig
+            {
+                ProcessName = Vhf2VolumeApp,
+                VolumeDataRef = "system.analog.A_ASP_VHF_2_VOLUME",
+                MuteDataRef = "system.indicators.I_ASP_VHF_2_REC",
+                Enabled = IsVhf2Controllable(),
+                LatchMute = Vhf2LatchMute
+            };
+
+            // VHF3
+            AudioChannels[AudioChannel.VHF3] = new AudioChannelConfig
+            {
+                ProcessName = Vhf3VolumeApp,
+                VolumeDataRef = "system.analog.A_ASP_VHF_3_VOLUME",
+                MuteDataRef = "system.indicators.I_ASP_VHF_3_REC",
+                Enabled = IsVhf3Controllable(),
+                LatchMute = Vhf3LatchMute
+            };
+
+            // CAB
+            AudioChannels[AudioChannel.CAB] = new AudioChannelConfig
+            {
+                ProcessName = CabVolumeApp,
+                VolumeDataRef = "system.analog.A_ASP_CAB_VOLUME",
+                MuteDataRef = "system.indicators.I_ASP_CAB_REC",
+                Enabled = IsCabControllable(),
+                LatchMute = CabLatchMute
+            };
+
+            // PA
+            AudioChannels[AudioChannel.PA] = new AudioChannelConfig
+            {
+                ProcessName = PaVolumeApp,
+                VolumeDataRef = "system.analog.A_ASP_PA_VOLUME",
+                MuteDataRef = "system.indicators.I_ASP_PA_REC",
+                Enabled = IsPaControllable(),
+                LatchMute = PaLatchMute
+            };
         }
 
         public string GetSetting(string key, string defaultValue = "")

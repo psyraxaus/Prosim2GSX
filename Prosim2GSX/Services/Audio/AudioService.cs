@@ -4,6 +4,7 @@ using Prosim2GSX.Models;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Prosim2GSX.Services.Audio
 {
@@ -16,17 +17,16 @@ namespace Prosim2GSX.Services.Audio
         private readonly ProsimController _prosimController;
         private readonly MobiSimConnect _simConnect;
         private readonly Dictionary<string, AudioSource> _audioSources = new Dictionary<string, AudioSource>();
-        private string _lastVhf1App;
-        
+
         private bool _fcuTrackFpaMode = false;
         private bool _fcuHeadingVsMode = false;
 
         private DataRefChangedHandler _trackFpaModeHandler;
         private DataRefChangedHandler _headingVsModeHandler;
-        private DataRefChangedHandler _intVolumeHandler;
-        private DataRefChangedHandler _intRecHandler;
-        private DataRefChangedHandler _vhf1VolumeHandler;
-        private DataRefChangedHandler _vhf1RecHandler;
+
+        // Dictionary to store handlers for each channel
+        private Dictionary<AudioChannel, DataRefChangedHandler> _volumeHandlers = new Dictionary<AudioChannel, DataRefChangedHandler>();
+        private Dictionary<AudioChannel, DataRefChangedHandler> _muteHandlers = new Dictionary<AudioChannel, DataRefChangedHandler>();
 
         /// <summary>
         /// Creates a new AudioService
@@ -38,16 +38,20 @@ namespace Prosim2GSX.Services.Audio
             _model = model;
             _prosimController = prosimController;
             _simConnect = simConnect;
-            
-            if (!string.IsNullOrEmpty(_model.Vhf1VolumeApp))
-                _lastVhf1App = _model.Vhf1VolumeApp;
 
+            // Initialize FCU mode handlers
             _trackFpaModeHandler = new DataRefChangedHandler(OnTrackFpaModeChanged);
             _headingVsModeHandler = new DataRefChangedHandler(OnHeadingVsModeChanged);
-            _intVolumeHandler = new DataRefChangedHandler(OnIntVolumeChanged);
-            _intRecHandler = new DataRefChangedHandler(OnIntRecChanged);
-            _vhf1VolumeHandler = new DataRefChangedHandler(OnVhf1VolumeChanged);
-            _vhf1RecHandler = new DataRefChangedHandler(OnVhf1RecChanged);
+
+            // Initialize handlers for each audio channel
+            foreach (var channel in Enum.GetValues(typeof(AudioChannel)).Cast<AudioChannel>())
+            {
+                _volumeHandlers[channel] = new DataRefChangedHandler((dataRef, oldValue, newValue) =>
+                    OnVolumeChanged(channel, dataRef, oldValue, newValue));
+
+                _muteHandlers[channel] = new DataRefChangedHandler((dataRef, oldValue, newValue) =>
+                    OnMuteChanged(channel, dataRef, oldValue, newValue));
+            }
         }
         
         /// <summary>
@@ -55,27 +59,52 @@ namespace Prosim2GSX.Services.Audio
         /// </summary>
         public void Initialize()
         {
+            Logger.Log(LogLevel.Information, "AudioService:Initialize", "Initializing audio service");
+
+            // Subscribe to FCU mode datarefs
             _prosimController.SubscribeToDataRef("system.indicators.I_FCU_TRACK_FPA_MODE", _trackFpaModeHandler);
             _prosimController.SubscribeToDataRef("system.indicators.I_FCU_HEADING_VS_MODE", _headingVsModeHandler);
-            
-            // Initialize default audio sources based on ServiceModel settings
-            if (_model.GsxVolumeControl)
+
+            // Initialize audio sources and subscribe to datarefs for each enabled channel
+            foreach (var channelEntry in _model.AudioChannels)
             {
-                AddAudioSource("Couatl64_MSFS", "GSX", "system.analog.A_ASP_INT_VOLUME", "system.indicators.I_ASP_INT_REC");
-                _prosimController.SubscribeToDataRef("system.analog.A_ASP_INT_VOLUME", _intVolumeHandler);
-                _prosimController.SubscribeToDataRef("system.indicators.I_ASP_INT_REC", _intRecHandler);
-            }
-            
-            if (_model.IsVhf1Controllable())
-            {
-                AddAudioSource(_model.Vhf1VolumeApp, "VHF1", "system.analog.A_ASP_VHF_1_VOLUME", "system.indicators.I_ASP_VHF_1_REC");
-                _prosimController.SubscribeToDataRef("system.analog.A_ASP_VHF_1_VOLUME", _vhf1VolumeHandler);
-                _prosimController.SubscribeToDataRef("system.indicators.I_ASP_VHF_1_REC", _vhf1RecHandler);
+                var channel = channelEntry.Key;
+                var config = channelEntry.Value;
+
+                if (config.Enabled)
+                {
+                    Logger.Log(LogLevel.Information, "AudioService:Initialize",
+                        $"Enabling audio channel: {channel} for process: {config.ProcessName}");
+
+                    AddAudioSource(config.ProcessName, channel.ToString(), config.VolumeDataRef, config.MuteDataRef);
+                    _prosimController.SubscribeToDataRef(config.VolumeDataRef, _volumeHandlers[channel]);
+                    _prosimController.SubscribeToDataRef(config.MuteDataRef, _muteHandlers[channel]);
+                }
+                else
+                {
+                    Logger.Log(LogLevel.Debug, "AudioService:Initialize",
+                        $"Audio channel {channel} is disabled");
+                }
             }
 
-            _fcuTrackFpaMode = _prosimController.Interface.GetProsimVariable("system.indicators.I_FCU_TRACK_FPA_MODE");
-            _fcuHeadingVsMode = _prosimController.Interface.GetProsimVariable("system.indicators.I_FCU_HEADING_VS_MODE");
+            // Get initial FCU mode state
+            try
+            {
+                _fcuTrackFpaMode = _prosimController.Interface.GetProsimVariable("system.indicators.I_FCU_TRACK_FPA_MODE");
+                _fcuHeadingVsMode = _prosimController.Interface.GetProsimVariable("system.indicators.I_FCU_HEADING_VS_MODE");
 
+                Logger.Log(LogLevel.Debug, "AudioService:Initialize",
+                    $"Initial FCU mode state: TrackFpaMode={_fcuTrackFpaMode}, HeadingVsMode={_fcuHeadingVsMode}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "AudioService:Initialize",
+                    $"Error getting initial FCU mode state: {ex.Message}");
+
+                // Default to false if we can't get the initial state
+                _fcuTrackFpaMode = false;
+                _fcuHeadingVsMode = false;
+            }
         }
         
 
@@ -105,102 +134,6 @@ namespace Prosim2GSX.Services.Audio
                 GetAudioSessions();
             }
         }
-
-        private void OnIntVolumeChanged(string dataRef, dynamic oldValue, dynamic newValue)
-        {
-            if (!_fcuTrackFpaMode && !_fcuHeadingVsMode)
-                return; // Ignore changes when FCU is not in the correct mode
-                
-            if (_audioSources.TryGetValue("GSX", out AudioSource source) && source.Session != null)
-            {
-                float volume = Convert.ToSingle(newValue);
-                if (volume >= 0 && volume != source.Volume)
-                {
-                    source.Session.SimpleAudioVolume.MasterVolume = volume;
-                    source.Volume = volume;
-                    
-                    // Publish event
-                    EventAggregator.Instance.Publish(new AudioStateChangedEvent(source.SourceName, source.Session.SimpleAudioVolume.Mute, volume));
-                }
-            }
-        }
-        
-        private void OnIntRecChanged(string dataRef, dynamic oldValue, dynamic newValue)
-        {
-            if (!_fcuTrackFpaMode && !_fcuHeadingVsMode)
-                return; // Ignore changes when FCU is not in the correct mode
-                
-            if (_audioSources.TryGetValue("GSX", out AudioSource source) && source.Session != null)
-            {
-                int muted = Convert.ToBoolean(newValue) ? 1 : 0;
-                if (muted >= 0 && muted != source.MuteState)
-                {
-                    source.Session.SimpleAudioVolume.Mute = muted == 0;
-                    source.MuteState = muted;
-                    
-                    // Publish event
-                    EventAggregator.Instance.Publish(new AudioStateChangedEvent(source.SourceName, muted == 0, source.Session.SimpleAudioVolume.MasterVolume));
-                }
-            }
-        }
-        
-        private void OnVhf1VolumeChanged(string dataRef, dynamic oldValue, dynamic newValue)
-        {
-            if (!_fcuTrackFpaMode && !_fcuHeadingVsMode)
-                return; // Ignore changes when FCU is not in the correct mode
-                
-            if (_audioSources.TryGetValue("VHF1", out AudioSource source) && source.Session != null)
-            {
-                float volume = Convert.ToSingle(newValue);
-                if (volume >= 0 && volume != source.Volume)
-                {
-                    source.Session.SimpleAudioVolume.MasterVolume = volume;
-                    source.Volume = volume;
-                    
-                    // Publish event
-                    EventAggregator.Instance.Publish(new AudioStateChangedEvent(source.SourceName, source.Session.SimpleAudioVolume.Mute, volume));
-                }
-            }
-        }
-        
-        private void OnVhf1RecChanged(string dataRef, dynamic oldValue, dynamic newValue)
-        {
-            if (!_fcuTrackFpaMode && !_fcuHeadingVsMode)
-                return; // Ignore changes when FCU is not in the correct mode
-                
-            if (_audioSources.TryGetValue("VHF1", out AudioSource source) && source.Session != null)
-            {
-                bool shouldHandleMute = true;
-                int muted = Convert.ToBoolean(newValue) ? 1 : 0;
-                
-                // Special handling for VHF1
-                if (!_model.Vhf1LatchMute)
-                {
-                    // If latch mute is disabled for VHF1, only unmute if needed
-                    if (source.Session.SimpleAudioVolume.Mute)
-                    {
-                        Logger.Log(LogLevel.Information, "AudioService:OnVhf1RecChanged", $"Unmuting {source.SourceName} (App muted and Mute-Option disabled)");
-                        source.Session.SimpleAudioVolume.Mute = false;
-                        source.MuteState = -1;
-                        
-                        // Publish event
-                        EventAggregator.Instance.Publish(new AudioStateChangedEvent(source.SourceName, false, source.Session.SimpleAudioVolume.MasterVolume));
-                    }
-                    shouldHandleMute = false;
-                }
-                
-                // Handle mute state if needed
-                if (shouldHandleMute && muted >= 0 && muted != source.MuteState)
-                {
-                    source.Session.SimpleAudioVolume.Mute = muted == 0;
-                    source.MuteState = muted;
-                    
-                    // Publish event
-                    EventAggregator.Instance.Publish(new AudioStateChangedEvent(source.SourceName, muted == 0, source.Session.SimpleAudioVolume.MasterVolume));
-                }
-            }
-        }
-
 
         /// <summary>
         /// Adds a new audio source to be controlled
@@ -327,44 +260,32 @@ namespace Prosim2GSX.Services.Audio
         /// </summary>
         private void HandleAppChanges()
         {
-            // Handle VHF1 app change
-            if (_lastVhf1App != _model.Vhf1VolumeApp)
+            // Check for changes in enabled channels
+            foreach (var channelEntry in _model.AudioChannels)
             {
-                // Remove old VHF1 source
-                RemoveAudioSource("VHF1");
-                
-                // Add new VHF1 source if enabled
-                if (_model.IsVhf1Controllable())
+                var channel = channelEntry.Key;
+                var config = channelEntry.Value;
+                string channelName = channel.ToString();
+
+                // If channel is enabled but not in audio sources, add it
+                if (config.Enabled && !_audioSources.ContainsKey(channelName))
                 {
-                    AddAudioSource(_model.Vhf1VolumeApp, "VHF1", "system.analog.A_ASP_VHF_1_VOLUME", "system.indicators.I_ASP_VHF_1_REC");
+                    AddAudioSource(config.ProcessName, channelName, config.VolumeDataRef, config.MuteDataRef);
+                    _prosimController.SubscribeToDataRef(config.VolumeDataRef, _volumeHandlers[channel]);
+                    _prosimController.SubscribeToDataRef(config.MuteDataRef, _muteHandlers[channel]);
                 }
-                
-                _lastVhf1App = _model.Vhf1VolumeApp;
+                // If channel is disabled but in audio sources, remove it
+                else if (!config.Enabled && _audioSources.ContainsKey(channelName))
+                {
+                    _prosimController.UnsubscribeFromDataRef(config.VolumeDataRef, _volumeHandlers[channel]);
+                    _prosimController.UnsubscribeFromDataRef(config.MuteDataRef, _muteHandlers[channel]);
+                    RemoveAudioSource(channelName);
+                }
             }
-            
-            // Handle GSX volume control setting change
-            if (_model.GsxVolumeControl && !_audioSources.ContainsKey("GSX"))
-            {
-                AddAudioSource("Couatl64_MSFS", "GSX", "system.analog.A_ASP_INT_VOLUME", "system.indicators.I_ASP_INT_REC");
-            }
-            else if (!_model.GsxVolumeControl && _audioSources.ContainsKey("GSX"))
-            {
-                RemoveAudioSource("GSX");
-            }
-            
-            // Handle VHF1 volume control setting change
-            if (_model.IsVhf1Controllable() && !_audioSources.ContainsKey("VHF1"))
-            {
-                AddAudioSource(_model.Vhf1VolumeApp, "VHF1", "system.analog.A_ASP_VHF_1_VOLUME", "system.indicators.I_ASP_VHF_1_REC");
-            }
-            else if (!_model.IsVhf1Controllable() && _audioSources.ContainsKey("VHF1"))
-            {
-                RemoveAudioSource("VHF1");
-            }
-            
+
             // Check if processes are still running
             List<string> sourcesToRemove = new List<string>();
-            
+
             foreach (var source in _audioSources.Values)
             {
                 if (source.Session != null && !IPCManager.IsProcessRunning(source.ProcessName))
@@ -372,15 +293,15 @@ namespace Prosim2GSX.Services.Audio
                     sourcesToRemove.Add(source.SourceName);
                 }
             }
-            
+
             foreach (var sourceName in sourcesToRemove)
             {
                 RemoveAudioSource(sourceName);
             }
-            
-            // Check if GSX Couatl engine is running
-            if (_audioSources.TryGetValue("GSX", out AudioSource gsxSource) && 
-                gsxSource.Session != null && 
+
+            // Special handling for GSX Couatl engine
+            if (_audioSources.TryGetValue(AudioChannel.GSX.ToString(), out AudioSource gsxSource) &&
+                gsxSource.Session != null &&
                 _simConnect.ReadLvar("FSDT_GSX_COUATL_STARTED") != 1)
             {
                 gsxSource.Session.SimpleAudioVolume.MasterVolume = 1.0f;
@@ -392,15 +313,138 @@ namespace Prosim2GSX.Services.Audio
             }
         }
 
+        /// <summary>
+        /// Handles volume changes for any audio channel
+        /// </summary>
+        /// <param name="channel">The audio channel that changed</param>
+        /// <param name="dataRef">The dataref that changed</param>
+        /// <param name="oldValue">The previous value</param>
+        /// <param name="newValue">The new value</param>
+        private void OnVolumeChanged(AudioChannel channel, string dataRef, dynamic oldValue, dynamic newValue)
+        {
+            try
+            {
+                if (!_fcuTrackFpaMode && !_fcuHeadingVsMode)
+                    return; // Ignore changes when FCU is not in the correct mode
+
+                if (_audioSources.TryGetValue(channel.ToString(), out AudioSource source) && source.Session != null)
+                {
+                    float volume;
+                    try
+                    {
+                        volume = Convert.ToSingle(newValue);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log(LogLevel.Error, "AudioService:OnVolumeChanged",
+                            $"Error converting volume value for {channel}: {ex.Message}");
+                        return;
+                    }
+
+                    if (volume >= 0 && volume != source.Volume)
+                    {
+                        source.Session.SimpleAudioVolume.MasterVolume = volume;
+                        source.Volume = volume;
+
+                        // Publish event
+                        EventAggregator.Instance.Publish(new AudioStateChangedEvent(source.SourceName, source.Session.SimpleAudioVolume.Mute, volume));
+
+                        Logger.Log(LogLevel.Debug, "AudioService:OnVolumeChanged",
+                            $"Volume changed for {channel}: {volume}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "AudioService:OnVolumeChanged",
+                    $"Exception handling volume change for {channel}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Handles mute state changes for any audio channel
+        /// </summary>
+        /// <param name="channel">The audio channel that changed</param>
+        /// <param name="dataRef">The dataref that changed</param>
+        /// <param name="oldValue">The previous value</param>
+        /// <param name="newValue">The new value</param>
+        private void OnMuteChanged(AudioChannel channel, string dataRef, dynamic oldValue, dynamic newValue)
+        {
+            try
+            {
+                if (!_fcuTrackFpaMode && !_fcuHeadingVsMode)
+                    return; // Ignore changes when FCU is not in the correct mode
+
+                if (_audioSources.TryGetValue(channel.ToString(), out AudioSource source) && source.Session != null)
+                {
+                    bool shouldHandleMute = true;
+                    int muted;
+
+                    try
+                    {
+                        muted = Convert.ToBoolean(newValue) ? 1 : 0;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log(LogLevel.Error, "AudioService:OnMuteChanged",
+                            $"Error converting mute value for {channel}: {ex.Message}");
+                        return;
+                    }
+
+                    // Check if latch mute is disabled for this channel
+                    if (_model.AudioChannels.TryGetValue(channel, out var config) && !config.LatchMute)
+                    {
+                        // If latch mute is disabled, only unmute if needed
+                        if (source.Session.SimpleAudioVolume.Mute)
+                        {
+                            Logger.Log(LogLevel.Information, "AudioService:OnMuteChanged",
+                                $"Unmuting {source.SourceName} (App muted and Mute-Option disabled)");
+                            source.Session.SimpleAudioVolume.Mute = false;
+                            source.MuteState = -1;
+
+                            // Publish event
+                            EventAggregator.Instance.Publish(new AudioStateChangedEvent(source.SourceName, false, source.Session.SimpleAudioVolume.MasterVolume));
+                        }
+                        shouldHandleMute = false;
+                    }
+
+                    // Handle mute state if needed
+                    if (shouldHandleMute && muted >= 0 && muted != source.MuteState)
+                    {
+                        source.Session.SimpleAudioVolume.Mute = muted == 0;
+                        source.MuteState = muted;
+
+                        // Publish event
+                        EventAggregator.Instance.Publish(new AudioStateChangedEvent(source.SourceName, muted == 0, source.Session.SimpleAudioVolume.MasterVolume));
+
+                        Logger.Log(LogLevel.Debug, "AudioService:OnMuteChanged",
+                            $"Mute state changed for {channel}: {(muted == 0 ? "Muted" : "Unmuted")}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "AudioService:OnMuteChanged",
+                    $"Exception handling mute change for {channel}: {ex.Message}");
+            }
+        }
+
         public void Dispose()
         {
-            // Unsubscribe from all datarefs
+            // Unsubscribe from FCU mode datarefs
             _prosimController.UnsubscribeFromDataRef("system.indicators.I_FCU_TRACK_FPA_MODE", _trackFpaModeHandler);
             _prosimController.UnsubscribeFromDataRef("system.indicators.I_FCU_HEADING_VS_MODE", _headingVsModeHandler);
-            _prosimController.UnsubscribeFromDataRef("system.analog.A_ASP_INT_VOLUME", _intVolumeHandler);
-            _prosimController.UnsubscribeFromDataRef("system.indicators.I_ASP_INT_REC", _intRecHandler);
-            _prosimController.UnsubscribeFromDataRef("system.analog.A_ASP_VHF_1_VOLUME", _vhf1VolumeHandler);
-            _prosimController.UnsubscribeFromDataRef("system.indicators.I_ASP_VHF_1_REC", _vhf1RecHandler);
+
+            // Unsubscribe from all channel datarefs
+            foreach (var channelEntry in _model.AudioChannels)
+            {
+                var channel = channelEntry.Key;
+                var config = channelEntry.Value;
+
+                // Unsubscribe regardless of whether the channel is currently enabled
+                _prosimController.UnsubscribeFromDataRef(config.VolumeDataRef, _volumeHandlers[channel]);
+                _prosimController.UnsubscribeFromDataRef(config.MuteDataRef, _muteHandlers[channel]);
+            }
         }
     }
 }
