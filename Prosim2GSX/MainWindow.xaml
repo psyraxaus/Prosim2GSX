@@ -1,4 +1,4 @@
-﻿<Window x:Class="Prosim2GSX.MainWindow"
+<Window x:Class="Prosim2GSX.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -146,16 +146,25 @@
                             VerticalAlignment="Center">
                     <Button Style="{StaticResource TabButtonStyle}" 
                             Foreground="{DynamicResource HeaderText}"
+                            Content="🔊" 
+                            FontSize="16" 
+                            x:Name="btnAudioSettings"
+                            Click="btnAudioSettings_Click"
+                            ToolTip="Audio Settings"/>
+                    <Button Style="{StaticResource TabButtonStyle}" 
+                            Foreground="{DynamicResource HeaderText}"
                             Content="⚙" 
                             FontSize="16" 
                             x:Name="btnSettings"
-                            Click="btnSettings_Click"/>
+                            Click="btnSettings_Click"
+                            ToolTip="Settings"/>
                     <Button Style="{StaticResource TabButtonStyle}" 
                             Foreground="{DynamicResource HeaderText}"
                             Content="?" 
                             FontSize="16" 
                             x:Name="btnHelp"
-                            Click="btnHelp_Click"/>
+                            Click="btnHelp_Click"
+                            ToolTip="Help"/>
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -308,6 +317,48 @@
                             </ScrollViewer>
                         </Border>
                     </StackPanel>
+            </TabItem>
+
+            <!-- Audio Settings Tab -->
+            <TabItem Header="AUDIO SETTINGS" x:Name="AudioSettingsTab">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="20">
+                        <!-- Volume Control -->
+                        <TextBlock Text="VOLUME CONTROL" Style="{StaticResource CategoryHeaderStyle}"/>
+                        <Border Style="{StaticResource SectionBorderStyle}">
+                            <StackPanel>
+                                <CheckBox x:Name="chkGsxVolumeControl" 
+                                          Content="Control GSX App Audio Volume via the INT Knob on ACP1" 
+                                          Style="{StaticResource ModernCheckboxStyle}"
+                                          Click="chkGsxVolumeControl_Click"/>
+
+                                <CheckBox x:Name="chkVhf1VolumeControl" 
+                                          Content="Control Custom App Audio Volume via the VHF1 Knob on ACP1" 
+                                          Style="{StaticResource ModernCheckboxStyle}"
+                                          Click="chkVhf1VolumeControl_Click"/>
+
+                                <CheckBox x:Name="chkVhf1LatchMute" 
+                                          Content="Use Record Latch to mute/unmute App (push/pull Knob)" 
+                                          Style="{StaticResource ModernCheckboxStyle}"
+                                          Margin="24,5,0,5"
+                                          Click="chkVhf1LatchMute_Click"/>
+
+                                <StackPanel Orientation="Horizontal" Margin="24,5,0,0">
+                                    <TextBlock Text="Custom App:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBox x:Name="txtVhf1VolumeApp" 
+                                             Style="{StaticResource ModernTextBoxStyle}"
+                                             Width="120" 
+                                             LostFocus="txtVhf1VolumeApp_LostFocus" 
+                                             KeyUp="txtVhf1VolumeApp_KeyUp"/>
+                                    <TextBlock Text="(Name of the Binary without .exe Extension)" 
+                                              VerticalAlignment="Center" 
+                                              Margin="8,0,0,0"
+                                              Foreground="#808080"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
             </TabItem>
 
             <!-- Settings Tab -->
@@ -490,41 +541,6 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Volume Control -->
-                        <TextBlock Text="VOLUME CONTROL" Style="{StaticResource CategoryHeaderStyle}"/>
-                        <Border Style="{StaticResource SectionBorderStyle}">
-                            <StackPanel>
-                                <CheckBox x:Name="chkGsxVolumeControl" 
-                                          Content="Control GSX App Audio Volume via the INT Knob on ACP1" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Click="chkGsxVolumeControl_Click"/>
-
-                                <CheckBox x:Name="chkVhf1VolumeControl" 
-                                          Content="Control Custom App Audio Volume via the VHF1 Knob on ACP1" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Click="chkVhf1VolumeControl_Click"/>
-
-                                <CheckBox x:Name="chkVhf1LatchMute" 
-                                          Content="Use Record Latch to mute/unmute App (push/pull Knob)" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Margin="24,5,0,5"
-                                          Click="chkVhf1LatchMute_Click"/>
-
-                                <StackPanel Orientation="Horizontal" Margin="24,5,0,0">
-                                    <TextBlock Text="Custom App:" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBox x:Name="txtVhf1VolumeApp" 
-                                             Style="{StaticResource ModernTextBoxStyle}"
-                                             Width="120" 
-                                             LostFocus="txtVhf1VolumeApp_LostFocus" 
-                                             KeyUp="txtVhf1VolumeApp_KeyUp"/>
-                                    <TextBlock Text="(Name of the Binary without .exe Extension)" 
-                                              VerticalAlignment="Center" 
-                                              Margin="8,0,0,0"
-                                              Foreground="#808080"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-                        
                         <!-- Appearance Settings -->
                         <TextBlock Text="APPEARANCE" Style="{StaticResource CategoryHeaderStyle}"/>
                         <Border Style="{StaticResource SectionBorderStyle}">

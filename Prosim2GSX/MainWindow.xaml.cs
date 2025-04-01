@@ -663,6 +663,12 @@ namespace Prosim2GSX
             }
         }
 
+        private void btnAudioSettings_Click(object sender, RoutedEventArgs e)
+        {
+            // Switch to the Audio Settings tab
+            MainTabControl.SelectedItem = AudioSettingsTab;
+        }
+
         private void btnSettings_Click(object sender, RoutedEventArgs e)
         {
             // Switch to the Settings tab
