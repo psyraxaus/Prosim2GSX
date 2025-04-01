@@ -1,13 +1,15 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿using System;
 using System.Threading;
 using Microsoft.FlightSimulator.SimConnect;
 using Prosim2GSX.Events;
 using Prosim2GSX.Models;
+using Prosim2GSX.Services.Audio;
 
 namespace Prosim2GSX
 {
     public class ServiceController
     {
+        private IAudioService _audioService;
         protected ServiceModel Model;
         protected ProsimController ProsimController;
         protected FlightPlan FlightPlan;
@@ -17,6 +19,7 @@ namespace Prosim2GSX
         {
             this.Model = model;
             this.ProsimController = new(model);
+            this._audioService = new AudioService(model, IPCManager.SimConnect);
         }
 
         public void Run()
@@ -129,7 +132,7 @@ namespace Prosim2GSX
 
         protected void ServiceLoop()
         {
-            var gsxController = new GsxController(Model, ProsimController, FlightPlan);
+            var gsxController = new GsxController(Model, ProsimController, FlightPlan, _audioService);
             // Store the GsxController in IPCManager so it can be accessed by the MainWindow
             IPCManager.GsxController = gsxController;
             
@@ -154,7 +157,7 @@ namespace Prosim2GSX
                     }
 
                     if (Model.GsxVolumeControl || Model.IsVhf1Controllable())
-                        gsxController.ControlAudio();
+                        _audioService.ControlAudio();
 
                     Thread.Sleep(delay);
                     elapsedMS += delay;
@@ -184,7 +187,7 @@ namespace Prosim2GSX
             if (Model.GsxVolumeControl || Model.IsVhf1Controllable())
             {
                 Logger.Log(LogLevel.Information, "ServiceController:ServiceLoop", "Resetting GSX/VHF1 Audio");
-                gsxController.ResetAudio();
+                _audioService.ResetAudio();
             }
             // Clear the GsxController reference when the service loop ends
             IPCManager.GsxController = null;
