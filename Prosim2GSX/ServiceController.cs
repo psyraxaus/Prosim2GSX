@@ -20,6 +20,12 @@ namespace Prosim2GSX
             this.Model = model;
             this.ProsimController = new(model);
             this._audioService = new AudioService(model, ProsimController, IPCManager.SimConnect);
+
+            // Add this line to set the AudioService in the ServiceModel
+            if (model is ServiceModel serviceModel)
+            {
+                serviceModel.SetAudioService((AudioService)_audioService);
+            }
         }
 
         public void Run()
@@ -196,8 +202,16 @@ namespace Prosim2GSX
             }
             finally 
             {
-                _audioService.Dispose();
+                if (_audioService is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
             }
+        }
+
+        public IAudioService GetAudioService()
+        {
+            return _audioService;
         }
     }
 }

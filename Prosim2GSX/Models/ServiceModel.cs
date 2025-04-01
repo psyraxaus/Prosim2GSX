@@ -2,14 +2,18 @@
 using Prosim2GSX.Services.Audio;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using static Prosim2GSX.Services.Audio.AudioChannelConfig;
 
 namespace Prosim2GSX.Models
 {
     public class ServiceModel
     {
+        private AudioService _audioService;
         public string AcarsNetwork {  get; set; }
         public string AcarsNetworkUrl { get; set; }
         public string AcarsSecret { get; set; }
+        public AudioApiType AudioApiType { get; set; }
         public bool AutoBoarding { get; set; }
         public bool AutoConnect { get; set; }
         public bool JetwayOnly { get; set; }
@@ -75,6 +79,11 @@ namespace Prosim2GSX.Models
 
         public Dictionary<AudioChannel, AudioChannelConfig> AudioChannels { get; private set; } = new Dictionary<AudioChannel, AudioChannelConfig>();
 
+        public Dictionary<AudioChannel, string> VoiceMeeterStrips { get; private set; } = new Dictionary<AudioChannel, string>();
+
+        public Dictionary<AudioChannel, VoiceMeeterDeviceType> VoiceMeeterDeviceTypes { get; private set; } = new Dictionary<AudioChannel, VoiceMeeterDeviceType>();
+
+
         public ServiceModel()
         {
             LoadConfiguration();
@@ -112,6 +121,7 @@ namespace Prosim2GSX.Models
             AcarsNetwork = Convert.ToString(ConfigurationFile.GetSetting("acarsNetwork", "Hoppie"));
             AcarsNetworkUrl = Convert.ToString(ConfigurationFile.GetSetting("acarsNetworkUrl", "http://www.hoppie.nl/acars/system/connect.html"));
             AcarsSecret = Convert.ToString(ConfigurationFile.GetSetting("acarsSecret", ""));
+            AudioApiType = (AudioApiType)Enum.Parse(typeof(AudioApiType),Convert.ToString(ConfigurationFile.GetSetting("audioApiType", "CoreAudio")));
             AutoBoarding = Convert.ToBoolean(ConfigurationFile.GetSetting("autoBoarding", "true"));
             AutoConnect = Convert.ToBoolean(ConfigurationFile.GetSetting("autoConnect", "true"));
             JetwayOnly = Convert.ToBoolean(ConfigurationFile.GetSetting("jetwayOnly", "false"));
@@ -165,6 +175,19 @@ namespace Prosim2GSX.Models
             Vhf3LatchMute = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf3LatchMute", "true"));
             WaitForConnect = Convert.ToBoolean(ConfigurationFile.GetSetting("waitForConnect", "true"));
 
+            foreach (var channel in Enum.GetValues(typeof(AudioChannel)).Cast<AudioChannel>())
+            {
+                string stripName = Convert.ToString(ConfigurationFile.GetSetting($"voiceMeeter{channel}Strip", ""));
+                VoiceMeeterStrips[channel] = stripName;
+            }
+
+            foreach (var channel in Enum.GetValues(typeof(AudioChannel)).Cast<AudioChannel>())
+            {
+                string deviceTypeStr = Convert.ToString(ConfigurationFile.GetSetting($"voiceMeeter{channel}DeviceType", "Strip"));
+                VoiceMeeterDeviceTypes[channel] = Enum.TryParse<VoiceMeeterDeviceType>(deviceTypeStr, out var deviceType) ?
+                    deviceType : VoiceMeeterDeviceType.Strip;
+            }
+
             InitializeAudioChannels();
         }
 
@@ -177,7 +200,8 @@ namespace Prosim2GSX.Models
                 VolumeDataRef = "system.analog.A_ASP_INT_VOLUME",
                 MuteDataRef = "system.indicators.I_ASP_INT_REC",
                 Enabled = GsxVolumeControl,
-                LatchMute = IntLatchMute
+                LatchMute = IntLatchMute,
+                VoiceMeeterStrip = VoiceMeeterStrips.ContainsKey(AudioChannel.INT) ? VoiceMeeterStrips[AudioChannel.INT] : ""
             };
 
             // VHF1
@@ -187,7 +211,8 @@ namespace Prosim2GSX.Models
                 VolumeDataRef = "system.analog.A_ASP_VHF_1_VOLUME",
                 MuteDataRef = "system.indicators.I_ASP_VHF_1_REC",
                 Enabled = IsVhf1Controllable(),
-                LatchMute = Vhf1LatchMute
+                LatchMute = Vhf1LatchMute,
+                VoiceMeeterStrip = VoiceMeeterStrips.ContainsKey(AudioChannel.VHF1) ? VoiceMeeterStrips[AudioChannel.VHF1] : ""
             };
 
             // VHF2
@@ -197,7 +222,8 @@ namespace Prosim2GSX.Models
                 VolumeDataRef = "system.analog.A_ASP_VHF_2_VOLUME",
                 MuteDataRef = "system.indicators.I_ASP_VHF_2_REC",
                 Enabled = IsVhf2Controllable(),
-                LatchMute = Vhf2LatchMute
+                LatchMute = Vhf2LatchMute,
+                VoiceMeeterStrip = VoiceMeeterStrips.ContainsKey(AudioChannel.VHF2) ? VoiceMeeterStrips[AudioChannel.VHF2] : ""
             };
 
             // VHF3
@@ -207,7 +233,8 @@ namespace Prosim2GSX.Models
                 VolumeDataRef = "system.analog.A_ASP_VHF_3_VOLUME",
                 MuteDataRef = "system.indicators.I_ASP_VHF_3_REC",
                 Enabled = IsVhf3Controllable(),
-                LatchMute = Vhf3LatchMute
+                LatchMute = Vhf3LatchMute,
+                VoiceMeeterStrip = VoiceMeeterStrips.ContainsKey(AudioChannel.VHF3) ? VoiceMeeterStrips[AudioChannel.VHF3] : ""
             };
 
             // CAB
@@ -217,7 +244,8 @@ namespace Prosim2GSX.Models
                 VolumeDataRef = "system.analog.A_ASP_CAB_VOLUME",
                 MuteDataRef = "system.indicators.I_ASP_CAB_REC",
                 Enabled = IsCabControllable(),
-                LatchMute = CabLatchMute
+                LatchMute = CabLatchMute,
+                VoiceMeeterStrip = VoiceMeeterStrips.ContainsKey(AudioChannel.CAB) ? VoiceMeeterStrips[AudioChannel.CAB] : ""
             };
 
             // PA
@@ -227,7 +255,8 @@ namespace Prosim2GSX.Models
                 VolumeDataRef = "system.analog.A_ASP_PA_VOLUME",
                 MuteDataRef = "system.indicators.I_ASP_PA_REC",
                 Enabled = IsPaControllable(),
-                LatchMute = PaLatchMute
+                LatchMute = PaLatchMute,
+                VoiceMeeterStrip = VoiceMeeterStrips.ContainsKey(AudioChannel.PA) ? VoiceMeeterStrips[AudioChannel.PA] : ""
             };
         }
 
@@ -249,6 +278,27 @@ namespace Prosim2GSX.Models
                 return RefuelRate;
             else
                 return RefuelRate / ProsimController.weightConversion;
+        }
+
+        public void SetVoiceMeeterStrip(AudioChannel channel, string stripName)
+        {
+            VoiceMeeterStrips[channel] = stripName;
+            SetSetting($"voiceMeeter{channel}Strip", stripName);
+        }
+        public void SetAudioService(AudioService audioService)
+        {
+            _audioService = audioService;
+        }
+
+        public AudioService GetAudioService()
+        {
+            return _audioService;
+        }
+
+        public void SetVoiceMeeterDeviceType(AudioChannel channel, VoiceMeeterDeviceType deviceType)
+        {
+            VoiceMeeterDeviceTypes[channel] = deviceType;
+            SetSetting($"voiceMeeter{channel}DeviceType", deviceType.ToString());
         }
     }
 }

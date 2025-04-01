@@ -9,6 +9,9 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Prosim2GSX.Models;
+using Prosim2GSX.Services.Audio;
+using System.Threading;
+using static Prosim2GSX.Services.Audio.AudioChannelConfig;
 
 namespace Prosim2GSX
 {
@@ -19,7 +22,7 @@ namespace Prosim2GSX
         protected DispatcherTimer timer;
         protected int lineCounter = 0;
         private List<SubscriptionToken> _subscriptionTokens = new List<SubscriptionToken>();
-
+        private bool _isLoadingSettings = false;
         public MainWindow(NotifyIconViewModel notifyModel, ServiceModel serviceModel)
         {
             InitializeComponent();
@@ -185,6 +188,26 @@ namespace Prosim2GSX
 
         protected void LoadSettings()
         {
+            // Set audio API radio buttons
+            rbCoreAudio.IsChecked = serviceModel.AudioApiType == AudioApiType.CoreAudio;
+            rbVoiceMeeter.IsChecked = serviceModel.AudioApiType == AudioApiType.VoiceMeeter;
+
+            // Update UI visibility based on selected API
+            UpdateAudioApiVisibility();
+
+            // Set audio API radio buttons
+            rbCoreAudio.IsChecked = serviceModel.AudioApiType == AudioApiType.CoreAudio;
+            rbVoiceMeeter.IsChecked = serviceModel.AudioApiType == AudioApiType.VoiceMeeter;
+
+            // Update UI visibility based on selected API
+            UpdateAudioApiVisibility();
+
+            // If VoiceMeeter is selected, load available strips
+            if (serviceModel.AudioApiType == AudioApiType.VoiceMeeter)
+            {
+                LoadVoiceMeeterStrips();
+            }
+
             if (serviceModel.FlightPlanType == "EFB")
             {
                 eFBPlan.IsChecked = true;
@@ -865,6 +888,398 @@ namespace Prosim2GSX
                 MessageBoxImage.Information);
         }
 
+        private void audioApi_Click(object sender, RoutedEventArgs e)
+        {
+            AudioApiType apiType = rbCoreAudio.IsChecked == true ?
+                AudioApiType.CoreAudio : AudioApiType.VoiceMeeter;
 
+            serviceModel.SetSetting("audioApiType", apiType.ToString());
+
+            // Update UI visibility based on selected API
+            UpdateAudioApiVisibility();
+
+            // If VoiceMeeter is selected, load available strips
+            if (apiType == AudioApiType.VoiceMeeter)
+            {
+                LoadVoiceMeeterStrips();
+            }
+        }
+
+        private void UpdateAudioApiVisibility()
+        {
+            bool isCoreAudio = serviceModel.AudioApiType == AudioApiType.CoreAudio;
+
+            // Update INT channel visibility
+            pnlIntCoreAudio.Visibility = isCoreAudio ? Visibility.Visible : Visibility.Collapsed;
+            pnlIntVoiceMeeter.Visibility = isCoreAudio ? Visibility.Collapsed : Visibility.Visible;
+
+            // Update VHF1 channel visibility
+            pnlVhf1CoreAudio.Visibility = isCoreAudio ? Visibility.Visible : Visibility.Collapsed;
+            pnlVhf1VoiceMeeter.Visibility = isCoreAudio ? Visibility.Collapsed : Visibility.Visible;
+
+            // Update VHF2 channel visibility
+            pnlVhf2CoreAudio.Visibility = isCoreAudio ? Visibility.Visible : Visibility.Collapsed;
+            pnlVhf2VoiceMeeter.Visibility = isCoreAudio ? Visibility.Collapsed : Visibility.Visible;
+            
+            // Update VHF3 channel visibility
+            pnlVhf3CoreAudio.Visibility = isCoreAudio ? Visibility.Visible : Visibility.Collapsed;
+            pnlVhf3VoiceMeeter.Visibility = isCoreAudio ? Visibility.Collapsed : Visibility.Visible;
+
+            // Update CAB channel visibility
+            pnlCabCoreAudio.Visibility = isCoreAudio ? Visibility.Visible : Visibility.Collapsed;
+            pnlCabVoiceMeeter.Visibility = isCoreAudio ? Visibility.Collapsed : Visibility.Visible;
+
+            // Update PA channel visibility
+            pnlPaCoreAudio.Visibility = isCoreAudio ? Visibility.Visible : Visibility.Collapsed;
+            pnlPaVoiceMeeter.Visibility = isCoreAudio ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        private void LoadVoiceMeeterStrips()
+        {
+            try
+            {
+                // Get available strips from the AudioService
+                var audioService = serviceModel.GetAudioService();
+                if (audioService == null)
+                    return;
+
+                // Check if VoiceMeeter is running
+                if (!audioService.IsVoiceMeeterRunning())
+                {
+                    // Show a message to the user
+                    MessageBox.Show(
+                        "VoiceMeeter is not running. Please start VoiceMeeter and click the Refresh button.",
+                        "VoiceMeeter Not Running",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+
+                    // Try to start VoiceMeeter
+                    if (audioService.EnsureVoiceMeeterIsRunning())
+                    {
+                        // Wait a moment for VoiceMeeter to initialize
+                        Thread.Sleep(1000);
+                    }
+                    else
+                    {
+                        // Clear the ComboBoxes
+                        cboIntVoiceMeeterStrip.ItemsSource = null;
+                        cboVhf1VoiceMeeterStrip.ItemsSource = null;
+                        cboVhf2VoiceMeeterStrip.ItemsSource = null;
+                        cboVhf3VoiceMeeterStrip.ItemsSource = null;
+                        cboCabVoiceMeeterStrip.ItemsSource = null;
+                        cboPaVoiceMeeterStrip.ItemsSource = null;
+
+                        return;
+                    }
+                }
+
+                // Set the radio buttons based on the device types
+                _isLoadingSettings = true;
+
+                if (serviceModel.VoiceMeeterDeviceTypes.TryGetValue(AudioChannel.INT, out var intDeviceType))
+                {
+                    rbIntVoiceMeeterStrip.IsChecked = intDeviceType == VoiceMeeterDeviceType.Strip;
+                    rbIntVoiceMeeterBus.IsChecked = intDeviceType == VoiceMeeterDeviceType.Bus;
+                }
+
+                if (serviceModel.VoiceMeeterDeviceTypes.TryGetValue(AudioChannel.VHF1, out var vhf1DeviceType))
+                {
+                    rbVhf1VoiceMeeterStrip.IsChecked = vhf1DeviceType == VoiceMeeterDeviceType.Strip;
+                    rbVhf1VoiceMeeterBus.IsChecked = vhf1DeviceType == VoiceMeeterDeviceType.Bus;
+                }
+
+                if (serviceModel.VoiceMeeterDeviceTypes.TryGetValue(AudioChannel.VHF2, out var vhf2DeviceType))
+                {
+                    rbVhf2VoiceMeeterStrip.IsChecked = vhf2DeviceType == VoiceMeeterDeviceType.Strip;
+                    rbVhf2VoiceMeeterBus.IsChecked = vhf2DeviceType == VoiceMeeterDeviceType.Bus;
+                }
+
+                if (serviceModel.VoiceMeeterDeviceTypes.TryGetValue(AudioChannel.VHF3, out var vhf3DeviceType))
+                {
+                    rbVhf3VoiceMeeterStrip.IsChecked = vhf3DeviceType == VoiceMeeterDeviceType.Strip;
+                    rbVhf3VoiceMeeterBus.IsChecked = vhf3DeviceType == VoiceMeeterDeviceType.Bus;
+                }
+
+                if (serviceModel.VoiceMeeterDeviceTypes.TryGetValue(AudioChannel.CAB, out var cabDeviceType))
+                {
+                    rbCabVoiceMeeterStrip.IsChecked = cabDeviceType == VoiceMeeterDeviceType.Strip;
+                    rbCabVoiceMeeterBus.IsChecked = cabDeviceType == VoiceMeeterDeviceType.Bus;
+                }
+
+                if (serviceModel.VoiceMeeterDeviceTypes.TryGetValue(AudioChannel.PA, out var paDeviceType))
+                {
+                    rbPaVoiceMeeterStrip.IsChecked = paDeviceType == VoiceMeeterDeviceType.Strip;
+                    rbPaVoiceMeeterBus.IsChecked = paDeviceType == VoiceMeeterDeviceType.Bus;
+                }
+
+                _isLoadingSettings = false;
+
+                // Load the strips/buses for each channel
+                LoadVoiceMeeterStripsForChannel(AudioChannel.INT);
+                LoadVoiceMeeterStripsForChannel(AudioChannel.VHF1);
+                LoadVoiceMeeterStripsForChannel(AudioChannel.VHF2);
+                LoadVoiceMeeterStripsForChannel(AudioChannel.VHF3);
+                LoadVoiceMeeterStripsForChannel(AudioChannel.CAB);
+                LoadVoiceMeeterStripsForChannel(AudioChannel.PA);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Warning, "MainWindow", $"Error loading VoiceMeeter strips: {ex.Message}");
+                MessageBox.Show(
+                    $"Error loading VoiceMeeter strips: {ex.Message}",
+                    "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
+        private void rbIntVoiceMeeterDeviceType_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isLoadingSettings)
+                return;
+
+            VoiceMeeterDeviceType deviceType = rbIntVoiceMeeterStrip.IsChecked == true ?
+                VoiceMeeterDeviceType.Strip : VoiceMeeterDeviceType.Bus;
+
+            serviceModel.SetVoiceMeeterDeviceType(AudioChannel.INT, deviceType);
+
+            // Reload the ComboBox with the appropriate list
+            LoadVoiceMeeterStripsForChannel(AudioChannel.INT);
+        }
+
+        private void rbVhf1VoiceMeeterDeviceType_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isLoadingSettings)
+                return;
+
+            VoiceMeeterDeviceType deviceType = rbVhf1VoiceMeeterStrip.IsChecked == true ?
+                VoiceMeeterDeviceType.Strip : VoiceMeeterDeviceType.Bus;
+
+            serviceModel.SetVoiceMeeterDeviceType(AudioChannel.VHF1, deviceType);
+
+            // Reload the ComboBox with the appropriate list
+            LoadVoiceMeeterStripsForChannel(AudioChannel.VHF1);
+        }
+
+        private void rbVhf2VoiceMeeterDeviceType_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isLoadingSettings)
+                return;
+
+            VoiceMeeterDeviceType deviceType = rbVhf2VoiceMeeterStrip.IsChecked == true ?
+                VoiceMeeterDeviceType.Strip : VoiceMeeterDeviceType.Bus;
+
+            serviceModel.SetVoiceMeeterDeviceType(AudioChannel.VHF2, deviceType);
+
+            // Reload the ComboBox with the appropriate list
+            LoadVoiceMeeterStripsForChannel(AudioChannel.VHF2);
+        }
+
+        private void rbVhf3VoiceMeeterDeviceType_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isLoadingSettings)
+                return;
+
+            VoiceMeeterDeviceType deviceType = rbVhf3VoiceMeeterStrip.IsChecked == true ?
+                VoiceMeeterDeviceType.Strip : VoiceMeeterDeviceType.Bus;
+
+            serviceModel.SetVoiceMeeterDeviceType(AudioChannel.VHF3, deviceType);
+
+            // Reload the ComboBox with the appropriate list
+            LoadVoiceMeeterStripsForChannel(AudioChannel.VHF3);
+        }
+
+        private void rbCabVoiceMeeterDeviceType_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isLoadingSettings)
+                return;
+
+            VoiceMeeterDeviceType deviceType = rbCabVoiceMeeterStrip.IsChecked == true ?
+                VoiceMeeterDeviceType.Strip : VoiceMeeterDeviceType.Bus;
+
+            serviceModel.SetVoiceMeeterDeviceType(AudioChannel.CAB, deviceType);
+
+            // Reload the ComboBox with the appropriate list
+            LoadVoiceMeeterStripsForChannel(AudioChannel.CAB);
+        }
+
+        private void rbPaVoiceMeeterDeviceType_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isLoadingSettings)
+                return;
+
+            VoiceMeeterDeviceType deviceType = rbPaVoiceMeeterStrip.IsChecked == true ?
+                VoiceMeeterDeviceType.Strip : VoiceMeeterDeviceType.Bus;
+
+            serviceModel.SetVoiceMeeterDeviceType(AudioChannel.PA, deviceType);
+
+            // Reload the ComboBox with the appropriate list
+            LoadVoiceMeeterStripsForChannel(AudioChannel.PA);
+        }
+
+        private void LoadVoiceMeeterStripsForChannel(AudioChannel channel)
+        {
+            try
+            {
+                // Get available strips/buses from the AudioService
+                var audioService = serviceModel.GetAudioService();
+                if (audioService == null)
+                    return;
+
+                // Get the device type
+                VoiceMeeterDeviceType deviceType = VoiceMeeterDeviceType.Strip;
+                if (serviceModel.VoiceMeeterDeviceTypes.TryGetValue(channel, out var type))
+                {
+                    deviceType = type;
+                }
+
+                // Get the appropriate list
+                List<KeyValuePair<string, string>> devices;
+                if (deviceType == VoiceMeeterDeviceType.Strip)
+                {
+                    devices = audioService.GetAvailableVoiceMeeterStrips();
+                }
+                else
+                {
+                    devices = audioService.GetAvailableVoiceMeeterBuses();
+                }
+
+                if (devices.Count == 0)
+                {
+                    return;
+                }
+
+                // Populate the ComboBox
+                _isLoadingSettings = true;
+
+                switch (channel)
+                {
+                    case AudioChannel.INT:
+                        cboIntVoiceMeeterStrip.ItemsSource = devices;
+                        if (serviceModel.VoiceMeeterStrips.TryGetValue(channel, out string intDevice) && !string.IsNullOrEmpty(intDevice))
+                        {
+                            cboIntVoiceMeeterStrip.SelectedValue = intDevice;
+                        }
+                        break;
+                    case AudioChannel.VHF1:
+                        cboVhf1VoiceMeeterStrip.ItemsSource = devices;
+                        if (serviceModel.VoiceMeeterStrips.TryGetValue(channel, out string vhf1Device) && !string.IsNullOrEmpty(vhf1Device))
+                        {
+                            cboIntVoiceMeeterStrip.SelectedValue = vhf1Device;
+                        }
+                        break;
+                    case AudioChannel.VHF2:
+                        cboVhf2VoiceMeeterStrip.ItemsSource = devices;
+                        if (serviceModel.VoiceMeeterStrips.TryGetValue(channel, out string vhf2Device) && !string.IsNullOrEmpty(vhf2Device))
+                        {
+                            cboIntVoiceMeeterStrip.SelectedValue = vhf2Device;
+                        }
+                        break;
+                    case AudioChannel.VHF3:
+                        cboVhf3VoiceMeeterStrip.ItemsSource = devices;
+                        if (serviceModel.VoiceMeeterStrips.TryGetValue(channel, out string vhf3Device) && !string.IsNullOrEmpty(vhf3Device))
+                        {
+                            cboIntVoiceMeeterStrip.SelectedValue = vhf3Device;
+                        }
+                        break;
+                    case AudioChannel.CAB:
+                        cboCabVoiceMeeterStrip.ItemsSource = devices;
+                        if (serviceModel.VoiceMeeterStrips.TryGetValue(channel, out string cabDevice) && !string.IsNullOrEmpty(cabDevice))
+                        {
+                            cboIntVoiceMeeterStrip.SelectedValue = cabDevice;
+                        }
+                        break;
+                    case AudioChannel.PA:
+                        cboPaVoiceMeeterStrip.ItemsSource = devices;
+                        if (serviceModel.VoiceMeeterStrips.TryGetValue(channel, out string paDevice) && !string.IsNullOrEmpty(paDevice))
+                        {
+                            cboIntVoiceMeeterStrip.SelectedValue = paDevice;
+                        }
+                        break;
+                }
+
+                _isLoadingSettings = false;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Warning, "MainWindow", $"Error loading VoiceMeeter devices for channel {channel}: {ex.Message}");
+            }
+        }
+
+
+
+        private void btnRefreshVoiceMeeterStrips_Click(object sender, RoutedEventArgs e)
+        {
+            LoadVoiceMeeterStrips();
+        }
+
+        private void cboIntVoiceMeeterStrip_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isLoadingSettings)
+                return;
+
+            if (cboIntVoiceMeeterStrip.SelectedValue != null)
+            {
+                string stripName = cboIntVoiceMeeterStrip.SelectedValue.ToString();
+                serviceModel.SetVoiceMeeterStrip(AudioChannel.INT, stripName);
+            }
+        }
+
+        private void cboVhf1VoiceMeeterStrip_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isLoadingSettings)
+                return;
+
+            if (cboVhf1VoiceMeeterStrip.SelectedValue != null)
+            {
+                string stripName = cboVhf1VoiceMeeterStrip.SelectedValue.ToString();
+                serviceModel.SetVoiceMeeterStrip(AudioChannel.VHF1, stripName);
+            }
+        }
+        private void cboVhf2VoiceMeeterStrip_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isLoadingSettings)
+                return;
+
+            if (cboVhf2VoiceMeeterStrip.SelectedValue != null)
+            {
+                string stripName = cboVhf2VoiceMeeterStrip.SelectedValue.ToString();
+                serviceModel.SetVoiceMeeterStrip(AudioChannel.VHF2, stripName);
+            }
+        }
+        private void cboVhf3VoiceMeeterStrip_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isLoadingSettings)
+                return;
+
+            if (cboVhf3VoiceMeeterStrip.SelectedValue != null)
+            {
+                string stripName = cboVhf3VoiceMeeterStrip.SelectedValue.ToString();
+                serviceModel.SetVoiceMeeterStrip(AudioChannel.VHF3, stripName);
+            }
+        }
+        private void cboCabVoiceMeeterStrip_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isLoadingSettings)
+                return;
+
+            if (cboCabVoiceMeeterStrip.SelectedValue != null)
+            {
+                string stripName = cboCabVoiceMeeterStrip.SelectedValue.ToString();
+                serviceModel.SetVoiceMeeterStrip(AudioChannel.CAB, stripName);
+            }
+        }
+
+        private void cboPaVoiceMeeterStrip_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isLoadingSettings)
+                return;
+
+            if (cboPaVoiceMeeterStrip.SelectedValue != null)
+            {
+                string stripName = cboPaVoiceMeeterStrip.SelectedValue.ToString();
+                serviceModel.SetVoiceMeeterStrip(AudioChannel.PA, stripName);
+            }
+        }
     }
 }

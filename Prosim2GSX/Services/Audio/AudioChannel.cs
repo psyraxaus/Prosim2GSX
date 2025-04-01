@@ -35,4 +35,13 @@
         /// </summary>
         PA
     }
+
+    /// <summary>
+    /// Enum representing selection of Core Audio or VoiceMeeter
+    /// </summary>
+    public enum AudioApiType
+    {
+        CoreAudio,
+        VoiceMeeter
+    }
 }

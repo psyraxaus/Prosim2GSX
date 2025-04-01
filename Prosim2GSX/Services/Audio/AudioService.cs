@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using static Prosim2GSX.Services.Audio.AudioChannelConfig;
 
 namespace Prosim2GSX.Services.Audio
 {
@@ -13,6 +14,10 @@ namespace Prosim2GSX.Services.Audio
     /// </summary>
     public class AudioService : IAudioService
     {
+        private readonly VoiceMeeterApi _voiceMeeterApi;
+        private Dictionary<AudioChannel, float> _voiceMeeterVolumes = new Dictionary<AudioChannel, float>();
+        private Dictionary<AudioChannel, bool> _voiceMeeterMutes = new Dictionary<AudioChannel, bool>();
+
         private readonly ServiceModel _model;
         private readonly ProsimController _prosimController;
         private readonly MobiSimConnect _simConnect;
@@ -38,6 +43,7 @@ namespace Prosim2GSX.Services.Audio
             _model = model;
             _prosimController = prosimController;
             _simConnect = simConnect;
+            _voiceMeeterApi = new VoiceMeeterApi();
 
             // Initialize FCU mode handlers
             _trackFpaModeHandler = new DataRefChangedHandler(OnTrackFpaModeChanged);
@@ -51,6 +57,16 @@ namespace Prosim2GSX.Services.Audio
 
                 _muteHandlers[channel] = new DataRefChangedHandler((dataRef, oldValue, newValue) =>
                     OnMuteChanged(channel, dataRef, oldValue, newValue));
+
+                // Initialize VoiceMeeter volumes and mutes
+                _voiceMeeterVolumes[channel] = 0.0f;
+                _voiceMeeterMutes[channel] = false;
+            }
+
+            // Initialize VoiceMeeter API if needed
+            if (_model.AudioApiType == AudioApiType.VoiceMeeter)
+            {
+                _voiceMeeterApi.Initialize();
             }
         }
         
@@ -74,9 +90,15 @@ namespace Prosim2GSX.Services.Audio
                 if (config.Enabled)
                 {
                     Logger.Log(LogLevel.Information, "AudioService:Initialize",
-                        $"Enabling audio channel: {channel} for process: {config.ProcessName}");
+                        $"Enabling audio channel: {channel}");
 
-                    AddAudioSource(config.ProcessName, channel.ToString(), config.VolumeDataRef, config.MuteDataRef);
+                    if (_model.AudioApiType == AudioApiType.CoreAudio)
+                    {
+                        // Core Audio initialization
+                        AddAudioSource(config.ProcessName, channel.ToString(), config.VolumeDataRef, config.MuteDataRef);
+                    }
+
+                    // Subscribe to datarefs regardless of API type
                     _prosimController.SubscribeToDataRef(config.VolumeDataRef, _volumeHandlers[channel]);
                     _prosimController.SubscribeToDataRef(config.MuteDataRef, _muteHandlers[channel]);
                 }
@@ -249,16 +271,55 @@ namespace Prosim2GSX.Services.Audio
             {
                 // Handle app changes
                 HandleAppChanges();
-                
-                // Get audio sessions if needed
-                GetAudioSessions();
+
+                if (_model.AudioApiType == AudioApiType.CoreAudio)
+                {
+                    // Get audio sessions if using Core Audio
+                    GetAudioSessions();
+                }
+                else if (_model.AudioApiType == AudioApiType.VoiceMeeter)
+                {
+                    // Update VoiceMeeter parameters if they've changed
+                    if (_voiceMeeterApi.AreParametersDirty())
+                    {
+                        UpdateVoiceMeeterParameters();
+                    }
+                }
             }
             catch (Exception ex)
             {
                 Logger.Log(LogLevel.Debug, "AudioService:ControlAudio", $"Exception {ex.GetType()} during Audio Control: {ex.Message}");
             }
         }
-        
+
+        private void UpdateVoiceMeeterParameters()
+        {
+            foreach (var channelEntry in _model.AudioChannels)
+            {
+                var channel = channelEntry.Key;
+                var config = channelEntry.Value;
+
+                if (config.Enabled && !string.IsNullOrEmpty(config.VoiceMeeterStrip))
+                {
+                    try
+                    {
+                        // Get current values from VoiceMeeter
+                        float gain = _voiceMeeterApi.GetStripGain(config.VoiceMeeterStrip);
+                        bool mute = _voiceMeeterApi.GetStripMute(config.VoiceMeeterStrip);
+
+                        // Update cached values
+                        _voiceMeeterVolumes[channel] = gain;
+                        _voiceMeeterMutes[channel] = mute;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log(LogLevel.Error, "AudioService:UpdateVoiceMeeterParameters",
+                            $"Error updating VoiceMeeter parameters for {channel}: {ex.Message}");
+                    }
+                }
+            }
+        }
+
         /// <summary>
         /// Handles changes to audio sources, such as app changes or process termination
         /// </summary>
@@ -334,7 +395,7 @@ namespace Prosim2GSX.Services.Audio
                 if (!_fcuTrackFpaMode && !_fcuHeadingVsMode)
                     return; // Ignore changes when FCU is not in the correct mode
 
-                if (_audioSources.TryGetValue(channel.ToString(), out AudioSource source) && source.Session != null)
+                if (_model.AudioChannels.TryGetValue(channel, out var config) && config.Enabled)
                 {
                     float volume;
                     try
@@ -348,16 +409,55 @@ namespace Prosim2GSX.Services.Audio
                         return;
                     }
 
-                    if (volume >= 0 && volume != source.Volume)
+                    if (volume >= 0)
                     {
-                        source.Session.SimpleAudioVolume.MasterVolume = volume;
-                        source.Volume = volume;
+                        if (_model.AudioApiType == AudioApiType.CoreAudio)
+                        {
+                            // Core Audio volume control
+                            if (_audioSources.TryGetValue(channel.ToString(), out AudioSource source) &&
+                                source.Session != null &&
+                                volume != source.Volume)
+                            {
+                                source.Session.SimpleAudioVolume.MasterVolume = volume;
+                                source.Volume = volume;
 
-                        // Publish event
-                        EventAggregator.Instance.Publish(new AudioStateChangedEvent(source.SourceName, source.Session.SimpleAudioVolume.Mute, volume));
+                                // Publish event
+                                EventAggregator.Instance.Publish(new AudioStateChangedEvent(source.SourceName, source.Session.SimpleAudioVolume.Mute, volume));
 
-                        Logger.Log(LogLevel.Debug, "AudioService:OnVolumeChanged",
-                            $"Volume changed for {channel}: {volume}");
+                                Logger.Log(LogLevel.Debug, "AudioService:OnVolumeChanged",
+                                    $"Volume changed for {channel}: {volume}");
+                            }
+                        }
+                        else if (_model.AudioApiType == AudioApiType.VoiceMeeter)
+                        {
+                            // Get the device type and name
+                            if (_model is ServiceModel serviceModel &&
+                                serviceModel.VoiceMeeterDeviceTypes.TryGetValue(channel, out var deviceType) &&
+                                serviceModel.VoiceMeeterStrips.TryGetValue(channel, out var deviceName) &&
+                                !string.IsNullOrEmpty(deviceName))
+                            {
+                                // Convert 0-1 range to VoiceMeeter gain range (-60 to 12 dB)
+                                float gain = _voiceMeeterApi.VolumeToGain(volume);
+
+                                if (deviceType == VoiceMeeterDeviceType.Strip)
+                                {
+                                    // VoiceMeeter strip volume control
+                                    _voiceMeeterApi.SetStripGain(deviceName, gain);
+                                    Logger.Log(LogLevel.Debug, "AudioService:OnVolumeChanged",
+                                        $"VoiceMeeter strip gain changed for {channel}: {gain} dB");
+                                }
+                                else
+                                {
+                                    // VoiceMeeter bus volume control
+                                    _voiceMeeterApi.SetBusGain(deviceName, gain);
+                                    Logger.Log(LogLevel.Debug, "AudioService:OnVolumeChanged",
+                                        $"VoiceMeeter bus gain changed for {channel}: {gain} dB");
+                                }
+
+                                // Publish event
+                                EventAggregator.Instance.Publish(new AudioStateChangedEvent(channel.ToString(), false, volume));
+                            }
+                        }
                     }
                 }
             }
@@ -382,7 +482,7 @@ namespace Prosim2GSX.Services.Audio
                 if (!_fcuTrackFpaMode && !_fcuHeadingVsMode)
                     return; // Ignore changes when FCU is not in the correct mode
 
-                if (_audioSources.TryGetValue(channel.ToString(), out AudioSource source) && source.Session != null)
+                if (_model.AudioChannels.TryGetValue(channel, out var config) && config.Enabled)
                 {
                     bool shouldHandleMute = true;
                     int muted;
@@ -399,33 +499,117 @@ namespace Prosim2GSX.Services.Audio
                     }
 
                     // Check if latch mute is disabled for this channel
-                    if (_model.AudioChannels.TryGetValue(channel, out var config) && !config.LatchMute)
+                    if (!config.LatchMute)
                     {
-                        // If latch mute is disabled, only unmute if needed
-                        if (source.Session.SimpleAudioVolume.Mute)
-                        {
-                            Logger.Log(LogLevel.Information, "AudioService:OnMuteChanged",
-                                $"Unmuting {source.SourceName} (App muted and Mute-Option disabled)");
-                            source.Session.SimpleAudioVolume.Mute = false;
-                            source.MuteState = -1;
-
-                            // Publish event
-                            EventAggregator.Instance.Publish(new AudioStateChangedEvent(source.SourceName, false, source.Session.SimpleAudioVolume.MasterVolume));
-                        }
                         shouldHandleMute = false;
+
+                        if (_model.AudioApiType == AudioApiType.CoreAudio)
+                        {
+                            // If latch mute is disabled, only unmute if needed
+                            if (_audioSources.TryGetValue(channel.ToString(), out AudioSource source) &&
+                                source.Session != null &&
+                                source.Session.SimpleAudioVolume.Mute)
+                            {
+                                Logger.Log(LogLevel.Information, "AudioService:OnMuteChanged",
+                                    $"Unmuting {source.SourceName} (App muted and Mute-Option disabled)");
+                                source.Session.SimpleAudioVolume.Mute = false;
+                                source.MuteState = -1;
+
+                                // Publish event
+                                EventAggregator.Instance.Publish(new AudioStateChangedEvent(source.SourceName, false, source.Session.SimpleAudioVolume.MasterVolume));
+                            }
+                        }
+                        else if (_model.AudioApiType == AudioApiType.VoiceMeeter)
+                        {
+                            // Get the device type and name
+                            if (_model is ServiceModel serviceModel &&
+                                serviceModel.VoiceMeeterDeviceTypes.TryGetValue(channel, out var deviceType) &&
+                                serviceModel.VoiceMeeterStrips.TryGetValue(channel, out var deviceName) &&
+                                !string.IsNullOrEmpty(deviceName))
+                            {
+                                bool isMuted = false;
+
+                                if (deviceType == VoiceMeeterDeviceType.Strip)
+                                {
+                                    // Check if the strip is muted
+                                    isMuted = _voiceMeeterApi.GetStripMute(deviceName);
+
+                                    // If latch mute is disabled, only unmute if needed
+                                    if (isMuted)
+                                    {
+                                        Logger.Log(LogLevel.Information, "AudioService:OnMuteChanged",
+                                            $"Unmuting VoiceMeeter strip {deviceName} (Mute-Option disabled)");
+                                        _voiceMeeterApi.SetStripMute(deviceName, false);
+                                    }
+                                }
+                                else
+                                {
+                                    // Check if the bus is muted
+                                    isMuted = _voiceMeeterApi.GetBusMute(deviceName);
+
+                                    // If latch mute is disabled, only unmute if needed
+                                    if (isMuted)
+                                    {
+                                        Logger.Log(LogLevel.Information, "AudioService:OnMuteChanged",
+                                            $"Unmuting VoiceMeeter bus {deviceName} (Mute-Option disabled)");
+                                        _voiceMeeterApi.SetBusMute(deviceName, false);
+                                    }
+                                }
+
+                                // Publish event
+                                EventAggregator.Instance.Publish(new AudioStateChangedEvent(channel.ToString(), false, 0));
+                            }
+                        }
                     }
 
                     // Handle mute state if needed
-                    if (shouldHandleMute && muted >= 0 && muted != source.MuteState)
+                    if (shouldHandleMute && muted >= 0)
                     {
-                        source.Session.SimpleAudioVolume.Mute = muted == 0;
-                        source.MuteState = muted;
+                        bool shouldMute = muted == 0;
 
-                        // Publish event
-                        EventAggregator.Instance.Publish(new AudioStateChangedEvent(source.SourceName, muted == 0, source.Session.SimpleAudioVolume.MasterVolume));
+                        if (_model.AudioApiType == AudioApiType.CoreAudio)
+                        {
+                            if (_audioSources.TryGetValue(channel.ToString(), out AudioSource source) &&
+                                source.Session != null &&
+                                muted != source.MuteState)
+                            {
+                                source.Session.SimpleAudioVolume.Mute = shouldMute;
+                                source.MuteState = muted;
 
-                        Logger.Log(LogLevel.Debug, "AudioService:OnMuteChanged",
-                            $"Mute state changed for {channel}: {(muted == 0 ? "Muted" : "Unmuted")}");
+                                // Publish event
+                                EventAggregator.Instance.Publish(new AudioStateChangedEvent(source.SourceName, shouldMute, source.Session.SimpleAudioVolume.MasterVolume));
+
+                                Logger.Log(LogLevel.Debug, "AudioService:OnMuteChanged",
+                                    $"Mute state changed for {channel}: {(shouldMute ? "Muted" : "Unmuted")}");
+                            }
+                        }
+                        else if (_model.AudioApiType == AudioApiType.VoiceMeeter)
+                        {
+                            // Get the device type and name
+                            if (_model is ServiceModel serviceModel &&
+                                serviceModel.VoiceMeeterDeviceTypes.TryGetValue(channel, out var deviceType) &&
+                                serviceModel.VoiceMeeterStrips.TryGetValue(channel, out var deviceName) &&
+                                !string.IsNullOrEmpty(deviceName))
+                            {
+                                if (deviceType == VoiceMeeterDeviceType.Strip)
+                                {
+                                    // VoiceMeeter strip mute control
+                                    _voiceMeeterApi.SetStripMute(deviceName, shouldMute);
+                                    Logger.Log(LogLevel.Debug, "AudioService:OnMuteChanged",
+                                        $"VoiceMeeter strip mute state changed for {channel}: {(shouldMute ? "Muted" : "Unmuted")}");
+                                }
+                                else
+                                {
+                                    // VoiceMeeter bus mute control
+                                    _voiceMeeterApi.SetBusMute(deviceName, shouldMute);
+                                    Logger.Log(LogLevel.Debug, "AudioService:OnMuteChanged",
+                                        $"VoiceMeeter bus mute state changed for {channel}: {(shouldMute ? "Muted" : "Unmuted")}");
+                                }
+
+                                // Publish event
+                                EventAggregator.Instance.Publish(new AudioStateChangedEvent(channel.ToString(), shouldMute, 0));
+                            }
+                        }
                     }
                 }
             }
@@ -434,6 +618,34 @@ namespace Prosim2GSX.Services.Audio
                 Logger.Log(LogLevel.Error, "AudioService:OnMuteChanged",
                     $"Exception handling mute change for {channel}: {ex.Message}");
             }
+        }
+
+        public List<KeyValuePair<string, string>> GetAvailableVoiceMeeterStrips()
+        {
+            if (_voiceMeeterApi.Initialize())
+            {
+                return _voiceMeeterApi.GetAvailableStripsWithLabels();
+            }
+            return new List<KeyValuePair<string, string>>();
+        }
+
+        public bool EnsureVoiceMeeterIsRunning()
+        {
+            return _voiceMeeterApi.EnsureVoiceMeeterIsRunning();
+        }
+
+        public bool IsVoiceMeeterRunning()
+        {
+            return _voiceMeeterApi.IsVoiceMeeterRunning();
+        }
+
+        public List<KeyValuePair<string, string>> GetAvailableVoiceMeeterBuses()
+        {
+            if (_voiceMeeterApi.Initialize())
+            {
+                return _voiceMeeterApi.GetAvailableBusesWithLabels();
+            }
+            return new List<KeyValuePair<string, string>>();
         }
 
         public void Dispose()
@@ -451,6 +663,12 @@ namespace Prosim2GSX.Services.Audio
                 // Unsubscribe regardless of whether the channel is currently enabled
                 _prosimController.UnsubscribeFromDataRef(config.VolumeDataRef, _volumeHandlers[channel]);
                 _prosimController.UnsubscribeFromDataRef(config.MuteDataRef, _muteHandlers[channel]);
+            }
+
+            // Shutdown VoiceMeeter API if it was initialized
+            if (_model.AudioApiType == AudioApiType.VoiceMeeter)
+            {
+                _voiceMeeterApi.Shutdown();
             }
         }
     }

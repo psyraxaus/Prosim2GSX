@@ -323,6 +323,24 @@
             <TabItem Header="AUDIO SETTINGS" x:Name="AudioSettingsTab">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="20">
+                        <TextBlock Text="AUDIO API" Style="{StaticResource CategoryHeaderStyle}"/>
+                        <Border Style="{StaticResource SectionBorderStyle}">
+                            <StackPanel>
+                                <TextBlock Text="Select Audio API:" Margin="0,0,0,8"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <RadioButton x:Name="rbCoreAudio" 
+                                        Content="Core Audio (Process Control)" 
+                                        Style="{StaticResource ModernRadioButtonStyle}"
+                                        Click="audioApi_Click" 
+                                        IsChecked="True"/>
+
+                                    <RadioButton x:Name="rbVoiceMeeter" 
+                                        Content="VoiceMeeter API (Strip Control)" 
+                                        Style="{StaticResource ModernRadioButtonStyle}"
+                                        Click="audioApi_Click"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
                         <!-- Volume Control -->
                         <TextBlock Text="AUDIO CONTROL PANEL CHANNELS" Style="{StaticResource CategoryHeaderStyle}"/>
                         <Border Style="{StaticResource SectionBorderStyle}">
@@ -341,7 +359,8 @@
                                             Margin="0,5,0,5"
                                             Click="chkIntLatchMute_Click"/>
 
-                                        <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                        <!-- Core Audio fields -->
+                                        <StackPanel x:Name="pnlIntCoreAudio" Orientation="Horizontal" Margin="0,5,0,0">
                                             <TextBlock Text="Process Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                             <TextBox x:Name="txtIntVolumeApp" 
                                                 Style="{StaticResource ModernTextBoxStyle}"
@@ -353,6 +372,34 @@
                                                 Margin="8,0,0,0"
                                                 Foreground="#808080"/>
                                         </StackPanel>
+
+                                        <!-- VoiceMeeter fields -->
+                                        <StackPanel x:Name="pnlIntVoiceMeeter" Orientation="Vertical" Margin="0,5,0,0" Visibility="Collapsed">
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                                <TextBlock Text="Device Type:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <RadioButton x:Name="rbIntVoiceMeeterStrip" 
+                                                    Content="Strip (Input)" 
+                                                    Style="{StaticResource ModernRadioButtonStyle}"
+                                                    Click="rbIntVoiceMeeterDeviceType_Click" 
+                                                    IsChecked="True"/>
+                                                <RadioButton x:Name="rbIntVoiceMeeterBus" 
+                                                    Content="Bus (Output)" 
+                                                    Style="{StaticResource ModernRadioButtonStyle}"
+                                                    Click="rbIntVoiceMeeterDeviceType_Click"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="Device Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <ComboBox x:Name="cboIntVoiceMeeterStrip" 
+                                                    Width="200" 
+                                                    SelectionChanged="cboIntVoiceMeeterStrip_SelectionChanged"
+                                                    DisplayMemberPath="Value"
+                                                    SelectedValuePath="Key"/>
+                                                <Button x:Name="btnRefreshIntStrips" 
+                                                    Content="Refresh" 
+                                                    Margin="10,0,0,0"
+                                                    Click="btnRefreshVoiceMeeterStrips_Click"/>
+                                            </StackPanel>
+                                        </StackPanel>
                                     </StackPanel>
                                 </Expander>
 
@@ -360,17 +407,18 @@
                                 <Expander Header="VHF1" IsExpanded="True" Margin="0,5">
                                     <StackPanel Margin="20,10,0,10">
                                         <CheckBox x:Name="chkVhf1VolumeControl" 
-                                      Content="Control App Audio Volume via the VHF1 Knob on ACP" 
-                                      Style="{StaticResource ModernCheckboxStyle}"
-                                      Click="chkVhf1VolumeControl_Click"/>
+                                            Content="Control VHF1 App Audio Volume via the VHF1 Knob on ACP" 
+                                            Style="{StaticResource ModernCheckboxStyle}"
+                                            Click="chkVhf1VolumeControl_Click"/>
 
                                         <CheckBox x:Name="chkVhf1LatchMute" 
-                                      Content="Use Record Latch to mute/unmute App (push/pull Knob)" 
-                                      Style="{StaticResource ModernCheckboxStyle}"
-                                      Margin="0,5,0,5"
-                                      Click="chkVhf1LatchMute_Click"/>
+                                            Content="Use Record Latch to mute/unmute App (push/pull Knob)" 
+                                            Style="{StaticResource ModernCheckboxStyle}"
+                                            Margin="0,5,0,5"
+                                            Click="chkVhf1LatchMute_Click"/>
 
-                                        <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                        <!-- Core Audio fields -->
+                                        <StackPanel x:Name="pnlVhf1CoreAudio" Orientation="Horizontal" Margin="0,5,0,0">
                                             <TextBlock Text="Process Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                             <TextBox x:Name="txtVhf1VolumeApp" 
                                                 Style="{StaticResource ModernTextBoxStyle}"
@@ -382,6 +430,34 @@
                                                 Margin="8,0,0,0"
                                                 Foreground="#808080"/>
                                         </StackPanel>
+
+                                        <!-- VoiceMeeter fields -->
+                                        <StackPanel x:Name="pnlVhf1VoiceMeeter" Orientation="Vertical" Margin="0,5,0,0" Visibility="Collapsed">
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                                <TextBlock Text="Device Type:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <RadioButton x:Name="rbVhf1VoiceMeeterStrip" 
+                                                    Content="Strip (Input)" 
+                                                    Style="{StaticResource ModernRadioButtonStyle}"
+                                                    Click="rbVhf1VoiceMeeterDeviceType_Click" 
+                                                    IsChecked="True"/>
+                                                <RadioButton x:Name="rbVhf1VoiceMeeterBus" 
+                                                    Content="Bus (Output)" 
+                                                    Style="{StaticResource ModernRadioButtonStyle}"
+                                                    Click="rbVhf1VoiceMeeterDeviceType_Click"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="Device Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <ComboBox x:Name="cboVhf1VoiceMeeterStrip" 
+                                                    Width="200" 
+                                                    SelectionChanged="cboVhf1VoiceMeeterStrip_SelectionChanged"
+                                                    DisplayMemberPath="Value"
+                                                    SelectedValuePath="Key"/>
+                                                <Button x:Name="btnRefreshVhf1Strips" 
+                                                    Content="Refresh" 
+                                                    Margin="10,0,0,0"
+                                                    Click="btnRefreshVoiceMeeterStrips_Click"/>
+                                            </StackPanel>
+                                        </StackPanel>
                                     </StackPanel>
                                 </Expander>
 
@@ -389,17 +465,18 @@
                                 <Expander Header="VHF2" IsExpanded="True" Margin="0,5">
                                     <StackPanel Margin="20,10,0,10">
                                         <CheckBox x:Name="chkVhf2VolumeControl" 
-                                      Content="Control App Audio Volume via the VHF2 Knob on ACP" 
-                                      Style="{StaticResource ModernCheckboxStyle}"
-                                      Click="chkVhf2VolumeControl_Click"/>
+                                            Content="Control VHF2 App Audio Volume via the VHF2 Knob on ACP" 
+                                            Style="{StaticResource ModernCheckboxStyle}"
+                                            Click="chkVhf2VolumeControl_Click"/>
 
                                         <CheckBox x:Name="chkVhf2LatchMute" 
-                                      Content="Use Record Latch to mute/unmute App (push/pull Knob)" 
-                                      Style="{StaticResource ModernCheckboxStyle}"
-                                      Margin="0,5,0,5"
-                                      Click="chkVhf2LatchMute_Click"/>
+                                            Content="Use Record Latch to mute/unmute App (push/pull Knob)" 
+                                            Style="{StaticResource ModernCheckboxStyle}"
+                                            Margin="0,5,0,5"
+                                            Click="chkVhf2LatchMute_Click"/>
 
-                                        <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                        <!-- Core Audio fields -->
+                                        <StackPanel x:Name="pnlVhf2CoreAudio" Orientation="Horizontal" Margin="0,5,0,0">
                                             <TextBlock Text="Process Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                             <TextBox x:Name="txtVhf2VolumeApp" 
                                                 Style="{StaticResource ModernTextBoxStyle}"
@@ -411,6 +488,34 @@
                                                 Margin="8,0,0,0"
                                                 Foreground="#808080"/>
                                         </StackPanel>
+
+                                        <!-- VoiceMeeter fields -->
+                                        <StackPanel x:Name="pnlVhf2VoiceMeeter" Orientation="Vertical" Margin="0,5,0,0" Visibility="Collapsed">
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                                <TextBlock Text="Device Type:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <RadioButton x:Name="rbVhf2VoiceMeeterStrip" 
+                                                    Content="Strip (Input)" 
+                                                    Style="{StaticResource ModernRadioButtonStyle}"
+                                                    Click="rbVhf2VoiceMeeterDeviceType_Click" 
+                                                    IsChecked="True"/>
+                                                <RadioButton x:Name="rbVhf2VoiceMeeterBus" 
+                                                    Content="Bus (Output)" 
+                                                    Style="{StaticResource ModernRadioButtonStyle}"
+                                                    Click="rbVhf2VoiceMeeterDeviceType_Click"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="Device Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <ComboBox x:Name="cboVhf2VoiceMeeterStrip" 
+                                                    Width="200" 
+                                                    SelectionChanged="cboVhf2VoiceMeeterStrip_SelectionChanged"
+                                                    DisplayMemberPath="Value"
+                                                    SelectedValuePath="Key"/>
+                                                <Button x:Name="btnRefreshVhf2Strips" 
+                                                    Content="Refresh" 
+                                                    Margin="10,0,0,0"
+                                                    Click="btnRefreshVoiceMeeterStrips_Click"/>
+                                            </StackPanel>
+                                        </StackPanel>
                                     </StackPanel>
                                 </Expander>
 
@@ -418,17 +523,18 @@
                                 <Expander Header="VHF3" IsExpanded="True" Margin="0,5">
                                     <StackPanel Margin="20,10,0,10">
                                         <CheckBox x:Name="chkVhf3VolumeControl" 
-                                      Content="Control App Audio Volume via the VHF3 Knob on ACP" 
-                                      Style="{StaticResource ModernCheckboxStyle}"
-                                      Click="chkVhf3VolumeControl_Click"/>
+                                            Content="Control VHF3 App Audio Volume via the VHF3 Knob on ACP" 
+                                            Style="{StaticResource ModernCheckboxStyle}"
+                                            Click="chkVhf3VolumeControl_Click"/>
 
                                         <CheckBox x:Name="chkVhf3LatchMute" 
-                                      Content="Use Record Latch to mute/unmute App (push/pull Knob)" 
-                                      Style="{StaticResource ModernCheckboxStyle}"
-                                      Margin="0,5,0,5"
-                                      Click="chkVhf3LatchMute_Click"/>
+                                            Content="Use Record Latch to mute/unmute App (push/pull Knob)" 
+                                            Style="{StaticResource ModernCheckboxStyle}"
+                                            Margin="0,5,0,5"
+                                            Click="chkVhf3LatchMute_Click"/>
 
-                                        <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                        <!-- Core Audio fields -->
+                                        <StackPanel x:Name="pnlVhf3CoreAudio" Orientation="Horizontal" Margin="0,5,0,0">
                                             <TextBlock Text="Process Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                             <TextBox x:Name="txtVhf3VolumeApp" 
                                                 Style="{StaticResource ModernTextBoxStyle}"
@@ -440,6 +546,34 @@
                                                 Margin="8,0,0,0"
                                                 Foreground="#808080"/>
                                         </StackPanel>
+
+                                        <!-- VoiceMeeter fields -->
+                                        <StackPanel x:Name="pnlVhf3VoiceMeeter" Orientation="Vertical" Margin="0,5,0,0" Visibility="Collapsed">
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                                <TextBlock Text="Device Type:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <RadioButton x:Name="rbVhf3VoiceMeeterStrip" 
+                                                    Content="Strip (Input)" 
+                                                    Style="{StaticResource ModernRadioButtonStyle}"
+                                                    Click="rbVhf3VoiceMeeterDeviceType_Click" 
+                                                    IsChecked="True"/>
+                                                <RadioButton x:Name="rbVhf3VoiceMeeterBus" 
+                                                    Content="Bus (Output)" 
+                                                    Style="{StaticResource ModernRadioButtonStyle}"
+                                                    Click="rbVhf3VoiceMeeterDeviceType_Click"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="Device Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <ComboBox x:Name="cboVhf3VoiceMeeterStrip" 
+                                                    Width="200" 
+                                                    SelectionChanged="cboVhf3VoiceMeeterStrip_SelectionChanged"
+                                                    DisplayMemberPath="Value"
+                                                    SelectedValuePath="Key"/>
+                                                <Button x:Name="btnRefreshVhf3Strips" 
+                                                    Content="Refresh" 
+                                                    Margin="10,0,0,0"
+                                                    Click="btnRefreshVoiceMeeterStrips_Click"/>
+                                            </StackPanel>
+                                        </StackPanel>
                                     </StackPanel>
                                 </Expander>
 
@@ -447,17 +581,18 @@
                                 <Expander Header="CAB" IsExpanded="True" Margin="0,5">
                                     <StackPanel Margin="20,10,0,10">
                                         <CheckBox x:Name="chkCabVolumeControl" 
-                                      Content="Control App Audio Volume via the CAB Knob on ACP" 
-                                      Style="{StaticResource ModernCheckboxStyle}"
-                                      Click="chkCabVolumeControl_Click"/>
+                                            Content="Control CAB App Audio Volume via the CAB Knob on ACP" 
+                                            Style="{StaticResource ModernCheckboxStyle}"
+                                            Click="chkCabVolumeControl_Click"/>
 
                                         <CheckBox x:Name="chkCabLatchMute" 
-                                      Content="Use Record Latch to mute/unmute App (push/pull Knob)" 
-                                      Style="{StaticResource ModernCheckboxStyle}"
-                                      Margin="0,5,0,5"
-                                      Click="chkCabLatchMute_Click"/>
+                                            Content="Use Record Latch to mute/unmute App (push/pull Knob)" 
+                                            Style="{StaticResource ModernCheckboxStyle}"
+                                            Margin="0,5,0,5"
+                                            Click="chkCabLatchMute_Click"/>
 
-                                        <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                        <!-- Core Audio fields -->
+                                        <StackPanel x:Name="pnlCabCoreAudio" Orientation="Horizontal" Margin="0,5,0,0">
                                             <TextBlock Text="Process Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                             <TextBox x:Name="txtCabVolumeApp" 
                                                 Style="{StaticResource ModernTextBoxStyle}"
@@ -469,6 +604,34 @@
                                                 Margin="8,0,0,0"
                                                 Foreground="#808080"/>
                                         </StackPanel>
+
+                                        <!-- VoiceMeeter fields -->
+                                        <StackPanel x:Name="pnlCabVoiceMeeter" Orientation="Vertical" Margin="0,5,0,0" Visibility="Collapsed">
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                                <TextBlock Text="Device Type:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <RadioButton x:Name="rbCabVoiceMeeterStrip" 
+                                                    Content="Strip (Input)" 
+                                                    Style="{StaticResource ModernRadioButtonStyle}"
+                                                    Click="rbCabVoiceMeeterDeviceType_Click" 
+                                                    IsChecked="True"/>
+                                                <RadioButton x:Name="rbCabVoiceMeeterBus" 
+                                                    Content="Bus (Output)" 
+                                                    Style="{StaticResource ModernRadioButtonStyle}"
+                                                    Click="rbCabVoiceMeeterDeviceType_Click"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="Device Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <ComboBox x:Name="cboCabVoiceMeeterStrip" 
+                                                    Width="200" 
+                                                    SelectionChanged="cboCabVoiceMeeterStrip_SelectionChanged"
+                                                    DisplayMemberPath="Value"
+                                                    SelectedValuePath="Key"/>
+                                                <Button x:Name="btnRefreshCabStrips" 
+                                                    Content="Refresh" 
+                                                    Margin="10,0,0,0"
+                                                    Click="btnRefreshVoiceMeeterStrips_Click"/>
+                                            </StackPanel>
+                                        </StackPanel>
                                     </StackPanel>
                                 </Expander>
 
@@ -476,17 +639,18 @@
                                 <Expander Header="PA" IsExpanded="True" Margin="0,5">
                                     <StackPanel Margin="20,10,0,10">
                                         <CheckBox x:Name="chkPaVolumeControl" 
-                                      Content="Control App Audio Volume via the PA Knob on ACP" 
-                                      Style="{StaticResource ModernCheckboxStyle}"
-                                      Click="chkPaVolumeControl_Click"/>
+                                            Content="Control PA App Audio Volume via the PA Knob on ACP" 
+                                            Style="{StaticResource ModernCheckboxStyle}"
+                                            Click="chkPaVolumeControl_Click"/>
 
                                         <CheckBox x:Name="chkPaLatchMute" 
-                                      Content="Use Record Latch to mute/unmute App (push/pull Knob)" 
-                                      Style="{StaticResource ModernCheckboxStyle}"
-                                      Margin="0,5,0,5"
-                                      Click="chkPaLatchMute_Click"/>
+                                            Content="Use Record Latch to mute/unmute App (push/pull Knob)" 
+                                            Style="{StaticResource ModernCheckboxStyle}"
+                                            Margin="0,5,0,5"
+                                            Click="chkPaLatchMute_Click"/>
 
-                                        <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                        <!-- Core Audio fields -->
+                                        <StackPanel x:Name="pnlPaCoreAudio" Orientation="Horizontal" Margin="0,5,0,0">
                                             <TextBlock Text="Process Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                             <TextBox x:Name="txtPaVolumeApp" 
                                                 Style="{StaticResource ModernTextBoxStyle}"
@@ -497,6 +661,34 @@
                                                 VerticalAlignment="Center" 
                                                 Margin="8,0,0,0"
                                                 Foreground="#808080"/>
+                                        </StackPanel>
+
+                                        <!-- VoiceMeeter fields -->
+                                        <StackPanel x:Name="pnlPaVoiceMeeter" Orientation="Vertical" Margin="0,5,0,0" Visibility="Collapsed">
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                                <TextBlock Text="Device Type:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <RadioButton x:Name="rbPaVoiceMeeterStrip" 
+                                                    Content="Strip (Input)" 
+                                                    Style="{StaticResource ModernRadioButtonStyle}"
+                                                    Click="rbPaVoiceMeeterDeviceType_Click" 
+                                                    IsChecked="True"/>
+                                                <RadioButton x:Name="rbPaVoiceMeeterBus" 
+                                                    Content="Bus (Output)" 
+                                                    Style="{StaticResource ModernRadioButtonStyle}"
+                                                    Click="rbPaVoiceMeeterDeviceType_Click"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="Device Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <ComboBox x:Name="cboPaVoiceMeeterStrip" 
+                                                    Width="200" 
+                                                    SelectionChanged="cboPaVoiceMeeterStrip_SelectionChanged"
+                                                    DisplayMemberPath="Value"
+                                                    SelectedValuePath="Key"/>
+                                                <Button x:Name="btnRefreshPaStrips" 
+                                                    Content="Refresh" 
+                                                    Margin="10,0,0,0"
+                                                    Click="btnRefreshVoiceMeeterStrips_Click"/>
+                                            </StackPanel>
                                         </StackPanel>
                                     </StackPanel>
                                 </Expander>

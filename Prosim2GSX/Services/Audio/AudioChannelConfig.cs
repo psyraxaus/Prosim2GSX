@@ -29,5 +29,13 @@
         /// Whether mute state should be latched (true) or momentary (false)
         /// </summary>
         public bool LatchMute { get; set; } = true;
+
+        public enum VoiceMeeterDeviceType
+        {
+            Strip,
+            Bus
+        }
+
+        public string VoiceMeeterStrip { get; set; }
     }
 }
