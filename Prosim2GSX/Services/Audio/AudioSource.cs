@@ -33,28 +33,28 @@ namespace Prosim2GSX.Services.Audio
         public int MuteState { get; set; } = -1;
         
         /// <summary>
-        /// LVAR name for the volume knob
+        /// Dataref name for the volume knob
         /// </summary>
-        public string KnobLvarName { get; set; }
+        public string KnobDataRef  { get; set; }
         
         /// <summary>
-        /// LVAR name for the mute control
+        /// Dataref name for the mute control
         /// </summary>
-        public string MuteLvarName { get; set; }
+        public string MuteDataRef  { get; set; }
         
         /// <summary>
         /// Creates a new audio source
         /// </summary>
         /// <param name="processName">Name of the process</param>
         /// <param name="sourceName">Friendly name for the source</param>
-        /// <param name="knobLvarName">LVAR name for volume control</param>
-        /// <param name="muteLvarName">LVAR name for mute control</param>
-        public AudioSource(string processName, string sourceName, string knobLvarName, string muteLvarName)
+        /// <param name="knobDataRef">Dataref name for volume control</param>
+        /// <param name="muteDataRef">Dataref name for mute control</param>
+        public AudioSource(string processName, string sourceName, string knobDataRef, string muteDataRef)
         {
             ProcessName = processName;
             SourceName = sourceName;
-            KnobLvarName = knobLvarName;
-            MuteLvarName = muteLvarName;
+            KnobDataRef = knobDataRef;
+            MuteDataRef = muteDataRef;
         }
     }
 }
