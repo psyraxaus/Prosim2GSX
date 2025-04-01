@@ -180,7 +180,7 @@ namespace Prosim2GSX.Services.Audio
             {
                 MMDeviceEnumerator deviceEnumerator = new(Guid.NewGuid());
                 var devices = deviceEnumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
-                
+
                 foreach (var source in _audioSources.Values)
                 {
                     if (source.Session == null)
@@ -192,19 +192,22 @@ namespace Prosim2GSX.Services.Audio
                                 try
                                 {
                                     Process p = Process.GetProcessById((int)session.ProcessID);
-                                    if (p.ProcessName == source.ProcessName)
+                                    // Check if the process name matches any of the names in the list
+                                    if (source.ProcessNames.Contains(p.ProcessName))
                                     {
                                         source.Session = session;
-                                        Logger.Log(LogLevel.Information, "AudioService:GetAudioSessions", $"Found Audio Session for {source.SourceName} ({source.ProcessName})");
+                                        Logger.Log(LogLevel.Information, "AudioService:GetAudioSessions",
+                                            $"Found Audio Session for {source.SourceName} ({p.ProcessName})");
                                         break;
                                     }
                                 }
                                 catch (Exception ex)
                                 {
-                                    Logger.Log(LogLevel.Debug, "AudioService:GetAudioSessions", $"Error getting process: {ex.Message}");
+                                    Logger.Log(LogLevel.Debug, "AudioService:GetAudioSessions",
+                                        $"Error getting process: {ex.Message}");
                                 }
                             }
-                            
+
                             if (source.Session != null)
                                 break;
                         }
@@ -213,7 +216,8 @@ namespace Prosim2GSX.Services.Audio
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, "AudioService:GetAudioSessions", $"Error enumerating audio devices: {ex.Message}");
+                Logger.Log(LogLevel.Error, "AudioService:GetAudioSessions",
+                    $"Error enumerating audio devices: {ex.Message}");
             }
         }
         
@@ -288,7 +292,9 @@ namespace Prosim2GSX.Services.Audio
 
             foreach (var source in _audioSources.Values)
             {
-                if (source.Session != null && !IPCManager.IsProcessRunning(source.ProcessName))
+                // Check if the session is active and if any of the processes are running
+                if (source.Session != null &&
+                    !source.ProcessNames.Any(processName => IPCManager.IsProcessRunning(processName)))
                 {
                     sourcesToRemove.Add(source.SourceName);
                 }
@@ -309,7 +315,8 @@ namespace Prosim2GSX.Services.Audio
                 gsxSource.Session = null;
                 gsxSource.Volume = -1;
                 gsxSource.MuteState = -1;
-                Logger.Log(LogLevel.Information, "AudioService:HandleAppChanges", $"Disabled Audio Session for GSX (Couatl Engine not started)");
+                Logger.Log(LogLevel.Information, "AudioService:HandleAppChanges",
+                    $"Disabled Audio Session for GSX (Couatl Engine not started)");
             }
         }
 

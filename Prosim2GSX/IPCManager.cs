@@ -50,10 +50,18 @@ namespace Prosim2GSX
             }
         }
 
-        public static bool IsProcessRunning(string name)
+        public static bool IsProcessRunning(string processName)
         {
-            Process proc = Process.GetProcessesByName(name).FirstOrDefault();
-            return proc != null && proc.ProcessName == name;
+            try
+            {
+                // For a single process name, use the original implementation
+                Process[] processes = Process.GetProcessesByName(processName);
+                return processes.Length > 0;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public static bool IsSimRunning()

@@ -348,7 +348,7 @@
                                                 Width="120" 
                                                 LostFocus="txtIntVolumeApp_LostFocus" 
                                                 KeyUp="txtIntVolumeApp_KeyUp"/>
-                                            <TextBlock Text="(Name of the Binary without .exe Extension)" 
+                                            <TextBlock Text="(Comma-separated list of process names without .exe extension)" 
                                                 VerticalAlignment="Center" 
                                                 Margin="8,0,0,0"
                                                 Foreground="#808080"/>
@@ -373,14 +373,14 @@
                                         <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
                                             <TextBlock Text="Process Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                             <TextBox x:Name="txtVhf1VolumeApp" 
-                                         Style="{StaticResource ModernTextBoxStyle}"
-                                         Width="120" 
-                                         LostFocus="txtVhf1VolumeApp_LostFocus" 
-                                         KeyUp="txtVhf1VolumeApp_KeyUp"/>
-                                            <TextBlock Text="(Name of the Binary without .exe Extension)" 
-                                          VerticalAlignment="Center" 
-                                          Margin="8,0,0,0"
-                                          Foreground="#808080"/>
+                                                Style="{StaticResource ModernTextBoxStyle}"
+                                                Width="120" 
+                                                LostFocus="txtVhf1VolumeApp_LostFocus" 
+                                                KeyUp="txtVhf1VolumeApp_KeyUp"/>
+                                            <TextBlock Text="(Comma-separated list of process names without .exe extension)" 
+                                                VerticalAlignment="Center" 
+                                                Margin="8,0,0,0"
+                                                Foreground="#808080"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Expander>
@@ -402,14 +402,14 @@
                                         <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
                                             <TextBlock Text="Process Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                             <TextBox x:Name="txtVhf2VolumeApp" 
-                                         Style="{StaticResource ModernTextBoxStyle}"
-                                         Width="120" 
-                                         LostFocus="txtVhf2VolumeApp_LostFocus" 
-                                         KeyUp="txtVhf2VolumeApp_KeyUp"/>
-                                            <TextBlock Text="(Name of the Binary without .exe Extension)" 
-                                          VerticalAlignment="Center" 
-                                          Margin="8,0,0,0"
-                                          Foreground="#808080"/>
+                                                Style="{StaticResource ModernTextBoxStyle}"
+                                                Width="120" 
+                                                LostFocus="txtVhf2VolumeApp_LostFocus" 
+                                                KeyUp="txtVhf2VolumeApp_KeyUp"/>
+                                            <TextBlock Text="(Comma-separated list of process names without .exe extension)" 
+                                                VerticalAlignment="Center" 
+                                                Margin="8,0,0,0"
+                                                Foreground="#808080"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Expander>
@@ -431,14 +431,14 @@
                                         <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
                                             <TextBlock Text="Process Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                             <TextBox x:Name="txtVhf3VolumeApp" 
-                                         Style="{StaticResource ModernTextBoxStyle}"
-                                         Width="120" 
-                                         LostFocus="txtVhf3VolumeApp_LostFocus" 
-                                         KeyUp="txtVhf3VolumeApp_KeyUp"/>
-                                            <TextBlock Text="(Name of the Binary without .exe Extension)" 
-                                          VerticalAlignment="Center" 
-                                          Margin="8,0,0,0"
-                                          Foreground="#808080"/>
+                                                Style="{StaticResource ModernTextBoxStyle}"
+                                                Width="120" 
+                                                LostFocus="txtVhf3VolumeApp_LostFocus" 
+                                                KeyUp="txtVhf3VolumeApp_KeyUp"/>
+                                            <TextBlock Text="(Comma-separated list of process names without .exe extension)" 
+                                                VerticalAlignment="Center" 
+                                                Margin="8,0,0,0"
+                                                Foreground="#808080"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Expander>
@@ -460,14 +460,14 @@
                                         <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
                                             <TextBlock Text="Process Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                             <TextBox x:Name="txtCabVolumeApp" 
-                                         Style="{StaticResource ModernTextBoxStyle}"
-                                         Width="120" 
-                                         LostFocus="txtCabVolumeApp_LostFocus" 
-                                         KeyUp="txtCabVolumeApp_KeyUp"/>
-                                            <TextBlock Text="(Name of the Binary without .exe Extension)" 
-                                          VerticalAlignment="Center" 
-                                          Margin="8,0,0,0"
-                                          Foreground="#808080"/>
+                                                Style="{StaticResource ModernTextBoxStyle}"
+                                                Width="120" 
+                                                LostFocus="txtCabVolumeApp_LostFocus" 
+                                                KeyUp="txtCabVolumeApp_KeyUp"/>
+                                            <TextBlock Text="(Comma-separated list of process names without .exe extension)" 
+                                                VerticalAlignment="Center" 
+                                                Margin="8,0,0,0"
+                                                Foreground="#808080"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Expander>
@@ -489,14 +489,14 @@
                                         <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
                                             <TextBlock Text="Process Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                             <TextBox x:Name="txtPaVolumeApp" 
-                                         Style="{StaticResource ModernTextBoxStyle}"
-                                         Width="120" 
-                                         LostFocus="txtPaVolumeApp_LostFocus" 
-                                         KeyUp="txtPaVolumeApp_KeyUp"/>
-                                            <TextBlock Text="(Name of the Binary without .exe Extension)" 
-                                          VerticalAlignment="Center" 
-                                          Margin="8,0,0,0"
-                                          Foreground="#808080"/>
+                                                Style="{StaticResource ModernTextBoxStyle}"
+                                                Width="120" 
+                                                LostFocus="txtPaVolumeApp_LostFocus" 
+                                                KeyUp="txtPaVolumeApp_KeyUp"/>
+                                            <TextBlock Text="(Comma-separated list of process names without .exe extension)" 
+                                                VerticalAlignment="Center" 
+                                                Margin="8,0,0,0"
+                                                Foreground="#808080"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Expander>
