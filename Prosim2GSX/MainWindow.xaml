@@ -118,57 +118,78 @@
         </Grid.RowDefinitions>
 
         <!-- Top Bar with App Name and Navigation -->
-        <Border Background="{DynamicResource HeaderBackground}" Grid.Row="0">
-            <DockPanel LastChildFill="False">
-                <TextBlock Text="PROSIM2GSX" 
-                           FontWeight="Bold" 
-                           FontSize="18" 
-                           Foreground="{DynamicResource HeaderText}" 
-                           VerticalAlignment="Center"
-                           Margin="20,0,0,0"
-                           DockPanel.Dock="Left"/>
+        <Border Background="{DynamicResource HeaderBackground}" Grid.Row="0" Margin="0,0,0,-2">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-                <TextBlock x:Name="CurrentDateTime" 
-                           Text="17.11.2023" 
-                           FontSize="14" 
-                           Foreground="{DynamicResource HeaderText}" 
-                           VerticalAlignment="Center"
-                           HorizontalAlignment="Center"
-                           Padding="10,5"
-                           Background="{DynamicResource SecondaryColor}"
-                           DockPanel.Dock="Right"
-                           Margin="0,0,15,0"/>
+                <!-- Left side - App Title -->
+                <TextBlock Grid.Column="0"
+                   Text="PROSIM2GSX" 
+                   FontWeight="Bold" 
+                   FontSize="18" 
+                   Foreground="{DynamicResource HeaderText}" 
+                   VerticalAlignment="Center"
+                   Margin="20,0,0,0"/>
 
-                <!-- Navigation icons mimicking the Skybook UI -->
-                <StackPanel Orientation="Horizontal" 
-                            DockPanel.Dock="Right" 
-                            Margin="0,0,20,0"
-                            VerticalAlignment="Center">
+                <!-- Center - Flight Number -->
+                <TextBlock Grid.Column="1"
+                   x:Name="FlightNumberDisplay" 
+                   Text="No Flight" 
+                   FontWeight="SemiBold" 
+                   FontSize="16" 
+                   Foreground="{DynamicResource HeaderText}" 
+                   VerticalAlignment="Center"
+                   HorizontalAlignment="Center"
+                   Padding="10,5"
+                   Background="{DynamicResource PrimaryColor}"
+                   MinWidth="120"
+                   TextAlignment="Center"/>
+
+                <!-- Right side - Date and Navigation -->
+                <StackPanel Grid.Column="2" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center">
+
+                    <!-- Navigation icons -->
                     <Button Style="{StaticResource TabButtonStyle}" 
-                            Foreground="{DynamicResource HeaderText}"
-                            Content="🔊" 
-                            FontSize="16" 
-                            x:Name="btnAudioSettings"
-                            Click="btnAudioSettings_Click"
-                            ToolTip="Audio Settings"/>
+                    Foreground="{DynamicResource HeaderText}"
+                    Content="🔊" 
+                    FontSize="16" 
+                    x:Name="btnAudioSettings"
+                    Click="btnAudioSettings_Click"
+                    ToolTip="Audio Settings"/>
                     <Button Style="{StaticResource TabButtonStyle}" 
-                            Foreground="{DynamicResource HeaderText}"
-                            Content="⚙" 
-                            FontSize="16" 
-                            x:Name="btnSettings"
-                            Click="btnSettings_Click"
-                            ToolTip="Settings"/>
+                    Foreground="{DynamicResource HeaderText}"
+                    Content="⚙" 
+                    FontSize="16" 
+                    x:Name="btnSettings"
+                    Click="btnSettings_Click"
+                    ToolTip="Settings"/>
                     <Button Style="{StaticResource TabButtonStyle}" 
-                            Foreground="{DynamicResource HeaderText}"
-                            Content="?" 
-                            FontSize="16" 
-                            x:Name="btnHelp"
-                            Click="btnHelp_Click"
-                            ToolTip="Help"/>
+                    Foreground="{DynamicResource HeaderText}"
+                    Content="?" 
+                    FontSize="16" 
+                    x:Name="btnHelp"
+                    Click="btnHelp_Click"
+                    ToolTip="Help"/>
+
+                    <!-- Date display -->
+                    <TextBlock x:Name="CurrentDateTime" 
+                       Text="17.11.2023" 
+                       FontSize="14" 
+                       Foreground="{DynamicResource HeaderText}" 
+                       VerticalAlignment="Center"
+                       Padding="10,5"
+                       Background="{DynamicResource SecondaryColor}"
+                       Margin="0,0,15,0"/>
                 </StackPanel>
-            </DockPanel>
+            </Grid>
         </Border>
-
         <!-- Main Content Area with TabControl -->
         <TabControl Grid.Row="1" 
                     BorderThickness="0"

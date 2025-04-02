@@ -1,4 +1,5 @@
 ﻿using Prosim2GSX.Behaviours;
+using Prosim2GSX.Events;
 using Prosim2GSX.Models;
 using System;
 using System.Globalization;
@@ -128,6 +129,7 @@ namespace Prosim2GSX
                 if (lastID != FlightPlanID)
                 {
                     Logger.Log(LogLevel.Information, "FlightPlan:Load", $"New OFP for Flight {Flight} loaded. ({Origin} -> {Destination})");
+                    EventAggregator.Instance.Publish(new FlightPlanChangedEvent(Flight));
                 }
 
                 return lastID != FlightPlanID;

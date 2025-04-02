@@ -49,8 +49,12 @@ namespace Prosim2GSX
             
             // Subscribe to flight phase events
             _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<FlightPhaseChangedEvent>(OnFlightPhaseChanged));
+
+            // Subscribe to flight number events
+            _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<FlightPlanChangedEvent>(OnFlightPlanChanged));
+
         }
-        
+
         private void OnConnectionStatusChanged(ConnectionStatusChangedEvent evt)
         {
             // Update UI based on connection status
@@ -184,6 +188,11 @@ namespace Prosim2GSX
                         break;
                 }
             });
+        }
+
+        private void OnFlightPlanChanged(FlightPlanChangedEvent evt)
+        {
+            UpdateFlightNumberDisplay(evt.FlightNumber);
         }
 
         protected void LoadSettings()
@@ -1298,6 +1307,14 @@ namespace Prosim2GSX
                 // Store both values
                 serviceModel.SetVoiceMeeterStrip(AudioChannel.PA, stripName, stripLabel);
             }
+        }
+
+        private void UpdateFlightNumberDisplay(string flightNumber)
+        {
+            Dispatcher.Invoke(() => {
+                FlightNumberDisplay.Text = string.IsNullOrEmpty(flightNumber) ?
+                    "No Flight" : flightNumber;
+            });
         }
     }
 }
