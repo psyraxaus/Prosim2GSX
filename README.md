@@ -10,6 +10,7 @@ Full and proper GSX Integration and Automation for the Prosim A320! <br/>
 - All Service Calls except Push-Back, De-Ice and Gate-Selection can be automated
 - GSX Audio can be controlled via the INT-Knob from the Cockpit
 - ATC Volume can be controlled via the VHF1-Knob from the Cockpit (ATC Application configurable)
+- VoiceMeeter integration for advanced audio control of all radio panel channels (INT, VHF1, VHF2, VHF3, CAB, PA)
 
 <br/><br/>
 
@@ -47,6 +48,34 @@ All Options have ToolTips which explains them further.
 All Settings can be changed dynamically on the Fly if needed. But do that before a Service/Feature starts or after it has ended. For example, don't disable "Automatic Jetway/Stair Operation" while the Jetway is connected. Do it before the Tool calls the Jetway or after it was disconnected by the Tool.<br/><br/>
 In general, it is up to your Preference how much Automation you want. I you want to keep Control of when Services are Called and/or the Jetway is connected, you can still enjoy the (De-)Boarding and Refueling Syncronization when the Automation-Options are disabled. The only Automation which can not be disabled: The Removal of the Ground-Equipment and Jetway-Disconnection (if still connected) is always active on Depature.<br/><br/>
 A Note on the Audio-Control: The Tool does not control Audio until the Plane is powered (=FCU is On). Be aware, that the Prosim defaults to 50% Volume on INT and VHF1 when loaded. When you end your Session, Prosim2GSX will try to reset the Application-Audio to unmuted and 100% Volume. But that does not really work on GSX because it is resetting at the same Time. So GSX can stay muted when switching to another Plane (if it was muted) - keep that in Mind.
+
+## Audio Control with VoiceMeeter
+
+Prosim2GSX now supports controlling VoiceMeeter strips and buses directly from the Prosim A320 cockpit. This allows for more advanced audio control beyond what's possible with Windows Core Audio.
+
+### Features
+- Control VoiceMeeter strips and buses using the radio panel knobs in Prosim
+- Map each audio channel (INT, VHF1, VHF2, VHF3, CAB, PA) to a specific VoiceMeeter strip or bus
+- Control volume and mute state for each channel
+- Synchronize Prosim radio panel state with VoiceMeeter parameters
+
+### Setup
+1. Install VoiceMeeter (Standard, Banana, or Potato) from [VB-Audio](https://vb-audio.com/Voicemeeter/)
+2. Start VoiceMeeter before launching Prosim2GSX
+3. In Prosim2GSX settings, select "VoiceMeeter" as the Audio API
+4. For each channel you want to control:
+   - Enable the channel
+   - Select whether it's a strip or bus
+   - Select the specific strip or bus from the dropdown
+   - Configure the latch mute option if desired
+5. Click "Refresh" if you don't see your strips or buses in the dropdown
+
+### Notes
+- VoiceMeeter must be running before Prosim2GSX starts
+- You don't need to specify a process name when using VoiceMeeter
+- The radio panel knobs in Prosim directly control the corresponding VoiceMeeter strips/buses
+- Volume range is mapped from Prosim's range (176-1020) to VoiceMeeter's range (-60dB to +12dB)
+- Mute state is inverted between Prosim and VoiceMeeter (REC button on = unmuted in VoiceMeeter)
 
 
 <br/><br/>

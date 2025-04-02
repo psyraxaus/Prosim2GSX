@@ -2,6 +2,7 @@
 using CefSharp.OffScreen;
 using H.NotifyIcon;
 using Prosim2GSX.Models;
+using Prosim2GSX.Services.Audio;
 using Prosim2GSX.Themes;
 using Serilog;
 using System;
@@ -81,6 +82,21 @@ namespace Prosim2GSX
         protected override void OnExit(ExitEventArgs e)
         {
             Model.CancellationRequested = true;
+
+            // Ensure VoiceMeeter connection is closed
+            if (Model.AudioApiType == AudioApiType.VoiceMeeter &&
+                Controller != null &&
+                Controller is ServiceController serviceController)
+            {
+                // Try to access the AudioService through the ServiceController
+                var audioService = serviceController.GetAudioService();
+                if (audioService != null)
+                {
+                    // Call Dispose to ensure VoiceMeeter connection is closed
+                    audioService.Dispose();
+                }
+            }
+
             notifyIcon?.Dispose();
             Cef.Shutdown();
             base.OnExit(e);
