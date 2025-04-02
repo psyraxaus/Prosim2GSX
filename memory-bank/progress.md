@@ -98,6 +98,10 @@ The comprehensive Prosim dataref subscription system and cockpit door integratio
 ### Audio Control
 - ✅ GSX audio control via INT-Knob
 - ✅ ATC volume control via VHF1-Knob
+- ✅ Enhanced VoiceMeeter integration for audio control
+- ✅ Support for controlling VoiceMeeter strips and buses
+- ✅ UI for selecting VoiceMeeter devices
+- ✅ Synchronization between Prosim datarefs and VoiceMeeter parameters
 
 ### User Interface
 - ✅ System tray icon for configuration access
@@ -138,6 +142,12 @@ Based on the README, there are some known considerations:
 - ⚠️ Extreme passenger density setting in GSX breaks boarding functionality
 
 ## Recently Fixed Issues
+- ✅ Fixed issues with VHF2, VHF3, CAB, and PA channels not controlling VoiceMeeter
+  - Root cause: IsXControllable() methods required process names even when using VoiceMeeter
+  - Solution: Modified these methods to work with VoiceMeeter even with empty process names
+- ✅ Fixed an issue where the code was trying to set read-only _REC datarefs
+  - Root cause: UpdateVoiceMeeterParameters method was trying to set read-only datarefs
+  - Solution: Removed the code that was trying to set these datarefs, only reading them instead
 - ✅ Fixed an issue with MSFS connection status not showing correctly in the UI despite simRunning being true
   - Root cause: Connection status events were published before the UI had subscribed to them
   - Solution: Added code to re-publish connection status events in ServiceController.ServiceLoop() method

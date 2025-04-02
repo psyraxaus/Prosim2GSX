@@ -10,6 +10,14 @@ Before the UI update, the focus was on implementing an event aggregator system t
 Previous work also focused on implementing a new Prosim dataref subscription system and enhancing the cockpit door integration between Prosim and GSX. The dataref subscription system involved creating a callback-based monitoring system for Prosim datarefs and implementing synchronization between the cockpit door state in Prosim and the corresponding LVAR in GSX. The implementation allows the cockpit door to muffle cabin sounds when closed, enhancing the realism of the simulation. Additionally, the previous work on cargo door logic, catering service door operation, and refueling process enhancements has been thoroughly tested and verified.
 
 ## Recent Changes
+- Enhanced VoiceMeeter integration for audio control:
+  - Fixed issues with VHF2, VHF3, CAB, and PA channels not controlling VoiceMeeter
+  - Modified the IsXControllable() methods to work with VoiceMeeter even with empty process names
+  - Fixed an issue where the code was trying to set read-only _REC datarefs
+  - Improved the UI for selecting VoiceMeeter strips and buses
+  - Added proper error handling for VoiceMeeter operations
+  - Enhanced the synchronization between Prosim datarefs and VoiceMeeter parameters
+
 - Enhanced the center of gravity (CG) calculations for more accurate loadsheet data:
   - Implemented a dedicated A320WeightAndBalance calculator class
   - Used proper A320 reference values for MAC calculations
@@ -96,6 +104,10 @@ Previous work also focused on implementing a new Prosim dataref subscription sys
   - Previously: Updated the application version from 0.3.0 to 0.4.0
 
 ## Active Decisions
+- Using VoiceMeeter API for advanced audio control beyond Windows Core Audio capabilities
+- Supporting both Core Audio and VoiceMeeter APIs for flexibility
+- Making channels controllable with VoiceMeeter even when process names are empty
+- Only reading _REC datarefs, not attempting to set them
 - Implementing a dedicated A320WeightAndBalance calculator for accurate CG calculations
 - Using proper A320 reference values for MAC calculations
 - Implementing tolerance-based detection of significant changes in loadsheet values
