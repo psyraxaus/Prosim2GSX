@@ -83,6 +83,7 @@ namespace Prosim2GSX.Models
 
         public Dictionary<AudioChannel, VoiceMeeterDeviceType> VoiceMeeterDeviceTypes { get; private set; } = new Dictionary<AudioChannel, VoiceMeeterDeviceType>();
 
+        public Dictionary<AudioChannel, string> VoiceMeeterStripLabels { get; private set; } = new Dictionary<AudioChannel, string>();
 
         public ServiceModel()
         {
@@ -91,27 +92,27 @@ namespace Prosim2GSX.Models
 
         public bool IsVhf1Controllable()
         {
-            return Vhf1VolumeControl && !string.IsNullOrEmpty(Vhf1VolumeApp);
+            return Vhf1VolumeControl && (AudioApiType == AudioApiType.VoiceMeeter || !string.IsNullOrEmpty(Vhf1VolumeApp));
         }
 
         public bool IsVhf2Controllable()
         {
-            return Vhf2VolumeControl && !string.IsNullOrEmpty(Vhf2VolumeApp);
+            return Vhf2VolumeControl && (AudioApiType == AudioApiType.VoiceMeeter || !string.IsNullOrEmpty(Vhf2VolumeApp));
         }
 
         public bool IsVhf3Controllable()
         {
-            return Vhf3VolumeControl && !string.IsNullOrEmpty(Vhf3VolumeApp);
+            return Vhf3VolumeControl && (AudioApiType == AudioApiType.VoiceMeeter || !string.IsNullOrEmpty(Vhf3VolumeApp));
         }
 
         public bool IsCabControllable()
         {
-            return CabVolumeControl && !string.IsNullOrEmpty(CabVolumeApp);
+            return CabVolumeControl && (AudioApiType == AudioApiType.VoiceMeeter || !string.IsNullOrEmpty(CabVolumeApp));
         }
 
         public bool IsPaControllable()
         {
-            return PaVolumeControl && !string.IsNullOrEmpty(PaVolumeApp);
+            return PaVolumeControl && (AudioApiType == AudioApiType.VoiceMeeter || !string.IsNullOrEmpty(PaVolumeApp));
         }
 
         protected void LoadConfiguration()
@@ -177,8 +178,8 @@ namespace Prosim2GSX.Models
 
             foreach (var channel in Enum.GetValues(typeof(AudioChannel)).Cast<AudioChannel>())
             {
-                string stripName = Convert.ToString(ConfigurationFile.GetSetting($"voiceMeeter{channel}Strip", ""));
-                VoiceMeeterStrips[channel] = stripName;
+                string stripLabel = Convert.ToString(ConfigurationFile.GetSetting($"voiceMeeter{channel}StripLabel", ""));
+                VoiceMeeterStripLabels[channel] = stripLabel;
             }
 
             foreach (var channel in Enum.GetValues(typeof(AudioChannel)).Cast<AudioChannel>())
@@ -186,6 +187,15 @@ namespace Prosim2GSX.Models
                 string deviceTypeStr = Convert.ToString(ConfigurationFile.GetSetting($"voiceMeeter{channel}DeviceType", "Strip"));
                 VoiceMeeterDeviceTypes[channel] = Enum.TryParse<VoiceMeeterDeviceType>(deviceTypeStr, out var deviceType) ?
                     deviceType : VoiceMeeterDeviceType.Strip;
+            }
+
+            foreach (var channel in Enum.GetValues(typeof(AudioChannel)).Cast<AudioChannel>())
+            {
+                string stripName = Convert.ToString(ConfigurationFile.GetSetting($"voiceMeeter{channel}Strip", ""));
+                if (!string.IsNullOrEmpty(stripName))
+                {
+                    VoiceMeeterStrips[channel] = stripName;
+                }
             }
 
             InitializeAudioChannels();
@@ -280,10 +290,12 @@ namespace Prosim2GSX.Models
                 return RefuelRate / ProsimController.weightConversion;
         }
 
-        public void SetVoiceMeeterStrip(AudioChannel channel, string stripName)
+        public void SetVoiceMeeterStrip(AudioChannel channel, string stripName, string stripLabel)
         {
             VoiceMeeterStrips[channel] = stripName;
+            VoiceMeeterStripLabels[channel] = stripLabel;
             SetSetting($"voiceMeeter{channel}Strip", stripName);
+            SetSetting($"voiceMeeter{channel}StripLabel", stripLabel);
         }
         public void SetAudioService(AudioService audioService)
         {

@@ -1165,35 +1165,35 @@ namespace Prosim2GSX
                         cboVhf1VoiceMeeterStrip.ItemsSource = devices;
                         if (serviceModel.VoiceMeeterStrips.TryGetValue(channel, out string vhf1Device) && !string.IsNullOrEmpty(vhf1Device))
                         {
-                            cboIntVoiceMeeterStrip.SelectedValue = vhf1Device;
+                            cboVhf1VoiceMeeterStrip.SelectedValue = vhf1Device;
                         }
                         break;
                     case AudioChannel.VHF2:
                         cboVhf2VoiceMeeterStrip.ItemsSource = devices;
                         if (serviceModel.VoiceMeeterStrips.TryGetValue(channel, out string vhf2Device) && !string.IsNullOrEmpty(vhf2Device))
                         {
-                            cboIntVoiceMeeterStrip.SelectedValue = vhf2Device;
+                            cboVhf2VoiceMeeterStrip.SelectedValue = vhf2Device;
                         }
                         break;
                     case AudioChannel.VHF3:
                         cboVhf3VoiceMeeterStrip.ItemsSource = devices;
                         if (serviceModel.VoiceMeeterStrips.TryGetValue(channel, out string vhf3Device) && !string.IsNullOrEmpty(vhf3Device))
                         {
-                            cboIntVoiceMeeterStrip.SelectedValue = vhf3Device;
+                            cboVhf3VoiceMeeterStrip.SelectedValue = vhf3Device;
                         }
                         break;
                     case AudioChannel.CAB:
                         cboCabVoiceMeeterStrip.ItemsSource = devices;
                         if (serviceModel.VoiceMeeterStrips.TryGetValue(channel, out string cabDevice) && !string.IsNullOrEmpty(cabDevice))
                         {
-                            cboIntVoiceMeeterStrip.SelectedValue = cabDevice;
+                            cboCabVoiceMeeterStrip.SelectedValue = cabDevice;
                         }
                         break;
                     case AudioChannel.PA:
                         cboPaVoiceMeeterStrip.ItemsSource = devices;
                         if (serviceModel.VoiceMeeterStrips.TryGetValue(channel, out string paDevice) && !string.IsNullOrEmpty(paDevice))
                         {
-                            cboIntVoiceMeeterStrip.SelectedValue = paDevice;
+                            cboPaVoiceMeeterStrip.SelectedValue = paDevice;
                         }
                         break;
                 }
@@ -1218,10 +1218,13 @@ namespace Prosim2GSX
             if (_isLoadingSettings)
                 return;
 
-            if (cboIntVoiceMeeterStrip.SelectedValue != null)
+            if (cboIntVoiceMeeterStrip.SelectedItem is KeyValuePair<string, string> selectedItem)
             {
-                string stripName = cboIntVoiceMeeterStrip.SelectedValue.ToString();
-                serviceModel.SetVoiceMeeterStrip(AudioChannel.INT, stripName);
+                string stripName = selectedItem.Key;   // This is the internal identifier (e.g., "Strip[0]")
+                string stripLabel = selectedItem.Value; // This is the user-friendly label (e.g., "Microphone")
+
+                // Store both values
+                serviceModel.SetVoiceMeeterStrip(AudioChannel.INT, stripName, stripLabel);
             }
         }
 
@@ -1230,10 +1233,13 @@ namespace Prosim2GSX
             if (_isLoadingSettings)
                 return;
 
-            if (cboVhf1VoiceMeeterStrip.SelectedValue != null)
+            if (cboVhf1VoiceMeeterStrip.SelectedItem is KeyValuePair<string, string> selectedItem)
             {
-                string stripName = cboVhf1VoiceMeeterStrip.SelectedValue.ToString();
-                serviceModel.SetVoiceMeeterStrip(AudioChannel.VHF1, stripName);
+                string stripName = selectedItem.Key;   // This is the internal identifier (e.g., "Strip[0]")
+                string stripLabel = selectedItem.Value; // This is the user-friendly label (e.g., "Microphone")
+
+                // Store both values
+                serviceModel.SetVoiceMeeterStrip(AudioChannel.VHF1, stripName, stripLabel);
             }
         }
         private void cboVhf2VoiceMeeterStrip_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -1241,10 +1247,13 @@ namespace Prosim2GSX
             if (_isLoadingSettings)
                 return;
 
-            if (cboVhf2VoiceMeeterStrip.SelectedValue != null)
+            if (cboVhf2VoiceMeeterStrip.SelectedItem is KeyValuePair<string, string> selectedItem)
             {
-                string stripName = cboVhf2VoiceMeeterStrip.SelectedValue.ToString();
-                serviceModel.SetVoiceMeeterStrip(AudioChannel.VHF2, stripName);
+                string stripName = selectedItem.Key;   // This is the internal identifier (e.g., "Strip[0]")
+                string stripLabel = selectedItem.Value; // This is the user-friendly label (e.g., "Microphone")
+
+                // Store both values
+                serviceModel.SetVoiceMeeterStrip(AudioChannel.VHF2, stripName, stripLabel);
             }
         }
         private void cboVhf3VoiceMeeterStrip_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -1252,10 +1261,13 @@ namespace Prosim2GSX
             if (_isLoadingSettings)
                 return;
 
-            if (cboVhf3VoiceMeeterStrip.SelectedValue != null)
+            if (cboVhf3VoiceMeeterStrip.SelectedItem is KeyValuePair<string, string> selectedItem)
             {
-                string stripName = cboVhf3VoiceMeeterStrip.SelectedValue.ToString();
-                serviceModel.SetVoiceMeeterStrip(AudioChannel.VHF3, stripName);
+                string stripName = selectedItem.Key;   // This is the internal identifier (e.g., "Strip[0]")
+                string stripLabel = selectedItem.Value; // This is the user-friendly label (e.g., "Microphone")
+
+                // Store both values
+                serviceModel.SetVoiceMeeterStrip(AudioChannel.VHF3, stripName, stripLabel);
             }
         }
         private void cboCabVoiceMeeterStrip_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -1263,10 +1275,13 @@ namespace Prosim2GSX
             if (_isLoadingSettings)
                 return;
 
-            if (cboCabVoiceMeeterStrip.SelectedValue != null)
+            if (cboCabVoiceMeeterStrip.SelectedItem is KeyValuePair<string, string> selectedItem)
             {
-                string stripName = cboCabVoiceMeeterStrip.SelectedValue.ToString();
-                serviceModel.SetVoiceMeeterStrip(AudioChannel.CAB, stripName);
+                string stripName = selectedItem.Key;   // This is the internal identifier (e.g., "Strip[0]")
+                string stripLabel = selectedItem.Value; // This is the user-friendly label (e.g., "Microphone")
+
+                // Store both values
+                serviceModel.SetVoiceMeeterStrip(AudioChannel.CAB, stripName, stripLabel);
             }
         }
 
@@ -1275,10 +1290,13 @@ namespace Prosim2GSX
             if (_isLoadingSettings)
                 return;
 
-            if (cboPaVoiceMeeterStrip.SelectedValue != null)
+            if (cboPaVoiceMeeterStrip.SelectedItem is KeyValuePair<string, string> selectedItem)
             {
-                string stripName = cboPaVoiceMeeterStrip.SelectedValue.ToString();
-                serviceModel.SetVoiceMeeterStrip(AudioChannel.PA, stripName);
+                string stripName = selectedItem.Key;   // This is the internal identifier (e.g., "Strip[0]")
+                string stripLabel = selectedItem.Value; // This is the user-friendly label (e.g., "Microphone")
+
+                // Store both values
+                serviceModel.SetVoiceMeeterStrip(AudioChannel.PA, stripName, stripLabel);
             }
         }
     }

@@ -63,8 +63,24 @@ namespace Prosim2GSX
             if (appSettings.ContainsKey(key))
             {
                 appSettings[key] = value;
-                SaveConfiguration();
             }
+            else
+            {
+                // Add the setting if it doesn't exist
+                XmlNode newNode = xmlDoc.CreateElement("add");
+
+                XmlAttribute attribute = xmlDoc.CreateAttribute("key");
+                attribute.Value = key;
+                newNode.Attributes.Append(attribute);
+
+                attribute = xmlDoc.CreateAttribute("value");
+                attribute.Value = value;
+                newNode.Attributes.Append(attribute);
+
+                xmlDoc.ChildNodes[1].AppendChild(newNode);
+                appSettings.Add(key, value);
+            }
+            SaveConfiguration();
         }
     }
 }

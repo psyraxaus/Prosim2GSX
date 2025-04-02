@@ -97,6 +97,38 @@ namespace Prosim2GSX.Services.Audio
                         // Core Audio initialization
                         AddAudioSource(config.ProcessName, channel.ToString(), config.VolumeDataRef, config.MuteDataRef);
                     }
+                    else if (_model.AudioApiType == AudioApiType.VoiceMeeter)
+                    {
+                        // Initialize VoiceMeeter cached values
+                        if (_model is ServiceModel serviceModel &&
+                            serviceModel.VoiceMeeterDeviceTypes.TryGetValue(channel, out var deviceType) &&
+                            serviceModel.VoiceMeeterStrips.TryGetValue(channel, out var deviceName) &&
+                            !string.IsNullOrEmpty(deviceName))
+                        {
+                            try
+                            {
+                                // Get initial values from VoiceMeeter
+                                if (deviceType == VoiceMeeterDeviceType.Strip)
+                                {
+                                    _voiceMeeterVolumes[channel] = _voiceMeeterApi.GetStripGain(deviceName);
+                                    _voiceMeeterMutes[channel] = _voiceMeeterApi.GetStripMute(deviceName);
+                                }
+                                else
+                                {
+                                    _voiceMeeterVolumes[channel] = _voiceMeeterApi.GetBusGain(deviceName);
+                                    _voiceMeeterMutes[channel] = _voiceMeeterApi.GetBusMute(deviceName);
+                                }
+
+                                Logger.Log(LogLevel.Debug, "AudioService:Initialize",
+                                    $"Initialized VoiceMeeter values for {channel}: Gain={_voiceMeeterVolumes[channel]}, Mute={_voiceMeeterMutes[channel]}");
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.Log(LogLevel.Error, "AudioService:Initialize",
+                                    $"Error initializing VoiceMeeter values for {channel}: {ex.Message}");
+                            }
+                        }
+                    }
 
                     // Subscribe to datarefs regardless of API type
                     _prosimController.SubscribeToDataRef(config.VolumeDataRef, _volumeHandlers[channel]);
@@ -127,9 +159,14 @@ namespace Prosim2GSX.Services.Audio
                 _fcuTrackFpaMode = false;
                 _fcuHeadingVsMode = false;
             }
+
+            // Perform initial synchronization for VoiceMeeter
+            if (_model.AudioApiType == AudioApiType.VoiceMeeter)
+            {
+                SynchronizeDatarefsWithVoiceMeeter();
+            }
         }
         
-
         private void OnTrackFpaModeChanged(string dataRef, dynamic oldValue, dynamic newValue)
         {
             _fcuTrackFpaMode = Convert.ToBoolean(newValue);
@@ -279,7 +316,10 @@ namespace Prosim2GSX.Services.Audio
                 }
                 else if (_model.AudioApiType == AudioApiType.VoiceMeeter)
                 {
-                    // Update VoiceMeeter parameters if they've changed
+                    // First, synchronize datarefs with VoiceMeeter to ensure VoiceMeeter reflects the current dataref values
+                    SynchronizeDatarefsWithVoiceMeeter();
+
+                    // Then check if VoiceMeeter parameters have changed (e.g., from manual adjustment in VoiceMeeter)
                     if (_voiceMeeterApi.AreParametersDirty())
                     {
                         UpdateVoiceMeeterParameters();
@@ -303,13 +343,95 @@ namespace Prosim2GSX.Services.Audio
                 {
                     try
                     {
-                        // Get current values from VoiceMeeter
-                        float gain = _voiceMeeterApi.GetStripGain(config.VoiceMeeterStrip);
-                        bool mute = _voiceMeeterApi.GetStripMute(config.VoiceMeeterStrip);
+                        if (_model is ServiceModel serviceModel &&
+                            serviceModel.VoiceMeeterDeviceTypes.TryGetValue(channel, out var deviceType) &&
+                            serviceModel.VoiceMeeterStrips.TryGetValue(channel, out var deviceName) &&
+                            !string.IsNullOrEmpty(deviceName))
+                        {
+                            // Get current values from VoiceMeeter
+                            float gain;
+                            bool mute;
 
-                        // Update cached values
-                        _voiceMeeterVolumes[channel] = gain;
-                        _voiceMeeterMutes[channel] = mute;
+                            if (deviceType == VoiceMeeterDeviceType.Strip)
+                            {
+                                gain = _voiceMeeterApi.GetStripGain(deviceName);
+                                mute = _voiceMeeterApi.GetStripMute(deviceName);
+                            }
+                            else
+                            {
+                                gain = _voiceMeeterApi.GetBusGain(deviceName);
+                                mute = _voiceMeeterApi.GetBusMute(deviceName);
+                            }
+
+                            // Check if values have changed
+                            bool gainChanged = !_voiceMeeterVolumes.TryGetValue(channel, out float cachedGain) ||
+                                              Math.Abs(cachedGain - gain) > 0.01f;
+
+                            bool muteChanged = !_voiceMeeterMutes.TryGetValue(channel, out bool cachedMute) ||
+                                              cachedMute != mute;
+
+                            // Update cached values
+                            if (gainChanged)
+                            {
+                                _voiceMeeterVolumes[channel] = gain;
+
+                                // Convert gain to dataref value
+                                float datarefValue = ConvertVoiceMeeterGainToDataref(gain);
+
+                                // Update the dataref if it doesn't match the current VoiceMeeter value
+                                try
+                                {
+                                    float currentDataref = _prosimController.Interface.GetProsimVariable(config.VolumeDataRef);
+                                    float threshold = 5f; // Larger threshold due to larger value range
+
+                                    if (Math.Abs(currentDataref - datarefValue) > threshold)
+                                    {
+                                        _prosimController.Interface.SetProsimVariable(config.VolumeDataRef, datarefValue);
+                                        Logger.Log(LogLevel.Debug, "AudioService:UpdateVoiceMeeterParameters",
+                                            $"Updated dataref {config.VolumeDataRef} to match VoiceMeeter gain for {channel}: {datarefValue}");
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Logger.Log(LogLevel.Error, "AudioService:UpdateVoiceMeeterParameters",
+                                        $"Error updating dataref for {channel}: {ex.Message}");
+                                }
+                            }
+
+                            if (muteChanged)
+                            {
+                                _voiceMeeterMutes[channel] = mute;
+
+                                // Invert the mute state for all channels before setting the dataref
+                                bool datarefMute = !mute;
+
+                                // We don't update the dataref because it's a read-only indicator
+                                try
+                                {
+                                    bool currentMute = Convert.ToBoolean(_prosimController.Interface.GetProsimVariable(config.MuteDataRef));
+                                    Logger.Log(LogLevel.Debug, "AudioService:UpdateVoiceMeeterParameters",
+                                        $"Current mute state for {channel}: {currentMute}");
+                                }
+                                catch (Exception ex)
+                                {
+                                    Logger.Log(LogLevel.Error, "AudioService:UpdateVoiceMeeterParameters",
+                                        $"Error reading mute dataref for {channel}: {ex.Message}");
+                                }
+                            }
+
+                            // If either value changed, publish an event
+                            if (gainChanged || muteChanged)
+                            {
+                                // Calculate normalized volume (0-1) for the event
+                                float datarefValue = ConvertVoiceMeeterGainToDataref(gain);
+                                float normalizedVolume = (datarefValue - 176f) / (1020f - 176f);
+
+                                EventAggregator.Instance.Publish(new AudioStateChangedEvent(
+                                    channel.ToString(),
+                                    mute,
+                                    normalizedVolume));
+                            }
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -393,14 +515,20 @@ namespace Prosim2GSX.Services.Audio
             try
             {
                 if (!_fcuTrackFpaMode && !_fcuHeadingVsMode)
+                {
+                    Logger.Log(LogLevel.Debug, "AudioService:OnVolumeChanged",
+                        $"Ignoring volume change for {channel}: FCU not in correct mode");
                     return; // Ignore changes when FCU is not in the correct mode
+                }
 
                 if (_model.AudioChannels.TryGetValue(channel, out var config) && config.Enabled)
                 {
-                    float volume;
+                    float datarefValue;
                     try
                     {
-                        volume = Convert.ToSingle(newValue);
+                        datarefValue = Convert.ToSingle(newValue);
+                        Logger.Log(LogLevel.Debug, "AudioService:OnVolumeChanged",
+                            $"Volume value for {channel} changed from {oldValue} to {datarefValue}");
                     }
                     catch (Exception ex)
                     {
@@ -409,10 +537,13 @@ namespace Prosim2GSX.Services.Audio
                         return;
                     }
 
-                    if (volume >= 0)
+                    if (datarefValue >= 0)
                     {
                         if (_model.AudioApiType == AudioApiType.CoreAudio)
                         {
+                            // For Core Audio, normalize to 0-1 range
+                            float volume = (datarefValue - 176f) / (1020f - 176f);
+
                             // Core Audio volume control
                             if (_audioSources.TryGetValue(channel.ToString(), out AudioSource source) &&
                                 source.Session != null &&
@@ -436,26 +567,72 @@ namespace Prosim2GSX.Services.Audio
                                 serviceModel.VoiceMeeterStrips.TryGetValue(channel, out var deviceName) &&
                                 !string.IsNullOrEmpty(deviceName))
                             {
-                                // Convert 0-1 range to VoiceMeeter gain range (-60 to 12 dB)
-                                float gain = _voiceMeeterApi.VolumeToGain(volume);
+                                // Convert dataref value to VoiceMeeter gain
+                                float gain = ConvertDatarefToVoiceMeeterGain(datarefValue);
+                                Logger.Log(LogLevel.Debug, "AudioService:OnVolumeChanged",
+                                    $"Converted dataref {datarefValue} to gain {gain} dB for {channel}");
 
-                                if (deviceType == VoiceMeeterDeviceType.Strip)
+                                // Check if the gain has actually changed to avoid unnecessary updates
+                                if (!_voiceMeeterVolumes.TryGetValue(channel, out float currentGain) ||
+                                    Math.Abs(currentGain - gain) > 0.01f)
                                 {
-                                    // VoiceMeeter strip volume control
-                                    _voiceMeeterApi.SetStripGain(deviceName, gain);
-                                    Logger.Log(LogLevel.Debug, "AudioService:OnVolumeChanged",
-                                        $"VoiceMeeter strip gain changed for {channel}: {gain} dB");
+                                    bool success = false;
+
+                                    if (deviceType == VoiceMeeterDeviceType.Strip)
+                                    {
+                                        // VoiceMeeter strip volume control
+                                        _voiceMeeterApi.SetStripGain(deviceName, gain);
+
+                                        // Verify the change was applied
+                                        float actualGain = _voiceMeeterApi.GetStripGain(deviceName);
+                                        success = Math.Abs(actualGain - gain) < 0.1f;
+
+                                        Logger.Log(LogLevel.Debug, "AudioService:OnVolumeChanged",
+                                            $"VoiceMeeter strip gain changed for {channel}: {gain} dB (success: {success})");
+                                    }
+                                    else
+                                    {
+                                        // VoiceMeeter bus volume control
+                                        _voiceMeeterApi.SetBusGain(deviceName, gain);
+
+                                        // Verify the change was applied
+                                        float actualGain = _voiceMeeterApi.GetBusGain(deviceName);
+                                        success = Math.Abs(actualGain - gain) < 0.1f;
+
+                                        Logger.Log(LogLevel.Debug, "AudioService:OnVolumeChanged",
+                                            $"VoiceMeeter bus gain changed for {channel}: {gain} dB (success: {success})");
+                                    }
+
+                                    if (success)
+                                    {
+                                        // Update cached value only if the change was successful
+                                        _voiceMeeterVolumes[channel] = gain;
+
+                                        // Calculate normalized volume (0-1) for the event
+                                        float normalizedVolume = (datarefValue - 176f) / (1020f - 176f);
+
+                                        // Publish event
+                                        EventAggregator.Instance.Publish(new AudioStateChangedEvent(
+                                            channel.ToString(),
+                                            _voiceMeeterMutes.TryGetValue(channel, out bool muted) ? muted : false,
+                                            normalizedVolume));
+                                    }
+                                    else
+                                    {
+                                        Logger.Log(LogLevel.Warning, "AudioService:OnVolumeChanged",
+                                            $"Failed to change VoiceMeeter gain for {channel}");
+                                    }
                                 }
                                 else
                                 {
-                                    // VoiceMeeter bus volume control
-                                    _voiceMeeterApi.SetBusGain(deviceName, gain);
                                     Logger.Log(LogLevel.Debug, "AudioService:OnVolumeChanged",
-                                        $"VoiceMeeter bus gain changed for {channel}: {gain} dB");
+                                        $"Skipping VoiceMeeter gain update for {channel} - value unchanged");
                                 }
-
-                                // Publish event
-                                EventAggregator.Instance.Publish(new AudioStateChangedEvent(channel.ToString(), false, volume));
+                            }
+                            else
+                            {
+                                Logger.Log(LogLevel.Warning, "AudioService:OnVolumeChanged",
+                                    $"Missing VoiceMeeter configuration for {channel}");
                             }
                         }
                     }
@@ -485,11 +662,14 @@ namespace Prosim2GSX.Services.Audio
                 if (_model.AudioChannels.TryGetValue(channel, out var config) && config.Enabled)
                 {
                     bool shouldHandleMute = true;
-                    int muted;
+                    bool muteValue;
 
                     try
                     {
-                        muted = Convert.ToBoolean(newValue) ? 1 : 0;
+                        // Invert the mute state for all channels
+                        muteValue = !Convert.ToBoolean(newValue);
+                        Logger.Log(LogLevel.Debug, "AudioService:OnMuteChanged",
+                            $"Inverted mute value for {channel}: dataref={newValue}, used={muteValue}");
                     }
                     catch (Exception ex)
                     {
@@ -563,24 +743,21 @@ namespace Prosim2GSX.Services.Audio
                     }
 
                     // Handle mute state if needed
-                    if (shouldHandleMute && muted >= 0)
+                    if (shouldHandleMute)
                     {
-                        bool shouldMute = muted == 0;
-
                         if (_model.AudioApiType == AudioApiType.CoreAudio)
                         {
                             if (_audioSources.TryGetValue(channel.ToString(), out AudioSource source) &&
-                                source.Session != null &&
-                                muted != source.MuteState)
+                                source.Session != null)
                             {
-                                source.Session.SimpleAudioVolume.Mute = shouldMute;
-                                source.MuteState = muted;
+                                source.Session.SimpleAudioVolume.Mute = muteValue;
+                                source.MuteState = muteValue ? 1 : 0;
 
                                 // Publish event
-                                EventAggregator.Instance.Publish(new AudioStateChangedEvent(source.SourceName, shouldMute, source.Session.SimpleAudioVolume.MasterVolume));
+                                EventAggregator.Instance.Publish(new AudioStateChangedEvent(source.SourceName, muteValue, source.Session.SimpleAudioVolume.MasterVolume));
 
                                 Logger.Log(LogLevel.Debug, "AudioService:OnMuteChanged",
-                                    $"Mute state changed for {channel}: {(shouldMute ? "Muted" : "Unmuted")}");
+                                    $"Mute state changed for {channel}: {(muteValue ? "Muted" : "Unmuted")}");
                             }
                         }
                         else if (_model.AudioApiType == AudioApiType.VoiceMeeter)
@@ -594,20 +771,23 @@ namespace Prosim2GSX.Services.Audio
                                 if (deviceType == VoiceMeeterDeviceType.Strip)
                                 {
                                     // VoiceMeeter strip mute control
-                                    _voiceMeeterApi.SetStripMute(deviceName, shouldMute);
+                                    _voiceMeeterApi.SetStripMute(deviceName, muteValue);
                                     Logger.Log(LogLevel.Debug, "AudioService:OnMuteChanged",
-                                        $"VoiceMeeter strip mute state changed for {channel}: {(shouldMute ? "Muted" : "Unmuted")}");
+                                        $"VoiceMeeter strip mute state changed for {channel}: {(muteValue ? "Muted" : "Unmuted")}");
                                 }
                                 else
                                 {
                                     // VoiceMeeter bus mute control
-                                    _voiceMeeterApi.SetBusMute(deviceName, shouldMute);
+                                    _voiceMeeterApi.SetBusMute(deviceName, muteValue);
                                     Logger.Log(LogLevel.Debug, "AudioService:OnMuteChanged",
-                                        $"VoiceMeeter bus mute state changed for {channel}: {(shouldMute ? "Muted" : "Unmuted")}");
+                                        $"VoiceMeeter bus mute state changed for {channel}: {(muteValue ? "Muted" : "Unmuted")}");
                                 }
 
+                                // Update cached value
+                                _voiceMeeterMutes[channel] = muteValue;
+
                                 // Publish event
-                                EventAggregator.Instance.Publish(new AudioStateChangedEvent(channel.ToString(), shouldMute, 0));
+                                EventAggregator.Instance.Publish(new AudioStateChangedEvent(channel.ToString(), muteValue, 0));
                             }
                         }
                     }
@@ -646,6 +826,156 @@ namespace Prosim2GSX.Services.Audio
                 return _voiceMeeterApi.GetAvailableBusesWithLabels();
             }
             return new List<KeyValuePair<string, string>>();
+        }
+
+        /// <summary>
+        /// Synchronizes the dataref values with VoiceMeeter parameters
+        /// </summary>
+        private void SynchronizeDatarefsWithVoiceMeeter()
+        {
+            if (_model.AudioApiType != AudioApiType.VoiceMeeter)
+                return;
+
+            foreach (var channelEntry in _model.AudioChannels)
+            {
+                var channel = channelEntry.Key;
+                var config = channelEntry.Value;
+
+                if (config.Enabled && !string.IsNullOrEmpty(config.VoiceMeeterStrip))
+                {
+                    try
+                    {
+                        if (_model is ServiceModel serviceModel &&
+                            serviceModel.VoiceMeeterDeviceTypes.TryGetValue(channel, out var deviceType) &&
+                            serviceModel.VoiceMeeterStrips.TryGetValue(channel, out var deviceName) &&
+                            !string.IsNullOrEmpty(deviceName))
+                        {
+                            // Get current dataref values
+                            float datarefValue = _prosimController.Interface.GetProsimVariable(config.VolumeDataRef);
+                            bool muteDataref = Convert.ToBoolean(_prosimController.Interface.GetProsimVariable(config.MuteDataRef));
+
+                            // Invert the mute state for all channels
+                            muteDataref = !muteDataref;
+
+                            // Convert dataref to gain
+                            float gainDataref = ConvertDatarefToVoiceMeeterGain(datarefValue);
+
+                            // Get current VoiceMeeter values
+                            float gainVoiceMeeter;
+                            bool muteVoiceMeeter;
+
+                            if (deviceType == VoiceMeeterDeviceType.Strip)
+                            {
+                                gainVoiceMeeter = _voiceMeeterApi.GetStripGain(deviceName);
+                                muteVoiceMeeter = _voiceMeeterApi.GetStripMute(deviceName);
+                            }
+                            else
+                            {
+                                gainVoiceMeeter = _voiceMeeterApi.GetBusGain(deviceName);
+                                muteVoiceMeeter = _voiceMeeterApi.GetBusMute(deviceName);
+                            }
+
+                            // Check if values are different
+                            bool gainDifferent = Math.Abs(gainDataref - gainVoiceMeeter) > 0.1f;
+                            bool muteDifferent = muteDataref != muteVoiceMeeter && config.LatchMute;
+
+                            // If different, update VoiceMeeter to match dataref
+                            if (gainDifferent)
+                            {
+                                if (deviceType == VoiceMeeterDeviceType.Strip)
+                                {
+                                    _voiceMeeterApi.SetStripGain(deviceName, gainDataref);
+                                    Logger.Log(LogLevel.Debug, "AudioService:SynchronizeDatarefsWithVoiceMeeter",
+                                        $"Updated VoiceMeeter strip gain for {channel} to match dataref: {gainDataref} dB");
+                                }
+                                else
+                                {
+                                    _voiceMeeterApi.SetBusGain(deviceName, gainDataref);
+                                    Logger.Log(LogLevel.Debug, "AudioService:SynchronizeDatarefsWithVoiceMeeter",
+                                        $"Updated VoiceMeeter bus gain for {channel} to match dataref: {gainDataref} dB");
+                                }
+
+                                // Update cached value
+                                _voiceMeeterVolumes[channel] = gainDataref;
+                            }
+
+                            if (muteDifferent)
+                            {
+                                if (deviceType == VoiceMeeterDeviceType.Strip)
+                                {
+                                    _voiceMeeterApi.SetStripMute(deviceName, muteDataref);
+                                    Logger.Log(LogLevel.Debug, "AudioService:SynchronizeDatarefsWithVoiceMeeter",
+                                        $"Updated VoiceMeeter strip mute for {channel} to match dataref: {muteDataref}");
+                                }
+                                else
+                                {
+                                    _voiceMeeterApi.SetBusMute(deviceName, muteDataref);
+                                    Logger.Log(LogLevel.Debug, "AudioService:SynchronizeDatarefsWithVoiceMeeter",
+                                        $"Updated VoiceMeeter bus mute for {channel} to match dataref: {muteDataref}");
+                                }
+
+                                // Update cached value
+                                _voiceMeeterMutes[channel] = muteDataref;
+                            }
+
+                            // If either value changed, publish an event
+                            if (gainDifferent || muteDifferent)
+                            {
+                                // Calculate normalized volume (0-1) for the event
+                                float normalizedVolume = (datarefValue - 176f) / (1020f - 176f);
+
+                                EventAggregator.Instance.Publish(new AudioStateChangedEvent(
+                                    channel.ToString(),
+                                    muteDataref,
+                                    normalizedVolume));
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log(LogLevel.Error, "AudioService:SynchronizeDatarefsWithVoiceMeeter",
+                            $"Error synchronizing dataref with VoiceMeeter for {channel}: {ex.Message}");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Converts a Prosim dataref volume value (176-1020) to VoiceMeeter gain (-60 to 12 dB)
+        /// </summary>
+        /// <param name="datarefValue">The raw dataref value from Prosim</param>
+        /// <returns>VoiceMeeter gain value in dB</returns>
+        private float ConvertDatarefToVoiceMeeterGain(float datarefValue)
+        {
+            // Clamp the input value to the valid range
+            float clampedValue = Math.Max(176f, Math.Min(1020f, datarefValue));
+
+            // Normalize to 0-1 range
+            float normalizedValue = (clampedValue - 176f) / (1020f - 176f);
+
+            // Convert to VoiceMeeter gain range (-60 to 12 dB)
+            float gain = (normalizedValue * 72f) - 60f;
+
+            return gain;
+        }
+
+        /// <summary>
+        /// Converts a VoiceMeeter gain value (-60 to 12 dB) to Prosim dataref volume (176-1020)
+        /// </summary>
+        /// <param name="gain">The gain value from VoiceMeeter in dB</param>
+        /// <returns>Prosim dataref value</returns>
+        private float ConvertVoiceMeeterGainToDataref(float gain)
+        {
+            // Clamp the input value to the valid range
+            float clampedGain = Math.Max(-60f, Math.Min(12f, gain));
+
+            // Normalize to 0-1 range
+            float normalizedValue = (clampedGain + 60f) / 72f;
+
+            // Convert to Prosim dataref range (176-1020)
+            float datarefValue = (normalizedValue * (1020f - 176f)) + 176f;
+
+            return datarefValue;
         }
 
         public void Dispose()
