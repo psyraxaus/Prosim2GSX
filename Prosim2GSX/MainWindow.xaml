@@ -766,6 +766,19 @@
                             </StackPanel>
                         </Border>
 
+                        <!-- Simbrief Settings -->
+                        <TextBlock Text="SIMBRIEF SETTINGS" Style="{StaticResource CategoryHeaderStyle}"/>
+                        <Border Style="{StaticResource SectionBorderStyle}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Simbrief ID:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBox x:Name="txtSimbriefID" 
+                                             Style="{StaticResource ModernTextBoxStyle}"
+                                             Width="80" 
+                                             LostFocus="txtSimbriefID_LostFocus" 
+                                             KeyUp="txtSimbriefID_KeyUp"/>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Prosim Settings -->
                         <TextBlock Text="PROSIM SETTINGS" Style="{StaticResource CategoryHeaderStyle}"/>
                         <Border Style="{StaticResource SectionBorderStyle}">

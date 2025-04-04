@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
+﻿﻿using Newtonsoft.Json.Linq;
 using ProSimSDK;
 using System;
 using System.Xml;
@@ -140,10 +140,7 @@ namespace Prosim2GSX
             }
         }
 
-        public void SetSimBriefID(ServiceModel model)
-        {
-            model.SimBriefID = (string)Interface.GetProsimVariable("efb.simbrief.id");
-        }
+        // Method removed: SetSimBriefID is no longer needed as we're using the manually entered value
 
         public bool IsProsimConnectionAvailable(ServiceModel model)
         {

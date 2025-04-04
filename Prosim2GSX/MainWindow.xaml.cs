@@ -1,4 +1,4 @@
-﻿﻿using Prosim2GSX.Events;
+﻿﻿﻿﻿﻿﻿using Prosim2GSX.Events;
 using Prosim2GSX.Themes;
 using System;
 using System.Collections.Generic;
@@ -249,6 +249,7 @@ namespace Prosim2GSX
 
             txtRefuelRate.Text = serviceModel.RefuelRate.ToString(CultureInfo.InvariantCulture);
             txtRepositionDelay.Text = serviceModel.RepositionDelay.ToString(CultureInfo.InvariantCulture);
+            txtSimbriefID.Text = serviceModel.SimBriefID;
 
             // INT settings
             chkIntVolumeControl.IsChecked = serviceModel.GsxVolumeControl;
@@ -695,6 +696,23 @@ namespace Prosim2GSX
         {
             if (txtVhf1VolumeApp?.Text != null)
                 serviceModel.SetSetting("vhf1VolumeApp", txtVhf1VolumeApp.Text);
+        }
+
+        private void txtSimbriefID_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Enter || e.Key == System.Windows.Input.Key.Return)
+                txtSimbriefID_Set();
+        }
+
+        private void txtSimbriefID_LostFocus(object sender, RoutedEventArgs e)
+        {
+            txtSimbriefID_Set();
+        }
+
+        private void txtSimbriefID_Set()
+        {
+            if (txtSimbriefID?.Text != null)
+                serviceModel.SetSetting("pilotID", txtSimbriefID.Text);
         }
 
         private void txtRepositionDelay_LostFocus(object sender, RoutedEventArgs e)

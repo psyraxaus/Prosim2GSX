@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿﻿using System;
 using System.Threading;
 using Microsoft.FlightSimulator.SimConnect;
 using Prosim2GSX.Events;
@@ -86,10 +86,7 @@ namespace Prosim2GSX
             // Initialize FlightPlan after Prosim is connected
             if (FlightPlan == null)
             {
-                // Get SimBrief ID from ProsimController
-                ProsimController.SetSimBriefID(Model);
-
-                // Create and load FlightPlan
+                // Create and load FlightPlan using the manually entered Simbrief ID
                 FlightPlan = new FlightPlan(Model);
                 if (!FlightPlan.Load())
                 {
