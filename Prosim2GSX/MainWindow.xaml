@@ -776,6 +776,10 @@
                                              Width="80" 
                                              LostFocus="txtSimbriefID_LostFocus" 
                                              KeyUp="txtSimbriefID_KeyUp"/>
+                                <Button x:Name="btnTestSimbriefConnection" 
+                                        Content="Test Connection" 
+                                        Margin="10,0,0,0"
+                                        Click="btnTestSimbriefConnection_Click"/>
                             </StackPanel>
                         </Border>
 

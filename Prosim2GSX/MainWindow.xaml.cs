@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿using Prosim2GSX.Events;
+﻿﻿using Prosim2GSX.Events;
 using Prosim2GSX.Themes;
 using System;
 using System.Collections.Generic;
@@ -52,7 +52,30 @@ namespace Prosim2GSX
 
             // Subscribe to flight number events
             _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<FlightPlanChangedEvent>(OnFlightPlanChanged));
-
+            
+            // Subscribe to Simbrief ID required events
+            _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<SimbriefIdRequiredEvent>(OnSimbriefIdRequired));
+        }
+        
+        private void OnSimbriefIdRequired(SimbriefIdRequiredEvent evt)
+        {
+            Dispatcher.Invoke(() => {
+                // Show a more prominent notification
+                MessageBox.Show(
+                    "A valid Simbrief ID is required to load flight plans.\n\nPlease enter your Simbrief ID in the Settings tab.",
+                    "Simbrief ID Required",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                    
+                // Automatically switch to the Settings tab
+                if (evt.AutoSwitchToSettings)
+                    MainTabControl.SelectedItem = SettingsTab;
+                    
+                // Highlight the Simbrief ID field
+                txtSimbriefID.Background = new SolidColorBrush(Colors.MistyRose);
+                txtSimbriefID.BorderBrush = new SolidColorBrush(Colors.Red);
+                txtSimbriefID.Focus();
+            });
         }
 
         private void OnConnectionStatusChanged(ConnectionStatusChangedEvent evt)
@@ -712,7 +735,41 @@ namespace Prosim2GSX
         private void txtSimbriefID_Set()
         {
             if (txtSimbriefID?.Text != null)
-                serviceModel.SetSetting("pilotID", txtSimbriefID.Text);
+            {
+                string id = txtSimbriefID.Text.Trim();
+                
+                // Validate the ID
+                if (string.IsNullOrWhiteSpace(id) || id == "0" || !int.TryParse(id, out _))
+                {
+                    // Show immediate feedback
+                    txtSimbriefID.Background = new SolidColorBrush(Colors.MistyRose);
+                    txtSimbriefID.BorderBrush = new SolidColorBrush(Colors.Red);
+                    
+                    MessageBox.Show(
+                        "Please enter a valid Simbrief ID (numeric value).",
+                        "Invalid Simbrief ID",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                        
+                    return;
+                }
+                
+                // Reset styling if valid
+                txtSimbriefID.Background = new SolidColorBrush(Colors.White);
+                txtSimbriefID.BorderBrush = new SolidColorBrush(Colors.Gray);
+                
+                // Save the valid ID
+                serviceModel.SetSetting("pilotID", id);
+                
+                // Provide positive feedback
+                Logger.Log(LogLevel.Information, "MainWindow", $"Simbrief ID set to {id}");
+                
+                // If we have a valid ID and there's a pending flight plan load, trigger a retry
+                if (serviceModel.IsValidSimbriefId())
+                {
+                    EventAggregator.Instance.Publish(new RetryFlightPlanLoadEvent());
+                }
+            }
         }
 
         private void txtRepositionDelay_LostFocus(object sender, RoutedEventArgs e)
@@ -1324,6 +1381,61 @@ namespace Prosim2GSX
 
                 // Store both values
                 serviceModel.SetVoiceMeeterStrip(AudioChannel.PA, stripName, stripLabel);
+            }
+        }
+
+        private async void btnTestSimbriefConnection_Click(object sender, RoutedEventArgs e)
+        {
+            if (!serviceModel.IsValidSimbriefId())
+            {
+                MessageBox.Show(
+                    "Please enter a valid Simbrief ID first.",
+                    "Invalid Simbrief ID",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+            
+            btnTestSimbriefConnection.IsEnabled = false;
+            btnTestSimbriefConnection.Content = "Testing...";
+            
+            try
+            {
+                // Create a temporary FlightPlan object to test the connection
+                var testPlan = new FlightPlan(serviceModel);
+                var result = await System.Threading.Tasks.Task.Run(() => testPlan.LoadWithValidation());
+                
+                if (result == FlightPlan.LoadResult.Success)
+                {
+                    MessageBox.Show(
+                        $"Successfully connected to Simbrief with ID: {serviceModel.SimBriefID}\n\n" +
+                        $"Flight: {testPlan.Flight}\n" +
+                        $"Route: {testPlan.Origin} → {testPlan.Destination}",
+                        "Connection Successful",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
+                else
+                {
+                    MessageBox.Show(
+                        "Failed to connect to Simbrief. Please check your ID and internet connection.",
+                        "Connection Failed",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Error testing connection: {ex.Message}",
+                    "Connection Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                btnTestSimbriefConnection.IsEnabled = true;
+                btnTestSimbriefConnection.Content = "Test Connection";
             }
         }
 

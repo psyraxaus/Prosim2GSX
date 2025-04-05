@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Threading;
 using Microsoft.FlightSimulator.SimConnect;
 using Prosim2GSX.Events;
@@ -15,6 +15,8 @@ namespace Prosim2GSX
         protected FlightPlan FlightPlan;
         protected int Interval = 1000;
 
+        private SubscriptionToken _retryToken;
+
         public ServiceController(ServiceModel model)
         {
             this.Model = model;
@@ -25,6 +27,19 @@ namespace Prosim2GSX
             if (model is ServiceModel serviceModel)
             {
                 serviceModel.SetAudioService((AudioService)_audioService);
+            }
+            
+            // Subscribe to the retry event
+            _retryToken = EventAggregator.Instance.Subscribe<RetryFlightPlanLoadEvent>(OnRetryFlightPlanLoad);
+        }
+        
+        private void OnRetryFlightPlanLoad(RetryFlightPlanLoadEvent evt)
+        {
+            // Retry loading the flight plan
+            if (FlightPlan != null && Model.IsValidSimbriefId())
+            {
+                Logger.Log(LogLevel.Information, "ServiceController", "Retrying flight plan load with new Simbrief ID");
+                FlightPlan.LoadWithValidation();
             }
         }
 
@@ -88,12 +103,52 @@ namespace Prosim2GSX
             {
                 // Create and load FlightPlan using the manually entered Simbrief ID
                 FlightPlan = new FlightPlan(Model);
-                if (!FlightPlan.Load())
+                
+                // Try to load with validation
+                var loadResult = FlightPlan.LoadWithValidation();
+                
+                // Handle different error cases
+                switch (loadResult)
                 {
-                    Logger.Log(LogLevel.Error, "ServiceController:Wait", "Could not load Flightplan");
-                    Thread.Sleep(5000);
+                    case FlightPlan.LoadResult.Success:
+                        // Make FlightPlan available to ProsimController
+                        ProsimController.SetFlightPlan(FlightPlan);
+                        break;
+                        
+                    case FlightPlan.LoadResult.InvalidId:
+                        // Wait for user to enter a valid ID
+                        Logger.Log(LogLevel.Warning, "ServiceController:Wait", 
+                            "Waiting for valid Simbrief ID to be entered in Settings tab...");
+                        
+                        // Start a background task to periodically check for valid ID
+                        System.Threading.Tasks.Task.Run(async () => {
+                            while (!Model.CancellationRequested && !Model.IsValidSimbriefId())
+                            {
+                                await System.Threading.Tasks.Task.Delay(5000); // Check every 5 seconds
+                            }
+                            
+                            // When valid ID is detected, try loading again
+                            if (!Model.CancellationRequested && Model.IsValidSimbriefId())
+                            {
+                                EventAggregator.Instance.Publish(new RetryFlightPlanLoadEvent());
+                            }
+                        });
+                        
+                        return false;
+                        
+                    case FlightPlan.LoadResult.NetworkError:
+                        Logger.Log(LogLevel.Error, "ServiceController:Wait", 
+                            "Network error loading flight plan. Check your internet connection.");
+                        Thread.Sleep(5000);
+                        return false;
+                        
+                    case FlightPlan.LoadResult.ParseError:
+                        Logger.Log(LogLevel.Error, "ServiceController:Wait", 
+                            "Error parsing flight plan data. The Simbrief API may have changed or returned invalid data.");
+                        Thread.Sleep(5000);
+                        return false;
                 }
-
+                
                 // Make FlightPlan available to ProsimController
                 ProsimController.SetFlightPlan(FlightPlan);
             }

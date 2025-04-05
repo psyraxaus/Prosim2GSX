@@ -46,11 +46,84 @@ namespace Prosim2GSX
             return await response.Content.ReadAsStringAsync();
         }
 
+        public enum LoadResult { Success, InvalidId, NetworkError, ParseError }
+
+        public LoadResult LoadWithValidation()
+        {
+            if (!Model.IsValidSimbriefId())
+            {
+                Logger.Log(LogLevel.Error, "FlightPlan:LoadWithValidation", "Invalid Simbrief ID");
+                EventAggregator.Instance.Publish(new SimbriefIdRequiredEvent());
+                return LoadResult.InvalidId;
+            }
+            
+            try
+            {
+                XmlNode sbOFP = LoadOFP();
+                if (sbOFP == null)
+                {
+                    Logger.Log(LogLevel.Error, "FlightPlan:LoadWithValidation", "Failed to load OFP");
+                    return LoadResult.NetworkError;
+                }
+                
+                // Process the flight plan data
+                string lastID = FlightPlanID;
+                CargoTotal = Convert.ToInt32(sbOFP["weights"]["cargo"].InnerText);
+                DateTimeOffset dateTimeOffset = DateTimeOffset.FromUnixTimeSeconds(Convert.ToInt64(sbOFP["api_params"]["date"].InnerText));
+                DateTime dateTime = dateTimeOffset.DateTime;
+                DateOfFlight = dateTime.ToString("ddMMMyy").ToUpper();
+                DateTime dayOfFlight = DateTime.Parse(DateOfFlight);
+                DayOfFlight = dayOfFlight.Day.ToString();
+                Destination = sbOFP["destination"]["icao_code"].InnerText;
+                EstimatedLandingWeight = Convert.ToDouble(sbOFP["weights"]["est_ldw"].InnerText, new RealInvariantFormat(sbOFP["weights"]["est_ldw"].InnerText));
+                EstimatedTakeOffWeight = Convert.ToDouble(sbOFP["weights"]["est_tow"].InnerText, new RealInvariantFormat(sbOFP["weights"]["est_ldw"].InnerText));
+                EstimatedZeroFuelWeight = Convert.ToDouble(sbOFP["weights"]["est_zfw"].InnerText, new RealInvariantFormat(sbOFP["weights"]["est_ldw"].InnerText));
+                Flight = sbOFP["general"]["icao_airline"].InnerText + sbOFP["general"]["flight_number"].InnerText;
+                FlightPlanID = sbOFP["params"]["request_id"].InnerText;
+                Fuel = Convert.ToDouble(sbOFP["fuel"]["plan_ramp"].InnerText, new RealInvariantFormat(sbOFP["fuel"]["plan_ramp"].InnerText));
+                FuelLanding = Convert.ToDouble(sbOFP["fuel"]["plan_landing"].InnerText, new RealInvariantFormat(sbOFP["fuel"]["plan_ramp"].InnerText));
+                MaxmimumLandingWeight = Convert.ToInt32(sbOFP["weights"]["max_ldw"].InnerText, new RealInvariantFormat(sbOFP["weights"]["max_ldw"].InnerText));
+                MaximumTakeOffWeight = Convert.ToInt32(sbOFP["weights"]["max_tow"].InnerText, new RealInvariantFormat(sbOFP["weights"]["max_tow"].InnerText));
+                MaximumZeroFuelWeight = Convert.ToInt32(sbOFP["weights"]["max_zfw"].InnerText, new RealInvariantFormat(sbOFP["weights"]["max_zfw"].InnerText));
+                Origin = sbOFP["origin"]["icao_code"].InnerText;
+                TailNumber = sbOFP["aircraft"]["reg"].InnerText;
+                Units = sbOFP["params"]["units"].InnerText;
+                WeightPax = Convert.ToDouble(sbOFP["weights"]["pax_weight"].InnerText, new RealInvariantFormat(sbOFP["weights"]["pax_weight"].InnerText));
+                WeightBag = Convert.ToDouble(sbOFP["weights"]["bag_weight"].InnerText, new RealInvariantFormat(sbOFP["weights"]["bag_weight"].InnerText));
+
+                if (Model.UseActualPaxValue)
+                {
+                    Passenger = Convert.ToInt32(sbOFP["weights"]["pax_count_actual"].InnerText);
+                    Bags = Convert.ToInt32(sbOFP["weights"]["bag_count_actual"].InnerText);
+                }
+                else
+                {
+                    Passenger = Convert.ToInt32(sbOFP["weights"]["pax_count"].InnerText);
+                    Bags = Convert.ToInt32(sbOFP["weights"]["bag_count"].InnerText);
+                }
+                ScheduledDepartureTime = Convert.ToInt32(sbOFP["api_params"]["dephour"].InnerText) + Convert.ToInt32(sbOFP["api_params"]["depmin"].InnerText);
+
+                if (lastID != FlightPlanID)
+                {
+                    Logger.Log(LogLevel.Information, "FlightPlan:LoadWithValidation", $"New OFP for Flight {Flight} loaded. ({Origin} -> {Destination})");
+                    EventAggregator.Instance.Publish(new FlightPlanChangedEvent(Flight));
+                }
+                
+                return LoadResult.Success;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "FlightPlan:LoadWithValidation", $"Exception: {ex.Message}");
+                return LoadResult.ParseError;
+            }
+        }
+
         protected XmlNode FetchOnline()
         {
-            if (Model.SimBriefID == "0")
+            if (!Model.IsValidSimbriefId())
             {
-                Logger.Log(LogLevel.Error, "FlightPlan:FetchOnline", $"SimBrief ID is not set!");
+                Logger.Log(LogLevel.Error, "FlightPlan:FetchOnline", $"SimBrief ID is not set or invalid!");
+                EventAggregator.Instance.Publish(new SimbriefIdRequiredEvent());
                 return null;
             }
 
