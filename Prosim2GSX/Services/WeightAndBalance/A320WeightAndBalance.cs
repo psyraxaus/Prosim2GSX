@@ -246,7 +246,7 @@ namespace Prosim2GSX.Services.WeightAndBalance
             double towWeight = _prosimController.Interface.GetProsimVariable("aircraft.weight.gross");
 
             // Get CG percentage from Prosim - this is what the EFB uses
-            double grossWeightCG = _prosimController.Interface.GetProsimVariable("aircraft.grossWeightCG");
+            double grossWeightCG = _prosimController.Interface.GetProsimVariable("aircraft.cg");
 
             // Calculate aircraft total mass in kg (ZFW + total fuel)
             double acMassKG = zfwWeight + totalFuel;
