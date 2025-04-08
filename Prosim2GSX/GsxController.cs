@@ -139,6 +139,8 @@ namespace Prosim2GSX
         private bool cockpitDoorStateChanged = false;
         private int lastCockpitDoorState = -1;
 
+        private int currentDeboardState = 0;
+
         // Dictionary to map service toggle LVAR names to door operations
         private readonly Dictionary<string, Action> serviceToggles = new Dictionary<string, Action>();
 
@@ -477,18 +479,58 @@ namespace Prosim2GSX
             }
 
             //TAXIIN -> ARRIVAL - Ground Equipment
-            int deboard_state = (int)SimConnect.ReadLvar("FSDT_GSX_DEBOARDING_STATE");
-            if (_state == FlightState.TAXIIN && SimConnect.ReadLvar("FSDT_VAR_EnginesStopped") == 1 && SimConnect.ReadLvar("S_MIP_PARKING_BRAKE") == 1 && SimConnect.ReadLvar("S_OH_EXT_LT_BEACON") == 0)
+            if (_state == FlightState.TAXIIN)
             {
-                RunArrivalServices(deboard_state);
+                double engine1 = ProsimController.Interface.GetProsimVariable("aircraft.engine1.raw");
+                double engine2 = ProsimController.Interface.GetProsimVariable("aircraft.engine2.raw");
+                bool enginesAreOff = engine1 < 18.0D && engine2 < 18.0D;
+                bool parkingBrakeSet = ProsimController.GetStatusFunction("system.switches.S_MIP_PARKING_BRAKE") == 1;
+                bool beaconIsOff = ProsimController.GetStatusFunction("system.switches.S_OH_EXT_LT_BEACON") == 0;
+                bool groundSpeedNearZero = SimConnect.ReadSimVar("GPS GROUND SPEED", "Meters per second") < 0.5;
 
-                return;
+                // Log the current state of each condition for debugging
+                Logger.Log(LogLevel.Debug, "GsxController:RunServices",
+                    $"TAXIIN conditions: Engines Off={enginesAreOff}, Parking Brake={parkingBrakeSet}, " +
+                    $"Beacon Off={beaconIsOff}, Low Speed={groundSpeedNearZero}");
+
+                // Check for critical arrival conditions
+                if (enginesAreOff && parkingBrakeSet)
+                {
+                    // Primary conditions for arrival are met
+
+                    // If beacon is still on, notify but proceed anyway with limited services
+                    if (!beaconIsOff)
+                    {
+                        Logger.Log(LogLevel.Information, "GsxController:RunServices",
+                            $"Proceeding to ARRIVAL with beacon still on - some services will be delayed");
+                    }
+
+                    // Additional check for low ground speed to ensure aircraft has fully stopped
+                    if (groundSpeedNearZero)
+                    {
+                        // Add a small delay to ensure aircraft has settled
+                        Logger.Log(LogLevel.Information, "GsxController:RunServices",
+                            $"Aircraft appears to be at final parking position, initiating arrival services");
+
+                        // Get current deboarding state before transition
+                        int currentDeboardState = (int)SimConnect.ReadLvar("FSDT_GSX_DEBOARDING_STATE");
+
+                        // Run arrival services with the current deboarding state
+                        RunArrivalServices();
+                        return;
+                    }
+                    else
+                    {
+                        Logger.Log(LogLevel.Debug, "GsxController:RunServices",
+                            $"Waiting for aircraft to come to a complete stop");
+                    }
+                }
             }
 
             //ARRIVAL - Deboarding
-            if (_state == FlightState.ARRIVAL && deboard_state >= 4)
+            if (_state == FlightState.ARRIVAL && currentDeboardState >= 4)
             {
-                RunDeboardingService(deboard_state);
+                RunDeboardingService();
             }
 
             //Pre-Flight - Turn-Around
@@ -878,54 +920,76 @@ namespace Prosim2GSX
             }
         }
 
-        private void RunArrivalServices(int deboard_state)
+        private void RunArrivalServices()
         {
-            if (SimConnect.ReadLvar("FSDT_GSX_COUATL_STARTED") != 1)
+            // Check if we're already in ARRIVAL state to avoid redundant operations
+            if (_state == FlightState.ARRIVAL)
             {
-                Logger.Log(LogLevel.Information, "GsxController:RunArrivalServices", $"Couatl Engine not running");
-
                 return;
             }
 
+            // First, set the state to ARRIVAL - this should be done before any other operations
+            // to ensure all systems respond to the correct state
+            CurrentFlightState = FlightState.ARRIVAL;
+            Logger.Log(LogLevel.Information, "GsxController:RunArrivalServices", $"State Change: Taxi-In -> Arrival (Setting up ground services)");
+
+            // Check if Couatl Engine is running before proceeding with GSX operations
+            if (SimConnect.ReadLvar("FSDT_GSX_COUATL_STARTED") != 1)
+            {
+                Logger.Log(LogLevel.Information, "GsxController:RunArrivalServices", $"Couatl Engine not running - will retry");
+                return;
+            }
+
+            // Set ground services first - these are critical
+            Logger.Log(LogLevel.Information, "GsxController:RunArrivalServices", $"Setting GPU and Chocks");
+            ProsimController.SetServiceChocks(true);
+            ProsimController.SetServiceGPU(true);
+
+            // Load passenger data for deboarding
+            SetPassengers(ProsimController.GetPaxPlanned());
+
+            // Handle beacon state check separately - if beacon is still on, don't connect PCA or call stairs/jetway
+            if (ProsimController.GetStatusFunction("system.switches.S_OH_EXT_LT_BEACON") == 1)
+            {
+                Logger.Log(LogLevel.Information, "GsxController:RunArrivalServices", $"Waiting for beacon to be turned off before connecting PCA or calling boarding equipment");
+                return;
+            }
+
+            // Connect boarding equipment if not already called
             if (Model.AutoConnect && !connectCalled)
             {
                 CallJetwayStairs();
                 connectCalled = true;
+                // Return to allow time for the jetway/stairs to connect before proceeding
                 return;
             }
 
-            if (SimConnect.ReadLvar("S_OH_EXT_LT_BEACON") == 1)
-                return;
-
+            // Connect PCA after jetway/stairs if needed
             if (Model.ConnectPCA && !pcaCalled && (!Model.PcaOnlyJetways || (Model.PcaOnlyJetways && SimConnect.ReadLvar("FSDT_GSX_JETWAY") != 2)))
             {
                 Logger.Log(LogLevel.Information, "GsxController:RunArrivalServices", $"Connecting PCA");
                 ProsimController.SetServicePCA(true);
                 pcaCalled = true;
+                // Return to allow PCA to connect
+                return;
             }
 
-            Logger.Log(LogLevel.Information, "GsxController:RunArrivalServices", $"Setting GPU and Chocks");
-            ProsimController.SetServiceChocks(true);
-            ProsimController.SetServiceGPU(true);
-            SetPassengers(ProsimController.GetPaxPlanned());
-
-            CurrentFlightState = FlightState.ARRIVAL;
-            Logger.Log(LogLevel.Information, "GsxController:RunArrivalServices", $"State Change: Taxi-In -> Arrival (Waiting for Deboarding)");
-
-            if (Model.AutoDeboarding && deboard_state < 4)
+            // Now that all services are set up, initiate deboarding if needed
+            if (Model.AutoDeboarding && currentDeboardState < 4)
             {
                 Logger.Log(LogLevel.Information, "GsxController:RunArrivalServices", $"Calling Deboarding Service");
-                SetPassengers(ProsimController.GetPaxPlanned());
                 MenuOpen();
                 MenuItem(1);
                 if (!Model.AutoConnect)
                     OperatorSelection();
             }
 
+            // Save fuel and hydraulic state if enabled
             if (Model.SetSaveFuel)
             {
                 double arrivalFuel = ProsimController.GetFuelAmount();
                 Model.SavedFuelAmount = arrivalFuel;
+                Logger.Log(LogLevel.Information, "GsxController:RunArrivalServices", $"Saved arrival fuel amount: {arrivalFuel}");
             }
 
             if (Model.SetSaveHydraulicFluids)
@@ -934,10 +998,11 @@ namespace Prosim2GSX
                 Model.HydaulicsBlueAmount = hydraulicFluids.Item1;
                 Model.HydaulicsGreenAmount = hydraulicFluids.Item2;
                 Model.HydaulicsYellowAmount = hydraulicFluids.Item3;
+                Logger.Log(LogLevel.Information, "GsxController:RunArrivalServices", $"Saved hydraulic fluid levels");
             }
         }
 
-        private void RunDeboardingService(int deboard_state)
+        private void RunDeboardingService()
         {
             if (!deboarding)
             {
@@ -956,10 +1021,13 @@ namespace Prosim2GSX
                 }
 
                 int paxCurrent = (int)SimConnect.ReadLvar("FSDT_GSX_NUMPASSENGERS") - (int)SimConnect.ReadLvar("FSDT_GSX_NUMPASSENGERS_DEBOARDING_TOTAL");
-                if (ProsimController.Deboarding(paxCurrent, (int)SimConnect.ReadLvar("FSDT_GSX_DEBOARDING_CARGO_PERCENT")) || deboard_state == 6 || deboard_state == 1)
+
+                // Use the class-level variable instead of the parameter
+                if (ProsimController.Deboarding(paxCurrent, (int)SimConnect.ReadLvar("FSDT_GSX_DEBOARDING_CARGO_PERCENT")) ||
+                    currentDeboardState == 6 || currentDeboardState == 1)
                 {
                     deboarding = false;
-                    Logger.Log(LogLevel.Information, "GsxController:RunDeboardingService", $"Deboarding finished (GSX State {deboard_state})");
+                    Logger.Log(LogLevel.Information, "GsxController:RunDeboardingService", $"Deboarding finished (GSX State {currentDeboardState})");
                     ProsimController.DeboardingStop();
                     Logger.Log(LogLevel.Information, "GsxController:RunDeboardingService", $"State Change: Arrival -> Turn-Around (Waiting for new Flightplan)");
                     CurrentFlightState = FlightState.TURNAROUND;
@@ -1236,6 +1304,8 @@ namespace Prosim2GSX
         /// </summary>
         private void OnDeboardingStateChanged(float newValue, float oldValue, string lvarName)
         {
+            currentDeboardState = (int)newValue;
+
             Logger.Log(LogLevel.Debug, "GSXController", $"Deboarding state changed to {newValue}");
             if (newValue != oldValue)
             {

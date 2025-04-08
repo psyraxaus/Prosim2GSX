@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:Prosim2GSX"
         xmlns:serviceModel="clr-namespace:System.ServiceModel;assembly=System.ServiceModel"
         mc:Ignorable="d"
-        Title="Prosim2GSX EFB" Height="781" Width="800" 
+        Title="Prosim2GSX EFB" Height="788" Width="800" 
         ResizeMode="NoResize" 
         IsVisibleChanged="Window_IsVisibleChanged" 
         Closing="Window_Closing"
@@ -194,11 +194,11 @@
         <TabControl Grid.Row="1" 
                     BorderThickness="0"
                     Background="Transparent"
-                    x:Name="MainTabControl">
+                    x:Name="MainTabControl" Margin="0,0,0,-11">
 
             <!-- Flight Status Tab -->
             <TabItem Header="FLIGHT STATUS" x:Name="StatusTab">
-                <StackPanel Margin="20,0,20,0" Height="655">
+                <StackPanel Margin="20,0,20,0" Height="665">
                         <!-- Connection Status -->
                         <TextBlock Text="CONNECTION STATUS" Style="{StaticResource CategoryHeaderStyle}"/>
                         <Border Style="{StaticResource SectionBorderStyle}">
@@ -332,7 +332,7 @@
 
                         <!-- Log Messages -->
                         <TextBlock Text="LOG MESSAGES" Style="{StaticResource CategoryHeaderStyle}"/>
-                        <Border Style="{StaticResource SectionBorderStyle}" MinHeight="120" Height="136">
+                        <Border Style="{StaticResource SectionBorderStyle}" MinHeight="120" Height="137">
                             <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="120">
                                 <TextBlock x:Name="txtLogMessages" TextWrapping="Wrap" Height="110"/>
                             </ScrollViewer>
