@@ -2,6 +2,7 @@
 using Prosim2GSX.Themes;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Windows;
@@ -20,14 +21,18 @@ namespace Prosim2GSX
         protected NotifyIconViewModel notifyModel;
         protected ServiceModel serviceModel;
         protected DispatcherTimer timer;
-        protected int lineCounter = 0;
         private List<SubscriptionToken> _subscriptionTokens = new List<SubscriptionToken>();
         private bool _isLoadingSettings = false;
+        private ObservableCollection<LogEntry> _logEntries = new ObservableCollection<LogEntry>();
+        private const int MaxLogEntries = 5;
         public MainWindow(NotifyIconViewModel notifyModel, ServiceModel serviceModel)
         {
             InitializeComponent();
             this.notifyModel = notifyModel;
             this.serviceModel = serviceModel;
+
+            // Initialize the log entries collection and bind it to the ListView
+            lvLogMessages.ItemsSource = _logEntries;
 
             timer = new DispatcherTimer
             {
@@ -347,13 +352,34 @@ namespace Prosim2GSX
 
         protected void UpdateLogArea()
         {
+            // Process all available log entries from the new LogEntryQueue
+            while (Logger.LogEntryQueue.TryDequeue(out LogEntry entry))
+            {
+                // Add to the observable collection on the UI thread
+                Dispatcher.Invoke(() =>
+                {
+                    // Add the new entry
+                    _logEntries.Add(entry);
+                    
+                    // Remove oldest entries if we exceed the maximum
+                    while (_logEntries.Count > MaxLogEntries)
+                    {
+                        _logEntries.RemoveAt(0);
+                    }
+                    
+                    // Scroll to the bottom to show the latest entry
+                    if (lvLogMessages.Items.Count > 0)
+                    {
+                        lvLogMessages.ScrollIntoView(lvLogMessages.Items[lvLogMessages.Items.Count - 1]);
+                    }
+                });
+            }
+            
+            // Process the old MessageQueue for backward compatibility
             while (Logger.MessageQueue.Count > 0)
             {
-
-                if (lineCounter > 5)
-                    txtLogMessages.Text = txtLogMessages.Text[(txtLogMessages.Text.IndexOf('\n') + 1)..];
-                txtLogMessages.Text += Logger.MessageQueue.Dequeue().ToString() + "\n";
-                lineCounter++;
+                // Just dequeue the messages to keep the queue from growing
+                Logger.MessageQueue.Dequeue();
             }
         }
 

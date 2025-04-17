@@ -141,7 +141,7 @@ namespace Prosim2GSX
         {
             Logger.Log(LogLevel.Information, "App:InitCef", $"Initializing Cef Browser ...");
             var settings = new CefSettings();
-            if (!Cef.IsInitialized)
+            if (Cef.IsInitialized != true)  // Handle nullable boolean from newer CEF version
                 Cef.Initialize(settings, performDependencyCheck: true, browserProcessHandler: null);
         }
 

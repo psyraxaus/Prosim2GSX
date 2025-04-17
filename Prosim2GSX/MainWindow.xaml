@@ -333,9 +333,28 @@
                         <!-- Log Messages -->
                         <TextBlock Text="LOG MESSAGES" Style="{StaticResource CategoryHeaderStyle}"/>
                         <Border Style="{StaticResource SectionBorderStyle}" MinHeight="120" Height="137">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="120">
-                                <TextBlock x:Name="txtLogMessages" TextWrapping="Wrap" Height="110"/>
-                            </ScrollViewer>
+                            <ListView x:Name="lvLogMessages" 
+                                      MaxHeight="120"
+                                      BorderThickness="0"
+                                      Background="Transparent"
+                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Message}" 
+                                                   TextWrapping="Wrap"
+                                                   Foreground="{Binding LevelBrush}"/>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                                <ListView.ItemContainerStyle>
+                                    <Style TargetType="ListViewItem">
+                                        <Setter Property="Padding" Value="2,1"/>
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    </Style>
+                                </ListView.ItemContainerStyle>
+                            </ListView>
                         </Border>
                     </StackPanel>
             </TabItem>
