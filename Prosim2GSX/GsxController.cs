@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using Microsoft.FlightSimulator.SimConnect;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using Microsoft.FlightSimulator.SimConnect;
 using Microsoft.Win32;
 using Prosim2GSX.Events;
 using Prosim2GSX.Models;
@@ -16,6 +16,7 @@ using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace Prosim2GSX
 {
@@ -439,51 +440,8 @@ namespace Prosim2GSX
                     }
                     else
                     {
-                        // Log detailed error information
-                        if (result.StatusCode.HasValue)
-                        {
-                            Logger.Log(LogLevel.Error, "GsxController:RunServices", 
-                                $"Failed to generate preliminary loadsheet: HTTP {(int)result.StatusCode} - {result.StatusCode}");
-                            
-                            // Log specific guidance based on status code
-                            switch (result.StatusCode)
-                            {
-                                case HttpStatusCode.NotFound:
-                                    Logger.Log(LogLevel.Error, "GsxController:RunServices", 
-                                        "The loadsheet endpoint was not found. Verify that Prosim's EFB server is running on port 5000.");
-                                    break;
-                                case HttpStatusCode.BadRequest:
-                                    Logger.Log(LogLevel.Error, "GsxController:RunServices", 
-                                        "Bad request to loadsheet endpoint. Verify that the flight plan is loaded correctly.");
-                                    break;
-                                case HttpStatusCode.Unauthorized:
-                                case HttpStatusCode.Forbidden:
-                                    Logger.Log(LogLevel.Error, "GsxController:RunServices", 
-                                        "Authorization error accessing loadsheet endpoint. Check Prosim configuration.");
-                                    break;
-                                case HttpStatusCode.InternalServerError:
-                                    Logger.Log(LogLevel.Error, "GsxController:RunServices", 
-                                        "Prosim server error generating loadsheet. Check Prosim logs for details.");
-                                    break;
-                                case HttpStatusCode.ServiceUnavailable:
-                                    Logger.Log(LogLevel.Error, "GsxController:RunServices", 
-                                        "Prosim service unavailable. Verify that Prosim is running and not overloaded.");
-                                    break;
-                            }
-                        }
-                        else
-                        {
-                            // Log the error message if no status code is available
-                            Logger.Log(LogLevel.Error, "GsxController:RunServices", 
-                                $"Failed to generate preliminary loadsheet: {result.ErrorMessage}");
-                        }
-                        
-                        // Log response content if available
-                        if (!string.IsNullOrEmpty(result.ResponseContent))
-                        {
-                            Logger.Log(LogLevel.Error, "GsxController:RunServices", 
-                                $"Response content: {result.ResponseContent}");
-                        }
+                        // Use the dedicated error logging method
+                        LogLoadsheetError(result, "preliminary", "GsxController:RunServices");
                     }
                 });
             }
@@ -898,51 +856,8 @@ namespace Prosim2GSX
                         }
                         else
                         {
-                            // Log detailed error information
-                            if (result.StatusCode.HasValue)
-                            {
-                                Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", 
-                                    $"Failed to generate final loadsheet: HTTP {(int)result.StatusCode} - {result.StatusCode}");
-                                
-                                // Log specific guidance based on status code
-                                switch (result.StatusCode)
-                                {
-                                    case HttpStatusCode.NotFound:
-                                        Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", 
-                                            "The loadsheet endpoint was not found. Verify that Prosim's EFB server is running on port 5000.");
-                                        break;
-                                    case HttpStatusCode.BadRequest:
-                                        Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", 
-                                            "Bad request to loadsheet endpoint. Verify that the flight plan is loaded correctly.");
-                                        break;
-                                    case HttpStatusCode.Unauthorized:
-                                    case HttpStatusCode.Forbidden:
-                                        Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", 
-                                            "Authorization error accessing loadsheet endpoint. Check Prosim configuration.");
-                                        break;
-                                    case HttpStatusCode.InternalServerError:
-                                        Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", 
-                                            "Prosim server error generating loadsheet. Check Prosim logs for details.");
-                                        break;
-                                    case HttpStatusCode.ServiceUnavailable:
-                                        Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", 
-                                            "Prosim service unavailable. Verify that Prosim is running and not overloaded.");
-                                        break;
-                                }
-                            }
-                            else
-                            {
-                                // Log the error message if no status code is available
-                                Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", 
-                                    $"Failed to generate final loadsheet: {result.ErrorMessage}");
-                            }
-                            
-                            // Log response content if available
-                            if (!string.IsNullOrEmpty(result.ResponseContent))
-                            {
-                                Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", 
-                                    $"Response content: {result.ResponseContent}");
-                            }
+                            // Use the dedicated error logging method
+                            LogLoadsheetError(result, "final", "GsxController:RunDEPARTUREServices");
                         }
                     });
                 }
@@ -1286,6 +1201,111 @@ namespace Prosim2GSX
             int counter = 0;
             while (!SimConnect.IsGsxMenuReady && counter < 1000) { Thread.Sleep(100); counter++; }
             Logger.Log(LogLevel.Debug, "GsxController:MenuWaitReady", $"Wait ended after {counter * 100}ms");
+        }
+
+        /// <summary>
+        /// Logs detailed error information for loadsheet generation failures
+        /// </summary>
+        /// <param name="result">The loadsheet result containing error details</param>
+        /// <param name="loadsheetType">The type of loadsheet (preliminary or final)</param>
+        /// <param name="methodName">The method name for logging context</param>
+        private void LogLoadsheetError(LoadsheetResult result, string loadsheetType, string methodName)
+        {
+            // Base error message with context
+            string baseErrorMsg = $"Failed to generate {loadsheetType} loadsheet";
+            
+            // Log the primary error with status code if available
+            if (result.StatusCode.HasValue)
+            {
+                Logger.Log(LogLevel.Error, methodName, 
+                    $"{baseErrorMsg}: HTTP {(int)result.StatusCode} - {result.StatusCode}");
+                
+                // Enhanced guidance based on status code with troubleshooting steps
+                switch (result.StatusCode)
+                {
+                    case HttpStatusCode.NotFound:
+                        Logger.Log(LogLevel.Error, methodName, 
+                            "The loadsheet endpoint was not found. Verify that:\n" +
+                            "1. Prosim's EFB server is running on port 5000\n" +
+                            "2. Network connectivity between applications is working\n" +
+                            "3. No firewall is blocking the connection");
+                        break;
+                    case HttpStatusCode.BadRequest:
+                        Logger.Log(LogLevel.Error, methodName, 
+                            "Bad request to loadsheet endpoint. Verify that:\n" +
+                            "1. The flight plan is loaded correctly\n" +
+                            "2. All required flight data is available (fuel, passengers, cargo)\n" +
+                            "3. The aircraft type is supported by the loadsheet generator");
+                        break;
+                    case HttpStatusCode.Unauthorized:
+                    case HttpStatusCode.Forbidden:
+                        Logger.Log(LogLevel.Error, methodName, 
+                            "Authorization error accessing loadsheet endpoint. Check:\n" +
+                            "1. Prosim configuration for API access\n" +
+                            "2. Any authentication settings in the EFB server");
+                        break;
+                    case HttpStatusCode.InternalServerError:
+                        Logger.Log(LogLevel.Error, methodName, 
+                            "Prosim server error generating loadsheet. Troubleshooting steps:\n" +
+                            "1. Check Prosim logs for detailed error information\n" +
+                            "2. Restart the Prosim EFB server\n" +
+                            "3. Verify flight data is valid and complete");
+                        break;
+                    case HttpStatusCode.ServiceUnavailable:
+                        Logger.Log(LogLevel.Error, methodName, 
+                            "Prosim service unavailable. Try:\n" +
+                            "1. Verifying Prosim is running\n" +
+                            "2. Checking if the EFB server is overloaded\n" +
+                            "3. Restarting the Prosim services");
+                        break;
+                    case HttpStatusCode.RequestTimeout:
+                        Logger.Log(LogLevel.Error, methodName, 
+                            "Request timed out. Check:\n" +
+                            "1. Network connectivity\n" +
+                            "2. Prosim server responsiveness\n" +
+                            "3. If the server is processing other requests");
+                        break;
+                    default:
+                        Logger.Log(LogLevel.Error, methodName, 
+                            $"Unexpected HTTP status: {result.StatusCode}. This may indicate:\n" +
+                            "1. A configuration issue\n" +
+                            "2. An incompatibility between software versions\n" +
+                            "3. A network infrastructure problem");
+                        break;
+                }
+            }
+            else
+            {
+                // More detailed error logging when no status code is available
+                Logger.Log(LogLevel.Error, methodName, 
+                    $"{baseErrorMsg}: {result.ErrorMessage}\n" +
+                    "This typically indicates a network or application error rather than an HTTP error.");
+            }
+            
+            // Enhanced response content logging with formatting for readability
+            if (!string.IsNullOrEmpty(result.ResponseContent))
+            {
+                try
+                {
+                    // Try to parse and format JSON for better readability
+                    var parsedJson = JsonConvert.DeserializeObject(result.ResponseContent);
+                    string formattedJson = JsonConvert.SerializeObject(parsedJson, Formatting.Indented);
+                    Logger.Log(LogLevel.Error, methodName, $"Response content:\n{formattedJson}");
+                }
+                catch
+                {
+                    // If not valid JSON, log as-is
+                    Logger.Log(LogLevel.Error, methodName, $"Response content: {result.ResponseContent}");
+                }
+            }
+            
+            // Log user-facing guidance
+            Logger.Log(LogLevel.Warning, methodName, 
+                $"Loadsheet generation failed. You may need to:\n" +
+                "1. Check network connectivity to Prosim\n" +
+                "2. Verify the flight plan is properly loaded\n" +
+                "3. Ensure fuel planning is complete\n" +
+                "4. Try manually generating a loadsheet in Prosim");
         }
     
         /// <summary>
