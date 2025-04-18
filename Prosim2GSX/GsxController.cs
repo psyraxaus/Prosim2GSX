@@ -395,55 +395,38 @@ namespace Prosim2GSX
             //DEPARTURE - Generate Preliminary Loadsheet
             if (_state == FlightState.DEPARTURE && !prelimLoadsheet)
             {
-                Logger.Log(LogLevel.Information, "GsxController:RunServices", $"Generating preliminary loadsheet using Prosim native functionality");
-                
-                // Generate preliminary loadsheet using Prosim's native functionality with enhanced error handling
-                _loadsheetService.GenerateLoadsheet("Preliminary").ContinueWith(task => {
-                    if (task.IsFaulted)
+                if (ProsimController.GetStatusFunction("aircraft.refuel.fuelTarget") >= 1)
+                {
+                    Logger.Log(LogLevel.Information, "GsxController:RunServices", $"Generating preliminary loadsheet using Prosim native functionality");
+
+                    // Generate preliminary loadsheet using Prosim's native functionality with enhanced error handling
+                    _loadsheetService.GenerateLoadsheet("Preliminary").ContinueWith(task =>
                     {
-                        // Handle task failure (exception in the task itself)
-                        Logger.Log(LogLevel.Error, "GsxController:RunServices", 
-                            $"Task exception while generating preliminary loadsheet: {task.Exception?.InnerException?.Message ?? "Unknown error"}");
-                        return;
-                    }
-                    
-                    var result = task.Result;
-                    if (result.Success)
-                    {
-                        prelimLoadsheet = true;
-                        Logger.Log(LogLevel.Information, "GsxController:RunServices", "Preliminary loadsheet generated successfully");
-                        
-                        // If ACARS is enabled, we can still send the loadsheet data via ACARS
-                        if (Model.UseAcars)
+                        if (task.IsFaulted)
                         {
-                            try
-                            {
-                                string flightNumber = ProsimController.GetFMSFlightNumber();
-                                if (!string.IsNullOrEmpty(flightNumber))
-                                {
-                                    // Get the loadsheet data from Prosim
-                                    var loadsheetData = ProsimController.GetLoadsheetData("Preliminary");
-                                    if (loadsheetData != null)
-                                    {
-                                        // Parse the loadsheet data and send it via ACARS
-                                        string prelimLoadsheetString = loadsheetData.ToString();
-                                        System.Threading.Tasks.Task acarsTask = AcarsClient.SendMessageToAcars(
-                                            flightNumber, "telex", prelimLoadsheetString);
-                                    }
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                Logger.Log(LogLevel.Error, "GsxController:RunServices", $"Error sending loadsheet to ACARS: {ex.Message}");
-                            }
+                            // Handle task failure (exception in the task itself)
+                            Logger.Log(LogLevel.Error, "GsxController:RunServices",
+                                $"Task exception while generating preliminary loadsheet: {task.Exception?.InnerException?.Message ?? "Unknown error"}");
+                            return;
                         }
-                    }
-                    else
-                    {
-                        // Use the dedicated error logging method
-                        LogLoadsheetError(result, "preliminary", "GsxController:RunServices");
-                    }
-                });
+
+                        var result = task.Result;
+                        if (result.Success)
+                        {
+                            prelimLoadsheet = true;
+                        }
+                        else
+                        {
+                            // Use the dedicated error logging method
+                            LogLoadsheetError(result, "preliminary", "GsxController:RunServices");
+                        }
+                    });
+                }
+                else
+                {
+                    Logger.Log(LogLevel.Debug, "GsxController:RunServices", $"aircraft.refuel.fuelTarget not set yet.  Waiting for refuel target to be set");
+                    prelimLoadsheet = false;
+                }
             }
 
             //DEPARTURE - Boarding & Refueling
