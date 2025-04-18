@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.FlightSimulator.SimConnect;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using Microsoft.FlightSimulator.SimConnect;
 using Microsoft.Win32;
 using Prosim2GSX.Events;
 using Prosim2GSX.Models;
@@ -38,8 +38,7 @@ namespace Prosim2GSX
 
         private readonly IAudioService _audioService;
 
-        private readonly IWeightAndBalanceCalculator _weightAndBalance;
-        private readonly LoadsheetFormatter _loadsheetFormatter;
+        private readonly Services.WeightAndBalance.ProsimLoadsheetService _loadsheetService;
 
         private DataRefChangedHandler cockpitDoorHandler;
         private DataRefChangedHandler onGPUStateChanged;
@@ -161,9 +160,9 @@ namespace Prosim2GSX
 
             SimConnect = IPCManager.SimConnect;
 
-            // Initialize weight and balance calculator and formatter
-            _weightAndBalance = new A320WeightAndBalance(prosimController, SimConnect);
-            _loadsheetFormatter = new LoadsheetFormatter();
+            // Initialize loadsheet service
+            _loadsheetService = new ProsimLoadsheetService(prosimController);
+            _loadsheetService.SubscribeToLoadsheetChanges();
 
             SimConnect.SubscribeSimVar("SIM ON GROUND", "Bool");
             SimConnect.SubscribeLvar("FSDT_GSX_DEBOARDING_STATE", OnDeboardingStateChanged);
@@ -383,47 +382,48 @@ namespace Prosim2GSX
                 return;
             }
 
-            //DEPARTURE - Get sim Zulu Time and send Prelim Loadsheet
+            //DEPARTURE - Generate Preliminary Loadsheet
             if (_state == FlightState.DEPARTURE && !prelimLoadsheet)
             {
-
-                var simTime = SimConnect.ReadEnvVar("ZULU TIME", "Seconds");
-                TimeSpan time = TimeSpan.FromSeconds(simTime);
-                Logger.Log(LogLevel.Debug, "GsxController:RunServices", $"ZULU time - {simTime}");
-
-                string flightNumber  = ProsimController.GetFMSFlightNumber();
-
-                if (Model.UseAcars && !string.IsNullOrEmpty(flightNumber))
-                {
-                    // Calculate preliminary loadsheet
-                    LoadsheetData prelimData = _weightAndBalance.CalculatePreliminaryLoadsheet(FlightPlan);
-
-                    // Store data for later reference
-                    prelimZfw = prelimData.ZeroFuelWeight;
-                    prelimTow = prelimData.TakeoffWeight;
-                    prelimMacZfw = prelimData.ZeroFuelWeightMac;
-                    prelimMacTow = prelimData.TakeoffWeightMac;
-                    prelimPax = prelimData.TotalPassengers;
-                    prelimFuel = Math.Round(prelimData.FuelWeight);
-
-                    // Format loadsheet
-                    var maxWeights = ProsimController.GetMaxWeights();
-                    var simulatorDateTime = ProsimController.Interface.GetProsimVariable("aircraft.time");
-                    string timeIn24HourFormat = simulatorDateTime.ToString("HHmm");
-                    string prelimLoadsheetString = _loadsheetFormatter.FormatLoadSheet("prelim", timeIn24HourFormat, prelimData,flightNumber, FlightPlan.TailNumber, FlightPlan.DayOfFlight, FlightPlan.DateOfFlight,FlightPlan.Origin, FlightPlan.Destination,maxWeights.Item1, maxWeights.Item2, maxWeights.Item3,0);
-
-                    try
-                    {
-                        System.Threading.Tasks.Task task = AcarsClient.SendMessageToAcars(
-                            flightNumber, "telex", prelimLoadsheetString);
-                        prelimLoadsheet = true;
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Log(LogLevel.Debug, "GsxController:RunServices", $"Error Sending ACARS - {ex.Message}");
-                    }
-                }
+                Logger.Log(LogLevel.Information, "GsxController:RunServices", $"Generating preliminary loadsheet using Prosim native functionality");
                 
+                // Generate preliminary loadsheet using Prosim's native functionality
+                _loadsheetService.GenerateLoadsheet("Preliminary").ContinueWith(task => {
+                    if (task.Result)
+                    {
+                        prelimLoadsheet = true;
+                        Logger.Log(LogLevel.Information, "GsxController:RunServices", "Preliminary loadsheet generated successfully");
+                        
+                        // If ACARS is enabled, we can still send the loadsheet data via ACARS
+                        if (Model.UseAcars)
+                        {
+                            try
+                            {
+                                string flightNumber = ProsimController.GetFMSFlightNumber();
+                                if (!string.IsNullOrEmpty(flightNumber))
+                                {
+                                    // Get the loadsheet data from Prosim
+                                    var loadsheetData = ProsimController.GetLoadsheetData("Preliminary");
+                                    if (loadsheetData != null)
+                                    {
+                                        // Parse the loadsheet data and send it via ACARS
+                                        string prelimLoadsheetString = loadsheetData.ToString();
+                                        System.Threading.Tasks.Task acarsTask = AcarsClient.SendMessageToAcars(
+                                            flightNumber, "telex", prelimLoadsheetString);
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.Log(LogLevel.Error, "GsxController:RunServices", $"Error sending loadsheet to ACARS: {ex.Message}");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Logger.Log(LogLevel.Error, "GsxController:RunServices", "Failed to generate preliminary loadsheet");
+                    }
+                });
             }
 
             //DEPARTURE - Boarding & Refueling
@@ -790,44 +790,41 @@ namespace Prosim2GSX
                 }
                 else
                 {
-                    Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Transmitting Final Loadsheet ...");
-                    ProsimController.TriggerFinal();
-
-                    // Calculate final loadsheet
-                    LoadsheetData finalData = _weightAndBalance.CalculateFinalLoadsheet();
-
-                    // Store final values
-                    finalZfw = finalData.ZeroFuelWeight;
-                    finalTow = finalData.TakeoffWeight;
-                    finalMacZfw = finalData.ZeroFuelWeightMac;
-                    finalMacTow = finalData.TakeoffWeightMac;
-                    finalPax = finalData.TotalPassengers;
-                    finalFuel = Math.Round(finalData.FuelWeight);
-
-                    finalLoadsheetSend = true;
-                    Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Final Loadsheet sent to ACARS");
-
-                    if (Model.UseAcars)
-                    {
-                        // Create preliminary data container for comparison
-                        LoadsheetData prelimData = new LoadsheetData
+                    Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Generating final loadsheet using Prosim native functionality");
+                    
+                    // Generate final loadsheet using Prosim's native functionality
+                    _loadsheetService.GenerateLoadsheet("Final").ContinueWith(task => {
+                        if (task.Result)
                         {
-                            ZeroFuelWeight = prelimZfw,
-                            TakeoffWeight = prelimTow,
-                            ZeroFuelWeightMac = prelimMacZfw,
-                            TakeoffWeightMac = prelimMacTow,
-                            TotalPassengers = prelimPax,
-                            FuelWeight = prelimFuel
-                        };
-
-                        // Format loadsheet with comparison to preliminary
-                        var maxWeights = ProsimController.GetMaxWeights();
-                        var simulatorDateTime = ProsimController.Interface.GetProsimVariable("aircraft.time");
-                        string timeIn24HourFormat = simulatorDateTime.ToString("HHmm");
-                        string finalLoadsheetString = _loadsheetFormatter.FormatLoadSheet("final", timeIn24HourFormat, finalData,ProsimController.GetFMSFlightNumber(), FlightPlan.TailNumber,FlightPlan.DayOfFlight, FlightPlan.DateOfFlight,FlightPlan.Origin, FlightPlan.Destination,maxWeights.Item1, maxWeights.Item2, maxWeights.Item3,0, prelimData);
-                        System.Threading.Tasks.Task task = AcarsClient.SendMessageToAcars(
-                            ProsimController.GetFMSFlightNumber(), "telex", finalLoadsheetString);
-                    }
+                            finalLoadsheetSend = true;
+                            Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", "Final loadsheet generated and sent to MCDU successfully");
+                            
+                            // If ACARS is enabled, we can still send the loadsheet data via ACARS
+                            if (Model.UseAcars)
+                            {
+                                try
+                                {
+                                    // Get the loadsheet data from Prosim
+                                    var loadsheetData = ProsimController.GetLoadsheetData("Final");
+                                    if (loadsheetData != null)
+                                    {
+                                        // Parse the loadsheet data and send it via ACARS
+                                        string finalLoadsheetString = loadsheetData.ToString();
+                                        System.Threading.Tasks.Task acarsTask = AcarsClient.SendMessageToAcars(
+                                            ProsimController.GetFMSFlightNumber(), "telex", finalLoadsheetString);
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", $"Error sending loadsheet to ACARS: {ex.Message}");
+                                }
+                            }
+                        }
+                        else
+                        {
+                            Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", "Failed to generate final loadsheet");
+                        }
+                    });
                 }
             }
             //EQUIPMENT

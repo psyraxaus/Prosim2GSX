@@ -1,5 +1,8 @@
 ﻿using ProSimSDK;
 using System;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
 
 using Prosim2GSX.Models;
 
@@ -70,6 +73,110 @@ namespace Prosim2GSX
             catch (Exception ex)
             {
                 Logger.Log(LogLevel.Error, "ProsimInterface:SetProsimSetVariable", $"There was an error setting {_dataRef} value {value} - exception {ex.ToString()}");
+            }
+        }
+
+        /// <summary>
+        /// Get the Prosim backend URL
+        /// </summary>
+        /// <returns>The backend URL</returns>
+        public string GetBackendUrl()
+        {
+            try
+            {
+                // Get the backend URL from the configuration
+                var config = GetProsimVariable("efb.configurationService.config");
+                if (config != null)
+                {
+                    dynamic configObj = Newtonsoft.Json.JsonConvert.DeserializeObject(config.ToString());
+                    if (configObj != null && configObj.backendUrl != null)
+                    {
+                        return configObj.backendUrl.ToString();
+                    }
+                }
+
+                // Fallback to default URL
+                return "http://localhost:8080";
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "ProsimInterface:GetBackendUrl", $"Error getting backend URL: {ex.Message}");
+                return "http://localhost:8080"; // Default fallback
+            }
+        }
+
+        /// <summary>
+        /// Make a POST request to the Prosim backend
+        /// </summary>
+        /// <param name="url">The URL to post to</param>
+        /// <param name="jsonContent">The JSON content to post</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public async Task<bool> PostAsync(string url, string jsonContent)
+        {
+            try
+            {
+                using (HttpClient client = new HttpClient())
+                {
+                    client.Timeout = TimeSpan.FromSeconds(30);
+                    
+                    StringContent content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+                    
+                    Logger.Log(LogLevel.Debug, "ProsimInterface:PostAsync", $"Posting to {url}");
+                    HttpResponseMessage response = await client.PostAsync(url, content);
+                    
+                    if (response.IsSuccessStatusCode)
+                    {
+                        Logger.Log(LogLevel.Debug, "ProsimInterface:PostAsync", $"POST to {url} successful");
+                        return true;
+                    }
+                    else
+                    {
+                        Logger.Log(LogLevel.Error, "ProsimInterface:PostAsync", 
+                            $"POST to {url} failed with status code {response.StatusCode}");
+                        return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "ProsimInterface:PostAsync", $"Error posting to {url}: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Make a DELETE request to the Prosim backend
+        /// </summary>
+        /// <param name="url">The URL to delete from</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public async Task<bool> DeleteAsync(string url)
+        {
+            try
+            {
+                using (HttpClient client = new HttpClient())
+                {
+                    client.Timeout = TimeSpan.FromSeconds(30);
+                    
+                    Logger.Log(LogLevel.Debug, "ProsimInterface:DeleteAsync", $"Deleting from {url}");
+                    HttpResponseMessage response = await client.DeleteAsync(url);
+                    
+                    if (response.IsSuccessStatusCode)
+                    {
+                        Logger.Log(LogLevel.Debug, "ProsimInterface:DeleteAsync", $"DELETE to {url} successful");
+                        return true;
+                    }
+                    else
+                    {
+                        Logger.Log(LogLevel.Error, "ProsimInterface:DeleteAsync", 
+                            $"DELETE to {url} failed with status code {response.StatusCode}");
+                        return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "ProsimInterface:DeleteAsync", $"Error deleting from {url}: {ex.Message}");
+                return false;
             }
         }
     }
