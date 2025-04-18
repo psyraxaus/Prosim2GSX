@@ -82,27 +82,8 @@ namespace Prosim2GSX
         /// <returns>The backend URL</returns>
         public string GetBackendUrl()
         {
-            try
-            {
-                // Get the backend URL from the configuration
-                var config = GetProsimVariable("efb.configurationService.config");
-                if (config != null)
-                {
-                    dynamic configObj = Newtonsoft.Json.JsonConvert.DeserializeObject(config.ToString());
-                    if (configObj != null && configObj.backendUrl != null)
-                    {
-                        return configObj.backendUrl.ToString();
-                    }
-                }
-
-                // Fallback to default URL
-                return "http://localhost:8080";
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Error, "ProsimInterface:GetBackendUrl", $"Error getting backend URL: {ex.Message}");
-                return "http://localhost:8080"; // Default fallback
-            }
+            // Return the hardcoded URL for Prosim's backend
+            return "http://127.0.0.1:5000/efb";
         }
 
         /// <summary>

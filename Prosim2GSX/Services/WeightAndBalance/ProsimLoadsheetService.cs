@@ -1,6 +1,9 @@
 using Newtonsoft.Json;
 using Prosim2GSX.Events;
 using System;
+using System.Net.Http.Headers;
+using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Prosim2GSX.Services.WeightAndBalance
@@ -45,55 +48,31 @@ namespace Prosim2GSX.Services.WeightAndBalance
         {
             try
             {
-                Logger.Log(LogLevel.Information, "ProsimLoadsheetService", $"Generating {type} loadsheet");
-                
-                // Check if we're using the EFB flight plan type
-                if (_prosimController.Model.FlightPlanType != "EFB")
+                // Create a completely fresh HttpClient for this request
+                using (var client = new HttpClient())
                 {
-                    Logger.Log(LogLevel.Warning, "ProsimLoadsheetService", 
-                        $"Cannot generate loadsheet - FlightPlanType is not EFB (current: {_prosimController.Model.FlightPlanType})");
-                    return false;
-                }
+                    // Set the exact URL used in the JavaScript version
+                    string fullUrl = $"{_prosimController.Interface.GetBackendUrl()}/loadsheet/generate?type={type}";
 
-                // Use the Prosim API to generate the loadsheet
-                // This is equivalent to the JavaScript code: this.backend.generateLoadsheet(type)
-                string url = $"{_prosimController.Interface.GetBackendUrl()}/loadsheet/generate?type={type}";
-                bool success = await _prosimController.Interface.PostAsync(url, "{}");
-                
-                if (success)
-                {
-                    Logger.Log(LogLevel.Information, "ProsimLoadsheetService", $"{type} loadsheet generation requested successfully");
-                    
-                    // Wait for the loadsheet to be available (with timeout)
-                    int attempts = 0;
-                    const int maxAttempts = 30; // 30 seconds timeout
-                    
-                    while (!_prosimController.IsLoadsheetAvailable(type) && attempts < maxAttempts)
-                    {
-                        await Task.Delay(1000); // Wait 1 second between checks
-                        attempts++;
-                    }
-                    
-                    if (_prosimController.IsLoadsheetAvailable(type))
-                    {
-                        Logger.Log(LogLevel.Information, "ProsimLoadsheetService", $"{type} loadsheet is now available");
-                        return true;
-                    }
-                    else
-                    {
-                        Logger.Log(LogLevel.Warning, "ProsimLoadsheetService", $"Timeout waiting for {type} loadsheet");
-                        return false;
-                    }
-                }
-                else
-                {
-                    Logger.Log(LogLevel.Error, "ProsimLoadsheetService", $"Failed to request {type} loadsheet generation");
-                    return false;
+                    // Set headers to match exactly what's in the JavaScript request
+                    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
+                    client.DefaultRequestHeaders.Add("Origin", "http://10.0.1.22:5010");
+                    client.DefaultRequestHeaders.Add("Referer", "http://10.0.1.22:5010/");
+                    client.DefaultRequestHeaders.Add("User-Agent", "C#HttpClient");
+
+                    // Use a completely empty content, no JSON
+                    var content = new StringContent("", Encoding.UTF8, "application/json");
+
+                    // Send the request
+                    var response = await client.PostAsync(fullUrl, content);
+
+                    return response.IsSuccessStatusCode;
                 }
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, "ProsimLoadsheetService", $"Error generating {type} loadsheet: {ex.Message}");
+                Logger.Log(LogLevel.Error, "ProsimLoadsheetService",
+                    $"Exception generating {type} loadsheet: {ex.Message}");
                 return false;
             }
         }

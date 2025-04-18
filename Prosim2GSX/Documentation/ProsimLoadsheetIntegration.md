@@ -36,7 +36,7 @@ public class ProsimLoadsheetService
 ### ProsimInterface Enhancements
 
 The ProsimInterface class has been enhanced with HTTP request methods for interacting with the Prosim backend API:
-- GetBackendUrl() - to get the backend URL
+- GetBackendUrl() - returns the hardcoded URL "http://127.0.0.1:5000/efb" for Prosim's backend
 - PostAsync() - to make POST requests
 - DeleteAsync() - to make DELETE requests
 
@@ -87,5 +87,6 @@ No additional configuration is required for the Prosim loadsheet integration. Th
 If you encounter issues with the loadsheet integration, check the following:
 - Ensure that Prosim is running and connected
 - Check that the flight plan is loaded correctly
-- Verify that the Prosim backend API is accessible
+- Verify that the Prosim backend API is accessible at http://127.0.0.1:5000/efb
 - Check the logs for any error messages related to loadsheet generation or sending
+- If you're experiencing connection issues, verify that Prosim's EFB server is running on port 5000
