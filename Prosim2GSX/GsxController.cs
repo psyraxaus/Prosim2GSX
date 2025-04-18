@@ -1287,75 +1287,7 @@ namespace Prosim2GSX
             while (!SimConnect.IsGsxMenuReady && counter < 1000) { Thread.Sleep(100); counter++; }
             Logger.Log(LogLevel.Debug, "GsxController:MenuWaitReady", $"Wait ended after {counter * 100}ms");
         }
-       
-        /// <summary>
-        /// Compares preliminary and final loadsheet values and marks changes with "//"
-        /// </summary>
-
-        private (string, string, string, string, string, string, bool) GetLoadSheetDifferences(double prezfw, double preTow, int prePax, double preMacZfw, double preMacTow, double prefuel, double finalZfw, double finalTow, int finalPax, double finalMacZfw, double finalMacTow, double finalfuel)
-        {
-            // Tolerance values for detecting changes
-            const double WeightTolerance = 1000.0; // 1000 kg tolerance for weight values
-            const double MacTolerance = 0.5;     // 0.5% tolerance for MAC values - more sensitive to detect GSX randomization effects
-            
-            string zfwChanged = "";
-            string towChanged = "";
-            string paxChanged = "";
-            string macZfwChanged = "";
-            string macTowChanged = "";
-            string fuelChanged = "";
-
-            // Check if values have changed beyond tolerance
-            bool hasZfwChanged = Math.Abs(prezfw - finalZfw) > WeightTolerance;
-            bool hasTowChanged = Math.Abs(preTow - finalTow) > WeightTolerance;
-            bool hasPaxChanged = prePax != finalPax;
-            bool hasMacZfwChanged = Math.Abs(preMacZfw - finalMacZfw) > MacTolerance;
-            bool hasMacTowChanged = Math.Abs(preMacTow - finalMacTow) > MacTolerance;
-            bool hasFuelChanged = Math.Abs(prefuel - finalfuel) > WeightTolerance;
-
-            // Mark changes with "//"
-            if (hasZfwChanged)
-            {
-                zfwChanged = "//";
-                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"ZFW changed: {prezfw} -> {finalZfw}");
-            }
-
-            if (hasTowChanged)
-            {
-                towChanged = "//";
-                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"TOW changed: {preTow} -> {finalTow}");
-            }
-
-            if (hasPaxChanged)
-            {
-                paxChanged = "//";
-                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"PAX changed: {prePax} -> {finalPax}");
-            }
-
-            if (hasMacZfwChanged)
-            {
-                macZfwChanged = "//";
-                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"MACZFW changed: {preMacZfw:F2}% -> {finalMacZfw:F2}%");
-            }
-
-            if (hasMacTowChanged)
-            {
-                macTowChanged = "//";
-                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"MACTOW changed: {preMacTow:F2}% -> {finalMacTow:F2}%");
-            }
-
-            if (hasFuelChanged)
-            {
-                fuelChanged = "//";
-                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"Fuel changed: {prefuel} -> {finalfuel}");
-            }
-
-            // Determine if any values have changed
-            bool hasChanged = hasZfwChanged || hasTowChanged || hasPaxChanged || hasMacZfwChanged || hasMacTowChanged || hasFuelChanged;
-
-            return (zfwChanged, towChanged, paxChanged, macZfwChanged, macTowChanged, fuelChanged, hasChanged);
-        }
-
+    
         /// <summary>
         /// Handler for catering state changes
         /// </summary>
