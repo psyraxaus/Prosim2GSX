@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
+﻿﻿using Newtonsoft.Json.Linq;
 using ProSimSDK;
 using System;
 using System.Xml;
@@ -140,10 +140,7 @@ namespace Prosim2GSX
             }
         }
 
-        public void SetSimBriefID(ServiceModel model)
-        {
-            model.SimBriefID = (string)Interface.GetProsimVariable("efb.simbrief.id");
-        }
+        // Method removed: SetSimBriefID is no longer needed as we're using the manually entered value
 
         public bool IsProsimConnectionAvailable(ServiceModel model)
         {
@@ -354,20 +351,30 @@ namespace Prosim2GSX
 
         public bool[] RandomizePaxSeating(int trueCount)
         {
-            if (trueCount < 0 || trueCount > 132)
-            {
-                throw new ArgumentException("The number of 'true' values must be between 0 and 132.");
-            }
             bool[] result = new bool[132];
+            int actualCount = trueCount;
+
+            // Check if trueCount exceeds maximum capacity
+            if (trueCount > 132)
+            {
+                Console.WriteLine($"Warning: Requested passenger count {trueCount} exceeds maximum capacity. Reducing to 132.");
+                actualCount = 132;
+            }
+            else if (trueCount < 0)
+            {
+                throw new ArgumentException("The number of passengers must be at least 0.");
+            }
+
             // Initialize all to false
             for (int i = 0; i < result.Length; i++)
             {
                 result[i] = false;
             }
+
             // Fill the array with 'true' values at random positions
             Random rand = new Random();
             int count = 0;
-            while (count < trueCount)
+            while (count < actualCount)
             {
                 int index = rand.Next(132);
                 if (!result[index])
@@ -376,6 +383,7 @@ namespace Prosim2GSX
                     count++;
                 }
             }
+
             return result;
         }
 

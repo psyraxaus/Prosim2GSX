@@ -28,6 +28,21 @@ namespace Prosim2GSX.Services.WeightAndBalance
         /// <param name="absoluteCG">CG position in meters from reference</param>
         /// <returns>CG position as percentage MAC</returns>
         double ConvertToMacPercentage(double absoluteCG);
+
+        /// <summary>
+        /// Calculate Zero Fuel Weight CG using the adjustment array from fuel quantity
+        /// </summary>
+        /// <param name="fuelIndex">Index based on fuel quantity (fuel in kg / 100)</param>
+        /// <param name="grossWeightCG">The gross weight CG percentage</param>
+        /// <returns>The zero fuel weight CG percentage</returns>
+        double CalculateZFWCG(int fuelIndex, double grossWeightCG);
+
+        /// <summary>
+        /// Get the CG adjustment value based on fuel quantity
+        /// </summary>
+        /// <param name="fuelIndex">Index based on fuel quantity (fuel in kg / 100)</param>
+        /// <returns>CG adjustment value in percentage</returns>
+        double GetCGAdjustmentForFuel(int fuelIndex);
     }
 
     /// <summary>

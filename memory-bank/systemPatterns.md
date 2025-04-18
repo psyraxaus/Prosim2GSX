@@ -235,6 +235,97 @@ The application implements a dynamic theming system that allows customization of
   }
   ```
 
+### First-Time Setup Pattern
+The application implements a first-time setup pattern to ensure critical configuration is completed before the main application starts:
+
+- **Core Components**:
+  - `FirstTimeSetupDialog`: A dedicated dialog for first-time configuration
+  - `App.xaml.cs`: Startup logic that checks for default configuration values
+  - `ServiceModel`: Model that stores and validates configuration
+
+- **Implementation**:
+  - During application startup, the system checks if the SimBrief ID is set to the default value (0)
+  - If the default value is detected, the first-time setup dialog is displayed
+  - The dialog provides a user-friendly interface for entering and validating the SimBrief ID
+  - Real-time validation ensures the ID is not empty, not "0", and is a valid numeric value
+  - The dialog provides clear feedback on validation status
+  - The user must enter a valid ID to proceed; canceling the dialog exits the application
+  - Once a valid ID is provided, it's saved to the configuration and the application continues normal initialization
+
+- **Benefits**:
+  - Ensures critical configuration is completed before the application attempts to use it
+  - Prevents crashes that could occur when using default or invalid configuration values
+  - Provides a better user experience than error messages after startup
+  - Centralizes validation logic in a dedicated component
+  - Replaces the previous event-based approach that could lead to crashes
+
+- **Example**:
+  ```csharp
+  // In App.xaml.cs
+  if (Model.SimBriefID == "0")
+  {
+      // Show the first-time setup dialog
+      var setupDialog = new FirstTimeSetupDialog(Model);
+      bool? result = setupDialog.ShowDialog();
+      
+      // If the user cancels, exit the application
+      if (result != true)
+      {
+          Logger.Log(LogLevel.Information, "App:OnStartup", 
+              "User cancelled first-time setup. Exiting application.");
+          Current.Shutdown();
+          return;
+      }
+      
+      // At this point, the user has entered a valid SimBrief ID
+      Logger.Log(LogLevel.Information, "App:OnStartup", 
+          $"User entered SimBrief ID: {Model.SimBriefID}");
+  }
+  
+  // In FirstTimeSetupDialog.xaml.cs
+  private void ValidateSimBriefID()
+  {
+      string id = txtSimbriefID.Text.Trim();
+      
+      // Check if the ID is empty
+      if (string.IsNullOrWhiteSpace(id))
+      {
+          txtValidationMessage.Text = "Please enter a SimBrief ID.";
+          btnContinue.IsEnabled = false;
+          _idValidated = false;
+          return;
+      }
+      
+      // Check if the ID is "0"
+      if (id == "0")
+      {
+          txtValidationMessage.Text = "The SimBrief ID cannot be 0. Please enter a valid ID.";
+          btnContinue.IsEnabled = false;
+          _idValidated = false;
+          return;
+      }
+      
+      // Check if the ID is a valid number
+      if (!int.TryParse(id, out _))
+      {
+          txtValidationMessage.Text = "The SimBrief ID must be a numeric value.";
+          btnContinue.IsEnabled = false;
+          _idValidated = false;
+          return;
+      }
+      
+      // If we get here, the ID is valid
+      txtValidationMessage.Text = "SimBrief ID validated successfully!";
+      txtValidationMessage.Foreground = System.Windows.Media.Brushes.Green;
+      btnContinue.IsEnabled = true;
+      _idValidated = true;
+      
+      // Save the ID to the model
+      _model.SetSetting("pilotID", id);
+      _model.SimBriefID = id;
+  }
+  ```
+
 ### EFB-Style UI Design Pattern
 The application implements an Electronic Flight Bag (EFB) style user interface design pattern, which is common in modern aviation applications:
 

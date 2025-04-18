@@ -312,5 +312,12 @@ namespace Prosim2GSX.Models
             VoiceMeeterDeviceTypes[channel] = deviceType;
             SetSetting($"voiceMeeter{channel}DeviceType", deviceType.ToString());
         }
+
+        public bool IsValidSimbriefId()
+        {
+            return !string.IsNullOrWhiteSpace(SimBriefID) && 
+                   SimBriefID != "0" && 
+                   int.TryParse(SimBriefID, out _); // Ensure it's a valid number
+        }
     }
 }
