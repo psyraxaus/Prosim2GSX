@@ -11,9 +11,11 @@ using System.Diagnostics;
 using System.Drawing.Text;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Prosim2GSX
 {
@@ -102,6 +104,13 @@ namespace Prosim2GSX
         private bool planePositioned = false;
         private double prelimFuel = 0d;
         private bool prelimLoadsheet = false;
+        
+        // Loadsheet generation state tracking
+        private enum LoadsheetState { NotStarted, Waiting, Generating, Completed, Failed }
+        private LoadsheetState _prelimLoadsheetState = LoadsheetState.NotStarted;
+        private DateTime _nextLoadsheetAttemptTime = DateTime.MinValue;
+        private Task<LoadsheetResult> _currentLoadsheetTask = null;
+        private string _loadsheetFlightPlanId = null;
         private double prelimMacTow = 00.0d;
         private double prelimMacZfw = 00.0d;
         private int prelimPax = 0;
@@ -387,9 +396,18 @@ namespace Prosim2GSX
             {
                 Logger.Log(LogLevel.Information, "GsxController:RunServices", $"Generating preliminary loadsheet using Prosim native functionality");
                 
-                // Generate preliminary loadsheet using Prosim's native functionality
+                // Generate preliminary loadsheet using Prosim's native functionality with enhanced error handling
                 _loadsheetService.GenerateLoadsheet("Preliminary").ContinueWith(task => {
-                    if (task.Result)
+                    if (task.IsFaulted)
+                    {
+                        // Handle task failure (exception in the task itself)
+                        Logger.Log(LogLevel.Error, "GsxController:RunServices", 
+                            $"Task exception while generating preliminary loadsheet: {task.Exception?.InnerException?.Message ?? "Unknown error"}");
+                        return;
+                    }
+                    
+                    var result = task.Result;
+                    if (result.Success)
                     {
                         prelimLoadsheet = true;
                         Logger.Log(LogLevel.Information, "GsxController:RunServices", "Preliminary loadsheet generated successfully");
@@ -421,7 +439,51 @@ namespace Prosim2GSX
                     }
                     else
                     {
-                        Logger.Log(LogLevel.Error, "GsxController:RunServices", "Failed to generate preliminary loadsheet");
+                        // Log detailed error information
+                        if (result.StatusCode.HasValue)
+                        {
+                            Logger.Log(LogLevel.Error, "GsxController:RunServices", 
+                                $"Failed to generate preliminary loadsheet: HTTP {(int)result.StatusCode} - {result.StatusCode}");
+                            
+                            // Log specific guidance based on status code
+                            switch (result.StatusCode)
+                            {
+                                case HttpStatusCode.NotFound:
+                                    Logger.Log(LogLevel.Error, "GsxController:RunServices", 
+                                        "The loadsheet endpoint was not found. Verify that Prosim's EFB server is running on port 5000.");
+                                    break;
+                                case HttpStatusCode.BadRequest:
+                                    Logger.Log(LogLevel.Error, "GsxController:RunServices", 
+                                        "Bad request to loadsheet endpoint. Verify that the flight plan is loaded correctly.");
+                                    break;
+                                case HttpStatusCode.Unauthorized:
+                                case HttpStatusCode.Forbidden:
+                                    Logger.Log(LogLevel.Error, "GsxController:RunServices", 
+                                        "Authorization error accessing loadsheet endpoint. Check Prosim configuration.");
+                                    break;
+                                case HttpStatusCode.InternalServerError:
+                                    Logger.Log(LogLevel.Error, "GsxController:RunServices", 
+                                        "Prosim server error generating loadsheet. Check Prosim logs for details.");
+                                    break;
+                                case HttpStatusCode.ServiceUnavailable:
+                                    Logger.Log(LogLevel.Error, "GsxController:RunServices", 
+                                        "Prosim service unavailable. Verify that Prosim is running and not overloaded.");
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            // Log the error message if no status code is available
+                            Logger.Log(LogLevel.Error, "GsxController:RunServices", 
+                                $"Failed to generate preliminary loadsheet: {result.ErrorMessage}");
+                        }
+                        
+                        // Log response content if available
+                        if (!string.IsNullOrEmpty(result.ResponseContent))
+                        {
+                            Logger.Log(LogLevel.Error, "GsxController:RunServices", 
+                                $"Response content: {result.ResponseContent}");
+                        }
                     }
                 });
             }
@@ -543,6 +605,10 @@ namespace Prosim2GSX
                     {
                         AcarsClient.SetCallsign(FlightCallsignToOpsCallsign(ProsimController.flightNumber));
                     }
+                    
+                    // Reset loadsheet flags in the loadsheet service to ensure we generate new loadsheets for the new flight
+                    _loadsheetService.ResetLoadsheetFlags();
+                    
                     CurrentFlightState = FlightState.DEPARTURE;
                     planePositioned = true;
                     connectCalled = true;
@@ -567,6 +633,7 @@ namespace Prosim2GSX
                     delayCounter = 0;
                     paxPlanned = 0;
                     delay = 0;
+                    prelimLoadsheet = false; // Reset the preliminary loadsheet flag
 
                     Logger.Log(LogLevel.Information, "GsxController:RunServices", $"State Change: Turn-Around -> DEPARTURE (Waiting for Refueling and Boarding)");
                 }
@@ -792,9 +859,18 @@ namespace Prosim2GSX
                 {
                     Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Generating final loadsheet using Prosim native functionality");
                     
-                    // Generate final loadsheet using Prosim's native functionality
+                    // Generate final loadsheet using Prosim's native functionality with enhanced error handling
                     _loadsheetService.GenerateLoadsheet("Final").ContinueWith(task => {
-                        if (task.Result)
+                        if (task.IsFaulted)
+                        {
+                            // Handle task failure (exception in the task itself)
+                            Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", 
+                                $"Task exception while generating final loadsheet: {task.Exception?.InnerException?.Message ?? "Unknown error"}");
+                            return;
+                        }
+                        
+                        var result = task.Result;
+                        if (result.Success)
                         {
                             finalLoadsheetSend = true;
                             Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", "Final loadsheet generated and sent to MCDU successfully");
@@ -822,7 +898,51 @@ namespace Prosim2GSX
                         }
                         else
                         {
-                            Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", "Failed to generate final loadsheet");
+                            // Log detailed error information
+                            if (result.StatusCode.HasValue)
+                            {
+                                Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", 
+                                    $"Failed to generate final loadsheet: HTTP {(int)result.StatusCode} - {result.StatusCode}");
+                                
+                                // Log specific guidance based on status code
+                                switch (result.StatusCode)
+                                {
+                                    case HttpStatusCode.NotFound:
+                                        Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", 
+                                            "The loadsheet endpoint was not found. Verify that Prosim's EFB server is running on port 5000.");
+                                        break;
+                                    case HttpStatusCode.BadRequest:
+                                        Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", 
+                                            "Bad request to loadsheet endpoint. Verify that the flight plan is loaded correctly.");
+                                        break;
+                                    case HttpStatusCode.Unauthorized:
+                                    case HttpStatusCode.Forbidden:
+                                        Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", 
+                                            "Authorization error accessing loadsheet endpoint. Check Prosim configuration.");
+                                        break;
+                                    case HttpStatusCode.InternalServerError:
+                                        Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", 
+                                            "Prosim server error generating loadsheet. Check Prosim logs for details.");
+                                        break;
+                                    case HttpStatusCode.ServiceUnavailable:
+                                        Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", 
+                                            "Prosim service unavailable. Verify that Prosim is running and not overloaded.");
+                                        break;
+                                }
+                            }
+                            else
+                            {
+                                // Log the error message if no status code is available
+                                Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", 
+                                    $"Failed to generate final loadsheet: {result.ErrorMessage}");
+                            }
+                            
+                            // Log response content if available
+                            if (!string.IsNullOrEmpty(result.ResponseContent))
+                            {
+                                Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", 
+                                    $"Response content: {result.ResponseContent}");
+                            }
                         }
                     });
                 }
