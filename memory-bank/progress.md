@@ -142,6 +142,9 @@ Based on the README, there are some known considerations:
 - ⚠️ Extreme passenger density setting in GSX breaks boarding functionality
 
 ## Recently Fixed Issues
+- ✅ Fixed application crash when default SimBrief ID is 0
+  - Root cause: The SimbriefIdRequiredEvent handler was causing a crash in KernelBase.dll after displaying a message box and switching to the Settings tab
+  - Solution: Removed the redundant SimbriefIdRequiredEvent system and implemented a more robust first-time setup dialog that validates the SimBrief ID at application startup
 - ✅ Fixed issues with VHF2, VHF3, CAB, and PA channels not controlling VoiceMeeter
   - Root cause: IsXControllable() methods required process names even when using VoiceMeeter
   - Solution: Modified these methods to work with VoiceMeeter even with empty process names
