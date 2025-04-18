@@ -53,7 +53,6 @@ namespace Prosim2GSX
             if (!Model.IsValidSimbriefId())
             {
                 Logger.Log(LogLevel.Error, "FlightPlan:LoadWithValidation", "Invalid Simbrief ID");
-                EventAggregator.Instance.Publish(new SimbriefIdRequiredEvent());
                 return LoadResult.InvalidId;
             }
             
@@ -123,7 +122,6 @@ namespace Prosim2GSX
             if (!Model.IsValidSimbriefId())
             {
                 Logger.Log(LogLevel.Error, "FlightPlan:FetchOnline", $"SimBrief ID is not set or invalid!");
-                EventAggregator.Instance.Publish(new SimbriefIdRequiredEvent());
                 return null;
             }
 

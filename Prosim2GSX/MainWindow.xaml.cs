@@ -57,32 +57,8 @@ namespace Prosim2GSX
 
             // Subscribe to flight number events
             _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<FlightPlanChangedEvent>(OnFlightPlanChanged));
-            
-            // Subscribe to Simbrief ID required events
-            _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<SimbriefIdRequiredEvent>(OnSimbriefIdRequired));
         }
         
-        private void OnSimbriefIdRequired(SimbriefIdRequiredEvent evt)
-        {
-            Dispatcher.Invoke(() => {
-                // Show a more prominent notification
-                MessageBox.Show(
-                    "A valid Simbrief ID is required to load flight plans.\n\nPlease enter your Simbrief ID in the Settings tab.",
-                    "Simbrief ID Required",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                    
-                // Automatically switch to the Settings tab
-                if (evt.AutoSwitchToSettings)
-                    MainTabControl.SelectedItem = SettingsTab;
-                    
-                // Highlight the Simbrief ID field
-                txtSimbriefID.Background = new SolidColorBrush(Colors.MistyRose);
-                txtSimbriefID.BorderBrush = new SolidColorBrush(Colors.Red);
-                txtSimbriefID.Focus();
-            });
-        }
-
         private void OnConnectionStatusChanged(ConnectionStatusChangedEvent evt)
         {
             // Update UI based on connection status

@@ -1,0 +1,94 @@
+<Window x:Class="Prosim2GSX.FirstTimeSetupDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SimBrief ID Setup" Height="425" Width="600"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <TextBlock Grid.Row="0" 
+                   Text="Welcome to Prosim2GSX!" 
+                   FontSize="24" 
+                   FontWeight="Bold" 
+                   Margin="0,0,0,20"/>
+        
+        <TextBlock Grid.Row="1" 
+                   TextWrapping="Wrap" 
+                   Margin="0,0,0,15">
+            <Run FontWeight="Bold">A valid SimBrief ID is required to use this application.</Run>
+            <LineBreak/>
+            <LineBreak/>
+            SimBrief is a free flight planning service that provides detailed operational flight plans for flight simulation. 
+            Prosim2GSX uses your SimBrief ID to fetch flight plans and load them into the simulator.
+        </TextBlock>
+        
+        <TextBlock Grid.Row="2" 
+                   TextWrapping="Wrap" 
+                   Margin="0,0,0,15">
+            <Run FontWeight="Bold">How to get a SimBrief ID:</Run>
+            <LineBreak/>
+            1. Go to <Hyperlink NavigateUri="https://www.simbrief.com" RequestNavigate="Hyperlink_RequestNavigate">www.simbrief.com</Hyperlink>
+            <LineBreak/>
+            2. Create a free account or log in to your existing account
+            <LineBreak/>
+            3. Go to your account settings to find your Pilot ID (a numeric value)
+        </TextBlock>
+        
+        <TextBlock Grid.Row="3" 
+                   Text="Enter your SimBrief Pilot ID:" 
+                   FontWeight="Bold" 
+                   Margin="0,10,0,5"/>
+        
+        <Grid Grid.Row="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            <TextBox x:Name="txtSimbriefID" 
+                     Grid.Column="0" 
+                     Margin="0,0,10,0" 
+                     FontSize="16" 
+                     Padding="5"
+                     KeyUp="txtSimbriefID_KeyUp"/>
+            
+            <Button x:Name="btnValidate" 
+                    Grid.Column="1" 
+                    Content="Validate" 
+                    Padding="15,5" 
+                    Click="btnValidate_Click"/>
+        </Grid>
+        
+        <TextBlock x:Name="txtValidationMessage" 
+                   Grid.Row="5" 
+                   Foreground="Red" 
+                   TextWrapping="Wrap" 
+                   Margin="0,10,0,0"/>
+        
+        <StackPanel Grid.Row="6" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right" 
+                    Margin="0,20,0,0">
+            <Button x:Name="btnCancel" 
+                    Content="Exit Application" 
+                    Padding="15,5" 
+                    Margin="0,0,10,0" 
+                    Click="btnCancel_Click"/>
+            
+            <Button x:Name="btnContinue" 
+                    Content="Continue" 
+                    Padding="15,5" 
+                    IsEnabled="False" 
+                    Click="btnContinue_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

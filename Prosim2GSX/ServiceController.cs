@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Threading;
 using Microsoft.FlightSimulator.SimConnect;
 using Prosim2GSX.Events;
@@ -116,25 +116,38 @@ namespace Prosim2GSX
                         break;
                         
                     case FlightPlan.LoadResult.InvalidId:
-                        // Wait for user to enter a valid ID
-                        Logger.Log(LogLevel.Warning, "ServiceController:Wait", 
-                            "Waiting for valid Simbrief ID to be entered in Settings tab...");
-                        
-                        // Start a background task to periodically check for valid ID
-                        System.Threading.Tasks.Task.Run(async () => {
-                            while (!Model.CancellationRequested && !Model.IsValidSimbriefId())
-                            {
-                                await System.Threading.Tasks.Task.Delay(5000); // Check every 5 seconds
-                            }
+                        // Special handling for default SimBrief ID (0)
+                        if (Model.SimBriefID == "0")
+                        {
+                            // Just log a message and return false, don't start a background task
+                            Logger.Log(LogLevel.Warning, "ServiceController:Wait", 
+                                "Default SimBrief ID detected. Please enter a valid Simbrief ID in Settings tab.");
                             
-                            // When valid ID is detected, try loading again
-                            if (!Model.CancellationRequested && Model.IsValidSimbriefId())
-                            {
-                                EventAggregator.Instance.Publish(new RetryFlightPlanLoadEvent());
-                            }
-                        });
-                        
-                        return false;
+                            // Don't try to load the flight plan or start a background task
+                            return false;
+                        }
+                        else
+                        {
+                            // For other invalid IDs, wait for user to enter a valid ID
+                            Logger.Log(LogLevel.Warning, "ServiceController:Wait", 
+                                "Waiting for valid Simbrief ID to be entered in Settings tab...");
+                            
+                            // Start a background task to periodically check for valid ID
+                            System.Threading.Tasks.Task.Run(async () => {
+                                while (!Model.CancellationRequested && !Model.IsValidSimbriefId())
+                                {
+                                    await System.Threading.Tasks.Task.Delay(5000); // Check every 5 seconds
+                                }
+                                
+                                // When valid ID is detected, try loading again
+                                if (!Model.CancellationRequested && Model.IsValidSimbriefId())
+                                {
+                                    EventAggregator.Instance.Publish(new RetryFlightPlanLoadEvent());
+                                }
+                            });
+                            
+                            return false;
+                        }
                         
                     case FlightPlan.LoadResult.NetworkError:
                         Logger.Log(LogLevel.Error, "ServiceController:Wait", 

@@ -57,26 +57,97 @@ namespace Prosim2GSX
                 }
             }
 
-            Model = new();
-            InitLog();
-            InitSystray();
-            InitCef();
-            
-            // Initialize theme manager
-            ThemeManager.Instance.SetServiceModel(Model);
-            ThemeManager.Instance.Initialize();
-
-            Controller = new(Model);
-            Task.Run(Controller.Run);
-
-            var timer = new DispatcherTimer
+            try
             {
-                Interval = TimeSpan.FromSeconds(1)
-            };
-            timer.Tick += OnTick;
-            timer.Start();
+                // Create the service model
+                Model = new();
+                
+                // Check for default SimBrief ID (0) before proceeding
+                if (Model.SimBriefID == "0")
+                {
+                    // Show the first-time setup dialog
+                    var setupDialog = new FirstTimeSetupDialog(Model);
+                    bool? result = setupDialog.ShowDialog();
+                    
+                    // If the user cancels, exit the application
+                    if (result != true)
+                    {
+                        Logger.Log(LogLevel.Information, "App:OnStartup", 
+                            "User cancelled first-time setup. Exiting application.");
+                        Current.Shutdown();
+                        return;
+                    }
+                    
+                    // At this point, the user has entered a valid SimBrief ID
+                    Logger.Log(LogLevel.Information, "App:OnStartup", 
+                        $"User entered SimBrief ID: {Model.SimBriefID}");
+                }
+                
+                // Only proceed with normal initialization if we have a valid SimBrief ID
+                if (Model.IsValidSimbriefId())
+                {
+                    InitLog();
+                    InitSystray();
+                    InitCef();
+                    
+                    // Initialize theme manager
+                    ThemeManager.Instance.SetServiceModel(Model);
+                    ThemeManager.Instance.Initialize();
 
-            MainWindow = new MainWindow(notifyIcon.DataContext as NotifyIconViewModel, Model);
+                    Controller = new(Model);
+                    
+                    // Start the controller in a background task with exception handling
+                    Task.Run(() => {
+                        try
+                        {
+                            Controller.Run();
+                        }
+                        catch (Exception ex)
+                        {
+                            // Log the exception
+                            Logger.Log(LogLevel.Critical, "App:OnStartup", 
+                                $"Critical exception in Controller.Run: {ex.GetType()} - {ex.Message}\n{ex.StackTrace}");
+                        }
+                    });
+
+                    var timer = new DispatcherTimer
+                    {
+                        Interval = TimeSpan.FromSeconds(1)
+                    };
+                    timer.Tick += OnTick;
+                    timer.Start();
+
+                    MainWindow = new MainWindow(notifyIcon.DataContext as NotifyIconViewModel, Model);
+                }
+                else
+                {
+                    // This should never happen, but just in case
+                    Logger.Log(LogLevel.Critical, "App:OnStartup", 
+                        "Invalid SimBrief ID after setup. Exiting application.");
+                    MessageBox.Show(
+                        "Invalid SimBrief ID. Please restart the application and enter a valid ID.",
+                        "Critical Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                    Current.Shutdown();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                Logger.Log(LogLevel.Critical, "App:OnStartup", 
+                    $"Critical exception during application startup: {ex.GetType()} - {ex.Message}\n{ex.StackTrace}");
+                
+                // Show a message box with the error
+                MessageBox.Show(
+                    $"A critical error occurred during application startup:\n\n{ex.Message}\n\nPlease check the log file for more details.",
+                    "Critical Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                
+                // Shutdown the application
+                Current.Shutdown();
+            }
         }
 
         protected override void OnExit(ExitEventArgs e)
