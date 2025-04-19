@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Threading;
 using Microsoft.FlightSimulator.SimConnect;
 using Prosim2GSX.Events;
@@ -277,6 +277,21 @@ namespace Prosim2GSX
         public IAudioService GetAudioService()
         {
             return _audioService;
+        }
+        
+        /// <summary>
+        /// Performs a diagnostic check of the VoiceMeeter API and logs detailed information
+        /// </summary>
+        /// <returns>True if all checks pass, false otherwise</returns>
+        public bool PerformVoiceMeeterDiagnostics()
+        {
+            if (_audioService is AudioService audioService)
+            {
+                return audioService.PerformVoiceMeeterDiagnostics();
+            }
+            
+            Logger.Log(LogLevel.Warning, "ServiceController", "Cannot perform VoiceMeeter diagnostics: AudioService is not available");
+            return false;
         }
     }
 }

@@ -96,6 +96,9 @@ namespace Prosim2GSX
 
                     Controller = new(Model);
                     
+                    // Store the ServiceController in IPCManager for access from other components
+                    IPCManager.ServiceController = Controller;
+                    
                     // Start the controller in a background task with exception handling
                     Task.Run(() => {
                         try

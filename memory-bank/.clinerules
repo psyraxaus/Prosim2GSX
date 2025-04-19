@@ -18,6 +18,7 @@
 - Use dataref subscription pattern for Prosim state monitoring
 - Implement partial classes for organizing related functionality (e.g., ProsimController.DataRefMonitor.cs)
 - Use interface-based design for extensibility (e.g., IWeightAndBalanceCalculator)
+- Use fully qualified names for types that might conflict across namespaces (e.g., Prosim2GSX.LogLevel)
 
 ### Documentation
 - Document public APIs with limited comments that are concise and to the point
@@ -77,6 +78,8 @@
 - FS2Crew compatibility issues
 - Audio control limitations between sessions
 - Temporary fuel state manipulation for CG calculations may cause brief visual anomalies
+- VoiceMeeter integration requires specific DLL version compatibility across systems
+- External DLL dependencies may require updates when used on different computers
 
 ### Error Handling
 - Implement server status checking before attempting critical operations
@@ -94,6 +97,9 @@
 - Handle exceptions in dataref handlers to prevent monitoring system failures
 - Log detailed information for debugging dataref subscription issues
 - Ensure proper restoration of original fuel states after CG calculations
+- Implement comprehensive error handling for external DLL loading and initialization
+- Log detailed error information for DLL-related issues including version information
+- Provide fallback behavior when external DLLs fail to load or initialize
 
 ### Event Timing Patterns
 - Be aware of event subscription timing issues - events published before subscribers are registered won't be received
@@ -123,6 +129,8 @@
 - A320WeightAndBalance calculator provides CG calculations
 - CG calculations are used in loadsheet generation
 - Loadsheet data is sent to ACARS system when enabled
+- VoiceMeeter API provides advanced audio control for radio channels
+- Prosim audio panel datarefs control VoiceMeeter strips and buses
 
 ### Performance Considerations
 - Minimize CPU usage during flight

@@ -13,6 +13,7 @@
 - **SimConnect SDK**: Microsoft Flight Simulator's API for external applications
 - **Prosim SDK**: API for interfacing with Prosim A320 (via ProSimSDK.dll)
 - **MobiFlight WASM Module**: Provides additional MSFS variable access
+- **VoiceMeeter API**: Integration with VoiceMeeter for advanced audio control (via VoicemeeterRemote64.dll)
 
 ### Development Tools
 - **Visual Studio**: Primary IDE for development
@@ -117,6 +118,9 @@
 - State transitions between flight phases need careful management to prevent incorrect behavior
 - Loadsheet generation depends on Prosim's native functionality being available and properly configured
 - Server status checking is essential before attempting loadsheet generation to prevent failures
+- VoiceMeeter integration requires careful DLL version management to ensure compatibility across different systems
+- Namespace conflicts between similar types (like LogLevel) need to be handled with fully qualified names
+- External DLL dependencies require proper error handling and diagnostics for troubleshooting
 
 ### Future Technical Considerations
 - Adaptation to MSFS and GSX Pro updates
