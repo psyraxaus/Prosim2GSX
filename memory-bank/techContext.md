@@ -65,9 +65,7 @@
   - **Models/**: Data models
   - **Services/**: Business logic services
     - **WeightAndBalance/**: Weight and balance calculation services
-      - **A320WeightAndBalance.cs**: A320-specific weight and balance calculator
-      - **IWeightAndBalanceCalculator.cs**: Interface for aircraft weight and balance calculations
-      - **LoadsheetFormatter.cs**: Formats weight and balance data into airline-style loadsheets
+      - **ProsimLoadsheetService.cs**: Service for interacting with Prosim's native loadsheet functionality
   - **UI/**: User interface components
   - **Behaviours/**: Custom WPF behaviors
   - **lib/**: External libraries (e.g., ProSimSDK.dll)
@@ -115,17 +113,18 @@
 - GSX Pro lacks a formal API, requiring indirect interaction
 - Timing-sensitive operations may be affected by system performance
 - Compatibility dependent on external software versions
-- Limited error recovery for certain edge cases
-- CG calculations are specific to A320 aircraft model
-- Temporary fuel state manipulation for CG calculations may cause brief visual anomalies in the simulator
+- HTTP communication with Prosim's EFB server requires proper error handling and status checking
+- State transitions between flight phases need careful management to prevent incorrect behavior
+- Loadsheet generation depends on Prosim's native functionality being available and properly configured
+- Server status checking is essential before attempting loadsheet generation to prevent failures
 
 ### Future Technical Considerations
 - Adaptation to MSFS and GSX Pro updates
 - Expansion of automation capabilities
 - Improved error handling and recovery
 - Keeping up with .NET updates and new features
-- Extending weight and balance calculations to support additional aircraft types
-- Optimizing CG calculation performance and accuracy
+- Enhancing integration with Prosim's native loadsheet functionality
+- Optimizing loadsheet generation process and error handling
 
 ## Development Practices
 

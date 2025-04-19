@@ -658,20 +658,6 @@ namespace Prosim2GSX
             }
         }
 
-        // Add to ProsimController class if not already present
-        public (double, double, double) GetMaxWeights()
-        {
-            // Return max ZFW, max TOW, max LAW
-            return (Interface.GetProsimVariable("aircraft.weight.zfwMax"), Interface.GetProsimVariable("aircraft.weight.grossMax"), 66000);  // A320 typical values
-        }
-
-        public double GetPlannedTripFuel()
-        {
-            // Calculate trip fuel from flight plan
-            double tripFuel = FlightPlan.Fuel - FlightPlan.FuelLanding;
-            return tripFuel > 0 ? tripFuel : 5000; // Default 5000kg if not set
-        }
-
         public void SetFlightPlan(FlightPlan flightPlan)
         {
             this.FlightPlan = flightPlan;

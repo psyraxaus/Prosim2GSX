@@ -511,33 +511,32 @@ The system uses dictionary-based action mapping for service toggles:
 5. Refueling continues until target fuel level is reached or GSX reports completion
 6. Center of gravity calculations are performed for accurate loadsheet data using the GetZfwCG() and GetTowCG() methods
 
-### Center of Gravity Calculation Flow
-1. **Zero Fuel Weight CG (MACZFW) Calculation:**
-   - Current fuel values are stored for later restoration
-   - All fuel tanks are temporarily set to zero (ACT1, ACT2, center, left, right)
-   - A small delay allows the simulator to recalculate the CG
-   - The CG value is read directly from Prosim via the "aircraft.cg" dataref
-   - Original fuel values are restored to all tanks
-   - The MACZFW value is returned as a percentage
+### Loadsheet Generation Flow
+1. **Server Status Checking:**
+   - Before attempting to generate a loadsheet, the system checks if the Prosim EFB server is running and accessible
+   - A simple GET request is sent to the server's health endpoint
+   - If the server is not available, the operation is aborted with a clear error message
+   - This prevents unnecessary attempts to generate loadsheets when the server is not available
 
-2. **Take Off Weight CG (MACTOW) Calculation:**
-   - System checks if current fuel amount is close to planned fuel amount
-   - If fuel amounts are similar, current CG is used directly
-   - If recalculation is needed:
-     - Current fuel values are stored
-     - Fuel is distributed according to A320 fuel loading pattern:
-       - Wing tanks are filled first (up to capacity)
-       - Remaining fuel goes to center tank
-       - ACT tanks are left empty
-     - A small delay allows the simulator to recalculate the CG
-     - The CG value is read directly from Prosim
-     - Original fuel values are restored
-   - The MACTOW value is returned as a percentage
+2. **Loadsheet Generation:**
+   - The system uses Prosim's native loadsheet functionality to generate loadsheets
+   - A POST request is sent to the Prosim EFB server's loadsheet generation endpoint
+   - The request includes the type of loadsheet to generate (Preliminary or Final)
+   - The system tracks whether a loadsheet has already been generated for the current flight to avoid duplicate generation
+   - Flags are reset when a new flight plan is loaded
 
-3. **CG Values Usage:**
-   - CG values are included in both preliminary and final loadsheets
-   - Changes in CG values between preliminary and final loadsheets are marked with "//"
-   - A tolerance threshold is used to determine significant CG changes (0.5% for MAC values)
+3. **Error Handling:**
+   - Detailed HTTP status code interpretation with specific troubleshooting steps for different error types
+   - Retry logic with exponential backoff for transient failures
+   - Comprehensive logging of request/response details for troubleshooting
+   - Timeout handling to detect connection issues quickly
+   - Specific error messages for common failure scenarios (server not available, network issues, etc.)
+
+4. **Loadsheet Data Usage:**
+   - Loadsheet data is received via dataref subscription callbacks
+   - The system subscribes to the preliminary and final loadsheet datarefs
+   - When a loadsheet is received, an event is raised to notify interested components
+   - The loadsheet data can be sent to ACARS if enabled
 
 ### Catering Service Door Flow
 1. GSXController monitors catering service state via LVAR callbacks
@@ -564,12 +563,24 @@ The system uses dictionary-based action mapping for service toggles:
 
 ## Error Handling
 
+- Enhanced HTTP error handling with detailed status code interpretation and troubleshooting steps
+- Server status checking before attempting critical operations
 - Graceful degradation when components are unavailable
-- Retry mechanisms for transient failures
-- Logging of errors for troubleshooting
+- Sophisticated retry mechanisms with exponential backoff for transient failures
+- Detailed logging of errors with context for effective troubleshooting
 - User notifications for critical issues
 - Recovery procedures for common failure scenarios
 - Exception handling in LVAR callbacks to prevent cascading failures
 - Value change validation to prevent unnecessary callback executions
 - Exception handling in event handlers to prevent event propagation failures
 - Thread-safe event publishing and subscription management
+- Timeout handling for network operations
+- Detailed request/response logging for API interactions
+- Context-aware state handling to prevent incorrect state transitions
+- Specific error handling for loadsheet generation failures:
+  - HTTP 404 (Not Found): Guidance for checking if Prosim's EFB server is running on port 5000
+  - HTTP 400 (Bad Request): Suggestions for verifying flight plan, fuel, passenger, and cargo data
+  - HTTP 401/403 (Unauthorized/Forbidden): Tips for checking Prosim API access configuration
+  - HTTP 500 (Internal Server Error): Steps to check Prosim logs and restart the EFB server
+  - HTTP 503 (Service Unavailable): Guidance for checking if Prosim is running or overloaded
+  - HTTP 408 (Request Timeout): Suggestions for checking network connectivity and server responsiveness

@@ -1,9 +1,11 @@
 # Active Context: Prosim2GSX
 
 ## Current Focus
-The current focus has been on fixing an application crash that occurred when the default SimBrief ID was set to 0. This issue was causing the application to crash in KernelBase.dll after displaying a message box and switching to the Settings tab. The fix involved removing the redundant SimbriefIdRequiredEvent system and implementing a more robust first-time setup dialog that validates the SimBrief ID at application startup.
+The current focus has been on simplifying the loadsheet generation process by removing redundant custom weight and balance calculations and fully relying on Prosim's native loadsheet functionality. This change removes unnecessary complexity and potential points of failure in the code. The redundant variables and methods related to custom weight and balance calculations have been removed from GsxController.cs and ProsimController.cs, while keeping the enhanced error handling, server status checking, and retry logic in ProsimLoadsheetService.cs.
 
-Prior to this fix, the focus was on enhancing the center of gravity (CG) calculations for more accurate loadsheet data. These enhancements involve implementing a dedicated A320WeightAndBalance calculator that provides sophisticated methods to accurately determine the Zero Fuel Weight Center of Gravity (MACZFW) and Take Off Weight Center of Gravity (MACTOW). The implementation uses proper A320 reference values and provides accurate calculations for both preliminary and final loadsheets. The CG calculation improvements ensure more realistic loadsheet data, enhancing the overall simulation experience.
+Prior to this simplification, the focus was on enhancing error handling for loadsheet generation and fixing issues with deboarding state handling. We significantly improved the error diagnostics and recovery capabilities for loadsheet generation by implementing server status checking, detailed HTTP status code interpretation, and better retry logic. We also fixed an issue where deboarding was being called prematurely during departure by improving the state handling logic.
+
+Prior to these enhancements, the focus was on fixing an application crash that occurred when the default SimBrief ID was set to 0. This issue was causing the application to crash in KernelBase.dll after displaying a message box and switching to the Settings tab. The fix involved removing the redundant SimbriefIdRequiredEvent system and implementing a more robust first-time setup dialog that validates the SimBrief ID at application startup.
 
 Prior to these CG calculation enhancements, the focus was on updating the user interface to a new Electronic Flight Bag (EFB) look, providing a more modern and intuitive interface for users. This UI redesign improves the visual appearance and usability of the application while maintaining all the existing functionality. The new EFB-style interface follows design patterns common in modern aviation applications, making the tool more familiar to pilots who use similar interfaces in their flight operations.
 
@@ -12,6 +14,14 @@ Before the UI update, the focus was on implementing an event aggregator system t
 Previous work also focused on implementing a new Prosim dataref subscription system and enhancing the cockpit door integration between Prosim and GSX. The dataref subscription system involved creating a callback-based monitoring system for Prosim datarefs and implementing synchronization between the cockpit door state in Prosim and the corresponding LVAR in GSX. The implementation allows the cockpit door to muffle cabin sounds when closed, enhancing the realism of the simulation. Additionally, the previous work on cargo door logic, catering service door operation, and refueling process enhancements has been thoroughly tested and verified.
 
 ## Recent Changes
+- Simplified loadsheet generation by removing redundant custom weight and balance calculations:
+  - Removed redundant variables from GsxController.cs (finalMacTow, finalMacZfw, prelimMacTow, prelimMacZfw, finalTow, finalZfw, prelimTow, prelimZfw, macZfw)
+  - Removed custom weight and balance calculation methods from ProsimController.cs
+  - Kept the enhanced error handling, server status checking, and retry logic in ProsimLoadsheetService.cs
+  - Fully relying on Prosim's native loadsheet functionality for more reliable operation
+  - Simplified the codebase by removing unnecessary complexity
+  - Reduced potential points of failure in the loadsheet generation process
+
 - Enhanced VoiceMeeter integration for audio control:
   - Fixed issues with VHF2, VHF3, CAB, and PA channels not controlling VoiceMeeter
   - Modified the IsXControllable() methods to work with VoiceMeeter even with empty process names
@@ -106,16 +116,14 @@ Previous work also focused on implementing a new Prosim dataref subscription sys
   - Previously: Updated the application version from 0.3.0 to 0.4.0
 
 ## Active Decisions
+- Fully relying on Prosim's native loadsheet functionality instead of custom calculations
+- Removing redundant variables and methods to simplify the codebase
+- Keeping the enhanced error handling, server status checking, and retry logic for loadsheet generation
+- Maintaining the improved deboarding state handling to prevent premature deboarding during departure
 - Using VoiceMeeter API for advanced audio control beyond Windows Core Audio capabilities
 - Supporting both Core Audio and VoiceMeeter APIs for flexibility
 - Making channels controllable with VoiceMeeter even when process names are empty
 - Only reading _REC datarefs, not attempting to set them
-- Implementing a dedicated A320WeightAndBalance calculator for accurate CG calculations
-- Using proper A320 reference values for MAC calculations
-- Implementing tolerance-based detection of significant changes in loadsheet values
-- Enhancing the loadsheet formatting with proper marking of changes
-- Implementing sophisticated weight distribution across cabin zones, cargo compartments, and fuel tanks
-- Integrating the CG calculations with Prosim and GSX for accurate data synchronization
 - Implementing an event aggregator system to decouple components and improve UI responsiveness
 - Using a publisher-subscriber pattern for event-based communication
 - Creating a thread-safe singleton implementation of the event aggregator
@@ -136,11 +144,10 @@ Previous work also focused on implementing a new Prosim dataref subscription sys
 - Previously: Choosing to update to .NET 8 for improved performance and extended support
 
 ## Current Challenges
-- Ensuring the CG calculation methods handle all aircraft loading scenarios correctly
-- Balancing accuracy with performance in the CG calculations
-- Handling edge cases in the weight distribution calculations
-- Ensuring proper synchronization of weight data between Prosim and GSX
-- Validating the accuracy of the MAC percentage calculations
+- Ensuring proper integration with Prosim's native loadsheet functionality
+- Handling potential errors or edge cases in the loadsheet generation process
+- Maintaining compatibility with future updates to Prosim's loadsheet system
+- Ensuring proper error handling and recovery for loadsheet generation failures
 - Ensuring the event aggregator system handles all edge cases properly
 - Managing the lifecycle of event subscriptions to prevent memory leaks
 - Balancing event publishing frequency with performance considerations
@@ -162,11 +169,11 @@ Previous work also focused on implementing a new Prosim dataref subscription sys
 - Testing the automatic door operations with various service scenarios
 
 ## Next Steps
-1. Further refine the CG calculation methods for edge cases
-2. Implement additional validation for weight distribution calculations
-3. Add more detailed logging for CG calculations to aid in troubleshooting
-4. Consider implementing additional aircraft types for weight and balance calculations
-5. Optimize the performance of the CG calculation methods
+1. Test the simplified loadsheet generation process with various flight scenarios
+2. Monitor for any issues with Prosim's native loadsheet functionality
+3. Consider adding more detailed logging for loadsheet generation to aid in troubleshooting
+4. Explore potential improvements to error handling for edge cases
+5. Update documentation to reflect the simplified approach to loadsheet generation
 6. Extend the event aggregator system to cover more aspects of the application
 7. Implement additional event types for other state changes in the system
 8. Optimize event publishing frequency for different types of events

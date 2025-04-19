@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using Microsoft.FlightSimulator.SimConnect;
+﻿﻿using Microsoft.FlightSimulator.SimConnect;
 using Microsoft.Win32;
 using Prosim2GSX.Events;
 using Prosim2GSX.Models;
@@ -86,16 +86,11 @@ namespace Prosim2GSX
         private bool equipmentRemoved = false;
         private double finalFuel = 0d;
         private bool finalLoadsheetSend = false;
-        private double finalMacTow = 00.0d;
-        private double finalMacZfw = 00.0d;
         private int finalPax = 0;
-        private double finalTow = 00.0d;
-        private double finalZfw = 00.0d;
         private bool firstRun = true;
         private string flightPlanID = "0";
         private bool initialFuelSet = false;
         private bool initialFluidsSet = false;
-        private double macZfw = 0.0d;
         private bool operatorWasSelected = false;
         private string opsCallsign = "";
         private bool opsCallsignSet = false;
@@ -112,11 +107,7 @@ namespace Prosim2GSX
         private DateTime _nextLoadsheetAttemptTime = DateTime.MinValue;
         private Task<LoadsheetResult> _currentLoadsheetTask = null;
         private string _loadsheetFlightPlanId = null;
-        private double prelimMacTow = 00.0d;
-        private double prelimMacZfw = 00.0d;
         private int prelimPax = 0;
-        private double prelimTow = 00.0d;
-        private double prelimZfw = 00.0d;
         private bool pushFinished = false;
         private bool pushNwsDisco = false;
         private bool pushRunning = false;

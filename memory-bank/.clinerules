@@ -79,6 +79,12 @@
 - Temporary fuel state manipulation for CG calculations may cause brief visual anomalies
 
 ### Error Handling
+- Implement server status checking before attempting critical operations
+- Provide detailed HTTP status code interpretation with specific troubleshooting steps
+- Use sophisticated retry mechanisms with exponential backoff for transient failures
+- Implement timeout handling for network operations
+- Log detailed request/response information for API interactions
+- Use context-aware state handling to prevent incorrect state transitions
 - Gracefully handle connection failures
 - Provide clear error messages
 - Recover from service interruptions
@@ -131,18 +137,17 @@
 - Optimize CG calculations to minimize performance impact
 - Use appropriate tolerances for detecting significant changes in loadsheet values
 
-### Weight and Balance Calculation Patterns
-- Use proper A320 reference values for MAC calculations
-- Implement temporary fuel state manipulation for accurate CG readings
-- Always restore original fuel states after CG calculations
-- Use proper A320 fuel loading patterns for accurate MACTOW calculations
-- Implement tolerance-based comparison for detecting significant CG changes
-- Use MAC percentage for standardized CG representation
-- Separate preliminary and final loadsheet calculations
-- Mark significant changes between preliminary and final loadsheets
-- Distribute passengers across cabin zones based on zone capacities
-- Distribute cargo between forward and aft compartments
-- Distribute fuel across center, left, and right tanks
+### Loadsheet Generation Patterns
+- Use Prosim's native loadsheet functionality instead of custom calculations
+- Implement server status checking before attempting loadsheet generation
+- Use detailed HTTP status code interpretation for troubleshooting
+- Implement retry logic with exponential backoff for transient failures
+- Log detailed request/response information for API interactions
+- Track loadsheet generation state to avoid duplicate generation
+- Reset loadsheet flags when a new flight plan is loaded
+- Subscribe to loadsheet datarefs to receive loadsheet data
+- Send loadsheet data to ACARS if enabled
+- Provide specific error messages for common failure scenarios
 
 ## Future Development
 
@@ -163,7 +168,7 @@
 - Identify additional datarefs that could benefit from subscription
 - Implement priority levels for different dataref monitors
 - Optimize monitoring intervals based on dataref change frequency
-- Further refine CG calculation methods for edge cases
-- Implement additional validation for weight distribution calculations
-- Add more detailed logging for CG calculations
-- Optimize the performance of CG calculation methods
+- Enhance integration with Prosim's native loadsheet functionality
+- Improve error handling for loadsheet generation
+- Add more detailed logging for loadsheet generation
+- Optimize the loadsheet generation process
