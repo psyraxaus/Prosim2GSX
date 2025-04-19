@@ -1,4 +1,5 @@
-﻿﻿using Prosim2GSX.Behaviours;
+﻿using Prosim2GSX;
+using Prosim2GSX.Behaviours;
 using Prosim2GSX.Services.Audio;
 using System;
 using System.Collections.Generic;
@@ -92,27 +93,87 @@ namespace Prosim2GSX.Models
 
         public bool IsVhf1Controllable()
         {
-            return Vhf1VolumeControl && (AudioApiType == AudioApiType.VoiceMeeter || !string.IsNullOrEmpty(Vhf1VolumeApp));
+            bool hasVoiceMeeterStrip = AudioApiType == AudioApiType.VoiceMeeter && 
+                                       VoiceMeeterStrips.ContainsKey(AudioChannel.VHF1) && 
+                                       !string.IsNullOrEmpty(VoiceMeeterStrips[AudioChannel.VHF1]);
+            
+            bool hasCoreAudioApp = !string.IsNullOrEmpty(Vhf1VolumeApp);
+            
+            // Log the result for debugging
+            Logger.Log(Prosim2GSX.LogLevel.Debug, "ServiceModel", 
+                $"IsVhf1Controllable: Control={Vhf1VolumeControl}, API={AudioApiType}, " +
+                $"HasStrip={hasVoiceMeeterStrip}, HasApp={hasCoreAudioApp}, " +
+                $"Result={Vhf1VolumeControl && (hasVoiceMeeterStrip || hasCoreAudioApp)}");
+            
+            return Vhf1VolumeControl && (hasVoiceMeeterStrip || hasCoreAudioApp);
         }
 
         public bool IsVhf2Controllable()
         {
-            return Vhf2VolumeControl && (AudioApiType == AudioApiType.VoiceMeeter || !string.IsNullOrEmpty(Vhf2VolumeApp));
+            bool hasVoiceMeeterStrip = AudioApiType == AudioApiType.VoiceMeeter && 
+                                       VoiceMeeterStrips.ContainsKey(AudioChannel.VHF2) && 
+                                       !string.IsNullOrEmpty(VoiceMeeterStrips[AudioChannel.VHF2]);
+            
+            bool hasCoreAudioApp = !string.IsNullOrEmpty(Vhf2VolumeApp);
+            
+            // Log the result for debugging
+            Logger.Log(Prosim2GSX.LogLevel.Debug, "ServiceModel", 
+                $"IsVhf2Controllable: Control={Vhf2VolumeControl}, API={AudioApiType}, " +
+                $"HasStrip={hasVoiceMeeterStrip}, HasApp={hasCoreAudioApp}, " +
+                $"Result={Vhf2VolumeControl && (hasVoiceMeeterStrip || hasCoreAudioApp)}");
+            
+            return Vhf2VolumeControl && (hasVoiceMeeterStrip || hasCoreAudioApp);
         }
 
         public bool IsVhf3Controllable()
         {
-            return Vhf3VolumeControl && (AudioApiType == AudioApiType.VoiceMeeter || !string.IsNullOrEmpty(Vhf3VolumeApp));
+            bool hasVoiceMeeterStrip = AudioApiType == AudioApiType.VoiceMeeter && 
+                                       VoiceMeeterStrips.ContainsKey(AudioChannel.VHF3) && 
+                                       !string.IsNullOrEmpty(VoiceMeeterStrips[AudioChannel.VHF3]);
+            
+            bool hasCoreAudioApp = !string.IsNullOrEmpty(Vhf3VolumeApp);
+            
+            // Log the result for debugging
+            Logger.Log(Prosim2GSX.LogLevel.Debug, "ServiceModel", 
+                $"IsVhf3Controllable: Control={Vhf3VolumeControl}, API={AudioApiType}, " +
+                $"HasStrip={hasVoiceMeeterStrip}, HasApp={hasCoreAudioApp}, " +
+                $"Result={Vhf3VolumeControl && (hasVoiceMeeterStrip || hasCoreAudioApp)}");
+            
+            return Vhf3VolumeControl && (hasVoiceMeeterStrip || hasCoreAudioApp);
         }
 
         public bool IsCabControllable()
         {
-            return CabVolumeControl && (AudioApiType == AudioApiType.VoiceMeeter || !string.IsNullOrEmpty(CabVolumeApp));
+            bool hasVoiceMeeterStrip = AudioApiType == AudioApiType.VoiceMeeter && 
+                                       VoiceMeeterStrips.ContainsKey(AudioChannel.CAB) && 
+                                       !string.IsNullOrEmpty(VoiceMeeterStrips[AudioChannel.CAB]);
+            
+            bool hasCoreAudioApp = !string.IsNullOrEmpty(CabVolumeApp);
+            
+            // Log the result for debugging
+            Logger.Log(Prosim2GSX.LogLevel.Debug, "ServiceModel", 
+                $"IsCabControllable: Control={CabVolumeControl}, API={AudioApiType}, " +
+                $"HasStrip={hasVoiceMeeterStrip}, HasApp={hasCoreAudioApp}, " +
+                $"Result={CabVolumeControl && (hasVoiceMeeterStrip || hasCoreAudioApp)}");
+            
+            return CabVolumeControl && (hasVoiceMeeterStrip || hasCoreAudioApp);
         }
 
         public bool IsPaControllable()
         {
-            return PaVolumeControl && (AudioApiType == AudioApiType.VoiceMeeter || !string.IsNullOrEmpty(PaVolumeApp));
+            bool hasVoiceMeeterStrip = AudioApiType == AudioApiType.VoiceMeeter && 
+                                       VoiceMeeterStrips.ContainsKey(AudioChannel.PA) && 
+                                       !string.IsNullOrEmpty(VoiceMeeterStrips[AudioChannel.PA]);
+            
+            bool hasCoreAudioApp = !string.IsNullOrEmpty(PaVolumeApp);
+            
+            // Log the result for debugging
+            Logger.Log(Prosim2GSX.LogLevel.Debug, "ServiceModel", 
+                $"IsPaControllable: Control={PaVolumeControl}, API={AudioApiType}, " +
+                $"HasStrip={hasVoiceMeeterStrip}, HasApp={hasCoreAudioApp}, " +
+                $"Result={PaVolumeControl && (hasVoiceMeeterStrip || hasCoreAudioApp)}");
+            
+            return PaVolumeControl && (hasVoiceMeeterStrip || hasCoreAudioApp);
         }
 
         protected void LoadConfiguration()

@@ -14,6 +14,12 @@ Before the UI update, the focus was on implementing an event aggregator system t
 Previous work also focused on implementing a new Prosim dataref subscription system and enhancing the cockpit door integration between Prosim and GSX. The dataref subscription system involved creating a callback-based monitoring system for Prosim datarefs and implementing synchronization between the cockpit door state in Prosim and the corresponding LVAR in GSX. The implementation allows the cockpit door to muffle cabin sounds when closed, enhancing the realism of the simulation. Additionally, the previous work on cargo door logic, catering service door operation, and refueling process enhancements has been thoroughly tested and verified.
 
 ## Recent Changes
+- Fixed VoiceMeeter channel control issue:
+  - Fixed namespace conflict with LogLevel enum in ServiceModel.cs by using fully qualified name (Prosim2GSX.LogLevel)
+  - Updated VoicemeeterRemote64.dll to a newer version for better compatibility across different systems
+  - Enhanced error handling for VoiceMeeter API initialization
+  - Improved logging for VoiceMeeter operations to aid in debugging
+
 - Simplified loadsheet generation by removing redundant custom weight and balance calculations:
   - Removed redundant variables from GsxController.cs (finalMacTow, finalMacZfw, prelimMacTow, prelimMacZfw, finalTow, finalZfw, prelimTow, prelimZfw, macZfw)
   - Removed custom weight and balance calculation methods from ProsimController.cs

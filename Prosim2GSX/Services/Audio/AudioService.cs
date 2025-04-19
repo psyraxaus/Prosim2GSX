@@ -829,6 +829,142 @@ namespace Prosim2GSX.Services.Audio
         }
 
         /// <summary>
+        /// Performs a diagnostic check of the VoiceMeeter API and logs detailed information
+        /// </summary>
+        /// <returns>True if all checks pass, false otherwise</returns>
+        public bool PerformVoiceMeeterDiagnostics()
+        {
+            if (_model.AudioApiType != AudioApiType.VoiceMeeter)
+            {
+                Logger.Log(LogLevel.Warning, "AudioService", "Cannot perform VoiceMeeter diagnostics: Audio API type is not set to VoiceMeeter");
+                return false;
+            }
+
+            Logger.Log(LogLevel.Information, "AudioService", "Starting VoiceMeeter diagnostics");
+            
+            // First, run the VoiceMeeter API diagnostics
+            bool apiDiagnosticsSuccess = _voiceMeeterApi.PerformDiagnostics();
+            
+            // Then, check the FCU mode
+            Logger.Log(LogLevel.Information, "AudioService", "Checking FCU mode...");
+            Logger.Log(LogLevel.Information, "AudioService", $"FCU Track/FPA Mode: {_fcuTrackFpaMode}");
+            Logger.Log(LogLevel.Information, "AudioService", $"FCU Heading/VS Mode: {_fcuHeadingVsMode}");
+            
+            if (!_fcuTrackFpaMode && !_fcuHeadingVsMode)
+            {
+                Logger.Log(LogLevel.Warning, "AudioService", "FCU is not in the correct mode for audio control");
+            }
+            
+            // Check the VoiceMeeter strip configuration
+            Logger.Log(LogLevel.Information, "AudioService", "Checking VoiceMeeter strip configuration...");
+            
+            foreach (var channelEntry in _model.AudioChannels)
+            {
+                var channel = channelEntry.Key;
+                var config = channelEntry.Value;
+                
+                if (config.Enabled)
+                {
+                    Logger.Log(LogLevel.Information, "AudioService", $"Channel {channel} is enabled");
+                    
+                    // Check if the channel has a VoiceMeeter strip configured
+                    if (_model is ServiceModel serviceModel)
+                    {
+                        bool hasDeviceType = serviceModel.VoiceMeeterDeviceTypes.TryGetValue(channel, out var deviceType);
+                        bool hasStrip = serviceModel.VoiceMeeterStrips.TryGetValue(channel, out var stripName);
+                        
+                        Logger.Log(LogLevel.Information, "AudioService", 
+                            $"  Device Type: {(hasDeviceType ? deviceType.ToString() : "Not configured")}");
+                        Logger.Log(LogLevel.Information, "AudioService", 
+                            $"  Strip Name: {(hasStrip ? stripName : "Not configured")}");
+                        
+                        if (hasStrip && !string.IsNullOrEmpty(stripName))
+                        {
+                            // Check if the strip exists in VoiceMeeter
+                            var strips = _voiceMeeterApi.GetAvailableStripsWithLabels();
+                            var buses = _voiceMeeterApi.GetAvailableBusesWithLabels();
+                            
+                            bool stripExists = false;
+                            
+                            if (deviceType == VoiceMeeterDeviceType.Strip)
+                            {
+                                stripExists = strips.Any(s => s.Key == stripName);
+                            }
+                            else
+                            {
+                                stripExists = buses.Any(b => b.Key == stripName);
+                            }
+                            
+                            Logger.Log(LogLevel.Information, "AudioService", 
+                                $"  Strip exists in VoiceMeeter: {stripExists}");
+                            
+                            if (!stripExists)
+                            {
+                                Logger.Log(LogLevel.Warning, "AudioService", 
+                                    $"  Strip {stripName} does not exist in VoiceMeeter");
+                            }
+                        }
+                        else
+                        {
+                            Logger.Log(LogLevel.Warning, "AudioService", 
+                                $"  No VoiceMeeter strip configured for channel {channel}");
+                        }
+                    }
+                    
+                    // Check if the channel is controllable
+                    bool isControllable = false;
+                    
+                    switch (channel)
+                    {
+                        case AudioChannel.VHF1:
+                            isControllable = _model.IsVhf1Controllable();
+                            break;
+                        case AudioChannel.VHF2:
+                            isControllable = _model.IsVhf2Controllable();
+                            break;
+                        case AudioChannel.VHF3:
+                            isControllable = _model.IsVhf3Controllable();
+                            break;
+                        case AudioChannel.CAB:
+                            isControllable = _model.IsCabControllable();
+                            break;
+                        case AudioChannel.PA:
+                            isControllable = _model.IsPaControllable();
+                            break;
+                        case AudioChannel.INT:
+                            isControllable = _model.GsxVolumeControl;
+                            break;
+                    }
+                    
+                    Logger.Log(LogLevel.Information, "AudioService", $"  Is controllable: {isControllable}");
+                    
+                    if (!isControllable)
+                    {
+                        Logger.Log(LogLevel.Warning, "AudioService", $"  Channel {channel} is not controllable");
+                    }
+                }
+                else
+                {
+                    Logger.Log(LogLevel.Information, "AudioService", $"Channel {channel} is disabled");
+                }
+            }
+            
+            // Check the cached VoiceMeeter volumes and mutes
+            Logger.Log(LogLevel.Information, "AudioService", "Checking cached VoiceMeeter volumes and mutes...");
+            
+            foreach (var channelEntry in _voiceMeeterVolumes)
+            {
+                Logger.Log(LogLevel.Information, "AudioService", 
+                    $"  {channelEntry.Key}: Volume={channelEntry.Value} dB, " +
+                    $"Mute={(_voiceMeeterMutes.TryGetValue(channelEntry.Key, out bool muted) ? muted : false)}");
+            }
+            
+            Logger.Log(LogLevel.Information, "AudioService", "VoiceMeeter diagnostics completed");
+            
+            return apiDiagnosticsSuccess;
+        }
+
+        /// <summary>
         /// Synchronizes the dataref values with VoiceMeeter parameters
         /// </summary>
         private void SynchronizeDatarefsWithVoiceMeeter()

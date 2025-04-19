@@ -37,6 +37,6 @@ namespace Prosim2GSX.Services.Audio
         /// <param name="sourceName">Friendly name of the audio source to remove</param>
         void RemoveAudioSource(string sourceName);
 
-        void Dispose();
+        new void Dispose();
     }
 }

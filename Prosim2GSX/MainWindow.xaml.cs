@@ -1,4 +1,4 @@
-﻿﻿using Prosim2GSX.Events;
+﻿﻿﻿﻿using Prosim2GSX.Events;
 using Prosim2GSX.Themes;
 using System;
 using System.Collections.Generic;
@@ -859,6 +859,66 @@ namespace Prosim2GSX
             }
             _subscriptionTokens.Clear();
         }
+        
+        private void btnRunVoiceMeeterDiagnostics_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Check if VoiceMeeter API is selected
+                if (serviceModel.AudioApiType != AudioApiType.VoiceMeeter)
+                {
+                    MessageBox.Show(
+                        "VoiceMeeter API must be selected to run diagnostics. Please select VoiceMeeter API first.",
+                        "VoiceMeeter API Not Selected",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
+                }
+                
+                // Get the service controller
+                var serviceController = IPCManager.ServiceController;
+                if (serviceController == null)
+                {
+                    MessageBox.Show(
+                        "Service controller is not available. Please try again later.",
+                        "Service Controller Not Available",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                    return;
+                }
+                
+                // Run the diagnostics
+                Logger.Log(LogLevel.Information, "MainWindow", "Starting VoiceMeeter diagnostics...");
+                bool success = serviceController.PerformVoiceMeeterDiagnostics();
+                
+                // Show a message box with the result
+                if (success)
+                {
+                    MessageBox.Show(
+                        "VoiceMeeter diagnostics completed successfully. Check the log for details.",
+                        "Diagnostics Successful",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
+                else
+                {
+                    MessageBox.Show(
+                        "VoiceMeeter diagnostics completed with errors. Check the log for details.",
+                        "Diagnostics Failed",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "MainWindow", $"Error running VoiceMeeter diagnostics: {ex.Message}");
+                MessageBox.Show(
+                    $"Error running VoiceMeeter diagnostics: {ex.Message}",
+                    "Diagnostics Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
 
         private void LoadThemes()
         {
@@ -994,6 +1054,9 @@ namespace Prosim2GSX
         private void UpdateAudioApiVisibility()
         {
             bool isCoreAudio = serviceModel.AudioApiType == AudioApiType.CoreAudio;
+
+            // Update VoiceMeeter diagnostics button visibility
+            pnlVoiceMeeterDiagnostics.Visibility = isCoreAudio ? Visibility.Collapsed : Visibility.Visible;
 
             // Update INT channel visibility
             pnlIntCoreAudio.Visibility = isCoreAudio ? Visibility.Visible : Visibility.Collapsed;
