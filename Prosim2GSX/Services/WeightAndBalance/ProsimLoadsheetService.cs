@@ -315,11 +315,81 @@ namespace Prosim2GSX.Services.WeightAndBalance
                         // Make sure the content is exactly the same format
                         var content = new StringContent("{}", Encoding.UTF8, "application/json");
                         
+                        // Validate the backend URL
+                        if (string.IsNullOrEmpty(_prosimController.Interface.GetBackendUrl()))
+                        {
+                            Logger.Log(LogLevel.Error, "ProsimLoadsheetService", 
+                                "Backend URL is empty. Prosim EFB server may not be running or properly configured.");
+                            return LoadsheetResult.CreateFailure(
+                                "Backend URL is empty. Prosim EFB server may not be running or properly configured.");
+                        }
+                        
                         // Log the exact request being sent
                         Logger.Log(LogLevel.Debug, "ProsimLoadsheetService", 
                             $"Sending request to URL: {fullUrl}, Content: {await content.ReadAsStringAsync()}");
                         
-                        var response = await client.PostAsync(fullUrl, content);
+                        // Log flight data being used for loadsheet generation
+                        Logger.Log(LogLevel.Debug, "ProsimLoadsheetService", 
+                            $"Generating {type} loadsheet with: {paxCount} passengers, {cargoKg}kg cargo, {fuelKg}kg fuel");
+                        
+                        // Set timeout to detect connection issues faster
+                        client.Timeout = TimeSpan.FromSeconds(10);
+                        
+                        // Send the request and capture detailed timing
+                        DateTime requestStart = DateTime.Now;
+                        HttpResponseMessage response;
+                        
+                        try
+                        {
+                            response = await client.PostAsync(fullUrl, content);
+                        }
+                        catch (TaskCanceledException)
+                        {
+                            // Handle timeout specifically
+                            TimeSpan elapsed = DateTime.Now - requestStart;
+                            Logger.Log(LogLevel.Error, "ProsimLoadsheetService", 
+                                $"Request timed out after {elapsed.TotalSeconds:F1} seconds. " +
+                                "Check if Prosim EFB server is running and responsive.");
+                            
+                            if (retryCount < maxRetries)
+                            {
+                                retryCount++;
+                                int delayMs = 1000 * retryCount;
+                                Logger.Log(LogLevel.Warning, "ProsimLoadsheetService", 
+                                    $"Retrying in {delayMs/1000} seconds (attempt {retryCount}/{maxRetries})...");
+                                await Task.Delay(delayMs);
+                                continue;
+                            }
+                            
+                            return LoadsheetResult.CreateFailure(
+                                "Request timed out. Check if Prosim EFB server is running and responsive.");
+                        }
+                        catch (HttpRequestException ex)
+                        {
+                            // Handle connection issues
+                            Logger.Log(LogLevel.Error, "ProsimLoadsheetService", 
+                                $"HTTP request error: {ex.Message}. " +
+                                "Check network connectivity and if Prosim EFB server is running.");
+                            
+                            if (retryCount < maxRetries)
+                            {
+                                retryCount++;
+                                int delayMs = 1000 * retryCount;
+                                Logger.Log(LogLevel.Warning, "ProsimLoadsheetService", 
+                                    $"Retrying in {delayMs/1000} seconds (attempt {retryCount}/{maxRetries})...");
+                                await Task.Delay(delayMs);
+                                continue;
+                            }
+                            
+                            return LoadsheetResult.CreateFailure(
+                                $"HTTP request error: {ex.Message}. Check network connectivity and if Prosim EFB server is running.");
+                        }
+                        
+                        // Calculate and log request duration
+                        TimeSpan requestDuration = DateTime.Now - requestStart;
+                        Logger.Log(LogLevel.Debug, "ProsimLoadsheetService", 
+                            $"Request completed in {requestDuration.TotalMilliseconds:F0}ms");
+                        
                         string responseContent = await response.Content.ReadAsStringAsync();
                         
                         // Always log response for debugging
@@ -423,6 +493,68 @@ namespace Prosim2GSX.Services.WeightAndBalance
             catch (Exception ex)
             {
                 Logger.Log(LogLevel.Error, "ProsimLoadsheetService", $"Error resending loadsheet: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Check if the Prosim EFB server is running and accessible
+        /// </summary>
+        /// <returns>True if the server is accessible, false otherwise</returns>
+        public async Task<bool> CheckServerStatus()
+        {
+            try
+            {
+                Logger.Log(LogLevel.Information, "ProsimLoadsheetService", "Checking Prosim EFB server status");
+                
+                // Validate the backend URL
+                string backendUrl = _prosimController.Interface.GetBackendUrl();
+                if (string.IsNullOrEmpty(backendUrl))
+                {
+                    Logger.Log(LogLevel.Error, "ProsimLoadsheetService", 
+                        "Backend URL is empty. Prosim EFB server may not be properly configured.");
+                    return false;
+                }
+                
+                // Create a simple GET request to check if the server is running
+                using (var client = new HttpClient())
+                {
+                    // Set a short timeout to avoid hanging
+                    client.Timeout = TimeSpan.FromSeconds(5);
+                    
+                    // Send the request and capture timing
+                    DateTime requestStart = DateTime.Now;
+                    
+                    try
+                    {
+                        // Use the health endpoint if available, or fall back to the root
+                        string url = $"{backendUrl}/health";
+                        var response = await client.GetAsync(url);
+                        
+                        // Calculate request duration
+                        TimeSpan requestDuration = DateTime.Now - requestStart;
+                        
+                        // Log the result
+                        Logger.Log(LogLevel.Information, "ProsimLoadsheetService", 
+                            $"Server check completed in {requestDuration.TotalMilliseconds:F0}ms. " +
+                            $"Status: {response.StatusCode}");
+                        
+                        return response.IsSuccessStatusCode;
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log the error
+                        Logger.Log(LogLevel.Error, "ProsimLoadsheetService", 
+                            $"Error checking server status: {ex.Message}");
+                        
+                        return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "ProsimLoadsheetService", 
+                    $"Unexpected error checking server status: {ex.Message}");
                 return false;
             }
         }
