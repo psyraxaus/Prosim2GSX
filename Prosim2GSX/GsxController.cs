@@ -11,9 +11,12 @@ using System.Diagnostics;
 using System.Drawing.Text;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace Prosim2GSX
 {
@@ -38,8 +41,7 @@ namespace Prosim2GSX
 
         private readonly IAudioService _audioService;
 
-        private readonly IWeightAndBalanceCalculator _weightAndBalance;
-        private readonly LoadsheetFormatter _loadsheetFormatter;
+        private readonly Services.WeightAndBalance.ProsimLoadsheetService _loadsheetService;
 
         private DataRefChangedHandler cockpitDoorHandler;
         private DataRefChangedHandler onGPUStateChanged;
@@ -84,16 +86,11 @@ namespace Prosim2GSX
         private bool equipmentRemoved = false;
         private double finalFuel = 0d;
         private bool finalLoadsheetSend = false;
-        private double finalMacTow = 00.0d;
-        private double finalMacZfw = 00.0d;
         private int finalPax = 0;
-        private double finalTow = 00.0d;
-        private double finalZfw = 00.0d;
         private bool firstRun = true;
         private string flightPlanID = "0";
         private bool initialFuelSet = false;
         private bool initialFluidsSet = false;
-        private double macZfw = 0.0d;
         private bool operatorWasSelected = false;
         private string opsCallsign = "";
         private bool opsCallsignSet = false;
@@ -103,11 +100,14 @@ namespace Prosim2GSX
         private bool planePositioned = false;
         private double prelimFuel = 0d;
         private bool prelimLoadsheet = false;
-        private double prelimMacTow = 00.0d;
-        private double prelimMacZfw = 00.0d;
+        
+        // Loadsheet generation state tracking
+        private enum LoadsheetState { NotStarted, Waiting, Generating, Completed, Failed }
+        private LoadsheetState _prelimLoadsheetState = LoadsheetState.NotStarted;
+        private DateTime _nextLoadsheetAttemptTime = DateTime.MinValue;
+        private Task<LoadsheetResult> _currentLoadsheetTask = null;
+        private string _loadsheetFlightPlanId = null;
         private int prelimPax = 0;
-        private double prelimTow = 00.0d;
-        private double prelimZfw = 00.0d;
         private bool pushFinished = false;
         private bool pushNwsDisco = false;
         private bool pushRunning = false;
@@ -161,9 +161,9 @@ namespace Prosim2GSX
 
             SimConnect = IPCManager.SimConnect;
 
-            // Initialize weight and balance calculator and formatter
-            _weightAndBalance = new A320WeightAndBalance(prosimController, SimConnect);
-            _loadsheetFormatter = new LoadsheetFormatter();
+            // Initialize loadsheet service
+            _loadsheetService = new ProsimLoadsheetService(prosimController);
+            _loadsheetService.SubscribeToLoadsheetChanges();
 
             SimConnect.SubscribeSimVar("SIM ON GROUND", "Bool");
             SimConnect.SubscribeLvar("FSDT_GSX_DEBOARDING_STATE", OnDeboardingStateChanged);
@@ -358,6 +358,8 @@ namespace Prosim2GSX
                     CurrentFlightState = FlightState.DEPARTURE;
                     flightPlanID = ProsimController.flightPlanID;
                     SetPassengers(ProsimController.GetPaxPlanned());
+                    currentDeboardState = 0; // Reset deboarding state when transitioning to DEPARTURE
+                    Logger.Log(LogLevel.Debug, "GsxController:RunServices", $"Reset currentDeboardState to 0 for new flight");
 
                     Logger.Log(LogLevel.Information, "GsxController:RunServices", $"State Change: Preparation -> DEPARTURE (Waiting for Refueling and Boarding)");
                 }
@@ -383,47 +385,67 @@ namespace Prosim2GSX
                 return;
             }
 
-            //DEPARTURE - Get sim Zulu Time and send Prelim Loadsheet
+            //DEPARTURE - Generate Preliminary Loadsheet
             if (_state == FlightState.DEPARTURE && !prelimLoadsheet)
             {
-
-                var simTime = SimConnect.ReadEnvVar("ZULU TIME", "Seconds");
-                TimeSpan time = TimeSpan.FromSeconds(simTime);
-                Logger.Log(LogLevel.Debug, "GsxController:RunServices", $"ZULU time - {simTime}");
-
-                string flightNumber  = ProsimController.GetFMSFlightNumber();
-
-                if (Model.UseAcars && !string.IsNullOrEmpty(flightNumber))
+                if (ProsimController.GetStatusFunction("aircraft.refuel.fuelTarget") >= 1)
                 {
-                    // Calculate preliminary loadsheet
-                    LoadsheetData prelimData = _weightAndBalance.CalculatePreliminaryLoadsheet(FlightPlan);
+                    Logger.Log(LogLevel.Information, "GsxController:RunServices", $"Generating preliminary loadsheet using Prosim native functionality");
 
-                    // Store data for later reference
-                    prelimZfw = prelimData.ZeroFuelWeight;
-                    prelimTow = prelimData.TakeoffWeight;
-                    prelimMacZfw = prelimData.ZeroFuelWeightMac;
-                    prelimMacTow = prelimData.TakeoffWeightMac;
-                    prelimPax = prelimData.TotalPassengers;
-                    prelimFuel = Math.Round(prelimData.FuelWeight);
-
-                    // Format loadsheet
-                    var maxWeights = ProsimController.GetMaxWeights();
-                    var simulatorDateTime = ProsimController.Interface.GetProsimVariable("aircraft.time");
-                    string timeIn24HourFormat = simulatorDateTime.ToString("HHmm");
-                    string prelimLoadsheetString = _loadsheetFormatter.FormatLoadSheet("prelim", timeIn24HourFormat, prelimData,flightNumber, FlightPlan.TailNumber, FlightPlan.DayOfFlight, FlightPlan.DateOfFlight,FlightPlan.Origin, FlightPlan.Destination,maxWeights.Item1, maxWeights.Item2, maxWeights.Item3,0);
-
-                    try
+                    // First check if the Prosim EFB server is running and accessible
+                    _loadsheetService.CheckServerStatus().ContinueWith(serverCheckTask =>
                     {
-                        System.Threading.Tasks.Task task = AcarsClient.SendMessageToAcars(
-                            flightNumber, "telex", prelimLoadsheetString);
-                        prelimLoadsheet = true;
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Log(LogLevel.Debug, "GsxController:RunServices", $"Error Sending ACARS - {ex.Message}");
-                    }
+                        if (serverCheckTask.IsFaulted)
+                        {
+                            Logger.Log(LogLevel.Error, "GsxController:RunServices",
+                                $"Error checking Prosim EFB server status: {serverCheckTask.Exception?.InnerException?.Message ?? "Unknown error"}");
+                            return;
+                        }
+
+                        bool serverAvailable = serverCheckTask.Result;
+                        if (!serverAvailable)
+                        {
+                            Logger.Log(LogLevel.Error, "GsxController:RunServices",
+                                "Prosim EFB server is not available. Cannot generate loadsheet. " +
+                                "Check if Prosim is running and the EFB server is properly configured.");
+                            return;
+                        }
+
+                        // Server is available, proceed with loadsheet generation
+                        Logger.Log(LogLevel.Information, "GsxController:RunServices",
+                            "Prosim EFB server is available. Proceeding with loadsheet generation.");
+
+                        // Generate preliminary loadsheet using Prosim's native functionality with enhanced error handling
+                        _loadsheetService.GenerateLoadsheet("Preliminary").ContinueWith(task =>
+                        {
+                            if (task.IsFaulted)
+                            {
+                                // Handle task failure (exception in the task itself)
+                                Logger.Log(LogLevel.Error, "GsxController:RunServices",
+                                    $"Task exception while generating preliminary loadsheet: {task.Exception?.InnerException?.Message ?? "Unknown error"}");
+                                return;
+                            }
+
+                            var result = task.Result;
+                            if (result.Success)
+                            {
+                                prelimLoadsheet = true;
+                                Logger.Log(LogLevel.Information, "GsxController:RunServices", 
+                                    "Preliminary loadsheet generated successfully");
+                            }
+                            else
+                            {
+                                // Use the dedicated error logging method
+                                LogLoadsheetError(result, "preliminary", "GsxController:RunServices");
+                            }
+                        });
+                    });
                 }
-                
+                else
+                {
+                    Logger.Log(LogLevel.Debug, "GsxController:RunServices", $"aircraft.refuel.fuelTarget not set yet. Waiting for refuel target to be set");
+                    prelimLoadsheet = false;
+                }
             }
 
             //DEPARTURE - Boarding & Refueling
@@ -543,6 +565,10 @@ namespace Prosim2GSX
                     {
                         AcarsClient.SetCallsign(FlightCallsignToOpsCallsign(ProsimController.flightNumber));
                     }
+                    
+                    // Reset loadsheet flags in the loadsheet service to ensure we generate new loadsheets for the new flight
+                    _loadsheetService.ResetLoadsheetFlags();
+                    
                     CurrentFlightState = FlightState.DEPARTURE;
                     planePositioned = true;
                     connectCalled = true;
@@ -567,6 +593,9 @@ namespace Prosim2GSX
                     delayCounter = 0;
                     paxPlanned = 0;
                     delay = 0;
+                    prelimLoadsheet = false; // Reset the preliminary loadsheet flag
+                    currentDeboardState = 0; // Reset deboarding state when transitioning to DEPARTURE
+                    Logger.Log(LogLevel.Debug, "GsxController:RunServices", $"Reset currentDeboardState to 0 for new flight");
 
                     Logger.Log(LogLevel.Information, "GsxController:RunServices", $"State Change: Turn-Around -> DEPARTURE (Waiting for Refueling and Boarding)");
                 }
@@ -790,44 +819,77 @@ namespace Prosim2GSX
                 }
                 else
                 {
-                    Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Transmitting Final Loadsheet ...");
-                    ProsimController.TriggerFinal();
-
-                    // Calculate final loadsheet
-                    LoadsheetData finalData = _weightAndBalance.CalculateFinalLoadsheet();
-
-                    // Store final values
-                    finalZfw = finalData.ZeroFuelWeight;
-                    finalTow = finalData.TakeoffWeight;
-                    finalMacZfw = finalData.ZeroFuelWeightMac;
-                    finalMacTow = finalData.TakeoffWeightMac;
-                    finalPax = finalData.TotalPassengers;
-                    finalFuel = Math.Round(finalData.FuelWeight);
-
-                    finalLoadsheetSend = true;
-                    Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Final Loadsheet sent to ACARS");
-
-                    if (Model.UseAcars)
+                    Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", $"Generating final loadsheet using Prosim native functionality");
+                    
+                    // First check if the Prosim EFB server is running and accessible
+                    _loadsheetService.CheckServerStatus().ContinueWith(serverCheckTask =>
                     {
-                        // Create preliminary data container for comparison
-                        LoadsheetData prelimData = new LoadsheetData
+                        if (serverCheckTask.IsFaulted)
                         {
-                            ZeroFuelWeight = prelimZfw,
-                            TakeoffWeight = prelimTow,
-                            ZeroFuelWeightMac = prelimMacZfw,
-                            TakeoffWeightMac = prelimMacTow,
-                            TotalPassengers = prelimPax,
-                            FuelWeight = prelimFuel
-                        };
+                            Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices",
+                                $"Error checking Prosim EFB server status: {serverCheckTask.Exception?.InnerException?.Message ?? "Unknown error"}");
+                            return;
+                        }
 
-                        // Format loadsheet with comparison to preliminary
-                        var maxWeights = ProsimController.GetMaxWeights();
-                        var simulatorDateTime = ProsimController.Interface.GetProsimVariable("aircraft.time");
-                        string timeIn24HourFormat = simulatorDateTime.ToString("HHmm");
-                        string finalLoadsheetString = _loadsheetFormatter.FormatLoadSheet("final", timeIn24HourFormat, finalData,ProsimController.GetFMSFlightNumber(), FlightPlan.TailNumber,FlightPlan.DayOfFlight, FlightPlan.DateOfFlight,FlightPlan.Origin, FlightPlan.Destination,maxWeights.Item1, maxWeights.Item2, maxWeights.Item3,0, prelimData);
-                        System.Threading.Tasks.Task task = AcarsClient.SendMessageToAcars(
-                            ProsimController.GetFMSFlightNumber(), "telex", finalLoadsheetString);
-                    }
+                        bool serverAvailable = serverCheckTask.Result;
+                        if (!serverAvailable)
+                        {
+                            Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices",
+                                "Prosim EFB server is not available. Cannot generate final loadsheet. " +
+                                "Check if Prosim is running and the EFB server is properly configured.");
+                            return;
+                        }
+
+                        // Server is available, proceed with loadsheet generation
+                        Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices",
+                            "Prosim EFB server is available. Proceeding with final loadsheet generation.");
+                    
+                        // Generate final loadsheet using Prosim's native functionality with enhanced error handling
+                        _loadsheetService.GenerateLoadsheet("Final").ContinueWith(task => {
+                            if (task.IsFaulted)
+                            {
+                                // Handle task failure (exception in the task itself)
+                                Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", 
+                                    $"Task exception while generating final loadsheet: {task.Exception?.InnerException?.Message ?? "Unknown error"}");
+                                return;
+                            }
+                            
+                            var result = task.Result;
+                            if (result.Success)
+                            {
+                                finalLoadsheetSend = true;
+                                Logger.Log(LogLevel.Information, "GsxController:RunDEPARTUREServices", 
+                                    "Final loadsheet generated and sent to MCDU successfully");
+                                
+                                // If ACARS is enabled, we can still send the loadsheet data via ACARS
+                                if (Model.UseAcars)
+                                {
+                                    try
+                                    {
+                                        // Get the loadsheet data from Prosim
+                                        var loadsheetData = ProsimController.GetLoadsheetData("Final");
+                                        if (loadsheetData != null)
+                                        {
+                                            // Parse the loadsheet data and send it via ACARS
+                                            string finalLoadsheetString = loadsheetData.ToString();
+                                            System.Threading.Tasks.Task acarsTask = AcarsClient.SendMessageToAcars(
+                                                ProsimController.GetFMSFlightNumber(), "telex", finalLoadsheetString);
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Logger.Log(LogLevel.Error, "GsxController:RunDEPARTUREServices", 
+                                            $"Error sending loadsheet to ACARS: {ex.Message}");
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // Use the dedicated error logging method
+                                LogLoadsheetError(result, "final", "GsxController:RunDEPARTUREServices");
+                            }
+                        });
+                    });
                 }
             }
             //EQUIPMENT
@@ -1004,6 +1066,14 @@ namespace Prosim2GSX
 
         private void RunDeboardingService()
         {
+            // Double-check we're in the correct state before starting deboarding
+            if (_state != FlightState.ARRIVAL)
+            {
+                Logger.Log(LogLevel.Warning, "GsxController:RunDeboardingService", 
+                    $"Attempted to run deboarding service in incorrect state: {_state}. Ignoring.");
+                return;
+            }
+            
             if (!deboarding)
             {
                 deboarding = true;
@@ -1170,75 +1240,112 @@ namespace Prosim2GSX
             while (!SimConnect.IsGsxMenuReady && counter < 1000) { Thread.Sleep(100); counter++; }
             Logger.Log(LogLevel.Debug, "GsxController:MenuWaitReady", $"Wait ended after {counter * 100}ms");
         }
-       
+
         /// <summary>
-        /// Compares preliminary and final loadsheet values and marks changes with "//"
+        /// Logs detailed error information for loadsheet generation failures
         /// </summary>
-
-        private (string, string, string, string, string, string, bool) GetLoadSheetDifferences(double prezfw, double preTow, int prePax, double preMacZfw, double preMacTow, double prefuel, double finalZfw, double finalTow, int finalPax, double finalMacZfw, double finalMacTow, double finalfuel)
+        /// <param name="result">The loadsheet result containing error details</param>
+        /// <param name="loadsheetType">The type of loadsheet (preliminary or final)</param>
+        /// <param name="methodName">The method name for logging context</param>
+        private void LogLoadsheetError(LoadsheetResult result, string loadsheetType, string methodName)
         {
-            // Tolerance values for detecting changes
-            const double WeightTolerance = 1000.0; // 1000 kg tolerance for weight values
-            const double MacTolerance = 0.5;     // 0.5% tolerance for MAC values - more sensitive to detect GSX randomization effects
+            // Base error message with context
+            string baseErrorMsg = $"Failed to generate {loadsheetType} loadsheet";
             
-            string zfwChanged = "";
-            string towChanged = "";
-            string paxChanged = "";
-            string macZfwChanged = "";
-            string macTowChanged = "";
-            string fuelChanged = "";
-
-            // Check if values have changed beyond tolerance
-            bool hasZfwChanged = Math.Abs(prezfw - finalZfw) > WeightTolerance;
-            bool hasTowChanged = Math.Abs(preTow - finalTow) > WeightTolerance;
-            bool hasPaxChanged = prePax != finalPax;
-            bool hasMacZfwChanged = Math.Abs(preMacZfw - finalMacZfw) > MacTolerance;
-            bool hasMacTowChanged = Math.Abs(preMacTow - finalMacTow) > MacTolerance;
-            bool hasFuelChanged = Math.Abs(prefuel - finalfuel) > WeightTolerance;
-
-            // Mark changes with "//"
-            if (hasZfwChanged)
+            // Log the primary error with status code if available
+            if (result.StatusCode.HasValue)
             {
-                zfwChanged = "//";
-                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"ZFW changed: {prezfw} -> {finalZfw}");
+                Logger.Log(LogLevel.Error, methodName, 
+                    $"{baseErrorMsg}: HTTP {(int)result.StatusCode} - {result.StatusCode}");
+                
+                // Enhanced guidance based on status code with troubleshooting steps
+                switch (result.StatusCode)
+                {
+                    case HttpStatusCode.NotFound:
+                        Logger.Log(LogLevel.Error, methodName, 
+                            "The loadsheet endpoint was not found. Verify that:\n" +
+                            "1. Prosim's EFB server is running on port 5000\n" +
+                            "2. Network connectivity between applications is working\n" +
+                            "3. No firewall is blocking the connection");
+                        break;
+                    case HttpStatusCode.BadRequest:
+                        Logger.Log(LogLevel.Error, methodName, 
+                            "Bad request to loadsheet endpoint. Verify that:\n" +
+                            "1. The flight plan is loaded correctly\n" +
+                            "2. All required flight data is available (fuel, passengers, cargo)\n" +
+                            "3. The aircraft type is supported by the loadsheet generator");
+                        break;
+                    case HttpStatusCode.Unauthorized:
+                    case HttpStatusCode.Forbidden:
+                        Logger.Log(LogLevel.Error, methodName, 
+                            "Authorization error accessing loadsheet endpoint. Check:\n" +
+                            "1. Prosim configuration for API access\n" +
+                            "2. Any authentication settings in the EFB server");
+                        break;
+                    case HttpStatusCode.InternalServerError:
+                        Logger.Log(LogLevel.Error, methodName, 
+                            "Prosim server error generating loadsheet. Troubleshooting steps:\n" +
+                            "1. Check Prosim logs for detailed error information\n" +
+                            "2. Restart the Prosim EFB server\n" +
+                            "3. Verify flight data is valid and complete");
+                        break;
+                    case HttpStatusCode.ServiceUnavailable:
+                        Logger.Log(LogLevel.Error, methodName, 
+                            "Prosim service unavailable. Try:\n" +
+                            "1. Verifying Prosim is running\n" +
+                            "2. Checking if the EFB server is overloaded\n" +
+                            "3. Restarting the Prosim services");
+                        break;
+                    case HttpStatusCode.RequestTimeout:
+                        Logger.Log(LogLevel.Error, methodName, 
+                            "Request timed out. Check:\n" +
+                            "1. Network connectivity\n" +
+                            "2. Prosim server responsiveness\n" +
+                            "3. If the server is processing other requests");
+                        break;
+                    default:
+                        Logger.Log(LogLevel.Error, methodName, 
+                            $"Unexpected HTTP status: {result.StatusCode}. This may indicate:\n" +
+                            "1. A configuration issue\n" +
+                            "2. An incompatibility between software versions\n" +
+                            "3. A network infrastructure problem");
+                        break;
+                }
             }
-
-            if (hasTowChanged)
+            else
             {
-                towChanged = "//";
-                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"TOW changed: {preTow} -> {finalTow}");
+                // More detailed error logging when no status code is available
+                Logger.Log(LogLevel.Error, methodName, 
+                    $"{baseErrorMsg}: {result.ErrorMessage}\n" +
+                    "This typically indicates a network or application error rather than an HTTP error.");
             }
-
-            if (hasPaxChanged)
+            
+            // Enhanced response content logging with formatting for readability
+            if (!string.IsNullOrEmpty(result.ResponseContent))
             {
-                paxChanged = "//";
-                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"PAX changed: {prePax} -> {finalPax}");
+                try
+                {
+                    // Try to parse and format JSON for better readability
+                    var parsedJson = JsonConvert.DeserializeObject(result.ResponseContent);
+                    string formattedJson = JsonConvert.SerializeObject(parsedJson, Formatting.Indented);
+                    Logger.Log(LogLevel.Error, methodName, $"Response content:\n{formattedJson}");
+                }
+                catch
+                {
+                    // If not valid JSON, log as-is
+                    Logger.Log(LogLevel.Error, methodName, $"Response content: {result.ResponseContent}");
+                }
             }
-
-            if (hasMacZfwChanged)
-            {
-                macZfwChanged = "//";
-                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"MACZFW changed: {preMacZfw:F2}% -> {finalMacZfw:F2}%");
-            }
-
-            if (hasMacTowChanged)
-            {
-                macTowChanged = "//";
-                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"MACTOW changed: {preMacTow:F2}% -> {finalMacTow:F2}%");
-            }
-
-            if (hasFuelChanged)
-            {
-                fuelChanged = "//";
-                Logger.Log(LogLevel.Debug, "GsxController:GetLoadSheetDifferences", $"Fuel changed: {prefuel} -> {finalfuel}");
-            }
-
-            // Determine if any values have changed
-            bool hasChanged = hasZfwChanged || hasTowChanged || hasPaxChanged || hasMacZfwChanged || hasMacTowChanged || hasFuelChanged;
-
-            return (zfwChanged, towChanged, paxChanged, macZfwChanged, macTowChanged, fuelChanged, hasChanged);
+            
+            // Log user-facing guidance
+            Logger.Log(LogLevel.Warning, methodName, 
+                $"Loadsheet generation failed. You may need to:\n" +
+                "1. Check network connectivity to Prosim\n" +
+                "2. Verify the flight plan is properly loaded\n" +
+                "3. Ensure fuel planning is complete\n" +
+                "4. Try manually generating a loadsheet in Prosim");
         }
-
+    
         /// <summary>
         /// Handler for catering state changes
         /// </summary>
@@ -1304,9 +1411,21 @@ namespace Prosim2GSX
         /// </summary>
         private void OnDeboardingStateChanged(float newValue, float oldValue, string lvarName)
         {
-            currentDeboardState = (int)newValue;
+            Logger.Log(LogLevel.Debug, "GSXController", $"Deboarding state changed from {oldValue} to {newValue} in flight state {_state}");
+            
+            // Only update the deboarding state if we're in ARRIVAL or TAXIIN state
+            // or if the state is being reset to 0 or 1
+            if (_state == FlightState.ARRIVAL || _state == FlightState.TAXIIN || newValue <= 1)
+            {
+                currentDeboardState = (int)newValue;
+                Logger.Log(LogLevel.Debug, "GSXController", $"Updated currentDeboardState to {currentDeboardState}");
+            }
+            else
+            {
+                Logger.Log(LogLevel.Warning, "GSXController", 
+                    $"Ignoring deboarding state change to {newValue} because current flight state is {_state}");
+            }
 
-            Logger.Log(LogLevel.Debug, "GSXController", $"Deboarding state changed to {newValue}");
             if (newValue != oldValue)
             {
                 ServiceStatus status = newValue == 6 ? ServiceStatus.Completed :

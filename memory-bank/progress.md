@@ -1,7 +1,9 @@
 # Progress Tracking: Prosim2GSX
 
 ## Project Status
-The Prosim2GSX project is in a functional state with the core integration between Prosim A320 and GSX Pro working as expected. Recent enhancements to the center of gravity (CG) calculations have significantly improved the accuracy of loadsheet data. The implementation of a dedicated A320WeightAndBalance calculator provides sophisticated methods to accurately determine the Zero Fuel Weight Center of Gravity (MACZFW) and Take Off Weight Center of Gravity (MACTOW). The CG calculation improvements ensure more realistic loadsheet data, enhancing the overall simulation experience.
+The Prosim2GSX project is in a functional state with the core integration between Prosim A320 and GSX Pro working as expected. Recent simplifications to the loadsheet generation process have improved the reliability and maintainability of the application. By removing redundant custom weight and balance calculations and fully relying on Prosim's native loadsheet functionality, we've reduced complexity and potential points of failure in the code. The redundant variables and methods related to custom weight and balance calculations have been removed from GsxController.cs and ProsimController.cs, while keeping the enhanced error handling, server status checking, and retry logic in ProsimLoadsheetService.cs.
+
+Prior to these simplifications, improvements to error handling for loadsheet generation and fixes for deboarding state handling have enhanced the reliability and robustness of the application. The implementation of server status checking, detailed HTTP status code interpretation, and better retry logic has significantly improved the diagnostics and recovery capabilities for loadsheet generation. The fixes to deboarding state handling have resolved an issue where deboarding was being called prematurely during departure.
 
 The user interface has been updated to a new Electronic Flight Bag (EFB) look, providing a more modern and intuitive interface for users. This UI redesign improves the visual appearance and usability of the application while maintaining all the existing functionality. The new EFB-style interface follows design patterns common in modern aviation applications, making the tool more familiar to pilots who use similar interfaces in their flight operations.
 
@@ -10,6 +12,17 @@ Prior to this UI update, the implementation of an event aggregator system has si
 The comprehensive Prosim dataref subscription system and cockpit door integration have further enhanced the application's capabilities and realism. The dataref subscription system provides a robust foundation for monitoring Prosim state changes, while the cockpit door integration allows for realistic sound muffling when the cockpit door is closed. Previous enhancements to the refueling process and improvements to the LVAR subscription system have also significantly improved the realism and reliability of the application. The application has been successfully migrated from .NET 7 to .NET 8, with all dependencies updated to their latest compatible versions.
 
 ## Implemented Features
+
+### Loadsheet Generation
+- ✅ Simplified loadsheet generation by removing redundant custom weight and balance calculations
+- ✅ Removed redundant variables from GsxController.cs (finalMacTow, finalMacZfw, prelimMacTow, prelimMacZfw, finalTow, finalZfw, prelimTow, prelimZfw, macZfw)
+- ✅ Removed custom weight and balance calculation methods from ProsimController.cs
+- ✅ Fully relying on Prosim's native loadsheet functionality for more reliable operation
+- ✅ Enhanced error handling for loadsheet generation with detailed HTTP status code interpretation
+- ✅ Implemented server status checking before attempting loadsheet generation
+- ✅ Added better retry logic with exponential backoff for transient failures
+- ✅ Improved logging for loadsheet generation to aid in troubleshooting
+- ✅ Fixed issue with deboarding being called prematurely during departure
 
 ### User Interface
 - ✅ Updated the UI to a new Electronic Flight Bag (EFB) look
@@ -63,14 +76,10 @@ The comprehensive Prosim dataref subscription system and cockpit door integratio
 - ✅ Implemented flight phase change notifications via events
 
 ### Service Synchronization
-- ✅ Enhanced center of gravity (CG) calculations for more accurate loadsheet data
-- ✅ Implemented a dedicated A320WeightAndBalance calculator class
-- ✅ Used proper A320 reference values for MAC calculations
-- ✅ Improved the comparison between preliminary and final loadsheet values
-- ✅ Added tolerance-based detection of significant changes (0.5% for MAC values)
-- ✅ Enhanced the loadsheet formatting with proper marking of changes
-- ✅ Implemented sophisticated weight distribution across cabin zones, cargo compartments, and fuel tanks
-- ✅ Integrated the CG calculations with Prosim and GSX for accurate data synchronization
+- ✅ Simplified loadsheet generation by removing redundant custom weight and balance calculations
+- ✅ Enhanced error handling for loadsheet generation with detailed HTTP status code interpretation
+- ✅ Implemented server status checking before attempting loadsheet generation
+- ✅ Added better retry logic with exponential backoff for transient failures
 - ✅ Enhanced refueling process with fuel hose state management
 - ✅ Implemented pause/resume functionality for refueling based on fuel hose connection
 - ✅ Added better fuel target calculation with rounding to nearest 100
@@ -112,17 +121,17 @@ The comprehensive Prosim dataref subscription system and cockpit door integratio
 - ✅ Decoupled UI from direct controller dependencies
 
 ## In Progress Features
-- 🔄 Further refinement of CG calculation methods for edge cases
-- 🔄 Additional validation for weight distribution calculations
+- 🔄 Testing the simplified loadsheet generation process with various flight scenarios
+- 🔄 Monitoring for any issues with Prosim's native loadsheet functionality
 - 🔄 Testing of the event aggregator system with various service scenarios
 - 🔄 Extending the event aggregator to cover more aspects of the application
 - 🔄 Testing of the .NET 8 migration to ensure all functionality works as expected
 - 🔄 Identifying additional Prosim datarefs that could benefit from the subscription system
 
 ## Planned Features
-- 📋 Implementing additional aircraft types for weight and balance calculations
-- 📋 Optimizing the performance of the CG calculation methods
-- 📋 Adding more detailed logging for CG calculations to aid in troubleshooting
+- 📋 Adding more detailed logging for loadsheet generation to aid in troubleshooting
+- 📋 Exploring potential improvements to error handling for edge cases
+- 📋 Updating documentation to reflect the simplified approach to loadsheet generation
 - 📋 Implementing additional event types for other state changes in the system
 - 📋 Optimizing event publishing frequency for different types of events
 - 📋 Implementing event filtering to reduce unnecessary UI updates
@@ -142,6 +151,15 @@ Based on the README, there are some known considerations:
 - ⚠️ Extreme passenger density setting in GSX breaks boarding functionality
 
 ## Recently Fixed Issues
+- ✅ Simplified loadsheet generation by removing redundant custom weight and balance calculations
+  - Root cause: Unnecessary complexity and potential points of failure in the code
+  - Solution: Removed redundant variables and methods related to custom weight and balance calculations, fully relying on Prosim's native loadsheet functionality
+- ✅ Fixed issues with loadsheet generation error handling
+  - Root cause: Insufficient error handling and diagnostics for loadsheet generation failures
+  - Solution: Implemented server status checking, detailed HTTP status code interpretation, better retry logic, and enhanced logging
+- ✅ Fixed issue with deboarding being called prematurely during departure
+  - Root cause: Deboarding state variable was being updated regardless of the current flight phase
+  - Solution: Modified the OnDeboardingStateChanged handler to only update the currentDeboardState variable when in the appropriate flight state (ARRIVAL or TAXIIN)
 - ✅ Fixed application crash when default SimBrief ID is 0
   - Root cause: The SimbriefIdRequiredEvent handler was causing a crash in KernelBase.dll after displaying a message box and switching to the Settings tab
   - Solution: Removed the redundant SimbriefIdRequiredEvent system and implemented a more robust first-time setup dialog that validates the SimBrief ID at application startup
@@ -180,11 +198,11 @@ Initial build testing of the .NET 8 migration has been completed successfully. C
 ## Next Development Priorities
 Current development priorities include:
 
-1. Further refining the CG calculation methods for edge cases
-2. Implementing additional validation for weight distribution calculations
-3. Adding more detailed logging for CG calculations to aid in troubleshooting
-4. Considering implementing additional aircraft types for weight and balance calculations
-5. Optimizing the performance of the CG calculation methods
+1. Testing the simplified loadsheet generation process with various flight scenarios
+2. Monitoring for any issues with Prosim's native loadsheet functionality
+3. Adding more detailed logging for loadsheet generation to aid in troubleshooting
+4. Exploring potential improvements to error handling for edge cases
+5. Updating documentation to reflect the simplified approach to loadsheet generation
 6. Extending the event aggregator system to cover more aspects of the application
 7. Implementing additional event types for other state changes in the system
 8. Optimizing event publishing frequency for different types of events

@@ -1,4 +1,4 @@
-﻿﻿using Newtonsoft.Json.Linq;
+﻿﻿﻿﻿using Newtonsoft.Json.Linq;
 using ProSimSDK;
 using System;
 using System.Xml;
@@ -18,7 +18,7 @@ namespace Prosim2GSX
     public partial class ProsimController
     {
         public ProsimInterface Interface;
-        protected ServiceModel Model;
+        public ServiceModel Model { get; protected set; }
         protected FlightPlan FlightPlan;
         private MobiSimConnect SimConnect;
         // Our main ProSim connection
@@ -233,17 +233,40 @@ namespace Prosim2GSX
             Interface.SetProsimVariable("groundservice.groundpower", enable);
         }
 
-        public void TriggerFinal()
+        /// <summary>
+        /// Check if a loadsheet is available
+        /// </summary>
+        /// <param name="type">Type of loadsheet ("Preliminary" or "Final")</param>
+        /// <returns>True if loadsheet is available, false otherwise</returns>
+        public bool IsLoadsheetAvailable(string type)
         {
-            if (Model.FlightPlanType == "MCDU")
+            try
             {
-
+                var loadsheetData = Interface.GetProsimVariable($"efb.{type.ToLower()}Loadsheet");
+                return loadsheetData != null && !string.IsNullOrEmpty(loadsheetData.ToString());
             }
-            else
+            catch (Exception ex)
             {
-                //Interface.TriggerFinalOnEFB();
-                //Interface.ProsimPost(ProsimInterface.MsgMutation("bool", "doors.entry.left.fwd", false));
+                Logger.Log(LogLevel.Error, "ProsimController:IsLoadsheetAvailable", $"Error checking {type} loadsheet: {ex.Message}");
+                return false;
+            }
+        }
 
+        /// <summary>
+        /// Get loadsheet data
+        /// </summary>
+        /// <param name="type">Type of loadsheet ("Preliminary" or "Final")</param>
+        /// <returns>Loadsheet data as dynamic object, or null if not available</returns>
+        public dynamic GetLoadsheetData(string type)
+        {
+            try
+            {
+                return Interface.GetProsimVariable($"efb.{type.ToLower()}Loadsheet");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "ProsimController:GetLoadsheetData", $"Error getting {type} loadsheet data: {ex.Message}");
+                return null;
             }
         }
 
@@ -633,20 +656,6 @@ namespace Prosim2GSX
                     $"Could not convert value of type {value?.GetType().Name ?? "null"} to int for dataRef {dataRef}");
                 return 0;
             }
-        }
-
-        // Add to ProsimController class if not already present
-        public (double, double, double) GetMaxWeights()
-        {
-            // Return max ZFW, max TOW, max LAW
-            return (Interface.GetProsimVariable("aircraft.weight.zfwMax"), Interface.GetProsimVariable("aircraft.weight.grossMax"), 66000);  // A320 typical values
-        }
-
-        public double GetPlannedTripFuel()
-        {
-            // Calculate trip fuel from flight plan
-            double tripFuel = FlightPlan.Fuel - FlightPlan.FuelLanding;
-            return tripFuel > 0 ? tripFuel : 5000; // Default 5000kg if not set
         }
 
         public void SetFlightPlan(FlightPlan flightPlan)
