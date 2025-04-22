@@ -19,8 +19,27 @@ namespace Prosim2GSX.Services
         /// <param name="model">Service model</param>
         public static void Initialize(ServiceModel model)
         {
-            _serviceModel = model;
-            _serviceProvider = new ProsimServiceProvider(model);
+            try
+            {
+                if (model == null)
+                    throw new ArgumentNullException(nameof(model));
+
+                _serviceModel = model;
+                _serviceProvider = new ProsimServiceProvider(model);
+
+                // Verify that critical services are available
+                // This will throw if any of them are null
+                var test = ProsimInterface;
+                var test2 = FlightPlanService;
+
+                Logger.Log(LogLevel.Information, nameof(ServiceLocator), "ServiceLocator initialized successfully");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Critical, nameof(ServiceLocator),
+                    $"Failed to initialize ServiceLocator: {ex.Message}");
+                throw; // Rethrow to let caller handle it
+            }
         }
 
         /// <summary>
@@ -89,6 +108,62 @@ namespace Prosim2GSX.Services
         public static readonly float WeightConversion = 2.205f;
 
         /// <summary>
+        /// Get the ground service interface
+        /// </summary>
+        public static IGroundServiceInterface GroundService =>
+            _serviceProvider?.GetGroundService() ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
+
+        /// <summary>
+        /// Get the GSX flight state service
+        /// </summary>
+        public static IGsxFlightStateService GsxFlightStateService =>
+            _serviceProvider?.GetGsxFlightStateService() ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
+
+        /// <summary>
+        /// Get the GSX menu service
+        /// </summary>
+        public static IGsxMenuService GsxMenuService =>
+            _serviceProvider?.GetGsxMenuService() ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
+
+        /// <summary>
+        /// Get the GSX loadsheet service
+        /// </summary>
+        public static IGsxLoadsheetService GsxLoadsheetService =>
+            _serviceProvider?.GetGsxLoadsheetService() ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
+
+        /// <summary>
+        /// Get the GSX ground services service
+        /// </summary>
+        public static IGsxGroundServicesService GsxGroundServicesService =>
+            _serviceProvider?.GetGsxGroundServicesService() ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
+
+        /// <summary>
+        /// Get the GSX boarding service
+        /// </summary>
+        public static IGsxBoardingService GsxBoardingService =>
+            _serviceProvider?.GetGsxBoardingService() ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
+
+        /// <summary>
+        /// Get the GSX refueling service
+        /// </summary>
+        public static IGsxRefuelingService GsxRefuelingService =>
+            _serviceProvider?.GetGsxRefuelingService() ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
+
+        /// <summary>
+        /// Get the GSX SimConnect service
+        /// </summary>
+        public static IGsxSimConnectService GsxSimConnectService =>
+            _serviceProvider?.GetGsxSimConnectService() ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
+
+        /// <summary>
         /// Update ProSim data across all services
         /// </summary>
         /// <param name="forceCurrent">Whether to force current values</param>
@@ -112,12 +187,5 @@ namespace Prosim2GSX.Services
                 Logger.Log(LogLevel.Error, nameof(ServiceLocator), $"Exception during UpdateAllServices: {ex.Message}");
             }
         }
-
-        /// <summary>
-        /// Get the ground service interface
-        /// </summary>
-        public static IGroundServiceInterface GroundService =>
-            _serviceProvider?.GetGroundService() ??
-            throw new InvalidOperationException("ServiceLocator not initialized");
     }
 }

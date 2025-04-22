@@ -61,10 +61,8 @@ namespace Prosim2GSX
             try
             {
                 // Create the service model
-                //Model = new();
                 var serviceModel = new ServiceModel();
                 Model = serviceModel;
-                ServiceLocator.Initialize(serviceModel);
 
                 // Check for default SimBrief ID (0) before proceeding
                 if (serviceModel.SimBriefID == "0")
@@ -98,8 +96,27 @@ namespace Prosim2GSX
                     ThemeManager.Instance.SetServiceModel(serviceModel);
                     ThemeManager.Instance.Initialize();
 
-                    Controller = new(serviceModel);
-                    
+                    try
+                    {
+                        Logger.Log(LogLevel.Information, "App:OnStartup", "Initializing ServiceLocator");
+                        ServiceLocator.Initialize(serviceModel);
+                        Logger.Log(LogLevel.Information, "App:OnStartup", "ServiceLocator initialized successfully");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log(LogLevel.Critical, "App:OnStartup", $"Failed to initialize ServiceLocator: {ex.Message}\n{ex.StackTrace}");
+                        MessageBox.Show(
+                            $"Failed to initialize core services:\n\n{ex.Message}\n\nApplication will now exit.",
+                            "Critical Error",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Error);
+                        Current.Shutdown();
+                        return;
+                    }
+
+                    // Then create the controller that uses ServiceLocator
+                    Controller = new ServiceController(serviceModel);
+
                     // Store the ServiceController in IPCManager for access from other components
                     IPCManager.ServiceController = Controller;
                     

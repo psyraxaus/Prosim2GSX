@@ -25,6 +25,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="GsxController.cs.old" />
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="logo.ico">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </EmbeddedResource>

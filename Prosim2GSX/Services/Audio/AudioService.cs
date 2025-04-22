@@ -42,11 +42,12 @@ namespace Prosim2GSX.Services.Audio
         /// <param name="model">Service model containing settings</param>
         /// <param name="prosimController">Prosim instance for reading cockpit controls</param>
 
-        public AudioService(IProsimInterface prosimInterface, IDataRefMonitoringService dataRefService, MobiSimConnect simConnect)
+        public AudioService(IProsimInterface prosimInterface, IDataRefMonitoringService dataRefService, MobiSimConnect simConnect, ServiceModel model)
         {
             _prosimInterface = prosimInterface;
             _dataRefService = dataRefService;
             _simConnect = simConnect;
+            _model = model ?? throw new ArgumentNullException(nameof(model));
             _voiceMeeterApi = new VoiceMeeterApi();
 
             // Initialize FCU mode handlers

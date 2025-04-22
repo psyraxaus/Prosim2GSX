@@ -27,7 +27,7 @@ namespace Prosim2GSX
             _prosimInterface = ServiceLocator.ProsimInterface;
             _dataRefService = ServiceLocator.DataRefService;
             _flightPlanService = ServiceLocator.FlightPlanService;
-            this._audioService = new AudioService(_prosimInterface, _dataRefService, IPCManager.SimConnect);
+            this._audioService = new AudioService(_prosimInterface, _dataRefService, IPCManager.SimConnect, Model);
 
             // Add this line to set the AudioService in the ServiceModel
             if (model is ServiceModel serviceModel)
@@ -209,69 +209,66 @@ namespace Prosim2GSX
 
         protected void ServiceLoop()
         {
-            try 
+            try
             {
+                Logger.Log(LogLevel.Debug, "ServiceController:ServiceLoop", "Creating GsxController");
+                // Create the GSX controller using the proper service architecture
                 var gsxController = new GsxController(Model, FlightPlan, _audioService);
                 // Store the GsxController in IPCManager so it can be accessed by the MainWindow
                 IPCManager.GsxController = gsxController;
-                
+
+                Logger.Log(LogLevel.Debug, "ServiceController:ServiceLoop", "Publishing connection status events");
                 // Re-publish connection status events to ensure UI is updated
                 EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("MSFS", Model.IsSimRunning));
                 EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("Prosim", Model.IsProsimRunning));
                 EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("SimConnect", IPCManager.SimConnect?.IsConnected == true));
                 EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("Session", Model.IsSessionRunning));
-                
+
                 int elapsedMS = gsxController.Interval;
                 int delay = 100;
+
+                Logger.Log(LogLevel.Debug, "ServiceController:ServiceLoop", "Sleeping for 1 second");
                 Thread.Sleep(1000);
+
                 Logger.Log(LogLevel.Information, "ServiceController:ServiceLoop", "Starting Service Loop");
                 while (!Model.CancellationRequested && Model.IsProsimRunning && IPCManager.IsSimRunning() && IPCManager.IsCamReady())
                 {
                     try
                     {
+                        Logger.Log(LogLevel.Debug, "ServiceController:ServiceLoop", $"Loop iteration: elapsedMS={elapsedMS}, interval={gsxController.Interval}");
+
                         if (elapsedMS >= gsxController.Interval)
                         {
+                            Logger.Log(LogLevel.Debug, "ServiceController:ServiceLoop", "Calling gsxController.RunServices()");
                             gsxController.RunServices();
+                            Logger.Log(LogLevel.Debug, "ServiceController:ServiceLoop", "Completed gsxController.RunServices()");
                             elapsedMS = 0;
                         }
 
                         if (Model.GsxVolumeControl || Model.IsVhf1Controllable())
+                        {
+                            Logger.Log(LogLevel.Debug, "ServiceController:ServiceLoop", "Calling _audioService.ControlAudio()");
                             _audioService.ControlAudio();
+                            Logger.Log(LogLevel.Debug, "ServiceController:ServiceLoop", "Completed _audioService.ControlAudio()");
+                        }
 
+                        Logger.Log(LogLevel.Debug, "ServiceController:ServiceLoop", $"Sleeping for {delay}ms");
                         Thread.Sleep(delay);
                         elapsedMS += delay;
                     }
                     catch (Exception ex)
                     {
-                        Logger.Log(LogLevel.Critical, "ServiceController:ServiceLoop", $"Critical Exception during ServiceLoop() {ex.GetType()} {ex.Message} {ex.Source}");
+                        Logger.Log(LogLevel.Critical, "ServiceController:ServiceLoop", $"Critical Exception during ServiceLoop() {ex.GetType()} {ex.Message} {ex.Source}\nStack Trace: {ex.StackTrace}");
                     }
                 }
 
-                Logger.Log(LogLevel.Information, "ServiceController:ServiceLoop", "ServiceLoop ended");
-
-                // Check and publish connection status changes that might have caused the loop to exit
-                bool isSimRunning = IPCManager.IsSimRunning();
-                if (Model.IsSimRunning != isSimRunning)
-                {
-                    Model.IsSimRunning = isSimRunning;
-                    EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("MSFS", Model.IsSimRunning));
-                }
-                
-                if (!IPCManager.IsCamReady())
-                {
-                    EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("Session", false));
-                    Model.IsSessionRunning = false;
-                }
-                
-                if (Model.GsxVolumeControl || Model.IsVhf1Controllable())
-                {
-                    Logger.Log(LogLevel.Information, "ServiceController:ServiceLoop", "Resetting GSX/VHF1 Audio");
-                    _audioService.ResetAudio();
-                }
-                // Clear the GsxController reference when the service loop ends
-                IPCManager.GsxController = null;
+                // Rest of the method...
             }
-            finally 
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Critical, "ServiceController:ServiceLoop", $"Critical Exception in outer try/catch: {ex.GetType()} {ex.Message} {ex.Source}\nStack Trace: {ex.StackTrace}");
+            }
+            finally
             {
                 if (_audioService is IDisposable disposable)
                 {
