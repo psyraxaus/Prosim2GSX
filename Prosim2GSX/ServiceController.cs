@@ -5,6 +5,7 @@ using Prosim2GSX.Events;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services.Audio;
 using Prosim2GSX.Services;
+using Prosim2GSX.Services.GSX;
 using Prosim2GSX.Services.Prosim.Interfaces;
 
 namespace Prosim2GSX

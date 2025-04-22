@@ -11,6 +11,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services.Audio;
+using Prosim2GSX.Services.GSX.Enums;
 using System.Threading;
 using static Prosim2GSX.Services.Audio.AudioChannelConfig;
 using Prosim2GSX.Services;

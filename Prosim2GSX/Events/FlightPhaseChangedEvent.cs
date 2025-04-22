@@ -1,3 +1,5 @@
+using Prosim2GSX.Services.GSX.Enums;
+
 namespace Prosim2GSX.Events
 {
     public class FlightPhaseChangedEvent : EventBase

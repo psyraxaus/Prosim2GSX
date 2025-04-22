@@ -1,4 +1,5 @@
 ﻿using Prosim2GSX.Events;
+using Prosim2GSX.Services.GSX.Enums;
 using Prosim2GSX.Services.GSX.Interfaces;
 using System;
 using System.Collections.Generic;

@@ -3,6 +3,7 @@ using Prosim2GSX.Events;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
 using Prosim2GSX.Services.Audio;
+using Prosim2GSX.Services.GSX.Enums;
 using Prosim2GSX.Services.GSX.Implementation;
 using Prosim2GSX.Services.GSX.Interfaces;
 using Prosim2GSX.Services.Prosim.Interfaces;

@@ -1,5 +1,6 @@
 ﻿using System;
 using Prosim2GSX.Events;
+using Prosim2GSX.Services.GSX.Enums;
 
 namespace Prosim2GSX.Services.GSX.Interfaces
 {
