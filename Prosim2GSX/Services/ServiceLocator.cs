@@ -1,0 +1,123 @@
+﻿using Prosim2GSX.Models;
+using Prosim2GSX.Services.Prosim.Interfaces;
+using Prosim2GSX.Services.GSX.Interfaces;
+using System;
+
+namespace Prosim2GSX.Services
+{
+    /// <summary>
+    /// Provides centralized access to all ProSim services throughout the application
+    /// </summary>
+    public static class ServiceLocator
+    {
+        private static ProsimServiceProvider _serviceProvider;
+        private static ServiceModel _serviceModel;
+
+        /// <summary>
+        /// Initialize the service locator
+        /// </summary>
+        /// <param name="model">Service model</param>
+        public static void Initialize(ServiceModel model)
+        {
+            _serviceModel = model;
+            _serviceProvider = new ProsimServiceProvider(model);
+        }
+
+        /// <summary>
+        /// Get the ProSim interface
+        /// </summary>
+        public static IProsimInterface ProsimInterface =>
+            _serviceProvider?.GetProsimInterface() ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
+
+        /// <summary>
+        /// Get the connection service
+        /// </summary>
+        public static IProsimConnectionService ConnectionService =>
+            _serviceProvider?.GetConnectionService() ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
+
+        /// <summary>
+        /// Get the dataref monitoring service
+        /// </summary>
+        public static IDataRefMonitoringService DataRefService =>
+            _serviceProvider?.GetDataRefService() ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
+
+        /// <summary>
+        /// Get the flight plan service
+        /// </summary>
+        public static IFlightPlanService FlightPlanService =>
+            _serviceProvider?.GetFlightPlanService() ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
+
+        /// <summary>
+        /// Get the passenger service
+        /// </summary>
+        public static IPassengerService PassengerService =>
+            _serviceProvider?.GetPassengerService() ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
+
+        /// <summary>
+        /// Get the cargo service
+        /// </summary>
+        public static ICargoService CargoService =>
+            _serviceProvider?.GetCargoService() ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
+
+        /// <summary>
+        /// Get the door control service
+        /// </summary>
+        public static IDoorControlService DoorControlService =>
+            _serviceProvider?.GetDoorControlService() ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
+
+        public static ServiceModel Model =>
+            _serviceModel ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
+
+        /// <summary>
+        /// Get the refueling service
+        /// </summary>
+        public static IRefuelingService RefuelingService =>
+            _serviceProvider?.GetRefuelingService() ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
+
+        /// <summary>
+        /// Weight conversion factor from KG to LBS
+        /// </summary>
+        public static readonly float WeightConversion = 2.205f;
+
+        /// <summary>
+        /// Update ProSim data across all services
+        /// </summary>
+        /// <param name="forceCurrent">Whether to force current values</param>
+        /// <param name="flightPlan">The current flight plan</param>
+        public static void UpdateAllServices(bool forceCurrent, FlightPlan flightPlan)
+        {
+            try
+            {
+                // Check engine status
+                double engine1 = ProsimInterface.GetProsimVariable("aircraft.engine1.raw");
+                double engine2 = ProsimInterface.GetProsimVariable("aircraft.engine2.raw");
+
+                // Update all services that need updating
+                RefuelingService.UpdateFuelData(flightPlan);
+                FlightPlanService.Update(forceCurrent);
+                PassengerService.UpdatePassengerData(flightPlan, forceCurrent);
+                CargoService.UpdateCargoData(flightPlan);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, nameof(ServiceLocator), $"Exception during UpdateAllServices: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Get the ground service interface
+        /// </summary>
+        public static IGroundServiceInterface GroundService =>
+            _serviceProvider?.GetGroundService() ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
+    }
+}

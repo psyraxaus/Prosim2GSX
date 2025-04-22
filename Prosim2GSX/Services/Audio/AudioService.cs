@@ -1,6 +1,8 @@
 using CoreAudio;
 using Prosim2GSX.Events;
 using Prosim2GSX.Models;
+using Prosim2GSX.Services;
+using Prosim2GSX.Services.Prosim.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -19,7 +21,8 @@ namespace Prosim2GSX.Services.Audio
         private Dictionary<AudioChannel, bool> _voiceMeeterMutes = new Dictionary<AudioChannel, bool>();
 
         private readonly ServiceModel _model;
-        private readonly ProsimController _prosimController;
+        private readonly IProsimInterface _prosimInterface;
+        private readonly IDataRefMonitoringService _dataRefService;
         private readonly MobiSimConnect _simConnect;
         private readonly Dictionary<string, AudioSource> _audioSources = new Dictionary<string, AudioSource>();
 
@@ -38,10 +41,11 @@ namespace Prosim2GSX.Services.Audio
         /// </summary>
         /// <param name="model">Service model containing settings</param>
         /// <param name="prosimController">Prosim instance for reading cockpit controls</param>
-        public AudioService(ServiceModel model, ProsimController prosimController, MobiSimConnect simConnect)
+
+        public AudioService(IProsimInterface prosimInterface, IDataRefMonitoringService dataRefService, MobiSimConnect simConnect)
         {
-            _model = model;
-            _prosimController = prosimController;
+            _prosimInterface = prosimInterface;
+            _dataRefService = dataRefService;
             _simConnect = simConnect;
             _voiceMeeterApi = new VoiceMeeterApi();
 
@@ -64,7 +68,7 @@ namespace Prosim2GSX.Services.Audio
             }
 
             // Initialize VoiceMeeter API if needed
-            if (_model.AudioApiType == AudioApiType.VoiceMeeter)
+            if (ServiceLocator.Model.AudioApiType == AudioApiType.VoiceMeeter)
             {
                 _voiceMeeterApi.Initialize();
             }
@@ -78,8 +82,8 @@ namespace Prosim2GSX.Services.Audio
             Logger.Log(LogLevel.Information, "AudioService:Initialize", "Initializing audio service");
 
             // Subscribe to FCU mode datarefs
-            _prosimController.SubscribeToDataRef("system.indicators.I_FCU_TRACK_FPA_MODE", _trackFpaModeHandler);
-            _prosimController.SubscribeToDataRef("system.indicators.I_FCU_HEADING_VS_MODE", _headingVsModeHandler);
+            _dataRefService.SubscribeToDataRef("system.indicators.I_FCU_TRACK_FPA_MODE", _trackFpaModeHandler);
+            _dataRefService.SubscribeToDataRef("system.indicators.I_FCU_HEADING_VS_MODE", _headingVsModeHandler);
 
             // Initialize audio sources and subscribe to datarefs for each enabled channel
             foreach (var channelEntry in _model.AudioChannels)
@@ -131,8 +135,8 @@ namespace Prosim2GSX.Services.Audio
                     }
 
                     // Subscribe to datarefs regardless of API type
-                    _prosimController.SubscribeToDataRef(config.VolumeDataRef, _volumeHandlers[channel]);
-                    _prosimController.SubscribeToDataRef(config.MuteDataRef, _muteHandlers[channel]);
+                    _dataRefService.SubscribeToDataRef(config.VolumeDataRef, _volumeHandlers[channel]);
+                    _dataRefService.SubscribeToDataRef(config.MuteDataRef, _muteHandlers[channel]);
                 }
                 else
                 {
@@ -144,8 +148,8 @@ namespace Prosim2GSX.Services.Audio
             // Get initial FCU mode state
             try
             {
-                _fcuTrackFpaMode = _prosimController.Interface.GetProsimVariable("system.indicators.I_FCU_TRACK_FPA_MODE");
-                _fcuHeadingVsMode = _prosimController.Interface.GetProsimVariable("system.indicators.I_FCU_HEADING_VS_MODE");
+                _fcuTrackFpaMode = ServiceLocator.ProsimInterface.GetProsimVariable("system.indicators.I_FCU_TRACK_FPA_MODE");
+                _fcuHeadingVsMode = ServiceLocator.ProsimInterface.GetProsimVariable("system.indicators.I_FCU_HEADING_VS_MODE");
 
                 Logger.Log(LogLevel.Debug, "AudioService:Initialize",
                     $"Initial FCU mode state: TrackFpaMode={_fcuTrackFpaMode}, HeadingVsMode={_fcuHeadingVsMode}");
@@ -381,12 +385,12 @@ namespace Prosim2GSX.Services.Audio
                                 // Update the dataref if it doesn't match the current VoiceMeeter value
                                 try
                                 {
-                                    float currentDataref = _prosimController.Interface.GetProsimVariable(config.VolumeDataRef);
+                                    float currentDataref = ServiceLocator.ProsimInterface.GetProsimVariable(config.VolumeDataRef);
                                     float threshold = 5f; // Larger threshold due to larger value range
 
                                     if (Math.Abs(currentDataref - datarefValue) > threshold)
                                     {
-                                        _prosimController.Interface.SetProsimVariable(config.VolumeDataRef, datarefValue);
+                                        ServiceLocator.ProsimInterface.SetProsimVariable(config.VolumeDataRef, datarefValue);
                                         Logger.Log(LogLevel.Debug, "AudioService:UpdateVoiceMeeterParameters",
                                             $"Updated dataref {config.VolumeDataRef} to match VoiceMeeter gain for {channel}: {datarefValue}");
                                     }
@@ -408,7 +412,7 @@ namespace Prosim2GSX.Services.Audio
                                 // We don't update the dataref because it's a read-only indicator
                                 try
                                 {
-                                    bool currentMute = Convert.ToBoolean(_prosimController.Interface.GetProsimVariable(config.MuteDataRef));
+                                    bool currentMute = Convert.ToBoolean(ServiceLocator.ProsimInterface.GetProsimVariable(config.MuteDataRef));
                                     Logger.Log(LogLevel.Debug, "AudioService:UpdateVoiceMeeterParameters",
                                         $"Current mute state for {channel}: {currentMute}");
                                 }
@@ -458,14 +462,14 @@ namespace Prosim2GSX.Services.Audio
                 if (config.Enabled && !_audioSources.ContainsKey(channelName))
                 {
                     AddAudioSource(config.ProcessName, channelName, config.VolumeDataRef, config.MuteDataRef);
-                    _prosimController.SubscribeToDataRef(config.VolumeDataRef, _volumeHandlers[channel]);
-                    _prosimController.SubscribeToDataRef(config.MuteDataRef, _muteHandlers[channel]);
+                    _dataRefService.SubscribeToDataRef(config.VolumeDataRef, _volumeHandlers[channel]);
+                    _dataRefService.SubscribeToDataRef(config.MuteDataRef, _muteHandlers[channel]);
                 }
                 // If channel is disabled but in audio sources, remove it
                 else if (!config.Enabled && _audioSources.ContainsKey(channelName))
                 {
-                    _prosimController.UnsubscribeFromDataRef(config.VolumeDataRef, _volumeHandlers[channel]);
-                    _prosimController.UnsubscribeFromDataRef(config.MuteDataRef, _muteHandlers[channel]);
+                    _dataRefService.UnsubscribeFromDataRef(config.VolumeDataRef, _volumeHandlers[channel]);
+                    _dataRefService.UnsubscribeFromDataRef(config.MuteDataRef, _muteHandlers[channel]);
                     RemoveAudioSource(channelName);
                 }
             }
@@ -987,8 +991,8 @@ namespace Prosim2GSX.Services.Audio
                             !string.IsNullOrEmpty(deviceName))
                         {
                             // Get current dataref values
-                            float datarefValue = _prosimController.Interface.GetProsimVariable(config.VolumeDataRef);
-                            bool muteDataref = Convert.ToBoolean(_prosimController.Interface.GetProsimVariable(config.MuteDataRef));
+                            float datarefValue = ServiceLocator.ProsimInterface.GetProsimVariable(config.VolumeDataRef);
+                            bool muteDataref = Convert.ToBoolean(ServiceLocator.ProsimInterface.GetProsimVariable(config.MuteDataRef));
 
                             // Invert the mute state for all channels
                             muteDataref = !muteDataref;
@@ -1117,8 +1121,8 @@ namespace Prosim2GSX.Services.Audio
         public void Dispose()
         {
             // Unsubscribe from FCU mode datarefs
-            _prosimController.UnsubscribeFromDataRef("system.indicators.I_FCU_TRACK_FPA_MODE", _trackFpaModeHandler);
-            _prosimController.UnsubscribeFromDataRef("system.indicators.I_FCU_HEADING_VS_MODE", _headingVsModeHandler);
+            _dataRefService.UnsubscribeFromDataRef("system.indicators.I_FCU_TRACK_FPA_MODE", _trackFpaModeHandler);
+            _dataRefService.UnsubscribeFromDataRef("system.indicators.I_FCU_HEADING_VS_MODE", _headingVsModeHandler);
 
             // Unsubscribe from all channel datarefs
             foreach (var channelEntry in _model.AudioChannels)
@@ -1127,8 +1131,8 @@ namespace Prosim2GSX.Services.Audio
                 var config = channelEntry.Value;
 
                 // Unsubscribe regardless of whether the channel is currently enabled
-                _prosimController.UnsubscribeFromDataRef(config.VolumeDataRef, _volumeHandlers[channel]);
-                _prosimController.UnsubscribeFromDataRef(config.MuteDataRef, _muteHandlers[channel]);
+                _dataRefService.UnsubscribeFromDataRef(config.VolumeDataRef, _volumeHandlers[channel]);
+                _dataRefService.UnsubscribeFromDataRef(config.MuteDataRef, _muteHandlers[channel]);
             }
 
             // Shutdown VoiceMeeter API if it was initialized

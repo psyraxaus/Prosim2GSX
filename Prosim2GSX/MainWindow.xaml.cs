@@ -13,6 +13,7 @@ using Prosim2GSX.Models;
 using Prosim2GSX.Services.Audio;
 using System.Threading;
 using static Prosim2GSX.Services.Audio.AudioChannelConfig;
+using Prosim2GSX.Services;
 
 namespace Prosim2GSX
 {
@@ -792,14 +793,14 @@ namespace Prosim2GSX
 
             if (sender == unitKGS && serviceModel.RefuelUnit == "LBS")
             {
-                fuelRate /= ProsimController.weightConversion;
+                fuelRate /= ServiceLocator.WeightConversion;
                 serviceModel.SetSetting("refuelRate", Convert.ToString(fuelRate, CultureInfo.InvariantCulture));
                 serviceModel.SetSetting("refuelUnit", "KGS");
                 txtRefuelRate.Text = Convert.ToString(fuelRate, CultureInfo.InvariantCulture);
             }
             else if (sender == unitLBS && serviceModel.RefuelUnit == "KGS")
             {
-                fuelRate *= ProsimController.weightConversion;
+                fuelRate *= ServiceLocator.WeightConversion;
                 serviceModel.SetSetting("refuelRate", Convert.ToString(fuelRate, CultureInfo.InvariantCulture));
                 serviceModel.SetSetting("refuelUnit", "LBS");
                 txtRefuelRate.Text = Convert.ToString(fuelRate, CultureInfo.InvariantCulture);

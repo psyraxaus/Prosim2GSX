@@ -2,6 +2,7 @@
 using CefSharp.OffScreen;
 using H.NotifyIcon;
 using Prosim2GSX.Models;
+using Prosim2GSX.Services;
 using Prosim2GSX.Services.Audio;
 using Prosim2GSX.Themes;
 using Serilog;
@@ -60,13 +61,16 @@ namespace Prosim2GSX
             try
             {
                 // Create the service model
-                Model = new();
-                
+                //Model = new();
+                var serviceModel = new ServiceModel();
+                Model = serviceModel;
+                ServiceLocator.Initialize(serviceModel);
+
                 // Check for default SimBrief ID (0) before proceeding
-                if (Model.SimBriefID == "0")
+                if (serviceModel.SimBriefID == "0")
                 {
                     // Show the first-time setup dialog
-                    var setupDialog = new FirstTimeSetupDialog(Model);
+                    var setupDialog = new FirstTimeSetupDialog(serviceModel);
                     bool? result = setupDialog.ShowDialog();
                     
                     // If the user cancels, exit the application
@@ -80,21 +84,21 @@ namespace Prosim2GSX
                     
                     // At this point, the user has entered a valid SimBrief ID
                     Logger.Log(LogLevel.Information, "App:OnStartup", 
-                        $"User entered SimBrief ID: {Model.SimBriefID}");
+                        $"User entered SimBrief ID: {serviceModel.SimBriefID}");
                 }
                 
                 // Only proceed with normal initialization if we have a valid SimBrief ID
-                if (Model.IsValidSimbriefId())
+                if (serviceModel.IsValidSimbriefId())
                 {
                     InitLog();
                     InitSystray();
                     InitCef();
                     
                     // Initialize theme manager
-                    ThemeManager.Instance.SetServiceModel(Model);
+                    ThemeManager.Instance.SetServiceModel(serviceModel);
                     ThemeManager.Instance.Initialize();
 
-                    Controller = new(Model);
+                    Controller = new(serviceModel);
                     
                     // Store the ServiceController in IPCManager for access from other components
                     IPCManager.ServiceController = Controller;
@@ -120,7 +124,7 @@ namespace Prosim2GSX
                     timer.Tick += OnTick;
                     timer.Start();
 
-                    MainWindow = new MainWindow(notifyIcon.DataContext as NotifyIconViewModel, Model);
+                    MainWindow = new MainWindow(notifyIcon.DataContext as NotifyIconViewModel, serviceModel);
                 }
                 else
                 {

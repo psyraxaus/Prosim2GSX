@@ -6,6 +6,8 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Net;
+using Prosim2GSX.Services.Prosim.Interfaces;
+using Prosim2GSX.Services.Prosim.Implementation;
 
 namespace Prosim2GSX.Services.WeightAndBalance
 {
@@ -63,7 +65,9 @@ namespace Prosim2GSX.Services.WeightAndBalance
     /// </summary>
     public class ProsimLoadsheetService
     {
-        private readonly ProsimController _prosimController;
+        //private readonly ProsimController _prosimController;
+        private IProsimInterface _prosimInterface;
+        private IFlightPlanService _flightPlanService;
         private DataRefChangedHandler _prelimLoadsheetHandler;
         private DataRefChangedHandler _finalLoadsheetHandler;
 
@@ -71,12 +75,18 @@ namespace Prosim2GSX.Services.WeightAndBalance
         /// Event raised when a loadsheet is received
         /// </summary>
         public event EventHandler<LoadsheetReceivedEventArgs> LoadsheetReceived;
-
+/*
         public ProsimLoadsheetService(ProsimController prosimController)
         {
             _prosimController = prosimController ?? throw new ArgumentNullException(nameof(prosimController));
             _prelimLoadsheetHandler = new DataRefChangedHandler(OnPrelimLoadsheetChanged);
             _finalLoadsheetHandler = new DataRefChangedHandler(OnFinalLoadsheetChanged);
+        }
+*/
+        public ProsimLoadsheetService(IProsimInterface prosimInterface, IFlightPlanService flightPlanService)
+        {
+            _prosimInterface = prosimInterface;
+            _flightPlanService = flightPlanService;
         }
 
         /// <summary>
@@ -88,7 +98,7 @@ namespace Prosim2GSX.Services.WeightAndBalance
         {
             try
             {
-                var value = _prosimController.Interface.GetProsimVariable(dataRef);
+                var value = _prosimInterface.GetProsimVariable(dataRef);
                 return true;
             }
             catch (Exception)
@@ -103,7 +113,7 @@ namespace Prosim2GSX.Services.WeightAndBalance
         /// </summary>
         public void SubscribeToLoadsheetChanges()
         {
-            if (!_prosimController.IsFlightplanLoaded())
+            if (!ServiceLocator.FlightPlanService.IsFlightplanLoaded())
             {
                 Logger.Log(LogLevel.Warning, "ProsimLoadsheetService", "Cannot subscribe to loadsheet changes - flight plan not loaded");
                 return;
@@ -115,13 +125,13 @@ namespace Prosim2GSX.Services.WeightAndBalance
             
             if (prelimExists)
             {
-                _prosimController.SubscribeToDataRef("efb.prelimLoadsheet", _prelimLoadsheetHandler);
+                ServiceLocator.DataRefService.SubscribeToDataRef("efb.prelimLoadsheet", _prelimLoadsheetHandler);
                 Logger.Log(LogLevel.Information, "ProsimLoadsheetService", "Subscribed to preliminary loadsheet changes");
             }
             
             if (finalExists)
             {
-                _prosimController.SubscribeToDataRef("efb.finalLoadsheet", _finalLoadsheetHandler);
+                ServiceLocator.DataRefService.SubscribeToDataRef("efb.finalLoadsheet", _finalLoadsheetHandler);
                 Logger.Log(LogLevel.Information, "ProsimLoadsheetService", "Subscribed to final loadsheet changes");
             }
             
@@ -144,8 +154,8 @@ namespace Prosim2GSX.Services.WeightAndBalance
             {
                 // 1. Set passenger seat map using ProsimController's existing method
                 // This ensures we use the same format that's already working elsewhere
-                bool[] seatMap = _prosimController.RandomizePaxSeating(paxCount);
-                
+                bool[] seatMap = ServiceLocator.PassengerService.RandomizePassengerSeating(paxCount);
+
                 // Convert to comma-separated string
                 StringBuilder seatMapString = new StringBuilder();
                 for (int i = 0; i < seatMap.Length; i++)
@@ -155,7 +165,7 @@ namespace Prosim2GSX.Services.WeightAndBalance
                         seatMapString.Append(",");
                 }
                 
-                _prosimController.Interface.SetProsimVariable("efb.passengers.booked.string", seatMapString.ToString());
+                ServiceLocator.ProsimInterface.SetProsimVariable("efb.passengers.booked.string", seatMapString.ToString());
                 
                 // 2. Set passenger statistics (simplified - we'll assume all economy)
                 var passengerStats = new
@@ -167,15 +177,15 @@ namespace Prosim2GSX.Services.WeightAndBalance
                     NumOfPaxInSection3 = paxCount - (int)(paxCount * 0.5) - (int)(paxCount * 0.4), // Remainder
                     Total = paxCount
                 };
-                _prosimController.Interface.SetProsimVariable("efb.passengerStatistics", 
+                ServiceLocator.ProsimInterface.SetProsimVariable("efb.passengerStatistics", 
                     JsonConvert.SerializeObject(passengerStats));
                 
                 // 3. Set planned cargo
-                _prosimController.Interface.SetProsimVariable("efb.plannedCargoKg", cargoKg);
+                ServiceLocator.ProsimInterface.SetProsimVariable("efb.plannedCargoKg", cargoKg);
                 
                 // 4. Set fuel target
                 var fuelTarget = new { refuelTarget = fuelKg };
-                _prosimController.Interface.SetProsimVariable("aircraft.refuel.fuelTarget", 
+                ServiceLocator.ProsimInterface.SetProsimVariable("aircraft.refuel.fuelTarget", 
                     JsonConvert.SerializeObject(fuelTarget));
                 
                 Logger.Log(LogLevel.Information, "ProsimLoadsheetService", 
@@ -197,13 +207,13 @@ namespace Prosim2GSX.Services.WeightAndBalance
             try
             {
                 // Get current fuel amount and fuel target
-                double currentFuel = _prosimController.GetFuelAmount();
+                double currentFuel = ServiceLocator.RefuelingService.GetFuelAmount();
                 double fuelTarget = 0;
                 
                 // Try to get the fuel target value
                 try
                 {
-                    var targetValue = _prosimController.Interface.GetProsimVariable("aircraft.refuel.fuelTarget");
+                    var targetValue = _prosimInterface.GetProsimVariable("aircraft.refuel.fuelTarget");
                     if (targetValue != null)
                     {
                         // Convert to double if possible
@@ -295,16 +305,16 @@ namespace Prosim2GSX.Services.WeightAndBalance
                 try
                 {
                     // Get flight data from the controller
-                    int paxCount = _prosimController.GetPaxPlanned();
+                    int paxCount = ServiceLocator.PassengerService.GetPlannedPassengers();
                     double cargoKg = 6000; // Default cargo weight if not available
-                    double fuelKg = _prosimController.GetFuelAmount();
+                    double fuelKg = ServiceLocator.RefuelingService.GetFuelAmount();
                     
                     // Prepare the datarefs
                     PrepareLoadsheetDatarefs(paxCount, cargoKg, fuelKg);
                     
                     using (var client = new HttpClient())
                     {
-                        string fullUrl = $"{_prosimController.Interface.GetBackendUrl()}/loadsheet/generate?type={type}";
+                        string fullUrl = $"{ServiceLocator.ProsimInterface.GetBackendUrl()}/loadsheet/generate?type={type}";
                         
                         // Set headers to match exactly what's in the JavaScript request
                         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
@@ -316,7 +326,7 @@ namespace Prosim2GSX.Services.WeightAndBalance
                         var content = new StringContent("{}", Encoding.UTF8, "application/json");
                         
                         // Validate the backend URL
-                        if (string.IsNullOrEmpty(_prosimController.Interface.GetBackendUrl()))
+                        if (string.IsNullOrEmpty(ServiceLocator.ProsimInterface.GetBackendUrl()))
                         {
                             Logger.Log(LogLevel.Error, "ProsimLoadsheetService", 
                                 "Backend URL is empty. Prosim EFB server may not be running or properly configured.");
@@ -476,8 +486,8 @@ namespace Prosim2GSX.Services.WeightAndBalance
                 
                 // Use the Prosim API to resend the loadsheet
                 // This is equivalent to the JavaScript code: this.backend.resendLoadsheet()
-                string url = $"{_prosimController.Interface.GetBackendUrl()}/loadsheet/resend";
-                bool success = await _prosimController.Interface.PostAsync(url, "{}");
+                string url = $"{ServiceLocator.ProsimInterface.GetBackendUrl()}/loadsheet/resend";
+                bool success = await ServiceLocator.ProsimInterface.PostAsync(url, "{}");
                 
                 if (success)
                 {
@@ -508,7 +518,7 @@ namespace Prosim2GSX.Services.WeightAndBalance
                 Logger.Log(LogLevel.Information, "ProsimLoadsheetService", "Checking Prosim EFB server status");
                 
                 // Validate the backend URL
-                string backendUrl = _prosimController.Interface.GetBackendUrl();
+                string backendUrl = ServiceLocator.ProsimInterface.GetBackendUrl();
                 if (string.IsNullOrEmpty(backendUrl))
                 {
                     Logger.Log(LogLevel.Error, "ProsimLoadsheetService", 
@@ -570,8 +580,8 @@ namespace Prosim2GSX.Services.WeightAndBalance
                 
                 // Use the Prosim API to reset loadsheets
                 // This is equivalent to the JavaScript code: this.backend.resetLoadsheets()
-                string url = $"{_prosimController.Interface.GetBackendUrl()}/loadsheet";
-                bool success = await _prosimController.Interface.DeleteAsync(url);
+                string url = $"{ServiceLocator.ProsimInterface.GetBackendUrl()}/loadsheet";
+                bool success = await ServiceLocator.ProsimInterface.DeleteAsync(url);
                 
                 if (success)
                 {

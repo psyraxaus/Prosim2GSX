@@ -1,5 +1,6 @@
 ﻿using Prosim2GSX;
 using Prosim2GSX.Behaviours;
+using Prosim2GSX.Services;
 using Prosim2GSX.Services.Audio;
 using System;
 using System.Collections.Generic;
@@ -348,7 +349,7 @@ namespace Prosim2GSX.Models
             if (RefuelUnit == "KGS")
                 return RefuelRate;
             else
-                return RefuelRate / ProsimController.weightConversion;
+                return RefuelRate / ServiceLocator.WeightConversion;
         }
 
         public void SetVoiceMeeterStrip(AudioChannel channel, string stripName, string stripLabel)

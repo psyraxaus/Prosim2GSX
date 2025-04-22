@@ -4,6 +4,8 @@ using Microsoft.FlightSimulator.SimConnect;
 using Prosim2GSX.Events;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services.Audio;
+using Prosim2GSX.Services;
+using Prosim2GSX.Services.Prosim.Interfaces;
 
 namespace Prosim2GSX
 {
@@ -11,7 +13,9 @@ namespace Prosim2GSX
     {
         private IAudioService _audioService;
         protected ServiceModel Model;
-        protected ProsimController ProsimController;
+        private readonly IProsimInterface _prosimInterface;
+        private readonly IDataRefMonitoringService _dataRefService;
+        private readonly IFlightPlanService _flightPlanService;
         protected FlightPlan FlightPlan;
         protected int Interval = 1000;
 
@@ -20,8 +24,10 @@ namespace Prosim2GSX
         public ServiceController(ServiceModel model)
         {
             this.Model = model;
-            this.ProsimController = new(model);
-            this._audioService = new AudioService(model, ProsimController, IPCManager.SimConnect);
+            _prosimInterface = ServiceLocator.ProsimInterface;
+            _dataRefService = ServiceLocator.DataRefService;
+            _flightPlanService = ServiceLocator.FlightPlanService;
+            this._audioService = new AudioService(_prosimInterface, _dataRefService, IPCManager.SimConnect);
 
             // Add this line to set the AudioService in the ServiceModel
             if (model is ServiceModel serviceModel)
@@ -93,7 +99,7 @@ namespace Prosim2GSX
             if (!IPCManager.WaitForConnection(Model))
                 return false;
 
-            if (!ProsimController.IsProsimConnectionAvailable(Model))
+            if (!ServiceLocator.ConnectionService.WaitForAvailability())
                 return false;
             else
                 Model.IsProsimRunning = true;
@@ -112,7 +118,7 @@ namespace Prosim2GSX
                 {
                     case FlightPlan.LoadResult.Success:
                         // Make FlightPlan available to ProsimController
-                        ProsimController.SetFlightPlan(FlightPlan);
+                        ServiceLocator.FlightPlanService.SetFlightPlan(FlightPlan);
                         break;
                         
                     case FlightPlan.LoadResult.InvalidId:
@@ -163,7 +169,7 @@ namespace Prosim2GSX
                 }
                 
                 // Make FlightPlan available to ProsimController
-                ProsimController.SetFlightPlan(FlightPlan);
+                ServiceLocator.FlightPlanService.SetFlightPlan(FlightPlan);
             }
 
             if (!IPCManager.WaitForSessionReady(Model))
@@ -205,7 +211,7 @@ namespace Prosim2GSX
         {
             try 
             {
-                var gsxController = new GsxController(Model, ProsimController, FlightPlan, _audioService);
+                var gsxController = new GsxController(Model, FlightPlan, _audioService);
                 // Store the GsxController in IPCManager so it can be accessed by the MainWindow
                 IPCManager.GsxController = gsxController;
                 
