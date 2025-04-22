@@ -2,6 +2,7 @@
 using Prosim2GSX.Services.Prosim.Interfaces;
 using Prosim2GSX.Services.GSX.Interfaces;
 using System;
+using Prosim2GSX.Services.Connection.Interfaces;
 
 namespace Prosim2GSX.Services
 {
@@ -50,10 +51,10 @@ namespace Prosim2GSX.Services
             throw new InvalidOperationException("ServiceLocator not initialized");
 
         /// <summary>
-        /// Get the connection service
+        /// Get the Prosim connection service
         /// </summary>
-        public static IProsimConnectionService ConnectionService =>
-            _serviceProvider?.GetConnectionService() ??
+        public static IProsimConnectionService ProsimConnectionService =>
+            _serviceProvider?.GetProsimConnectionService() ?? // Changed from GetConnectionService to GetProsimConnectionService
             throw new InvalidOperationException("ServiceLocator not initialized");
 
         /// <summary>
@@ -187,5 +188,12 @@ namespace Prosim2GSX.Services
                 Logger.Log(LogLevel.Error, nameof(ServiceLocator), $"Exception during UpdateAllServices: {ex.Message}");
             }
         }
+
+        /// <summary>
+        /// Get the application connection service
+        /// </summary>
+        public static IConnectionService ConnectionService =>
+            _serviceProvider?.GetApplicationConnectionService() ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
     }
 }
