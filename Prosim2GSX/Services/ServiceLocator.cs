@@ -92,6 +92,9 @@ namespace Prosim2GSX.Services
             _serviceProvider?.GetDoorControlService() ??
             throw new InvalidOperationException("ServiceLocator not initialized");
 
+        /// <summary>
+        /// Gets the central service model that provides application-wide configuration and settings.
+        /// </summary>
         public static ServiceModel Model =>
             _serviceModel ??
             throw new InvalidOperationException("ServiceLocator not initialized");
