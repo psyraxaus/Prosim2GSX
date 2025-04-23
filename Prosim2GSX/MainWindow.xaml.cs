@@ -1513,5 +1513,24 @@ namespace Prosim2GSX
                     "No Flight" : flightNumber;
             });
         }
+
+        private void btnConfigureExternalDependencies_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new ExternalDependenciesDialog(serviceModel);
+            dialog.Owner = this;
+            bool? result = dialog.ShowDialog();
+
+            if (result == true)
+            {
+                // No need for explicit save - settings are saved via SetSetting
+
+                // Show restart message
+                MessageBox.Show(
+                    "The external dependencies configuration has been updated. Please restart the application for the changes to take effect.",
+                    "Configuration Updated",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+        }
     }
 }

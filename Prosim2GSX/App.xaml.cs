@@ -64,34 +64,92 @@ namespace Prosim2GSX
                 var serviceModel = new ServiceModel();
                 Model = serviceModel;
 
-                // Check for default SimBrief ID (0) before proceeding
+                // First check for SimBrief ID
                 if (serviceModel.SimBriefID == "0")
                 {
                     // Show the first-time setup dialog
                     var setupDialog = new FirstTimeSetupDialog(serviceModel);
                     bool? result = setupDialog.ShowDialog();
-                    
+
                     // If the user cancels, exit the application
                     if (result != true)
                     {
-                        Logger.Log(LogLevel.Information, "App:OnStartup", 
+                        Logger.Log(LogLevel.Information, "App:OnStartup",
                             "User cancelled first-time setup. Exiting application.");
                         Current.Shutdown();
                         return;
                     }
-                    
+
                     // At this point, the user has entered a valid SimBrief ID
-                    Logger.Log(LogLevel.Information, "App:OnStartup", 
+                    Logger.Log(LogLevel.Information, "App:OnStartup",
                         $"User entered SimBrief ID: {serviceModel.SimBriefID}");
                 }
-                
+
+                // Now check for external dependencies configuration
+                bool needsExternalDependenciesConfig = false;
+
+                // Check if we need custom ProsimSDK.dll (if it's not in the expected location)
+                if (!File.Exists(Path.Combine(AppDir, "lib", "ProSimSDK.dll")) &&
+                    string.IsNullOrEmpty(serviceModel.ProsimSDKPath))
+                {
+                    needsExternalDependenciesConfig = true;
+                    Logger.Log(LogLevel.Warning, "App:OnStartup",
+                        "ProSimSDK.dll not found in default location and custom path not set");
+                }
+
+                // Check if we need custom VoicemeeterRemote64.dll (if it's not in the expected location)
+                if (!File.Exists(Path.Combine(AppDir, "VoicemeeterRemote64.dll")) &&
+                    string.IsNullOrEmpty(serviceModel.VoicemeeterDllPath))
+                {
+                    needsExternalDependenciesConfig = true;
+                    Logger.Log(LogLevel.Warning, "App:OnStartup",
+                        "VoicemeeterRemote64.dll not found in default location and custom path not set");
+                }
+
+                if (needsExternalDependenciesConfig)
+                {
+                    // Show the external dependencies dialog
+                    var dependenciesDialog = new ExternalDependenciesDialog(serviceModel);
+                    bool? result = dependenciesDialog.ShowDialog();
+
+                    // If the user cancels, show a warning but continue
+                    if (result != true)
+                    {
+                        Logger.Log(LogLevel.Warning, "App:OnStartup",
+                            "User cancelled external dependencies setup. Some features may not work correctly.");
+                        MessageBox.Show(
+                            "External dependencies have not been configured. Some features related to Prosim and Voicemeeter may not work correctly.",
+                            "Warning",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                    }
+                    else
+                    {
+                        Logger.Log(LogLevel.Information, "App:OnStartup",
+                            "User configured external dependencies.");
+                    }
+                }
+
                 // Only proceed with normal initialization if we have a valid SimBrief ID
                 if (serviceModel.IsValidSimbriefId())
                 {
                     InitLog();
                     InitSystray();
                     InitCef();
-                    
+
+                    // Set up DLL search paths if they have been configured
+                    if (!string.IsNullOrEmpty(serviceModel.ProsimSDKPath) && File.Exists(serviceModel.ProsimSDKPath))
+                    {
+                        string prosimDir = Path.GetDirectoryName(serviceModel.ProsimSDKPath);
+                        if (!string.IsNullOrEmpty(prosimDir))
+                        {
+                            // Add ProsimSDK directory to DLL search path
+                            Services.DllLoader.AddDllDirectory(prosimDir);
+                            Logger.Log(LogLevel.Information, "App:OnStartup",
+                                $"Added ProsimSDK directory to DLL search path: {prosimDir}");
+                        }
+                    }
+
                     // Initialize theme manager
                     ThemeManager.Instance.SetServiceModel(serviceModel);
                     ThemeManager.Instance.Initialize();

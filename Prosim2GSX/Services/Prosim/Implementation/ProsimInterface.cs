@@ -3,6 +3,7 @@ using Prosim2GSX.Models;
 using Prosim2GSX.Services.Prosim.Interfaces;
 using Prosim2GSX.Services.Prosim.Models;
 using System;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -17,6 +18,20 @@ namespace Prosim2GSX.Services.Prosim.Implementation
 
         public ProsimInterface(ServiceModel model, ProSimConnect connection)
         {
+            _model = model ?? throw new ArgumentNullException(nameof(model));
+
+            // If custom path is specified, set it for ProSimConnect
+            if (!string.IsNullOrEmpty(_model.ProsimSDKPath) && File.Exists(_model.ProsimSDKPath))
+            {
+                string directory = Path.GetDirectoryName(_model.ProsimSDKPath);
+                if (!string.IsNullOrEmpty(directory))
+                {
+                    DllLoader.AddDllDirectory(directory);
+                    Logger.Log(LogLevel.Information, nameof(ProsimInterface),
+                        $"Using Prosim SDK from: {_model.ProsimSDKPath}");
+                }
+            }
+
             _model = model ?? throw new ArgumentNullException(nameof(model));
             _connection = connection ?? throw new ArgumentNullException(nameof(connection));
         }

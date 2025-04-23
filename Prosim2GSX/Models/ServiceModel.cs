@@ -87,6 +87,21 @@ namespace Prosim2GSX.Models
 
         public Dictionary<AudioChannel, string> VoiceMeeterStripLabels { get; private set; } = new Dictionary<AudioChannel, string>();
 
+        /// <summary>
+        /// Path to the ProsimSDK.dll file
+        /// </summary>
+        public string ProsimSDKPath { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Path to the VoicemeeterRemote64.dll file
+        /// </summary>
+        public string VoicemeeterDllPath { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Whether external dependencies have been configured
+        /// </summary>
+        public bool ExternalDependenciesConfigured { get; set; } = false;
+
         public ServiceModel()
         {
             LoadConfiguration();
@@ -237,6 +252,9 @@ namespace Prosim2GSX.Models
             Vhf3VolumeControl = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf3VolumeControl", "false"));
             Vhf3LatchMute = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf3LatchMute", "true"));
             WaitForConnect = Convert.ToBoolean(ConfigurationFile.GetSetting("waitForConnect", "true"));
+            ProsimSDKPath = Convert.ToString(ConfigurationFile.GetSetting("prosimSDKPath", ""));
+            VoicemeeterDllPath = Convert.ToString(ConfigurationFile.GetSetting("voicemeeterDllPath", ""));
+            ExternalDependenciesConfigured = Convert.ToBoolean(ConfigurationFile.GetSetting("externalDependenciesConfigured", "false"));
 
             foreach (var channel in Enum.GetValues(typeof(AudioChannel)).Cast<AudioChannel>())
             {

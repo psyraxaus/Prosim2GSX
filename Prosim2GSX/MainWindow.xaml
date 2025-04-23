@@ -950,6 +950,22 @@
                         </Border>
 
                         <!-- Appearance Settings -->
+                        <TextBlock Text="EXTERNAL DEPENDENCIES" Style="{StaticResource CategoryHeaderStyle}" Margin="0,20,0,0"/>
+                        <Border Style="{StaticResource SectionBorderStyle}">
+                            <StackPanel>
+                                <Button Content="Configure External Dependencies" 
+                HorizontalAlignment="Left"
+                Padding="10,5"
+                Margin="0,5,0,5"
+                Background="{DynamicResource PrimaryColor}"
+                Foreground="{DynamicResource HeaderText}"
+                Click="btnConfigureExternalDependencies_Click"/>
+                                <TextBlock Text="Configure paths to external DLL files (ProsimSDK.dll and VoicemeeterRemote64.dll)"
+                   TextWrapping="Wrap"
+                   Margin="0,5,0,0"
+                   Foreground="#808080"/>
+                            </StackPanel>
+                        </Border>
                         <TextBlock Text="APPEARANCE" Style="{StaticResource CategoryHeaderStyle}"/>
                         <Border Style="{StaticResource SectionBorderStyle}">
                             <StackPanel>

@@ -1,0 +1,62 @@
+﻿<Window x:Class="Prosim2GSX.ExternalDependenciesDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="External Dependencies Configuration" Height="350" Width="620"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" TextWrapping="Wrap" Margin="0,0,0,15" FontWeight="Bold" FontSize="14">
+            External Dependencies Configuration
+        </TextBlock>
+
+        <TextBlock x:Name="txtInfoMessage"
+           Grid.Row="1" 
+           TextWrapping="Wrap" 
+           Margin="0,0,0,15"
+           Foreground="{DynamicResource ContentText}">
+    Please specify the locations of the external dependencies. These are used to connect to Prosim and Voicemeeter.
+    The application will attempt to auto-detect these paths, but you may need to specify them manually if they are installed
+    in non-standard locations.
+        </TextBlock>
+
+        <Label Grid.Row="2" Content="ProSimSDK.dll Path:" Margin="0,5,0,0" FontWeight="SemiBold"/>
+        <Grid Grid.Row="3" Margin="0,5,0,15">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="txtProsimSDKPath" Grid.Column="0" Margin="0,0,5,0" Padding="5,2"/>
+            <Button x:Name="btnBrowseProsim" Grid.Column="1" Content="Browse..." Width="80" Click="BtnBrowseProsim_Click" Padding="5,2"/>
+        </Grid>
+
+        <Label Grid.Row="4" Content="VoicemeeterRemote64.dll Path:" FontWeight="SemiBold"/>
+        <Grid Grid.Row="5" Margin="0,5,0,15">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="txtVoicemeeterPath" Grid.Column="0" Margin="0,0,5,0" Padding="5,2"/>
+            <Button x:Name="btnBrowseVoicemeeter" Grid.Column="1" Content="Browse..." Width="80" Click="BtnBrowseVoicemeeter_Click" Padding="5,2"/>
+        </Grid>
+
+        <TextBlock Grid.Row="6" TextWrapping="Wrap" Foreground="#707070" Margin="0,5,0,0">
+            Note: These settings will be used the next time the application is started. 
+            Leave paths empty to use the default libraries bundled with the application.
+        </TextBlock>
+
+        <StackPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button x:Name="btnSave" Content="Save" Width="80" Click="BtnSave_Click" IsDefault="True" Padding="5,2"/>
+            <Button x:Name="btnCancel" Content="Cancel" Width="80" Margin="10,0,0,0" IsCancel="True" Padding="5,2"/>
+        </StackPanel>
+    </Grid>
+</Window>
