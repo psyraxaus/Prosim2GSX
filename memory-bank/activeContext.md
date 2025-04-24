@@ -3,6 +3,15 @@
 ## Current Focus
 The current focus has been on simplifying the loadsheet generation process by removing redundant custom weight and balance calculations and fully relying on Prosim's native loadsheet functionality. This change removes unnecessary complexity and potential points of failure in the code. The redundant variables and methods related to custom weight and balance calculations have been removed from GsxController.cs and ProsimController.cs, while keeping the enhanced error handling, server status checking, and retry logic in ProsimLoadsheetService.cs.
 
+The loadsheet generation process now follows a more robust workflow:
+1. First checking if the Prosim EFB server is available via a health check
+2. Only proceeding with loadsheet generation if the server is confirmed to be running
+3. Using proper HTTP request handling with timeout management
+4. Implementing exponential backoff for retries
+5. Detailed error reporting with HTTP status code interpretation
+6. Proper thread synchronization to prevent multiple simultaneous generation attempts
+7. Tracking of loadsheet states (NotStarted, Generating, Completed, Failed)
+
 Prior to this simplification, the focus was on enhancing error handling for loadsheet generation and fixing issues with deboarding state handling. We significantly improved the error diagnostics and recovery capabilities for loadsheet generation by implementing server status checking, detailed HTTP status code interpretation, and better retry logic. We also fixed an issue where deboarding was being called prematurely during departure by improving the state handling logic.
 
 Prior to these enhancements, the focus was on fixing an application crash that occurred when the default SimBrief ID was set to 0. This issue was causing the application to crash in KernelBase.dll after displaying a message box and switching to the Settings tab. The fix involved removing the redundant SimbriefIdRequiredEvent system and implementing a more robust first-time setup dialog that validates the SimBrief ID at application startup.
@@ -19,6 +28,9 @@ Previous work also focused on implementing a new Prosim dataref subscription sys
   - Updated VoicemeeterRemote64.dll to a newer version for better compatibility across different systems
   - Enhanced error handling for VoiceMeeter API initialization
   - Improved logging for VoiceMeeter operations to aid in debugging
+  - Implemented a more flexible audio channel configuration system that supports both strips and buses in VoiceMeeter
+  - Added UI for selecting VoiceMeeter strips/buses with dynamic loading of available options
+  - Added VoiceMeeter diagnostics functionality to help troubleshoot audio issues
 
 - Simplified loadsheet generation by removing redundant custom weight and balance calculations:
   - Removed redundant variables from GsxController.cs (finalMacTow, finalMacZfw, prelimMacTow, prelimMacZfw, finalTow, finalZfw, prelimTow, prelimZfw, macZfw)
@@ -126,6 +138,11 @@ Previous work also focused on implementing a new Prosim dataref subscription sys
 - Removing redundant variables and methods to simplify the codebase
 - Keeping the enhanced error handling, server status checking, and retry logic for loadsheet generation
 - Maintaining the improved deboarding state handling to prevent premature deboarding during departure
+- Implementing a state-machine approach for flight phase management with clear transitions
+- Using an event-driven architecture for UI updates to improve responsiveness
+- Separating service interfaces from implementations to improve testability and maintainability
+- Using a dictionary-based approach for service toggle handling to improve code organization
+- Implementing thread-safe event handling with proper subscription management
 - Using VoiceMeeter API for advanced audio control beyond Windows Core Audio capabilities
 - Supporting both Core Audio and VoiceMeeter APIs for flexibility
 - Making channels controllable with VoiceMeeter even when process names are empty
@@ -154,6 +171,13 @@ Previous work also focused on implementing a new Prosim dataref subscription sys
 - Handling potential errors or edge cases in the loadsheet generation process
 - Maintaining compatibility with future updates to Prosim's loadsheet system
 - Ensuring proper error handling and recovery for loadsheet generation failures
+- Managing the lifecycle of event subscriptions to prevent memory leaks
+- Balancing event publishing frequency with performance considerations
+- Coordinating the timing of door operations with GSX service states
+- Handling edge cases in the refueling process (disconnection, reconnection)
+- Ensuring accurate synchronization between Prosim and GSX Pro during all flight phases
+- Managing the complexity of the state machine transitions, especially during abnormal scenarios
+- Ensuring proper cleanup of resources when components are disposed
 - Ensuring the event aggregator system handles all edge cases properly
 - Managing the lifecycle of event subscriptions to prevent memory leaks
 - Balancing event publishing frequency with performance considerations
@@ -180,6 +204,11 @@ Previous work also focused on implementing a new Prosim dataref subscription sys
 3. Consider adding more detailed logging for loadsheet generation to aid in troubleshooting
 4. Explore potential improvements to error handling for edge cases
 5. Update documentation to reflect the simplified approach to loadsheet generation
+6. Consider implementing automated testing for core components
+7. Explore extending automation to cover push-back, de-ice, and gate selection services
+8. Implement performance metrics to monitor service response times
+9. Enhance the event filtering system to reduce unnecessary UI updates
+10. Optimize the monitoring interval for different types of datarefs based on criticality
 6. Extend the event aggregator system to cover more aspects of the application
 7. Implement additional event types for other state changes in the system
 8. Optimize event publishing frequency for different types of events

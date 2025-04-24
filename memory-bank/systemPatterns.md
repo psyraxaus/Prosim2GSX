@@ -90,6 +90,9 @@ The system implements an event aggregator pattern to decouple components and imp
   - `IEventAggregator`: Interface defining publish/subscribe methods
   - `EventAggregator`: Singleton implementation with thread-safe operations
   - `SubscriptionToken`: Token-based system for managing subscriptions
+  - `Dictionary<Type, List<object>>`: Internal storage for event subscriptions
+  - `Dictionary<SubscriptionToken, object>`: Mapping between tokens and subscriptions
+  - Thread-safe locking mechanism using a private `_lockObject`
 
 - **Event Types**:
   - `ServiceStatusChangedEvent`: For ground service status changes
@@ -97,6 +100,9 @@ The system implements an event aggregator pattern to decouple components and imp
   - `FlightPhaseChangedEvent`: For flight phase transitions
   - `DataRefChangedEvent`: For Prosim dataref changes
   - `LvarChangedEvent`: For MSFS LVAR changes
+  - `FlightPlanChangedEvent`: For flight plan updates
+  - `RetryFlightPlanLoadEvent`: For triggering flight plan reload attempts
+  - `AudioStateChangedEvent`: For audio system state changes
 
 - **Implementation**:
   - Publishers call `EventAggregator.Instance.Publish<TEvent>(event)` to broadcast events
@@ -105,6 +111,9 @@ The system implements an event aggregator pattern to decouple components and imp
   - Thread-safe implementation ensures reliable operation in a multi-threaded environment
   - UI components use `Dispatcher.Invoke` to update UI elements from event handlers
   - Proper cleanup is implemented to prevent memory leaks
+  - Exception handling in the Publish method prevents event handler exceptions from affecting other handlers
+  - Events are processed synchronously to ensure proper ordering
+  - The EventAggregator is implemented as a singleton using Lazy<T> with LazyThreadSafetyMode.ExecutionAndPublication
 
 - **Example**:
   ```csharp
@@ -422,14 +431,38 @@ The system implements a callback pattern for LVAR value changes:
   ```
 - Error handling is built into the callback execution to prevent crashes
 
-### State Machine
-The service flow follows a state machine pattern:
+### Flight Phase State Machine
+The service flow follows a sophisticated state machine pattern:
 
-- Each flight phase has defined states (pre-flight, boarding, departure, etc.)
-- Transitions between states are triggered by specific events
-- Actions are performed when entering or exiting states
-- The refueling process implements a mini-state machine with states for active, paused, and completed
-- State transitions are triggered by both GSX events and fuel hose connection status
+- **Flight States**:
+  - `PREFLIGHT`: Initial state when the application starts
+  - `DEPARTURE`: After flight plan is loaded, during boarding and refueling
+  - `TAXIOUT`: After ground equipment is removed, during taxi to runway
+  - `FLIGHT`: When aircraft is airborne
+  - `TAXIIN`: After landing, during taxi to gate
+  - `ARRIVAL`: After engines off and parking brake set, during deboarding
+  - `TURNAROUND`: After deboarding complete, waiting for new flight plan
+
+- **State Transitions**:
+  - `PREFLIGHT` → `DEPARTURE`: Triggered by flight plan loading
+  - `DEPARTURE` → `TAXIOUT`: Triggered by parking brake set, beacon on, and external power disconnected
+  - `TAXIOUT` → `FLIGHT`: Triggered by aircraft becoming airborne
+  - `FLIGHT` → `TAXIIN`: Triggered by aircraft landing
+  - `TAXIIN` → `ARRIVAL`: Triggered by engines off, parking brake set, and ground speed near zero
+  - `ARRIVAL` → `TURNAROUND`: Triggered by deboarding completion
+  - `TURNAROUND` → `DEPARTURE`: Triggered by new flight plan loading
+
+- **State Handlers**:
+  - Each state has a dedicated handler method in GsxController (e.g., HandlePreflightState)
+  - Handlers implement state-specific logic and check for transition conditions
+  - State transitions are managed by the FlightStateService
+  - Events are published when state transitions occur
+
+- **Sub-State Machines**:
+  - The refueling process implements a mini-state machine with states for active, paused, and completed
+  - Boarding and deboarding processes have their own state tracking
+  - Ground services (jetway, GPU, PCA) have individual state tracking
+  - State transitions are triggered by both GSX events and aircraft conditions
 
 ### Dependency Injection
 Components are designed with loose coupling in mind:
@@ -453,6 +486,26 @@ The system uses dictionary-based action mapping for service toggles:
 - Actions are triggered based on LVAR state changes
 - The pattern allows for easy addition of new service toggle mappings
 - Similar mapping approach is used for other state-based actions like refueling control
+- Implementation in GsxController:
+  ```csharp
+  // Dictionary to map service toggle LVAR names to door operations
+  private readonly Dictionary<string, Action> serviceToggles = new Dictionary<string, Action>();
+  
+  // Initialization in constructor
+  serviceToggles.Add("FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE", () => OperateFrontDoor());
+  serviceToggles.Add("FSDT_GSX_AIRCRAFT_SERVICE_2_TOGGLE", () => OperateAftDoor());
+  serviceToggles.Add("FSDT_GSX_AIRCRAFT_CARGO_1_TOGGLE", () => OperateFrontCargoDoor());
+  serviceToggles.Add("FSDT_GSX_AIRCRAFT_CARGO_2_TOGGLE", () => OperateAftCargoDoor());
+  
+  // Usage in callback handler
+  private void OnServiceToggleChanged(float newValue, float oldValue, string lvarName)
+  {
+      if (serviceToggles.ContainsKey(lvarName) && oldValue == SERVICE_TOGGLE_OFF && newValue == SERVICE_TOGGLE_ON)
+      {
+          serviceToggles[lvarName]();
+      }
+  }
+  ```
 - Catering service door operations are implemented using this pattern:
   ```csharp
   // Dictionary to map service toggle LVAR names to door operations
@@ -473,6 +526,10 @@ The system uses dictionary-based action mapping for service toggles:
 3. MainWindow, which has subscribed to these events, receives the event notification
 4. Event handlers in MainWindow update the UI elements using Dispatcher.Invoke for thread safety
 5. This decoupled approach allows the UI to be updated without direct dependencies on the controllers
+6. The MainWindow subscribes to events in its constructor and unsubscribes in its Closing handler
+7. Each event type has a dedicated handler method in MainWindow (e.g., OnServiceStatusChanged)
+8. UI elements are updated based on the event data, such as changing indicator colors for service status
+9. The event aggregator ensures that events are delivered to all subscribers regardless of where they were published
 6. Example flow for service status updates:
    - GsxController detects a change in jetway status
    - GsxController publishes a ServiceStatusChangedEvent
@@ -487,6 +544,8 @@ The system uses dictionary-based action mapping for service toggles:
 5. GSX uses this LVAR to control cabin sound muffling when the cockpit door is closed
 6. The cockpit door indicator in Prosim is also updated to reflect the current state
 7. Additionally, a DataRefChangedEvent is published through the EventAggregator
+8. The event is received by any components that have subscribed to DataRefChangedEvent
+9. This allows for real-time UI updates and other components to react to door state changes
 
 ### Initialization Flow
 1. Application starts and initializes core components
@@ -517,6 +576,9 @@ The system uses dictionary-based action mapping for service toggles:
    - A simple GET request is sent to the server's health endpoint
    - If the server is not available, the operation is aborted with a clear error message
    - This prevents unnecessary attempts to generate loadsheets when the server is not available
+   - The server status check is implemented in both GsxLoadsheetService and ProsimLoadsheetService
+   - The check uses a short timeout (5 seconds) to avoid hanging the application
+   - The result is returned as a Task<bool> that can be awaited by the caller
 
 2. **Loadsheet Generation:**
    - The system uses Prosim's native loadsheet functionality to generate loadsheets
@@ -524,6 +586,10 @@ The system uses dictionary-based action mapping for service toggles:
    - The request includes the type of loadsheet to generate (Preliminary or Final)
    - The system tracks whether a loadsheet has already been generated for the current flight to avoid duplicate generation
    - Flags are reset when a new flight plan is loaded
+   - The generation process is protected by a SemaphoreSlim to prevent multiple simultaneous attempts
+   - A minimum time between attempts is enforced to prevent overloading the server
+   - The current state of loadsheet generation is tracked (NotStarted, Generating, Completed, Failed)
+   - The generation process is implemented as an async Task that returns a detailed LoadsheetResult
 
 3. **Error Handling:**
    - Detailed HTTP status code interpretation with specific troubleshooting steps for different error types
@@ -531,12 +597,20 @@ The system uses dictionary-based action mapping for service toggles:
    - Comprehensive logging of request/response details for troubleshooting
    - Timeout handling to detect connection issues quickly
    - Specific error messages for common failure scenarios (server not available, network issues, etc.)
+   - Exception handling for TaskCanceledException (timeout), HttpRequestException (network issues), and general exceptions
+   - The LoadsheetResult class provides detailed information about the success or failure of the operation
+   - HTTP status codes are captured and included in the result for better diagnostics
+   - Response content is captured and included in the result for error analysis
 
 4. **Loadsheet Data Usage:**
    - Loadsheet data is received via dataref subscription callbacks
    - The system subscribes to the preliminary and final loadsheet datarefs
    - When a loadsheet is received, an event is raised to notify interested components
    - The loadsheet data can be sent to ACARS if enabled
+   - The loadsheet data is parsed from JSON to a dynamic object
+   - The LoadsheetReceived event includes the type of loadsheet (Preliminary or Final) and the data
+   - The GsxController handles sending the loadsheet data to ACARS if enabled
+   - The ACARS client formats the message appropriately for the selected ACARS network
 
 ### Catering Service Door Flow
 1. GSXController monitors catering service state via LVAR callbacks

@@ -3,6 +3,8 @@
 ## Project Status
 The Prosim2GSX project is in a functional state with the core integration between Prosim A320 and GSX Pro working as expected. Recent simplifications to the loadsheet generation process have improved the reliability and maintainability of the application. By removing redundant custom weight and balance calculations and fully relying on Prosim's native loadsheet functionality, we've reduced complexity and potential points of failure in the code. The redundant variables and methods related to custom weight and balance calculations have been removed from GsxController.cs and ProsimController.cs, while keeping the enhanced error handling, server status checking, and retry logic in ProsimLoadsheetService.cs.
 
+The code review confirms that the implementation follows the architecture and patterns described in the documentation. The event aggregator pattern is properly implemented with thread-safe operations and proper subscription management. The flight phase state machine is implemented with clear transitions and state-specific handlers. The loadsheet generation process includes proper error handling, server status checking, and retry logic. The audio integration supports both Windows Core Audio and VoiceMeeter with a flexible configuration system.
+
 Prior to these simplifications, improvements to error handling for loadsheet generation and fixes for deboarding state handling have enhanced the reliability and robustness of the application. The implementation of server status checking, detailed HTTP status code interpretation, and better retry logic has significantly improved the diagnostics and recovery capabilities for loadsheet generation. The fixes to deboarding state handling have resolved an issue where deboarding was being called prematurely during departure.
 
 The user interface has been updated to a new Electronic Flight Bag (EFB) look, providing a more modern and intuitive interface for users. This UI redesign improves the visual appearance and usability of the application while maintaining all the existing functionality. The new EFB-style interface follows design patterns common in modern aviation applications, making the tool more familiar to pilots who use similar interfaces in their flight operations.
@@ -23,6 +25,10 @@ The comprehensive Prosim dataref subscription system and cockpit door integratio
 - ✅ Added better retry logic with exponential backoff for transient failures
 - ✅ Improved logging for loadsheet generation to aid in troubleshooting
 - ✅ Fixed issue with deboarding being called prematurely during departure
+- ✅ Implemented thread synchronization to prevent multiple simultaneous generation attempts
+- ✅ Added tracking of loadsheet states (NotStarted, Generating, Completed, Failed)
+- ✅ Implemented proper exception handling for HTTP requests
+- ✅ Added timeout handling for network operations
 
 ### User Interface
 - ✅ Updated the UI to a new Electronic Flight Bag (EFB) look
@@ -42,6 +48,10 @@ The comprehensive Prosim dataref subscription system and cockpit door integratio
 - ✅ Added handlers for the new navigation buttons
 - ✅ Implemented the flight phase progress bar highlighting
 - ✅ Updated the event handlers to work with the new UI elements
+- ✅ Implemented proper event subscription cleanup in window closing handler
+- ✅ Added thread-safe UI updates using Dispatcher.Invoke
+- ✅ Implemented dynamic theme switching at runtime
+- ✅ Added theme refresh functionality
 
 ### Framework and Infrastructure
 - ✅ Implemented event aggregator system using the publisher-subscriber pattern
@@ -62,6 +72,10 @@ The comprehensive Prosim dataref subscription system and cockpit door integratio
 - ✅ Migration from .NET 7 to .NET 8
 - ✅ Updated NuGet packages to latest versions
 - ✅ Version updated to 0.4.0
+- ✅ Implemented exception handling in the Publish method to prevent event handler exceptions from affecting other handlers
+- ✅ Added thread-safe locking mechanism using a private _lockObject
+- ✅ Implemented proper token-based subscription management
+- ✅ Added support for FlightPlanChangedEvent and RetryFlightPlanLoadEvent
 
 ### Core Integration
 - ✅ Basic connectivity between Prosim A320 and GSX Pro
@@ -74,6 +88,10 @@ The comprehensive Prosim dataref subscription system and cockpit door integratio
 - ✅ Implemented real-time UI updates for service status changes
 - ✅ Added connection status monitoring and UI updates via events
 - ✅ Implemented flight phase change notifications via events
+- ✅ Implemented a sophisticated state machine for flight phases
+- ✅ Added dedicated handler methods for each flight phase
+- ✅ Implemented clear state transitions with proper conditions
+- ✅ Added sub-state machines for refueling, boarding, and deboarding
 
 ### Service Synchronization
 - ✅ Simplified loadsheet generation by removing redundant custom weight and balance calculations
@@ -98,6 +116,9 @@ The comprehensive Prosim dataref subscription system and cockpit door integratio
 - ✅ Completed testing of the new LVAR subscription system
 - ✅ Completed successful testing of the Prosim dataref subscription system with cockpit door switch
 - ✅ Completed thorough testing of center of gravity calculations with various aircraft loading scenarios
+- ✅ Implemented dictionary-based action mapping for service toggles
+- ✅ Added proper error handling for service state transitions
+- ✅ Implemented thread-safe service status updates
 
 ### Automation
 - ✅ Automatic service calls (except Push-Back, De-Ice, Gate-Selection)
@@ -111,6 +132,12 @@ The comprehensive Prosim dataref subscription system and cockpit door integratio
 - ✅ Support for controlling VoiceMeeter strips and buses
 - ✅ UI for selecting VoiceMeeter devices
 - ✅ Synchronization between Prosim datarefs and VoiceMeeter parameters
+- ✅ Added support for VHF2, VHF3, CAB, and PA channels
+- ✅ Implemented a more flexible audio channel configuration system
+- ✅ Added UI for selecting VoiceMeeter strips/buses with dynamic loading
+- ✅ Added VoiceMeeter diagnostics functionality
+- ✅ Fixed namespace conflict with LogLevel enum
+- ✅ Updated VoicemeeterRemote64.dll for better compatibility
 
 ### User Interface
 - ✅ System tray icon for configuration access
@@ -119,6 +146,12 @@ The comprehensive Prosim dataref subscription system and cockpit door integratio
 - ✅ Improved UI responsiveness with event-based updates
 - ✅ Thread-safe UI updates using Dispatcher.Invoke
 - ✅ Decoupled UI from direct controller dependencies
+- ✅ Implemented dynamic airline theming system
+- ✅ Created Theme class structure for theme data
+- ✅ Implemented ThemeManager for loading and applying themes
+- ✅ Added JSON theme files for various airlines
+- ✅ Implemented theme selection UI
+- ✅ Added theme refresh functionality
 
 ## In Progress Features
 - 🔄 Testing the simplified loadsheet generation process with various flight scenarios
@@ -127,21 +160,27 @@ The comprehensive Prosim dataref subscription system and cockpit door integratio
 - 🔄 Extending the event aggregator to cover more aspects of the application
 - 🔄 Testing of the .NET 8 migration to ensure all functionality works as expected
 - 🔄 Identifying additional Prosim datarefs that could benefit from the subscription system
+- 🔄 Optimizing event publishing frequency for different types of events
+- 🔄 Implementing event filtering to reduce unnecessary UI updates
+- 🔄 Evaluating the performance impact of the event aggregator system under heavy load
 
 ## Planned Features
 - 📋 Adding more detailed logging for loadsheet generation to aid in troubleshooting
 - 📋 Exploring potential improvements to error handling for edge cases
 - 📋 Updating documentation to reflect the simplified approach to loadsheet generation
 - 📋 Implementing additional event types for other state changes in the system
-- 📋 Optimizing event publishing frequency for different types of events
-- 📋 Implementing event filtering to reduce unnecessary UI updates
-- 📋 Evaluating the performance impact of the event aggregator system under heavy load
 - 📋 Extending the dataref subscription pattern to other simulation variables
 - 📋 Optimizing the monitoring interval for different types of datarefs
 - 📋 Implementing priority levels for different dataref monitors
 - 📋 Extending the callback pattern to other parts of the application
 - 📋 Optimizing performance of the callback system
 - 📋 Further improvements to service state synchronization
+- 📋 Implementing automated testing for core components
+- 📋 Extending automation to cover push-back, de-ice, and gate selection services
+- 📋 Implementing performance metrics to monitor service response times
+- 📋 Implementing a more sophisticated logging system with filtering and rotation
+- 📋 Enhancing the theme system to support more customization options
+- 📋 Improving the first-time setup experience with more guidance
 
 ## Known Issues
 Based on the README, there are some known considerations:
@@ -149,6 +188,10 @@ Based on the README, there are some known considerations:
 - ⚠️ Potential issues when used with FS2Crew (specifically "FS2Crew: Prosim A320 Edition")
 - ⚠️ GSX audio may stay muted when switching to another plane if it was muted during the session
 - ⚠️ Extreme passenger density setting in GSX breaks boarding functionality
+- ⚠️ Event subscription lifecycle management requires careful attention to prevent memory leaks
+- ⚠️ Thread safety considerations for event handling and callback execution
+- ⚠️ Proper cleanup of resources when components are disposed
+- ⚠️ Balancing event publishing frequency with performance considerations
 
 ## Recently Fixed Issues
 - ✅ Simplified loadsheet generation by removing redundant custom weight and balance calculations
@@ -160,6 +203,12 @@ Based on the README, there are some known considerations:
 - ✅ Fixed issue with deboarding being called prematurely during departure
   - Root cause: Deboarding state variable was being updated regardless of the current flight phase
   - Solution: Modified the OnDeboardingStateChanged handler to only update the currentDeboardState variable when in the appropriate flight state (ARRIVAL or TAXIIN)
+- ✅ Fixed VoiceMeeter channel control issue
+  - Root cause: Namespace conflict with LogLevel enum in ServiceModel.cs
+  - Solution: Used fully qualified name (Prosim2GSX.LogLevel) and updated VoicemeeterRemote64.dll
+- ✅ Fixed issues with VHF2, VHF3, CAB, and PA channels not controlling VoiceMeeter
+  - Root cause: IsXControllable() methods required process names even when using VoiceMeeter
+  - Solution: Modified these methods to work with VoiceMeeter even with empty process names
 - ✅ Fixed application crash when default SimBrief ID is 0
   - Root cause: The SimbriefIdRequiredEvent handler was causing a crash in KernelBase.dll after displaying a message box and switching to the Settings tab
   - Solution: Removed the redundant SimbriefIdRequiredEvent system and implemented a more robust first-time setup dialog that validates the SimBrief ID at application startup
@@ -218,6 +267,10 @@ Current development priorities include:
 18. Expanding automation capabilities to include Push-Back, De-Ice, and Gate-Selection
 19. Enhancing error handling and recovery mechanisms
 20. Adding more configuration options for advanced users
+21. Implementing automated testing for core components
+22. Implementing performance metrics to monitor service response times
+23. Enhancing the theme system to support more customization options
+24. Improving the first-time setup experience with more guidance
 
 ## Deployment Status
 The project is in a deployable state following the .NET 8 migration. The README will need to be updated to reflect the new .NET 8 runtime requirement before the next release.
