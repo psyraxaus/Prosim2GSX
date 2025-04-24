@@ -37,11 +37,13 @@ namespace Prosim2GSX.Services.GSX.Implementation
             IProsimInterface prosimInterface,
             IGsxSimConnectService simConnectService,
             IGsxMenuService menuService,
+            IDataRefMonitoringService dataRefMonitoringService,
             ServiceModel model)
         {
             _prosimInterface = prosimInterface ?? throw new ArgumentNullException(nameof(prosimInterface));
             _simConnectService = simConnectService ?? throw new ArgumentNullException(nameof(simConnectService));
             _menuService = menuService ?? throw new ArgumentNullException(nameof(menuService));
+            _dataRefMonitoringService = dataRefMonitoringService ?? throw new ArgumentNullException(nameof(dataRefMonitoringService));
             _model = model ?? throw new ArgumentNullException(nameof(model));
 
             // Subscribe to service state changes

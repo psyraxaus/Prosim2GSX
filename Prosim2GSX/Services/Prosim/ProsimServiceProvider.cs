@@ -85,7 +85,7 @@ namespace Prosim2GSX.Services
 
                 // Create ground services service
                 _gsxGroundServicesService = new GsxGroundServicesService(
-                    _prosimInterface, _gsxSimConnectService, _gsxMenuService, _model);
+                    _prosimInterface, _gsxSimConnectService, _gsxMenuService, _dataRefService, _model);
 
                 // Create boarding service
                 _gsxBoardingService = new GsxBoardingService(

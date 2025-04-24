@@ -165,6 +165,9 @@ namespace Prosim2GSX.Services.GSX
         {
             try
             {
+                // Update ground services status
+                UpdateGroundServicesStatus();
+
                 // Update all services with the latest data
                 ServiceLocator.UpdateAllServices(false, _flightPlan);
 
@@ -940,6 +943,103 @@ namespace Prosim2GSX.Services.GSX
                 $"Changed OPS callsign: {sb.ToString()}");
 
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Update the ground services status indicators
+        /// </summary>
+        public void UpdateGroundServicesStatus()
+        {
+            try
+            {
+                // Check jetway status
+                int jetwayState = (int)_simConnectService.ReadGsxLvar("FSDT_GSX_JETWAY");
+                if (jetwayState > 0)
+                {
+                    ServiceStatus status = jetwayState == 5 ? ServiceStatus.Active :
+                                        jetwayState == 6 ? ServiceStatus.Completed :
+                                        jetwayState == 4 ? ServiceStatus.Requested :
+                                        jetwayState == 2 ? ServiceStatus.Disconnected :
+                                        ServiceStatus.Inactive;
+                    EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Jetway", status));
+                }
+
+                // Check stairs status
+                int stairsState = (int)_simConnectService.ReadGsxLvar("FSDT_GSX_STAIRS");
+                if (stairsState > 0)
+                {
+                    ServiceStatus status = stairsState == 5 ? ServiceStatus.Active :
+                                       stairsState == 6 ? ServiceStatus.Completed :
+                                       stairsState == 4 ? ServiceStatus.Requested :
+                                       stairsState == 2 ? ServiceStatus.Disconnected :
+                                       ServiceStatus.Inactive;
+                    EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Stairs", status));
+                }
+
+                // Check boarding status
+                int boardingState = _simConnectService.GetBoardingState();
+                if (boardingState > 0)
+                {
+                    ServiceStatus status = boardingState == 5 ? ServiceStatus.Active :
+                                        boardingState == 6 ? ServiceStatus.Completed :
+                                        boardingState == 4 ? ServiceStatus.Requested :
+                                        ServiceStatus.Inactive;
+                    EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Boarding", status));
+                }
+
+                // Check deboarding status
+                int deboardingState = _simConnectService.GetDeboardingState();
+                if (deboardingState > 0)
+                {
+                    ServiceStatus status = deboardingState == 5 ? ServiceStatus.Active :
+                                        deboardingState == 6 ? ServiceStatus.Completed :
+                                        deboardingState == 4 ? ServiceStatus.Requested :
+                                        ServiceStatus.Inactive;
+                    EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Deboarding", status));
+                }
+
+                // Check catering status
+                int cateringState = _simConnectService.GetCateringState();
+                if (cateringState > 0)
+                {
+                    ServiceStatus status = cateringState == 5 ? ServiceStatus.Active :
+                                       cateringState == 6 ? ServiceStatus.Completed :
+                                       cateringState == 4 ? ServiceStatus.Requested :
+                                       ServiceStatus.Inactive;
+                    EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Catering", status));
+                }
+
+                // Check refueling status
+                int refuelingState = _simConnectService.GetRefuelingState();
+                if (refuelingState > 0)
+                {
+                    // Special case for refueling - consider fuel hose state
+                    bool fuelHoseConnected = _simConnectService.IsFuelHoseConnected();
+
+                    ServiceStatus status = refuelingState == 6 ? ServiceStatus.Completed :
+                                       refuelingState == 5 && fuelHoseConnected ? ServiceStatus.Active :
+                                       refuelingState == 5 && !fuelHoseConnected ? ServiceStatus.Waiting :
+                                       refuelingState == 4 ? ServiceStatus.Requested :
+                                       ServiceStatus.Inactive;
+                    EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Refuel", status));
+                }
+
+                // Check departure (pushback) status
+                int departureState = _simConnectService.GetDepartureState();
+                if (departureState > 0)
+                {
+                    ServiceStatus status = departureState == 5 ? ServiceStatus.Active :
+                                       departureState == 6 ? ServiceStatus.Completed :
+                                       departureState == 4 ? ServiceStatus.Requested :
+                                       ServiceStatus.Inactive;
+                    EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Pushback", status));
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, nameof(GsxController),
+                    $"Error updating ground services status: {ex.Message}");
+            }
         }
     }
 }

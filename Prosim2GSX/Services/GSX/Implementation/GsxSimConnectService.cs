@@ -1,4 +1,5 @@
 ﻿using Microsoft.FlightSimulator.SimConnect;
+using Prosim2GSX.Events;
 using Prosim2GSX.Services.GSX.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -30,25 +31,28 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// </summary>
         private void SubscribeToEssentialLvars()
         {
+            // Subscribe to LVARs with callbacks
+            SubscribeToGsxLvar("FSDT_GSX_JETWAY", OnJetwayStateChanged);
+            SubscribeToGsxLvar("FSDT_GSX_STAIRS", OnStairsStateChanged);
+            SubscribeToGsxLvar("FSDT_GSX_CATERING_STATE", OnCateringStateChanged);
+            SubscribeToGsxLvar("FSDT_GSX_REFUELING_STATE", OnRefuelingStateChanged);
+            SubscribeToGsxLvar("FSDT_GSX_BOARDING_STATE", OnBoardingStateChanged);
+            SubscribeToGsxLvar("FSDT_GSX_DEBOARDING_STATE", OnDeboardingStateChanged);
+            SubscribeToGsxLvar("FSDT_GSX_DEPARTURE_STATE", OnDepartureStateChanged);
+            SubscribeToGsxLvar("FSDT_GSX_BOARDING_CARGO", OnCargoLoadingChanged);
+            SubscribeToGsxLvar("FSDT_GSX_DEBOARDING_CARGO", OnCargoLoadingChanged);
+            SubscribeToGsxLvar("FSDT_GSX_FUELHOSE_CONNECTED", OnFuelHoseStateChanged);
+
+            // Subscribe to other LVARs without callbacks
             _simConnect.SubscribeLvar("FSDT_GSX_COUATL_STARTED");
-            _simConnect.SubscribeLvar("FSDT_GSX_DEBOARDING_STATE");
-            _simConnect.SubscribeLvar("FSDT_GSX_CATERING_STATE");
             _simConnect.SubscribeLvar("FSDT_GSX_COCKPIT_DOOR_OPEN");
-            _simConnect.SubscribeLvar("FSDT_GSX_REFUELING_STATE");
-            _simConnect.SubscribeLvar("FSDT_GSX_BOARDING_STATE");
-            _simConnect.SubscribeLvar("FSDT_GSX_DEPARTURE_STATE");
             _simConnect.SubscribeLvar("FSDT_GSX_DEICING_STATE");
             _simConnect.SubscribeLvar("FSDT_GSX_NUMPASSENGERS");
             _simConnect.SubscribeLvar("FSDT_GSX_NUMPASSENGERS_BOARDING_TOTAL");
             _simConnect.SubscribeLvar("FSDT_GSX_NUMPASSENGERS_DEBOARDING_TOTAL");
-            _simConnect.SubscribeLvar("FSDT_GSX_BOARDING_CARGO");
-            _simConnect.SubscribeLvar("FSDT_GSX_DEBOARDING_CARGO");
             _simConnect.SubscribeLvar("FSDT_GSX_BOARDING_CARGO_PERCENT");
             _simConnect.SubscribeLvar("FSDT_GSX_DEBOARDING_CARGO_PERCENT");
-            _simConnect.SubscribeLvar("FSDT_GSX_FUELHOSE_CONNECTED");
-            _simConnect.SubscribeLvar("FSDT_GSX_JETWAY");
             _simConnect.SubscribeLvar("FSDT_GSX_OPERATEJETWAYS_STATE");
-            _simConnect.SubscribeLvar("FSDT_GSX_STAIRS");
             _simConnect.SubscribeLvar("FSDT_GSX_OPERATESTAIRS_STATE");
 
             // Subscribe to SimVars
@@ -304,6 +308,151 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 Logger.Log(LogLevel.Error, nameof(GsxSimConnectService),
                     $"Error getting refueling state: {ex.Message}");
                 return 0;
+            }
+        }
+
+        /// <summary>
+        /// Handler for jetway state changes
+        /// </summary>
+        private void OnJetwayStateChanged(float newValue, float oldValue, string lvarName)
+        {
+            if (newValue != oldValue)
+            {
+                var status = GetStatusFromGsxState((int)newValue);
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Jetway", status));
+                Logger.Log(LogLevel.Information, nameof(GsxSimConnectService), $"Jetway state changed to {status}");
+            }
+        }
+
+        /// <summary>
+        /// Handler for stairs state changes
+        /// </summary>
+        private void OnStairsStateChanged(float newValue, float oldValue, string lvarName)
+        {
+            if (newValue != oldValue)
+            {
+                var status = GetStatusFromGsxState((int)newValue);
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Stairs", status));
+                Logger.Log(LogLevel.Information, nameof(GsxSimConnectService), $"Stairs state changed to {status}");
+            }
+        }
+
+        /// <summary>
+        /// Handler for catering state changes
+        /// </summary>
+        private void OnCateringStateChanged(float newValue, float oldValue, string lvarName)
+        {
+            if (newValue != oldValue)
+            {
+                var status = GetStatusFromGsxState((int)newValue);
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Catering", status));
+                Logger.Log(LogLevel.Information, nameof(GsxSimConnectService), $"Catering state changed to {status}");
+            }
+        }
+
+        /// <summary>
+        /// Handler for refueling state changes
+        /// </summary>
+        private void OnRefuelingStateChanged(float newValue, float oldValue, string lvarName)
+        {
+            if (newValue != oldValue)
+            {
+                var status = GetStatusFromGsxState((int)newValue);
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Refuel", status));
+                Logger.Log(LogLevel.Information, nameof(GsxSimConnectService), $"Refueling state changed to {status}");
+            }
+        }
+
+        /// <summary>
+        /// Handler for boarding state changes
+        /// </summary>
+        private void OnBoardingStateChanged(float newValue, float oldValue, string lvarName)
+        {
+            if (newValue != oldValue)
+            {
+                var status = GetStatusFromGsxState((int)newValue);
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Boarding", status));
+                Logger.Log(LogLevel.Information, nameof(GsxSimConnectService), $"Boarding state changed to {status}");
+            }
+        }
+
+        /// <summary>
+        /// Handler for deboarding state changes
+        /// </summary>
+        private void OnDeboardingStateChanged(float newValue, float oldValue, string lvarName)
+        {
+            if (newValue != oldValue)
+            {
+                var status = GetStatusFromGsxState((int)newValue);
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Deboarding", status));
+                Logger.Log(LogLevel.Information, nameof(GsxSimConnectService), $"Deboarding state changed to {status}");
+            }
+        }
+
+        /// <summary>
+        /// Handler for departure state changes
+        /// </summary>
+        private void OnDepartureStateChanged(float newValue, float oldValue, string lvarName)
+        {
+            if (newValue != oldValue)
+            {
+                var status = GetStatusFromGsxState((int)newValue);
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Pushback", status));
+                Logger.Log(LogLevel.Information, nameof(GsxSimConnectService), $"Departure state changed to {status}");
+            }
+        }
+
+        /// <summary>
+        /// Handler for cargo loading/unloading changes
+        /// </summary>
+        private void OnCargoLoadingChanged(float newValue, float oldValue, string lvarName)
+        {
+            if (newValue != oldValue)
+            {
+                // This just logs the change - the actual status updates come from the cargo percentage
+                Logger.Log(LogLevel.Debug, nameof(GsxSimConnectService), $"Cargo operation {lvarName} changed from {oldValue} to {newValue}");
+            }
+        }
+
+        /// <summary>
+        /// Handler for fuel hose connection changes
+        /// </summary>
+        private void OnFuelHoseStateChanged(float newValue, float oldValue, string lvarName)
+        {
+            if (newValue != oldValue)
+            {
+                Logger.Log(LogLevel.Information, nameof(GsxSimConnectService),
+                    $"Fuel hose {(newValue == 1 ? "connected" : "disconnected")}");
+
+                // If refueling state is active and fuel hose state changes, update the refueling status
+                int refuelingState = GetRefuelingState();
+                if (refuelingState == 5)
+                {
+                    // If refueling is active, update status based on fuel hose
+                    var status = newValue == 1 ? ServiceStatus.Active : ServiceStatus.Waiting;
+                    EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Refuel", status));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Helper method to convert GSX state values to ServiceStatus
+        /// </summary>
+        private ServiceStatus GetStatusFromGsxState(int state)
+        {
+            // GSX states: 0=Inactive, 4=Requested, 5=Active, 6=Completed
+            switch (state)
+            {
+                case 6:
+                    return ServiceStatus.Completed;
+                case 5:
+                    return ServiceStatus.Active;
+                case 4:
+                    return ServiceStatus.Requested;
+                case 2:
+                    return ServiceStatus.Disconnected;
+                default:
+                    return ServiceStatus.Inactive;
             }
         }
     }
