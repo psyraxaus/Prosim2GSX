@@ -1,5 +1,6 @@
 ﻿using Prosim2GSX.Events;
 using Prosim2GSX.Models;
+using Prosim2GSX.Services.GSX.Enums;
 using Prosim2GSX.Services.GSX.Interfaces;
 using Prosim2GSX.Services.Prosim.Interfaces;
 using System;
@@ -66,9 +67,9 @@ namespace Prosim2GSX.Services.GSX.Implementation
 
             if (newValue != oldValue)
             {
-                var status = newValue == 6 ? ServiceStatus.Completed :
-                            newValue == 5 ? ServiceStatus.Active :
-                            newValue == 4 ? ServiceStatus.Requested :
+                var status = newValue == (int)GsxServiceState.Completed ? ServiceStatus.Completed :
+                            newValue == (int)GsxServiceState.Active ? ServiceStatus.Active :
+                            newValue == (int)GsxServiceState.Requested ? ServiceStatus.Requested :
                             ServiceStatus.Inactive;
 
                 EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Boarding", status));
@@ -103,9 +104,9 @@ namespace Prosim2GSX.Services.GSX.Implementation
 
             if (newValue != oldValue)
             {
-                var status = newValue == 6 ? ServiceStatus.Completed :
-                            newValue == 5 ? ServiceStatus.Active :
-                            newValue == 4 ? ServiceStatus.Requested :
+                var status = newValue == (int)GsxServiceState.Completed ? ServiceStatus.Completed :
+                            newValue == (int)GsxServiceState.Active ? ServiceStatus.Active :
+                            newValue == (int)GsxServiceState.Requested ? ServiceStatus.Requested :
                             ServiceStatus.Inactive;
 
                 EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Deboarding", status));
@@ -181,7 +182,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 return false;
 
             // Check if GSX considers boarding complete
-            if (_simConnectService.GetBoardingState() == 6)
+            if (_simConnectService.GetBoardingState() == (int)GsxServiceState.Completed)
             {
                 Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
                     "GSX reports boarding completed");
@@ -212,7 +213,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 return false;
 
             // Check if GSX considers deboarding complete
-            if (_simConnectService.GetDeboardingState() == 6)
+            if (_simConnectService.GetDeboardingState() == (int)GsxServiceState.Completed)
             {
                 Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
                     "GSX reports deboarding completed");

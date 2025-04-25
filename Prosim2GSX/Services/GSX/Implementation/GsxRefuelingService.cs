@@ -1,4 +1,5 @@
 ﻿using Prosim2GSX.Models;
+using Prosim2GSX.Services.GSX.Enums;
 using Prosim2GSX.Services.GSX.Interfaces;
 using Prosim2GSX.Services.Prosim.Interfaces;
 using System;
@@ -156,15 +157,14 @@ namespace Prosim2GSX.Services.GSX.Implementation
             Logger.Log(LogLevel.Debug, nameof(GsxRefuelingService),
                 $"GSX refueling state changed from {oldValue} to {newValue}");
 
-            // State 4 = Requested, 5 = Active, 6 = Completed
-            if (newValue >= 4 && !_refuelingRequested)
+            if (newValue >= (int)GsxServiceState.Requested && !_refuelingRequested)
             {
                 _refuelingRequested = true;
                 // Start the refueling in Prosim service
                 _refuelingService.StartRefueling();
             }
 
-            if (newValue == 6 && !_refuelingService.IsRefuelingComplete)
+            if (newValue == (int)GsxServiceState.Completed && !_refuelingService.IsRefuelingComplete)
             {
                 // GSX considers refueling complete
                 _refuelingService.StopRefueling();

@@ -1,5 +1,6 @@
 ﻿using Prosim2GSX.Events;
 using Prosim2GSX.Models;
+using Prosim2GSX.Services.GSX.Enums;
 using Prosim2GSX.Services.GSX.Interfaces;
 using Prosim2GSX.Services.Prosim.Interfaces;
 using System;
@@ -22,14 +23,6 @@ namespace Prosim2GSX.Services.GSX.Implementation
         private bool _cateringComplete = false;
         private int _cateringState = 0;
 
-        // Constants for GSX service states
-        private const int GSX_SERVICE_AVAILABLE = 1;
-        private const int GSX_SERVICE_UNAVAILABLE = 2;
-        private const int GSX_SERVICE_BYPASSED = 3;
-        private const int GSX_SERVICE_REQUESTED = 4;
-        private const int GSX_SERVICE_ACTIVE = 5;
-        private const int GSX_SERVICE_COMPLETED = 6;
-
         // Dictionary to map service toggle LVAR names to door operations
         private readonly Dictionary<string, Action> _serviceToggles = new Dictionary<string, Action>();
 
@@ -37,10 +30,10 @@ namespace Prosim2GSX.Services.GSX.Implementation
         public bool IsCateringRequested => _cateringRequested;
 
         /// <inheritdoc/>
-        public bool IsCateringActive => _cateringState == GSX_SERVICE_ACTIVE;
+        public bool IsCateringActive => _cateringState == (int)GsxServiceState.Active;
 
         /// <inheritdoc/>
-        public bool IsCateringComplete => _cateringComplete || _cateringState == GSX_SERVICE_COMPLETED;
+        public bool IsCateringComplete => _cateringComplete || _cateringState == (int)GsxServiceState.Completed;
 
         /// <inheritdoc/>
         public int CateringState => _cateringState;
@@ -98,16 +91,16 @@ namespace Prosim2GSX.Services.GSX.Implementation
 
             if (newValue != oldValue)
             {
-                ServiceStatus status = newValue == GSX_SERVICE_COMPLETED ? ServiceStatus.Completed :
-                                      newValue == GSX_SERVICE_ACTIVE ? ServiceStatus.Active :
-                                      newValue == GSX_SERVICE_REQUESTED ? ServiceStatus.Requested :
+                ServiceStatus status = newValue == (int)GsxServiceState.Completed ? ServiceStatus.Completed :
+                                      newValue == (int)GsxServiceState.Active ? ServiceStatus.Active :
+                                      newValue == (int)GsxServiceState.Requested ? ServiceStatus.Requested :
                                       ServiceStatus.Inactive;
 
                 EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Catering", status));
             }
 
             // Set cateringComplete when catering reaches completed state
-            if (newValue == GSX_SERVICE_COMPLETED && !_cateringComplete)
+            if (newValue == (int)GsxServiceState.Completed && !_cateringComplete)
             {
                 _cateringComplete = true;
                 Logger.Log(LogLevel.Information, nameof(GsxCateringService), "Catering service completed");
@@ -164,13 +157,13 @@ namespace Prosim2GSX.Services.GSX.Implementation
 
             if (_model.SetOpenCateringDoor)
             {
-                if (_cateringState == GSX_SERVICE_REQUESTED ||
-                    (_cateringState == GSX_SERVICE_ACTIVE && !_prosimInterface.GetProsimVariable("doors.entry.right.fwd")))
+                if (_cateringState == (int)GsxServiceState.Requested ||
+                    (_cateringState == (int)GsxServiceState.Active && !_prosimInterface.GetProsimVariable("doors.entry.right.fwd")))
                 {
                     _doorControlService.SetForwardRightDoor(true);
                     Logger.Log(LogLevel.Information, nameof(GsxCateringService), "Opened forward right door for catering");
                 }
-                else if (_cateringState == GSX_SERVICE_ACTIVE && _prosimInterface.GetProsimVariable("doors.entry.right.fwd"))
+                else if (_cateringState == (int)GsxServiceState.Active && _prosimInterface.GetProsimVariable("doors.entry.right.fwd"))
                 {
                     _doorControlService.SetForwardRightDoor(false);
                     Logger.Log(LogLevel.Information, nameof(GsxCateringService), "Closed forward right door");
@@ -186,13 +179,13 @@ namespace Prosim2GSX.Services.GSX.Implementation
 
             if (_model.SetOpenCateringDoor)
             {
-                if (_cateringState == GSX_SERVICE_REQUESTED ||
-                    (_cateringState == GSX_SERVICE_ACTIVE && !_prosimInterface.GetProsimVariable("doors.entry.right.aft")))
+                if (_cateringState == (int)GsxServiceState.Requested ||
+                    (_cateringState == (int)GsxServiceState.Active && !_prosimInterface.GetProsimVariable("doors.entry.right.aft")))
                 {
                     _doorControlService.SetAftRightDoor(true);
                     Logger.Log(LogLevel.Information, nameof(GsxCateringService), "Opened aft right door for catering");
                 }
-                else if (_cateringState == GSX_SERVICE_ACTIVE && _prosimInterface.GetProsimVariable("doors.entry.right.aft"))
+                else if (_cateringState == (int)GsxServiceState.Active && _prosimInterface.GetProsimVariable("doors.entry.right.aft"))
                 {
                     _doorControlService.SetAftRightDoor(false);
                     Logger.Log(LogLevel.Information, nameof(GsxCateringService), "Closed aft right door");
