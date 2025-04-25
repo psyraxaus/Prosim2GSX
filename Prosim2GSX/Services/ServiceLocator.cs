@@ -198,5 +198,32 @@ namespace Prosim2GSX.Services
         public static IConnectionService ConnectionService =>
             _serviceProvider?.GetApplicationConnectionService() ??
             throw new InvalidOperationException("ServiceLocator not initialized");
+
+        /// <summary>
+        /// Updates the GSX services with the current SimConnect instance
+        /// </summary>
+        /// <param name="simConnect">The MobiSimConnect instance to use</param>
+        public static void UpdateGsxServices(MobiSimConnect simConnect)
+        {
+            if (simConnect == null)
+            {
+                Logger.Log(LogLevel.Warning, nameof(ServiceLocator),
+                    "Cannot update GSX services: SimConnect is null");
+                return;
+            }
+
+            Logger.Log(LogLevel.Information, nameof(ServiceLocator),
+                "Updating GSX services with current SimConnect instance");
+
+            try
+            {
+                _serviceProvider.UpdateGsxServices(simConnect);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, nameof(ServiceLocator),
+                    $"Error updating GSX services: {ex.Message}");
+            }
+        }
     }
 }

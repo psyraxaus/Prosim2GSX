@@ -34,13 +34,13 @@ namespace Prosim2GSX.Services
         private readonly IConnectionService _applicationConnectionService;
 
         // GSX services
-        private readonly IGsxFlightStateService _gsxFlightStateService;
-        private readonly IGsxMenuService _gsxMenuService;
-        private readonly IGsxLoadsheetService _gsxLoadsheetService;
-        private readonly IGsxGroundServicesService _gsxGroundServicesService;
-        private readonly IGsxBoardingService _gsxBoardingService;
-        private readonly IGsxRefuelingService _gsxRefuelingService;
-        private readonly IGsxSimConnectService _gsxSimConnectService;
+        private IGsxFlightStateService _gsxFlightStateService;
+        private IGsxMenuService _gsxMenuService;
+        private IGsxLoadsheetService _gsxLoadsheetService;
+        private IGsxGroundServicesService _gsxGroundServicesService;
+        private IGsxBoardingService _gsxBoardingService;
+        private IGsxRefuelingService _gsxRefuelingService;
+        private IGsxSimConnectService _gsxSimConnectService;
 
         /// <summary>
         /// Creates a new instance of the service provider
@@ -70,8 +70,34 @@ namespace Prosim2GSX.Services
             // Create GSX services if SimConnect is available
             if (IPCManager.SimConnect != null)
             {
+                try
+                {
+                    UpdateGsxServices(IPCManager.SimConnect);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LogLevel.Error, nameof(ProsimServiceProvider),
+                        $"Error creating GSX services: {ex.Message}");
+                }
+            }
+
+            Logger.Log(LogLevel.Information, nameof(ProsimServiceProvider),
+                "Service provider initialized");
+        }
+
+        /// <summary>
+        /// Updates the GSX services with the current SimConnect instance
+        /// </summary>
+        /// <param name="simConnect">The MobiSimConnect instance to use</param>
+        public void UpdateGsxServices(MobiSimConnect simConnect)
+        {
+            if (simConnect == null)
+                return;
+
+            try
+            {
                 // Create SimConnect service first as other services depend on it
-                _gsxSimConnectService = new GsxSimConnectService(IPCManager.SimConnect);
+                _gsxSimConnectService = new GsxSimConnectService(simConnect);
 
                 // Create the menu service
                 string menuFile = GsxHelpers.GetGsxMenuFilePath();
@@ -85,19 +111,37 @@ namespace Prosim2GSX.Services
 
                 // Create ground services service
                 _gsxGroundServicesService = new GsxGroundServicesService(
-                    _prosimInterface, _gsxSimConnectService, _gsxMenuService, _dataRefService, _model);
+                    _prosimInterface,
+                    _gsxSimConnectService,
+                    _gsxMenuService,
+                    _dataRefService,
+                    _model);
 
                 // Create boarding service
                 _gsxBoardingService = new GsxBoardingService(
-                    _prosimInterface, _gsxSimConnectService, _gsxMenuService, _doorControlService, _model);
+                    _prosimInterface,
+                    _gsxSimConnectService,
+                    _gsxMenuService,
+                    _doorControlService,
+                    _model);
 
                 // Create refueling service
                 _gsxRefuelingService = new GsxRefuelingService(
-                    _prosimInterface, _gsxSimConnectService, _gsxMenuService, _flightPlanService, _model);
-            }
+                    _prosimInterface,
+                    _gsxSimConnectService,
+                    _gsxMenuService,
+                    _flightPlanService,
+                    _model);
 
-            Logger.Log(LogLevel.Information, nameof(ProsimServiceProvider),
-                "Service provider initialized");
+                Logger.Log(LogLevel.Information, nameof(ProsimServiceProvider),
+                    "GSX services updated successfully");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, nameof(ProsimServiceProvider),
+                    $"Error updating GSX services: {ex.Message}");
+                throw; // Rethrow to let the caller handle it
+            }
         }
 
         // Original service getters

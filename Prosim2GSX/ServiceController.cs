@@ -336,9 +336,35 @@ namespace Prosim2GSX
         {
             try
             {
+                Logger.Log(LogLevel.Debug, nameof(ServiceController), "Ensuring GSX services are initialized");
+
+                // Initialize GSX services if SimConnect is available
+                if (IPCManager.SimConnect != null)
+                {
+                    try
+                    {
+                        // Force re-creation of GSX services with the current SimConnect instance
+                        ServiceLocator.UpdateGsxServices(IPCManager.SimConnect);
+                        Logger.Log(LogLevel.Information, nameof(ServiceController),
+                            "GSX services initialized successfully");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log(LogLevel.Error, nameof(ServiceController),
+                            $"Error initializing GSX services: {ex.Message}. Some features may not work correctly.");
+                    }
+                }
+                else
+                {
+                    Logger.Log(LogLevel.Warning, nameof(ServiceController),
+                        "SimConnect is not available. GSX services will not be initialized.");
+                }
+
                 Logger.Log(LogLevel.Debug, nameof(ServiceController), "Creating GsxController");
+
                 // Create the GSX controller
                 var gsxController = new GsxController(_model, _flightPlan, _audioService);
+
                 // Store the GsxController in IPCManager
                 IPCManager.GsxController = gsxController;
 

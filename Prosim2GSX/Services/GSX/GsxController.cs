@@ -73,18 +73,21 @@ namespace Prosim2GSX.Services.GSX
             _prosimInterface = ServiceLocator.ProsimInterface;
             _flightPlanService = ServiceLocator.FlightPlanService;
 
-            // Get GSX services
-            _flightStateService = ServiceLocator.GsxFlightStateService;
-            _menuService = ServiceLocator.GsxMenuService;
-            _loadsheetService = ServiceLocator.GsxLoadsheetService;
-            _groundServicesService = ServiceLocator.GsxGroundServicesService;
-            _boardingService = ServiceLocator.GsxBoardingService;
-            _refuelingService = ServiceLocator.GsxRefuelingService;
-            _simConnectService = ServiceLocator.GsxSimConnectService;
-
-            // Get SimConnect instance
-            _simConnectService = IPCManager.SimConnect != null ?
-                new GsxSimConnectService(IPCManager.SimConnect) : null;
+            // Get GSX services - add null checking here
+            _flightStateService = ServiceLocator.GsxFlightStateService ?? 
+                throw new InvalidOperationException("GsxFlightStateService is not available");
+            _menuService = ServiceLocator.GsxMenuService ?? 
+                throw new InvalidOperationException("GsxMenuService is not available");
+            _loadsheetService = ServiceLocator.GsxLoadsheetService ?? 
+                throw new InvalidOperationException("GsxLoadsheetService is not available");
+            _groundServicesService = ServiceLocator.GsxGroundServicesService ?? 
+                throw new InvalidOperationException("GsxGroundServicesService is not available");
+            _boardingService = ServiceLocator.GsxBoardingService ?? 
+                throw new InvalidOperationException("GsxBoardingService is not available");
+            _refuelingService = ServiceLocator.GsxRefuelingService ?? 
+                throw new InvalidOperationException("GsxRefuelingService is not available");
+            _simConnectService = ServiceLocator.GsxSimConnectService ?? 
+                throw new InvalidOperationException("GsxSimConnectService is not available");
 
             // Initialize and validate services
             ValidateServices();
