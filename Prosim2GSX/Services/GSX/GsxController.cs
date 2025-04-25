@@ -433,38 +433,41 @@ namespace Prosim2GSX.Services.GSX
             // First, check if preliminary loadsheet needs to be generated
             if (!_prelimLoadsheetGenerated)
             {
+                // Get refueling state from LVARs and services
                 bool fuelTargetSet = _prosimInterface.GetStatusFunction("aircraft.refuel.fuelTarget") >= 1;
                 bool fuelHoseConnected = _simConnectService.ReadGsxLvar("FSDT_GSX_FUELHOSE_CONNECTED") == 1;
                 int refuelingState = _simConnectService.GetRefuelingState();
+                bool refuelingActive = !_refuelingService.IsRefuelingComplete && _refuelingService.IsFuelHoseConnected;
 
                 // Only generate loadsheet when all conditions are met: 
                 // 1. Fuel target is set
                 // 2. Fuel hose is connected
-                // 3. GSX refueling state is active (5)
-                if (fuelTargetSet && fuelHoseConnected && refuelingState == 5)
+                // 3. Refueling is active
+                if (fuelTargetSet && fuelHoseConnected && refuelingActive)
                 {
                     Logger.Log(LogLevel.Information, nameof(GsxController),
-                        "Fuel target set, fuel hose connected, and refueling active - generating preliminary loadsheet");
+                        "Generating preliminary loadsheet - all conditions met");
                     GeneratePreliminaryLoadsheet();
                     return;
                 }
-                else if (fuelTargetSet)
-                {
-                    if (!fuelHoseConnected)
-                    {
-                        Logger.Log(LogLevel.Debug, nameof(GsxController),
-                            "Fuel target set but waiting for fuel hose connection before generating loadsheet");
-                    }
-                    else if (refuelingState != 5)
-                    {
-                        Logger.Log(LogLevel.Debug, nameof(GsxController),
-                            $"Fuel target set and hose connected, but refueling not active (state={refuelingState}). Waiting for active refueling.");
-                    }
-                }
                 else
                 {
-                    Logger.Log(LogLevel.Debug, nameof(GsxController),
-                        "aircraft.refuel.fuelTarget not set yet. Waiting for refuel target to be set");
+                    // Log which condition is not met
+                    if (!fuelTargetSet)
+                    {
+                        Logger.Log(LogLevel.Debug, nameof(GsxController),
+                            "Fuel target not set yet - waiting to generate preliminary loadsheet");
+                    }
+                    else if (!fuelHoseConnected)
+                    {
+                        Logger.Log(LogLevel.Debug, nameof(GsxController),
+                            "Fuel hose not connected - waiting to generate preliminary loadsheet");
+                    }
+                    else if (!refuelingActive)
+                    {
+                        Logger.Log(LogLevel.Debug, nameof(GsxController),
+                            $"Refueling not active (state: {_refuelingService.IsRefuelingComplete}) - waiting to generate preliminary loadsheet");
+                    }
                 }
             }
 
@@ -486,44 +489,26 @@ namespace Prosim2GSX.Services.GSX
 
                     if (_model.SetSaveHydraulicFluids && !_initialFluidsSet)
                     {
-                        // Set initial fluids (would be handled by refueling service)
+                        // Service will handle the actual setting
                         _initialFluidsSet = true;
                     }
 
-                    // Request refueling only if not already requested/active/completed
-                    if (!_refuelingService.IsRefueling && !refuelingComplete && !refuelingRequested)
+                    // Request refueling if not already requested
+                    if (!_refuelingService.IsRefuelingRequested && _simConnectService.GetRefuelingState() < 4)
                     {
-                        Logger.Log(LogLevel.Information, nameof(GsxController), "Calling Refuel Service");
+                        Logger.Log(LogLevel.Information, nameof(GsxController), "Requesting refueling service");
                         _refuelingService.RequestRefuelingService();
                         return;
                     }
 
-                    // Process refueling if active and not paused
-                    if (_refuelingService.IsRefueling && !_refuelingService.IsRefuelingComplete)
+                    // Process refueling - let the service handle all the details
+                    bool refuelingProcessComplete = _refuelingService.ProcessRefueling();
+
+                    // Check for preliminary loadsheet generation
+                    if (refuelingProcessComplete && !_prelimLoadsheetGenerated)
                     {
-                        // Check if the fuel hose is connected to determine if we should be refueling
-                        bool fuelHoseConnected = _simConnectService.IsFuelHoseConnected();
-
-                        // Update refueling state based on fuel hose connection
-                        // This ensures we only actively refuel when the hose is connected
-                        if (fuelHoseConnected && _refuelingService.IsRefuelingPaused)
-                        {
-                            Logger.Log(LogLevel.Information, nameof(GsxController),
-                                "Fuel hose connected - resuming refueling");
-                            _refuelingService.ResumeRefueling();
-                        }
-                        else if (!fuelHoseConnected && !_refuelingService.IsRefuelingPaused)
-                        {
-                            Logger.Log(LogLevel.Information, nameof(GsxController),
-                                "Fuel hose disconnected - pausing refueling");
-                            _refuelingService.PauseRefueling();
-                        }
-
-                        // Only process refueling if not paused (which means hose is connected)
-                        if (!_refuelingService.IsRefuelingPaused)
-                        {
-                            _refuelingService.ProcessRefueling();
-                        }
+                        // Generate preliminary loadsheet when refueling is complete
+                        GeneratePreliminaryLoadsheet();
                     }
                 }
 

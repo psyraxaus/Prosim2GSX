@@ -1,29 +1,40 @@
 ﻿namespace Prosim2GSX.Services.Prosim.Interfaces
 {
     /// <summary>
-    /// Service for aircraft refueling in ProSim
+    /// Service for managing aircraft refueling
     /// </summary>
     public interface IRefuelingService
     {
         /// <summary>
-        /// Current fuel amount in kg
-        /// </summary>
-        double CurrentFuel { get; }
-
-        /// <summary>
-        /// Planned fuel amount in kg
+        /// Gets the planned fuel amount in kg
         /// </summary>
         double PlannedFuel { get; }
 
         /// <summary>
-        /// Target fuel amount in kg
+        /// Gets the current fuel amount in kg
         /// </summary>
-        double TargetFuel { get; }
+        double CurrentFuel { get; }
 
         /// <summary>
-        /// Fuel units (KG or LBS)
+        /// Gets the fuel units (KG or LBS)
         /// </summary>
         string FuelUnits { get; }
+
+        /// <summary>
+        /// Gets whether the refueling is active
+        /// </summary>
+        bool IsRefuelingActive { get; }
+
+        /// <summary>
+        /// Gets whether the refueling is completed
+        /// </summary>
+        bool IsRefuelingComplete { get; }
+
+        /// <summary>
+        /// Update fuel data from the flight plan
+        /// </summary>
+        /// <param name="flightPlan">The flight plan</param>
+        void UpdateFuelData(FlightPlan flightPlan);
 
         /// <summary>
         /// Get the current fuel amount
@@ -32,7 +43,7 @@
         double GetFuelAmount();
 
         /// <summary>
-        /// Set initial fuel amount
+        /// Set the initial fuel amount
         /// </summary>
         void SetInitialFuel();
 
@@ -42,41 +53,41 @@
         void SetInitialFluids();
 
         /// <summary>
-        /// Get hydraulic fluid values
+        /// Get the hydraulic fluid values
         /// </summary>
-        /// <returns>Tuple of (blue, green, yellow) hydraulic quantities</returns>
+        /// <returns>Tuple of blue, green, and yellow hydraulic fluid values</returns>
         (double, double, double) GetHydraulicFluidValues();
 
         /// <summary>
-        /// Start refueling process
+        /// Start the refueling process
         /// </summary>
         void StartRefueling();
 
         /// <summary>
-        /// Process refueling
-        /// </summary>
-        /// <returns>True if refueling complete</returns>
-        bool ProcessRefueling();
-
-        /// <summary>
-        /// Stop refueling process
+        /// Stop the refueling process
         /// </summary>
         void StopRefueling();
 
         /// <summary>
-        /// Pause refueling process
+        /// Pause the refueling process
         /// </summary>
         void PauseRefueling();
 
         /// <summary>
-        /// Resume refueling process
+        /// Resume the refueling process
         /// </summary>
         void ResumeRefueling();
 
         /// <summary>
-        /// Update fuel data from the flight plan
+        /// Process one step of the refueling
         /// </summary>
-        /// <param name="flightPlan">The flight plan</param>
-        void UpdateFuelData(FlightPlan flightPlan);
+        /// <returns>True if refueling is complete</returns>
+        bool ProcessRefueling();
+
+        /// <summary>
+        /// Set the target fuel amount
+        /// </summary>
+        /// <param name="amount">The target amount in kg</param>
+        void SetFuelTarget(double amount);
     }
 }

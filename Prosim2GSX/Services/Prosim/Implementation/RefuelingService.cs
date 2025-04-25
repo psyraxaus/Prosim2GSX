@@ -1,52 +1,73 @@
-﻿using Prosim2GSX.Services.Prosim.Interfaces;
-using System;
+﻿using Prosim2GSX.Events;
 using Prosim2GSX.Models;
+using Prosim2GSX.Services.Prosim.Interfaces;
+using System;
 
 namespace Prosim2GSX.Services.Prosim.Implementation
 {
     public class RefuelingService : IRefuelingService
     {
-        private readonly IProsimInterface _prosimService;
+        private readonly IProsimInterface _prosimInterface;
         private readonly ServiceModel _model;
 
-        public double CurrentFuel { get; private set; } = 0;
-        public double PlannedFuel { get; private set; } = 0;
-        public double TargetFuel { get; private set; } = 0;
-        public string FuelUnits { get; private set; } = "KG";
+        private double _currentFuel = 0;
+        private double _plannedFuel = 0;
+        private double _targetFuel = 0;
+        private string _fuelUnits = "KG";
+        private bool _isRefuelingActive = false;
+        private bool _isRefuelingComplete = false;
 
         private static readonly float _weightConversion = 2.205f;
 
-        public RefuelingService(IProsimInterface prosimService, ServiceModel model)
+        /// <inheritdoc/>
+        public double CurrentFuel => _currentFuel;
+
+        /// <inheritdoc/>
+        public double PlannedFuel => _plannedFuel;
+
+        /// <inheritdoc/>
+        public string FuelUnits => _fuelUnits;
+
+        /// <inheritdoc/>
+        public bool IsRefuelingActive => _isRefuelingActive;
+
+        /// <inheritdoc/>
+        public bool IsRefuelingComplete => _isRefuelingComplete;
+
+        public RefuelingService(IProsimInterface prosimInterface, ServiceModel model)
         {
-            _prosimService = prosimService ?? throw new ArgumentNullException(nameof(prosimService));
+            _prosimInterface = prosimInterface ?? throw new ArgumentNullException(nameof(prosimInterface));
             _model = model ?? throw new ArgumentNullException(nameof(model));
         }
 
+        /// <inheritdoc/>
         public void UpdateFuelData(FlightPlan flightPlan)
         {
             try
             {
-                CurrentFuel = _prosimService.GetProsimVariable("aircraft.fuel.total.amount.kg");
-                FuelUnits = _prosimService.GetProsimVariable("system.config.Units.Weight");
+                // Get current fuel amount
+                _currentFuel = GetFuelAmount();
 
-                if (_model.FlightPlanType == "MCDU")
+                // Get fuel units
+                _fuelUnits = Convert.ToString(_prosimInterface.GetProsimVariable("system.config.Units.Weight"));
+
+                // Get planned fuel
+                if (_model.FlightPlanType == "MCDU" && flightPlan != null)
                 {
-                    if (flightPlan != null)
-                    {
-                        PlannedFuel = flightPlan.Fuel;
-                    }
+                    _plannedFuel = flightPlan.Fuel;
                 }
                 else
                 {
-                    PlannedFuel = _prosimService.GetProsimVariable("aircraft.refuel.fuelTarget");
+                    var fuelTarget = _prosimInterface.GetProsimVariable("aircraft.refuel.fuelTarget");
+                    _plannedFuel = fuelTarget != null ? Convert.ToDouble(fuelTarget) : 0;
                 }
 
                 // Convert if needed
-                if (FuelUnits == "LBS")
-                    PlannedFuel /= _weightConversion;
+                if (_fuelUnits == "LBS")
+                    _plannedFuel /= _weightConversion;
 
                 Logger.Log(LogLevel.Debug, nameof(RefuelingService),
-                    $"Updated fuel data - Current: {CurrentFuel}kg, Planned: {PlannedFuel}kg, Units: {FuelUnits}");
+                    $"Updated fuel data - Current: {_currentFuel}kg, Planned: {_plannedFuel}kg, Units: {_fuelUnits}");
             }
             catch (Exception ex)
             {
@@ -55,11 +76,13 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
         }
 
+        /// <inheritdoc/>
         public double GetFuelAmount()
         {
             try
             {
-                double fuelAmount = _prosimService.GetProsimVariable("aircraft.fuel.total.amount.kg");
+                double fuelAmount = Convert.ToDouble(_prosimInterface.GetProsimVariable("aircraft.fuel.total.amount.kg"));
+                _currentFuel = fuelAmount; // Update internal state
                 return fuelAmount;
             }
             catch (Exception ex)
@@ -70,6 +93,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
         }
 
+        /// <inheritdoc/>
         public void SetInitialFuel()
         {
             try
@@ -78,22 +102,33 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                 {
                     Logger.Log(LogLevel.Information, nameof(RefuelingService),
                         "Start at Zero Fuel amount - Resetting to 0kg (0lbs)");
-                    _prosimService.SetProsimVariable("aircraft.fuel.total.amount.kg", 0.0D);
-                    CurrentFuel = 0D;
+                    _prosimInterface.SetProsimVariable("aircraft.fuel.total.amount.kg", 0.0D);
+                    _currentFuel = 0D;
                 }
                 else if (_model.SetSaveFuel)
                 {
                     Logger.Log(LogLevel.Information, nameof(RefuelingService),
                         $"Using saved fuel value - Resetting to {_model.SavedFuelAmount}");
-                    _prosimService.SetProsimVariable("aircraft.fuel.total.amount.kg", _model.SavedFuelAmount);
-                    CurrentFuel = _model.SavedFuelAmount;
+                    _prosimInterface.SetProsimVariable("aircraft.fuel.total.amount.kg", _model.SavedFuelAmount);
+                    _currentFuel = _model.SavedFuelAmount;
                 }
-                else if (CurrentFuel > PlannedFuel)
+                else if (_currentFuel > _plannedFuel && _plannedFuel > 0)
                 {
                     Logger.Log(LogLevel.Information, nameof(RefuelingService),
                         "Current Fuel higher than planned - Resetting to 1500kg (3307lbs)");
-                    _prosimService.SetProsimVariable("aircraft.fuel.total.amount.kg", 1500.0D);
-                    CurrentFuel = 1500D;
+                    _prosimInterface.SetProsimVariable("aircraft.fuel.total.amount.kg", 1500.0D);
+                    _currentFuel = 1500D;
+                }
+
+                // Set target fuel
+                if (_plannedFuel > 0)
+                {
+                    SetFuelTarget(_plannedFuel);
+                }
+                else
+                {
+                    // Use default if no planned fuel
+                    SetFuelTarget(10000.0);
                 }
             }
             catch (Exception ex)
@@ -103,13 +138,38 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
         }
 
+        /// <inheritdoc/>
+        public void SetFuelTarget(double amount)
+        {
+            try
+            {
+                _targetFuel = amount;
+
+                // Round up to nearest 100
+                _targetFuel = Math.Ceiling(_targetFuel / 100.0) * 100.0;
+
+                // Set the datarefs
+                _prosimInterface.SetProsimVariable("aircraft.refuel.fuelTarget", _targetFuel);
+                _prosimInterface.SetProsimVariable("efb.plannedfuel", _targetFuel);
+
+                Logger.Log(LogLevel.Information, nameof(RefuelingService),
+                    $"Fuel target set to {_targetFuel:F1}kg");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, nameof(RefuelingService),
+                    $"Error setting fuel target: {ex.Message}");
+            }
+        }
+
+        /// <inheritdoc/>
         public void SetInitialFluids()
         {
             try
             {
-                _prosimService.SetProsimVariable("aircraft.hydraulics.blue.quantity", _model.HydaulicsBlueAmount);
-                _prosimService.SetProsimVariable("aircraft.hydraulics.green.quantity", _model.HydaulicsGreenAmount);
-                _prosimService.SetProsimVariable("aircraft.hydraulics.yellow.quantity", _model.HydaulicsYellowAmount);
+                _prosimInterface.SetProsimVariable("aircraft.hydraulics.blue.quantity", _model.HydaulicsBlueAmount);
+                _prosimInterface.SetProsimVariable("aircraft.hydraulics.green.quantity", _model.HydaulicsGreenAmount);
+                _prosimInterface.SetProsimVariable("aircraft.hydraulics.yellow.quantity", _model.HydaulicsYellowAmount);
 
                 Logger.Log(LogLevel.Debug, nameof(RefuelingService),
                     "Initial hydraulic fluids set successfully");
@@ -121,15 +181,21 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
         }
 
+        /// <inheritdoc/>
         public (double, double, double) GetHydraulicFluidValues()
         {
             try
             {
-                _model.HydaulicsBlueAmount = _prosimService.GetProsimVariable("aircraft.hydraulics.blue.quantity");
-                _model.HydaulicsGreenAmount = _prosimService.GetProsimVariable("aircraft.hydraulics.green.quantity");
-                _model.HydaulicsYellowAmount = _prosimService.GetProsimVariable("aircraft.hydraulics.yellow.quantity");
+                double blue = Convert.ToDouble(_prosimInterface.GetProsimVariable("aircraft.hydraulics.blue.quantity"));
+                double green = Convert.ToDouble(_prosimInterface.GetProsimVariable("aircraft.hydraulics.green.quantity"));
+                double yellow = Convert.ToDouble(_prosimInterface.GetProsimVariable("aircraft.hydraulics.yellow.quantity"));
 
-                return (_model.HydaulicsBlueAmount, _model.HydaulicsGreenAmount, _model.HydaulicsYellowAmount);
+                // Update model values
+                _model.HydaulicsBlueAmount = blue;
+                _model.HydaulicsGreenAmount = green;
+                _model.HydaulicsYellowAmount = yellow;
+
+                return (blue, green, yellow);
             }
             catch (Exception ex)
             {
@@ -139,26 +205,39 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
         }
 
+        /// <inheritdoc/>
         public void StartRefueling()
         {
             try
             {
-                // Initialize refueling with power off initially
-                _prosimService.SetProsimVariable("aircraft.refuel.refuelingRate", 0.0D);
-                _prosimService.SetProsimVariable("aircraft.refuel.refuelingPower", false);
+                // Get the current fuel amount
+                _currentFuel = GetFuelAmount();
 
-                // Round up planned fuel to the nearest 100
-                TargetFuel = Math.Ceiling(PlannedFuel / 100.0) * 100.0;
-                Logger.Log(LogLevel.Debug, nameof(RefuelingService),
-                    $"Rounding fuel from {PlannedFuel} to {TargetFuel}");
+                // Get the target fuel amount if not set yet
+                if (_targetFuel <= 0)
+                {
+                    if (_plannedFuel > 0)
+                    {
+                        _targetFuel = _plannedFuel;
+                    }
+                    else
+                    {
+                        // Default target if nothing else is available
+                        _targetFuel = 10000.0;
+                    }
+                }
 
-                if (FuelUnits == "KG")
-                    _prosimService.SetProsimVariable("aircraft.refuel.fuelTarget", TargetFuel);
-                else
-                    _prosimService.SetProsimVariable("aircraft.refuel.fuelTarget", TargetFuel * _weightConversion);
+                // Initialize with power off - will be turned on when hose connects
+                _prosimInterface.SetProsimVariable("aircraft.refuel.fuelTarget", _targetFuel);
+                _prosimInterface.SetProsimVariable("aircraft.refuel.refuelingPower", false);
+                _prosimInterface.SetProsimVariable("aircraft.refuel.refuelingRate", 0.0D);
 
-                Logger.Log(LogLevel.Debug, nameof(RefuelingService),
-                    $"Fuel target set to {TargetFuel} kg. Current fuel: {CurrentFuel} kg");
+                // Reset state
+                _isRefuelingActive = false;
+                _isRefuelingComplete = false;
+
+                Logger.Log(LogLevel.Information, nameof(RefuelingService),
+                    $"Refueling initialized. Current: {_currentFuel:F1}kg, Target: {_targetFuel:F1}kg");
             }
             catch (Exception ex)
             {
@@ -167,46 +246,25 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
         }
 
-        public bool ProcessRefueling()
-        {
-            try
-            {
-                float step = _model.GetFuelRateKGS();
-
-                Logger.Log(LogLevel.Debug, nameof(RefuelingService),
-                    $"Refueling step: Current={CurrentFuel}, Target={TargetFuel}, Step={step}");
-
-                if (CurrentFuel + step < TargetFuel)
-                {
-                    CurrentFuel += step;
-                    Logger.Log(LogLevel.Debug, nameof(RefuelingService),
-                        $"Refueling in progress: {CurrentFuel}/{TargetFuel} kg");
-                }
-                else
-                {
-                    CurrentFuel = TargetFuel;
-                    Logger.Log(LogLevel.Information, nameof(RefuelingService),
-                        $"Refueling complete: {CurrentFuel}/{TargetFuel} kg");
-                }
-
-                _prosimService.SetProsimVariable("aircraft.fuel.total.amount.kg", CurrentFuel);
-
-                return Math.Abs(CurrentFuel - TargetFuel) < 1.0;
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Error, nameof(RefuelingService),
-                    $"Error during refueling process: {ex.Message}");
-                return false;
-            }
-        }
-
+        /// <inheritdoc/>
         public void StopRefueling()
         {
             try
             {
-                Logger.Log(LogLevel.Information, nameof(RefuelingService), "Refueling stopped");
-                _prosimService.SetProsimVariable("aircraft.refuel.refuelingPower", false);
+                // Turn off power
+                _prosimInterface.SetProsimVariable("aircraft.refuel.refuelingPower", false);
+                _prosimInterface.SetProsimVariable("aircraft.refuel.refuelingRate", 0.0D);
+
+                // Update state
+                _isRefuelingActive = false;
+                _isRefuelingComplete = true;
+
+                // Log the completion
+                Logger.Log(LogLevel.Information, nameof(RefuelingService),
+                    $"Refueling completed. Final: {_currentFuel:F1}kg");
+
+                // Publish event
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Refuel", ServiceStatus.Completed));
             }
             catch (Exception ex)
             {
@@ -215,14 +273,22 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
         }
 
+        /// <inheritdoc/>
         public void PauseRefueling()
         {
             try
             {
-                Logger.Log(LogLevel.Information, nameof(RefuelingService), "Refueling paused - hose disconnected");
-                // Turn off power when hose disconnected
-                _prosimService.SetProsimVariable("aircraft.refuel.refuelingPower", false);
-                _prosimService.SetProsimVariable("aircraft.refuel.refuelingRate", 0.0D);
+                // Turn off power
+                _prosimInterface.SetProsimVariable("aircraft.refuel.refuelingPower", false);
+                _prosimInterface.SetProsimVariable("aircraft.refuel.refuelingRate", 0.0D);
+
+                _isRefuelingActive = false;
+
+                Logger.Log(LogLevel.Information, nameof(RefuelingService),
+                    $"Refueling paused at {_currentFuel:F1}kg");
+
+                // Publish event
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Refuel", ServiceStatus.Waiting));
             }
             catch (Exception ex)
             {
@@ -231,19 +297,78 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
         }
 
+        /// <inheritdoc/>
         public void ResumeRefueling()
         {
             try
             {
-                Logger.Log(LogLevel.Information, nameof(RefuelingService), "Refueling resumed - hose connected");
-                // Turn on power when hose connected
-                _prosimService.SetProsimVariable("aircraft.refuel.refuelingPower", true);
-                _prosimService.SetProsimVariable("aircraft.refuel.refuelingRate", _model.GetFuelRateKGS());
+                // Turn on power with appropriate rate
+                _prosimInterface.SetProsimVariable("aircraft.refuel.refuelingPower", true);
+                _prosimInterface.SetProsimVariable("aircraft.refuel.refuelingRate", _model.GetFuelRateKGS());
+
+                _isRefuelingActive = true;
+
+                Logger.Log(LogLevel.Information, nameof(RefuelingService),
+                    $"Refueling resumed. Current: {_currentFuel:F1}kg, Target: {_targetFuel:F1}kg");
+
+                // Publish event
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Refuel", ServiceStatus.Active));
             }
             catch (Exception ex)
             {
                 Logger.Log(LogLevel.Error, nameof(RefuelingService),
                     $"Error resuming refueling: {ex.Message}");
+            }
+        }
+
+        /// <inheritdoc/>
+        public bool ProcessRefueling()
+        {
+            // If refueling is not active or already complete, just return the current state
+            if (_isRefuelingComplete)
+                return true;
+
+            if (!_isRefuelingActive)
+                return false;
+
+            try
+            {
+                // Get the current fuel amount
+                _currentFuel = GetFuelAmount();
+
+                // Check if target has been reached
+                if (Math.Abs(_currentFuel - _targetFuel) < 10.0)
+                {
+                    StopRefueling();
+                    return true;
+                }
+
+                // Use the configured fuel rate from the model
+                // _model.GetFuelRateKGS() returns kg/s, so we need to account for processing interval
+                // Assuming this method is called approximately once per second
+                double step = _model.GetFuelRateKGS();
+
+                // Don't exceed target
+                if (_currentFuel + step > _targetFuel)
+                {
+                    step = _targetFuel - _currentFuel;
+                }
+
+                // Add the fuel
+                double newFuel = _currentFuel + step;
+                _prosimInterface.SetProsimVariable("aircraft.fuel.total.amount.kg", newFuel);
+                _currentFuel = newFuel;
+
+                Logger.Log(LogLevel.Debug, nameof(RefuelingService),
+                    $"Fuel incremented by {step:F1}kg: {_currentFuel - step:F1} -> {newFuel:F1}kg (Rate: {_model.GetFuelRateKGS():F1}kg/s)");
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, nameof(RefuelingService),
+                    $"Error processing refueling: {ex.Message}");
+                return false;
             }
         }
     }
