@@ -22,6 +22,7 @@ namespace Prosim2GSX.Services.GSX
         private readonly IGsxMenuService _menuService;
         private readonly IGsxLoadsheetService _loadsheetService;
         private readonly IGsxGroundServicesService _groundServicesService;
+        private readonly IGsxCateringService _cateringService;
         private readonly IGsxBoardingService _boardingService;
         private readonly IGsxRefuelingService _refuelingService;
         private readonly IGsxSimConnectService _simConnectService;
@@ -90,6 +91,8 @@ namespace Prosim2GSX.Services.GSX
                 throw new InvalidOperationException("GsxRefuelingService is not available");
             _simConnectService = ServiceLocator.GsxSimConnectService ?? 
                 throw new InvalidOperationException("GsxSimConnectService is not available");
+            _cateringService = ServiceLocator.GsxCateringService ??
+                throw new InvalidOperationException("GsxCateringService is not available");
 
             // Initialize and validate services
             ValidateServices();
@@ -474,9 +477,11 @@ namespace Prosim2GSX.Services.GSX
             // Check refueling and boarding state
             bool refuelingComplete = _refuelingService.IsRefuelingComplete;
             bool boardingComplete = _boardingService.IsBoardingComplete;
-            bool refuelingRequested = _simConnectService.GetRefuelingState() >= 4; // State 4 = Requested, 5 = Active, 6 = Completed
+            bool cateringComplete = _cateringService.IsCateringComplete;
+            bool refuelingRequested = _simConnectService.GetRefuelingState() >= 4;
+            bool cateringRequested = _cateringService.CateringState >= 4;
 
-            if (!refuelingComplete || !boardingComplete)
+            if (!refuelingComplete || !boardingComplete || (_model.CallCatering && !cateringComplete))
             {
                 // Handle refueling service
                 if (_model.AutoRefuel)
@@ -503,12 +508,37 @@ namespace Prosim2GSX.Services.GSX
 
                     // Process refueling - let the service handle all the details
                     bool refuelingProcessComplete = _refuelingService.ProcessRefueling();
-
+    
                     // Check for preliminary loadsheet generation
                     if (refuelingProcessComplete && !_prelimLoadsheetGenerated)
                     {
                         // Generate preliminary loadsheet when refueling is complete
                         GeneratePreliminaryLoadsheet();
+                    }
+                }
+
+
+                // Handle catering service
+                if (_model.CallCatering && !cateringRequested && !cateringComplete)
+                {
+                    Logger.Log(LogLevel.Information, nameof(GsxController), "Requesting catering service");
+                    _cateringService.RequestCateringService();
+                    return;
+                }
+
+                // Process catering
+                if (_model.CallCatering && cateringRequested && !cateringComplete)
+                {
+                    _cateringService.ProcessCatering();
+                }
+
+                // Handle boarding service
+                if (_model.AutoBoarding && !_boardingService.IsBoardingActive && !boardingComplete)
+                {
+                    // Wait for refueling and catering to complete before boarding
+                    if (refuelingComplete && (!_model.CallCatering || cateringComplete))
+                    {
+                        // existing boarding code...
                     }
                 }
 
