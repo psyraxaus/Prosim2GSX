@@ -269,15 +269,16 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 }
 
                 // Call stairs if needed and allowed
-                if (!jetwayOnly &&
-                    _simConnectService.ReadGsxLvar("FSDT_GSX_STAIRS") != 2 &&
-                    _simConnectService.ReadGsxLvar("FSDT_GSX_STAIRS") != 5 &&
-                    _simConnectService.ReadGsxLvar("FSDT_GSX_OPERATESTAIRS_STATE") < 3)
+                if (_simConnectService.ReadGsxLvar("FSDT_GSX_JETWAY") != 2 &&
+                    _simConnectService.ReadGsxLvar("FSDT_GSX_JETWAY") != 5 &&
+                    _simConnectService.ReadGsxLvar("FSDT_GSX_OPERATEJETWAYS_STATE") < 3)
                 {
-                    _menuService.OpenMenu();
-                    Logger.Log(LogLevel.Information, nameof(GsxGroundServicesService), "Calling Stairs");
-                    _menuService.SelectMenuItem(7);
+                    Logger.Log(LogLevel.Information, nameof(GsxGroundServicesService), "Calling Jetway");
+                    _menuService.SelectMenuItem(6);
                     _menuService.HandleOperatorSelection((int)_model.OperatorDelay);
+
+                    // Reduce wait time from 1500ms to 500ms
+                    Thread.Sleep(500);  // Was 1500ms
                 }
             }
             catch (Exception ex)

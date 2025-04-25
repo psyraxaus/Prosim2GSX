@@ -41,26 +41,43 @@ namespace Prosim2GSX.Services.GSX.Implementation
             Logger.Log(LogLevel.Debug, nameof(GsxMenuService),
                 $"Selecting Menu Option {index} (L-Var Value {index - 1})");
             _simConnectService.WriteGsxLvar("FSDT_GSX_MENU_CHOICE", index - 1);
+
+            // Small delay after selection to allow GSX to process
+            Thread.Sleep(100);
         }
 
         /// <inheritdoc/>
         public void WaitForMenuReady()
         {
+            // Reduce max iterations from 100 to 30 (3 seconds max)
             int counter = 0;
-            while (counter < 100)
+            int maxIterations = 30;
+            int sleepTime = 100;
+
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+            while (counter < maxIterations)
             {
                 // Pause execution
-                Thread.Sleep(100);
+                Thread.Sleep(sleepTime);
                 counter++;
 
                 // Check if the GSX menu is ready
-                // This would normally use SimConnect.IsGsxMenuReady, but we'll adapt for our service
                 if (_simConnectService.ReadGsxLvar("FSDT_GSX_MENU_READY") == 1)
                     break;
             }
 
+            stopwatch.Stop();
+
             Logger.Log(LogLevel.Debug, nameof(GsxMenuService),
-                $"Menu wait ended after {counter * 100}ms");
+                $"Menu wait ended after {stopwatch.ElapsedMilliseconds}ms ({counter} iterations)");
+
+            // Warn if we hit the maximum iterations
+            if (counter >= maxIterations)
+            {
+                Logger.Log(LogLevel.Warning, nameof(GsxMenuService),
+                    $"WaitForMenuReady timed out after {maxIterations * sleepTime}ms");
+            }
         }
 
         /// <inheritdoc/>
@@ -118,9 +135,10 @@ namespace Prosim2GSX.Services.GSX.Implementation
         }
 
         /// <inheritdoc/>
-        public bool HandleOperatorSelection(int operatorDelay = 2000)
+        public bool HandleOperatorSelection(int operatorDelay = 500)  // Reduced from 2000 to 500
         {
-            Thread.Sleep(2000);
+            // Remove the fixed 2-second delay here
+            // Thread.Sleep(2000);  - REMOVE THIS LINE
 
             int result = IsOperatorSelectionActive();
             if (result == -1)
