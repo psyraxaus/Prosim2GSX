@@ -22,6 +22,7 @@ namespace Prosim2GSX.Services.GSX
         private readonly IGsxMenuService _menuService;
         private readonly IGsxLoadsheetService _loadsheetService;
         private readonly IGsxGroundServicesService _groundServicesService;
+        private readonly IGsxCargoService _cargoService;
         private readonly IGsxCateringService _cateringService;
         private readonly IGsxBoardingService _boardingService;
         private readonly IGsxRefuelingService _refuelingService;
@@ -93,6 +94,8 @@ namespace Prosim2GSX.Services.GSX
                 throw new InvalidOperationException("GsxSimConnectService is not available");
             _cateringService = ServiceLocator.GsxCateringService ??
                 throw new InvalidOperationException("GsxCateringService is not available");
+            _cargoService = ServiceLocator.GsxCargoService ??
+                throw new InvalidOperationException("GsxCargoService is not available");
 
             // Initialize and validate services
             ValidateServices();
@@ -550,6 +553,7 @@ namespace Prosim2GSX.Services.GSX
                         {
                             _boardingService.SetPassengers(_passengerService.GetPlannedPassengers());
                             _boardingService.RequestBoardingService();
+                            _cargoService.ProcessCargoOperations();
                             _delayCounter = 0;
                         }
                         return;

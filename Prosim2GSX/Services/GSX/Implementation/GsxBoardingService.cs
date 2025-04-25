@@ -22,8 +22,6 @@ namespace Prosim2GSX.Services.GSX.Implementation
         private bool _isDeboarding = false;
         private bool _isDeboardingComplete = false;
         private int _plannedPassengers = 0;
-        private bool _frontCargoDoorOpened = false;
-        private bool _aftCargoDoorOpened = false;
 
         /// <inheritdoc/>
         public bool IsBoardingActive => _isBoarding;
@@ -36,12 +34,6 @@ namespace Prosim2GSX.Services.GSX.Implementation
 
         /// <inheritdoc/>
         public bool IsDeboardingComplete => _isDeboardingComplete;
-
-        /// <inheritdoc/>
-        public bool IsForwardCargoDoorOpen => _frontCargoDoorOpened;
-
-        /// <inheritdoc/>
-        public bool IsAftCargoDoorOpen => _aftCargoDoorOpened;
 
         /// <summary>
         /// Constructor
@@ -62,12 +54,6 @@ namespace Prosim2GSX.Services.GSX.Implementation
             // Subscribe to boarding/deboarding state changes
             _simConnectService.SubscribeToGsxLvar("FSDT_GSX_BOARDING_STATE", OnBoardingStateChanged);
             _simConnectService.SubscribeToGsxLvar("FSDT_GSX_DEBOARDING_STATE", OnDeboardingStateChanged);
-            _simConnectService.SubscribeToGsxLvar("FSDT_GSX_BOARDING_CARGO", OnCargoOperationChanged);
-            _simConnectService.SubscribeToGsxLvar("FSDT_GSX_DEBOARDING_CARGO", OnCargoOperationChanged);
-
-            _simConnectService.SubscribeToGsxLvar("FSDT_GSX_BOARDING_CARGO_PERCENT", OnCargoPercentChanged);
-            _simConnectService.SubscribeToGsxLvar("FSDT_GSX_DEBOARDING_CARGO_PERCENT", OnCargoPercentChanged);
-
         }
 
         /// <summary>
@@ -144,34 +130,6 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
         }
 
-        /// <summary>
-        /// Handler for cargo operation changes
-        /// </summary>
-        private void OnCargoOperationChanged(float newValue, float oldValue, string lvarName)
-        {
-            Logger.Log(LogLevel.Debug, nameof(GsxBoardingService),
-                $"Cargo operation {lvarName} changed from {oldValue} to {newValue}");
-
-            // Check if boarding cargo has started
-            if (lvarName == "FSDT_GSX_BOARDING_CARGO" && newValue == 1 && oldValue == 0)
-            {
-                OpenCargoDoors();
-            }
-            else if (lvarName == "FSDT_GSX_BOARDING_CARGO" && newValue == 0 && oldValue == 1)
-            {
-                CloseCargoDoors("Cargo loading completed");
-            }
-
-            if (lvarName == "FSDT_GSX_DEBOARDING_CARGO" && newValue == 1 && oldValue == 0)
-            {
-                OpenCargoDoors();
-            }
-            else if (lvarName == "FSDT_GSX_DEBOARDING_CARGO" && newValue == 0 && oldValue == 1)
-            {
-                CloseCargoDoors("Cargo unloading completed");
-            }
-        }
-
         /// <inheritdoc/>
         public void StartBoarding()
         {
@@ -188,28 +146,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             _isBoarding = false;
             _isBoardingComplete = true;
 
-            // Close any cargo doors that might be open
-            if (_model.SetOpenCargoDoors)
-            {
-                Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
-                    "Closing cargo doors after boarding");
-
-                if (_frontCargoDoorOpened)
-                {
-                    _doorControlService.SetForwardCargoDoor(false);
-                    _frontCargoDoorOpened = false;
-                    Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
-                        "Closed forward cargo door after boarding");
-                }
-
-                if (_aftCargoDoorOpened)
-                {
-                    _doorControlService.SetAftCargoDoor(false);
-                    _aftCargoDoorOpened = false;
-                    Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
-                        "Closed aft cargo door after boarding");
-                }
-            }
+            // We no longer manipulate doors here
 
             Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
                 "Boarding service stopped");
@@ -231,28 +168,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             _isDeboarding = false;
             _isDeboardingComplete = true;
 
-            // Close any cargo doors that might be open
-            if (_model.SetOpenCargoDoors)
-            {
-                Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
-                    "Closing cargo doors after deboarding");
-
-                if (_frontCargoDoorOpened)
-                {
-                    _doorControlService.SetForwardCargoDoor(false);
-                    _frontCargoDoorOpened = false;
-                    Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
-                        "Closed forward cargo door after deboarding");
-                }
-
-                if (_aftCargoDoorOpened)
-                {
-                    _doorControlService.SetAftCargoDoor(false);
-                    _aftCargoDoorOpened = false;
-                    Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
-                        "Closed aft cargo door after deboarding");
-                }
-            }
+            // We no longer manipulate doors here
 
             Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
                 "Deboarding service stopped");
@@ -270,56 +186,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
                     "GSX reports boarding completed");
 
-                // Close cargo doors if they're open
-                if (_model.SetOpenCargoDoors)
-                {
-                    Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
-                        "Closing cargo doors on boarding completion");
-
-                    if (_frontCargoDoorOpened)
-                    {
-                        _doorControlService.SetForwardCargoDoor(false);
-                        _frontCargoDoorOpened = false;
-                        Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
-                            "Closed forward cargo door on boarding completion");
-                    }
-
-                    if (_aftCargoDoorOpened)
-                    {
-                        _doorControlService.SetAftCargoDoor(false);
-                        _aftCargoDoorOpened = false;
-                        Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
-                            "Closed aft cargo door on boarding completion");
-                    }
-                }
-
                 return true;
-            }
-
-            // Check cargo percentage - if 100%, close cargo doors regardless of passenger state
-            if (cargoPercent >= 100)
-            {
-                if (_model.SetOpenCargoDoors)
-                {
-                    Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
-                        $"Cargo loading reached 100% - closing cargo doors");
-
-                    if (_frontCargoDoorOpened)
-                    {
-                        _doorControlService.SetForwardCargoDoor(false);
-                        _frontCargoDoorOpened = false;
-                        Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
-                            "Closed forward cargo door after cargo loading reached 100%");
-                    }
-
-                    if (_aftCargoDoorOpened)
-                    {
-                        _doorControlService.SetAftCargoDoor(false);
-                        _aftCargoDoorOpened = false;
-                        Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
-                            "Closed aft cargo door after cargo loading reached 100%");
-                    }
-                }
             }
 
             // Check if cargo is fully loaded and passengers are boarded
@@ -339,7 +206,6 @@ namespace Prosim2GSX.Services.GSX.Implementation
         }
 
         /// <inheritdoc/>
-        /// <inheritdoc/>
         public bool ProcessDeboarding(int paxCurrent, int cargoPercent)
         {
             if (!_isDeboarding)
@@ -351,56 +217,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
                     "GSX reports deboarding completed");
 
-                // Close cargo doors if they're open
-                if (_model.SetOpenCargoDoors)
-                {
-                    Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
-                        "Closing cargo doors on deboarding completion");
-
-                    if (_frontCargoDoorOpened)
-                    {
-                        _doorControlService.SetForwardCargoDoor(false);
-                        _frontCargoDoorOpened = false;
-                        Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
-                            "Closed forward cargo door on deboarding completion");
-                    }
-
-                    if (_aftCargoDoorOpened)
-                    {
-                        _doorControlService.SetAftCargoDoor(false);
-                        _aftCargoDoorOpened = false;
-                        Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
-                            "Closed aft cargo door on deboarding completion");
-                    }
-                }
-
                 return true;
-            }
-
-            // Check cargo percentage - if 100%, close cargo doors regardless of passenger state
-            if (cargoPercent >= 100)
-            {
-                if (_model.SetOpenCargoDoors)
-                {
-                    Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
-                        $"Cargo unloading reached 100% - closing cargo doors");
-
-                    if (_frontCargoDoorOpened)
-                    {
-                        _doorControlService.SetForwardCargoDoor(false);
-                        _frontCargoDoorOpened = false;
-                        Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
-                            "Closed forward cargo door after cargo unloading reached 100%");
-                    }
-
-                    if (_aftCargoDoorOpened)
-                    {
-                        _doorControlService.SetAftCargoDoor(false);
-                        _aftCargoDoorOpened = false;
-                        Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
-                            "Closed aft cargo door after cargo unloading reached 100%");
-                    }
-                }
             }
 
             // Check if cargo is fully unloaded and all passengers have deboarded
@@ -560,76 +377,6 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 Logger.Log(LogLevel.Error, nameof(GsxBoardingService),
                     $"Error getting planned passengers: {ex.Message}");
                 return 0;
-            }
-        }
-
-        /// <summary>
-        /// Opens both cargo doors if they're not already open
-        /// </summary>
-        private void OpenCargoDoors()
-        {
-            if (_model.SetOpenCargoDoors)
-            {
-                if (!_frontCargoDoorOpened)
-                {
-                    _doorControlService.SetForwardCargoDoor(true);
-                    _frontCargoDoorOpened = true;
-                    Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
-                        "Opened forward cargo door");
-                }
-
-                if (!_aftCargoDoorOpened)
-                {
-                    _doorControlService.SetAftCargoDoor(true);
-                    _aftCargoDoorOpened = true;
-                    Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
-                        "Opened aft cargo door");
-                }
-            }
-        }
-
-        /// <summary>
-        /// Closes both cargo doors if they're open
-        /// </summary>
-        /// <param name="reason">Reason for closing doors (for logging)</param>
-        private void CloseCargoDoors(string reason)
-        {
-            if (_model.SetOpenCargoDoors)
-            {
-                if (_frontCargoDoorOpened)
-                {
-                    _doorControlService.SetForwardCargoDoor(false);
-                    _frontCargoDoorOpened = false;
-                    Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
-                        $"Closed forward cargo door: {reason}");
-                }
-
-                if (_aftCargoDoorOpened)
-                {
-                    _doorControlService.SetAftCargoDoor(false);
-                    _aftCargoDoorOpened = false;
-                    Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
-                        $"Closed aft cargo door: {reason}");
-                }
-            }
-        }
-
-        private void OnCargoPercentChanged(float newValue, float oldValue, string lvarName)
-        {
-            Logger.Log(LogLevel.Debug, nameof(GsxBoardingService),
-                $"Cargo percentage {lvarName} changed from {oldValue} to {newValue}");
-
-            // Close cargo doors when percentage reaches 100%
-            if (newValue >= 100 && oldValue < 100)
-            {
-                if (lvarName == "FSDT_GSX_BOARDING_CARGO_PERCENT")
-                {
-                    CloseCargoDoors("Cargo loading reached 100%");
-                }
-                else if (lvarName == "FSDT_GSX_DEBOARDING_CARGO_PERCENT")
-                {
-                    CloseCargoDoors("Cargo unloading reached 100%");
-                }
             }
         }
     }

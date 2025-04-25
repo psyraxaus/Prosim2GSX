@@ -47,16 +47,6 @@
         void ToggleAftDoor();
 
         /// <summary>
-        /// Handle toggle for front cargo door
-        /// </summary>
-        void ToggleFrontCargoDoor();
-
-        /// <summary>
-        /// Handle toggle for aft cargo door
-        /// </summary>
-        void ToggleAftCargoDoor();
-
-        /// <summary>
         /// Subscribe to service toggle LVARs
         /// </summary>
         void SubscribeToServiceToggles();

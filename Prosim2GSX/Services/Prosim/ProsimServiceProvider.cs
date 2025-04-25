@@ -42,6 +42,7 @@ namespace Prosim2GSX.Services
         private IGsxRefuelingService _gsxRefuelingService;
         private IGsxSimConnectService _gsxSimConnectService;
         private IGsxCateringService _gsxCateringService;
+        private IGsxCargoService _gsxCargoService;
 
         /// <summary>
         /// Creates a new instance of the service provider
@@ -143,8 +144,18 @@ namespace Prosim2GSX.Services
                     _doorControlService,
                     _model);
 
+                // Create cargo service
+                _gsxCargoService = new GsxCargoService(
+                    _prosimInterface,
+                    _gsxSimConnectService,
+                    _doorControlService,
+                    _model);
+
                 // Subscribe to service toggles
                 _gsxCateringService.SubscribeToServiceToggles();
+
+                // Subscribe to cargo events
+                _gsxCargoService.SubscribeToCargoEvents();
 
                 Logger.Log(LogLevel.Information, nameof(ProsimServiceProvider),
                     "GSX services updated successfully");
@@ -180,5 +191,12 @@ namespace Prosim2GSX.Services
         public IGsxRefuelingService GetGsxRefuelingService() => _gsxRefuelingService;
         public IGsxSimConnectService GetGsxSimConnectService() => _gsxSimConnectService;
         public IGsxCateringService GetGsxCateringService() => _gsxCateringService;
+
+        /// <summary>
+        /// Gets the GSX cargo service
+        /// </summary>
+        /// <returns>The GSX cargo service</returns>
+        public IGsxCargoService GetGsxCargoService() => _gsxCargoService;
+
     }
 }

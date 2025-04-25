@@ -88,17 +88,5 @@
         /// </summary>
         /// <returns>Planned passenger count</returns>
         int GetPlannedPassengers();
-
-        /// <summary>
-        /// Get the state of the forward cargo door
-        /// </summary>
-        /// <returns>True if the door is open</returns>
-        bool IsForwardCargoDoorOpen { get; }
-
-        /// <summary>
-        /// Get the state of the aft cargo door
-        /// </summary>
-        /// <returns>True if the door is open</returns>
-        bool IsAftCargoDoorOpen { get; }
     }
 }

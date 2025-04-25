@@ -232,5 +232,12 @@ namespace Prosim2GSX.Services
         public static IGsxCateringService GsxCateringService =>
             _serviceProvider?.GetGsxCateringService() ??
             throw new InvalidOperationException("ServiceLocator not initialized");
+
+        /// <summary>
+        /// Get the GSX cargo service
+        /// </summary>
+        public static IGsxCargoService GsxCargoService =>
+            _serviceProvider?.GetGsxCargoService() ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
     }
 }

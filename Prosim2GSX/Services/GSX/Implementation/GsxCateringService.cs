@@ -75,8 +75,6 @@ namespace Prosim2GSX.Services.GSX.Implementation
         {
             _serviceToggles.Add("FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE", ToggleFrontDoor);
             _serviceToggles.Add("FSDT_GSX_AIRCRAFT_SERVICE_2_TOGGLE", ToggleAftDoor);
-            _serviceToggles.Add("FSDT_GSX_AIRCRAFT_CARGO_1_TOGGLE", ToggleFrontCargoDoor);
-            _serviceToggles.Add("FSDT_GSX_AIRCRAFT_CARGO_2_TOGGLE", ToggleAftCargoDoor);
         }
 
         /// <inheritdoc/>
@@ -198,38 +196,6 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 {
                     _doorControlService.SetAftRightDoor(false);
                     Logger.Log(LogLevel.Information, nameof(GsxCateringService), "Closed aft right door");
-                }
-            }
-        }
-
-        /// <inheritdoc/>
-        public void ToggleFrontCargoDoor()
-        {
-            // Operate front cargo door based on catering state
-            Logger.Log(LogLevel.Debug, nameof(GsxCateringService), "Command to operate Front Cargo Door");
-
-            if (_model.SetOpenCargoDoors)
-            {
-                if (_cateringState == GSX_SERVICE_COMPLETED)
-                {
-                    _doorControlService.SetForwardCargoDoor(true);
-                    Logger.Log(LogLevel.Information, nameof(GsxCateringService), "Opened forward cargo door");
-                }
-            }
-        }
-
-        /// <inheritdoc/>
-        public void ToggleAftCargoDoor()
-        {
-            // Operate aft cargo door based on catering state
-            Logger.Log(LogLevel.Debug, nameof(GsxCateringService), "Command to operate Aft Cargo Door");
-
-            if (_model.SetOpenCargoDoors)
-            {
-                if (_cateringState == GSX_SERVICE_COMPLETED)
-                {
-                    _doorControlService.SetAftCargoDoor(true);
-                    Logger.Log(LogLevel.Information, nameof(GsxCateringService), "Opened aft cargo door");
                 }
             }
         }
