@@ -370,24 +370,29 @@ namespace Prosim2GSX.Models
         {
             // The weight conversion factor (2.205 lbs per kg)
             const float WeightConversion = 2.205f;
-    
-            // Get the current weight units from Prosim
+
+            // Get the current weight units from config
             string units = RefuelUnit ?? "KG"; // Default to KG if not set
-    
-            // Convert from kg/min to kg/s
-            float rateInKgPerSecond = RefuelRate / 60.0f;
-    
-            // If units are in LBS, convert to KG
-            if (units.Equals("LBS", StringComparison.OrdinalIgnoreCase))
+
+            // If units are in KG, return the rate directly
+            if (units.Equals("KG", StringComparison.OrdinalIgnoreCase))
             {
-                // Convert from lbs/min to kg/min, then to kg/s
-                rateInKgPerSecond = (RefuelRate / WeightConversion) / 60.0f;
-        
-                Logger.Log(Prosim2GSX.LogLevel.Debug, nameof(ServiceModel),
-                    $"Converting fuel rate from LBS: {RefuelRate} lbs/min = {rateInKgPerSecond * 60.0f} kg/min = {rateInKgPerSecond} kg/s");
+                return RefuelRate; // Return the rate directly in kg/s
             }
-    
-            return rateInKgPerSecond;
+            // If units are in LBS, convert to KG
+            else if (units.Equals("LBS", StringComparison.OrdinalIgnoreCase))
+            {
+                // Convert from lbs/s to kg/s
+                float rateInKgPerSecond = RefuelRate / WeightConversion;
+
+                Logger.Log(Prosim2GSX.LogLevel.Debug, nameof(ServiceModel),
+                    $"Converting fuel rate from LBS: {RefuelRate} lbs/s = {rateInKgPerSecond} kg/s");
+
+                return rateInKgPerSecond;
+            }
+
+            // Default fallback
+            return RefuelRate;
         }
 
         public void SetVoiceMeeterStrip(AudioChannel channel, string stripName, string stripLabel)
