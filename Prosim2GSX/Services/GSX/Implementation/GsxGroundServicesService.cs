@@ -48,6 +48,31 @@ namespace Prosim2GSX.Services.GSX.Implementation
 
             // Subscribe to service state changes
             SubscribeToStateChanges();
+
+            // Publish initial service status events
+            try
+            {
+                bool gpuConnected = IsGpuConnected;
+                bool pcaConnected = IsPcaConnected;
+                bool chocksSet = AreChocksSet;
+
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent(
+                    "GPU", gpuConnected ? ServiceStatus.Completed : ServiceStatus.Disconnected));
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent(
+                    "PCA", pcaConnected ? ServiceStatus.Completed : ServiceStatus.Disconnected));
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent(
+                    "Chocks", chocksSet ? ServiceStatus.Completed : ServiceStatus.Disconnected));
+
+                Logger.Log(LogLevel.Information, nameof(GsxGroundServicesService),
+                    $"Published initial service status events - GPU: {(gpuConnected ? "Connected" : "Disconnected")}, " +
+                    $"PCA: {(pcaConnected ? "Connected" : "Disconnected")}, " +
+                    $"Chocks: {(chocksSet ? "Set" : "Removed")}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, nameof(GsxGroundServicesService),
+                    $"Error publishing initial service status: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -55,14 +80,51 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// </summary>
         private void SubscribeToStateChanges()
         {
+            Logger.Log(LogLevel.Information, nameof(GsxGroundServicesService),
+                "Subscribing to ground service state changes");
+
+            // Log dataref monitoring status
+            Logger.Log(LogLevel.Information, nameof(GsxGroundServicesService),
+                $"DataRef monitoring active: {_dataRefMonitoringService.IsMonitoringActive}");
+
+            // Force start monitoring if needed
+            if (!_dataRefMonitoringService.IsMonitoringActive)
+            {
+                Logger.Log(LogLevel.Warning, nameof(GsxGroundServicesService),
+                    "DataRef monitoring not active, starting it manually");
+                _dataRefMonitoringService.StartMonitoring();
+            }
+
             // Subscribe to GPU state changes
+            Logger.Log(LogLevel.Information, nameof(GsxGroundServicesService),
+                "Subscribing to GPU state changes");
             _dataRefMonitoringService.SubscribeToDataRef("groundservice.groundpower", OnGpuStateChanged);
 
             // Subscribe to PCA state changes
+            Logger.Log(LogLevel.Information, nameof(GsxGroundServicesService),
+                "Subscribing to PCA state changes");
             _dataRefMonitoringService.SubscribeToDataRef("groundservice.preconditionedAir", OnPcaStateChanged);
 
             // Subscribe to chocks state changes
+            Logger.Log(LogLevel.Information, nameof(GsxGroundServicesService),
+                "Subscribing to chocks state changes");
             _dataRefMonitoringService.SubscribeToDataRef("efb.chocks", OnChocksStateChanged);
+
+            // Log current values
+            try
+            {
+                dynamic gpuState = _prosimInterface.GetProsimVariable("groundservice.groundpower");
+                dynamic pcaState = _prosimInterface.GetProsimVariable("groundservice.preconditionedAir");
+                dynamic chocksState = _prosimInterface.GetProsimVariable("efb.chocks");
+
+                Logger.Log(LogLevel.Information, nameof(GsxGroundServicesService),
+                    $"Initial states - GPU: {gpuState}, PCA: {pcaState}, Chocks: {chocksState}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, nameof(GsxGroundServicesService),
+                    $"Error getting initial states: {ex.Message}");
+            }
         }
 
         /// <summary>

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.FlightSimulator.SimConnect;
@@ -358,6 +359,23 @@ namespace Prosim2GSX
                 {
                     Logger.Log(LogLevel.Warning, nameof(ServiceController),
                         "SimConnect is not available. GSX services will not be initialized.");
+                }
+
+                // Verify DataRefMonitoringService is initialized and running
+                Logger.Log(LogLevel.Debug, nameof(ServiceController),
+                    $"DataRef monitoring service active: {ServiceLocator.DataRefService.IsMonitoringActive}");
+
+                // List all monitored datarefs
+                var monitoredRefs = ServiceLocator.DataRefService.GetMonitoredDataRefs().ToList();
+                Logger.Log(LogLevel.Debug, nameof(ServiceController),
+                    $"Currently monitored datarefs ({monitoredRefs.Count}): {string.Join(", ", monitoredRefs)}");
+
+                // Force start if needed
+                if (!ServiceLocator.DataRefService.IsMonitoringActive)
+                {
+                    Logger.Log(LogLevel.Warning, nameof(ServiceController),
+                        "DataRef monitoring service not active, starting it manually");
+                    ServiceLocator.DataRefService.StartMonitoring();
                 }
 
                 Logger.Log(LogLevel.Debug, nameof(ServiceController), "Creating GsxController");

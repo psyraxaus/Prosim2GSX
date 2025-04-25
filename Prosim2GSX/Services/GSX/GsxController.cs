@@ -31,6 +31,7 @@ namespace Prosim2GSX.Services.GSX
         private readonly IAudioService _audioService;
         private readonly ServiceModel _model;
         private readonly FlightPlan _flightPlan;
+        private DataRefChangedHandler _cockpitDoorHandler;
 
         // State tracking variables
         private string _flightPlanID = "0";
@@ -131,8 +132,35 @@ namespace Prosim2GSX.Services.GSX
                 // Subscribe to loadsheet changes if the service is available
                 _loadsheetService?.SubscribeToLoadsheetChanges();
 
-                // Register data ref change handlers
+                // Create and register cockpit door handler
+                _cockpitDoorHandler = new DataRefChangedHandler(OnCockpitDoorStateChanged);
+
+                // Get the data ref monitoring service
+                var dataRefService = ServiceLocator.DataRefService;
+
+                // Log current status of monitoring service
+                Logger.Log(LogLevel.Information, nameof(GsxController),
+                    $"DataRef monitoring active: {dataRefService.IsMonitoringActive}");
+
+                // Force start monitoring if needed
+                if (!dataRefService.IsMonitoringActive)
+                {
+                    Logger.Log(LogLevel.Warning, nameof(GsxController),
+                        "DataRef monitoring not active, starting it manually");
+                    dataRefService.StartMonitoring();
+                }
+
+                // Subscribe to cockpit door state changes
+                Logger.Log(LogLevel.Information, nameof(GsxController),
+                    "Subscribing to cockpit door state changes");
+                dataRefService.SubscribeToDataRef("system.switches.S_PED_COCKPIT_DOOR", _cockpitDoorHandler);
+
+                // Register other data ref handlers
                 RegisterDataRefHandlers();
+
+                // Log successful initialization
+                Logger.Log(LogLevel.Information, nameof(GsxController),
+                    "Successfully subscribed to all required datarefs");
             }
             catch (Exception ex)
             {
@@ -943,6 +971,40 @@ namespace Prosim2GSX.Services.GSX
                 $"Changed OPS callsign: {sb.ToString()}");
 
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Handler for cockpit door state changes
+        /// </summary>
+        /// <param name="dataRef">The dataref name</param>
+        /// <param name="oldValue">The old value</param>
+        /// <param name="newValue">The new value</param>
+        private void OnCockpitDoorStateChanged(string dataRef, dynamic oldValue, dynamic newValue)
+        {
+            try
+            {
+                // Convert value to int to make sure we're dealing with the same type
+                int newDoorState = Convert.ToInt32(newValue);
+                int oldDoorState = Convert.ToInt32(oldValue);
+
+                // Only process if value actually changed
+                if (newDoorState != oldDoorState)
+                {
+                    // Determine door state: 0=Normal/Closed, 1=Unlock/Open, 2=Lock/Closed
+                    bool doorOpen = newDoorState == 1;
+
+                    // Update GSX LVAR to match door state (0=closed, 1=open)
+                    _simConnectService.WriteGsxLvar("FSDT_GSX_COCKPIT_DOOR_OPEN", doorOpen ? 1 : 0);
+
+                    Logger.Log(LogLevel.Information, nameof(GsxController),
+                        $"Cockpit door state changed to {newDoorState} ({(doorOpen ? "opened" : "closed")})");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, nameof(GsxController),
+                    $"Error handling cockpit door state change: {ex.Message}");
+            }
         }
     }
 }
