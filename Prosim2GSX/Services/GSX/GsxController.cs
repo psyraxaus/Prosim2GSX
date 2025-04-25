@@ -536,16 +536,6 @@ namespace Prosim2GSX.Services.GSX
                 if (_model.AutoBoarding && !_boardingService.IsBoardingActive && !boardingComplete)
                 {
                     // Wait for refueling and catering to complete before boarding
-                    if (refuelingComplete && (!_model.CallCatering || cateringComplete))
-                    {
-                        // existing boarding code...
-                    }
-                }
-
-                // Handle boarding service
-                if (_model.AutoBoarding && !_boardingService.IsBoardingActive && !boardingComplete)
-                {
-                    // Wait for refueling and catering to complete before boarding
                     if (refuelingComplete)
                     {
                         if (_delayCounter == 0)
