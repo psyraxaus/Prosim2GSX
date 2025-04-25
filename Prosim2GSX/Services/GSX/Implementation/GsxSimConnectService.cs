@@ -316,11 +316,14 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// </summary>
         private void OnJetwayStateChanged(float newValue, float oldValue, string lvarName)
         {
+            Logger.Log(LogLevel.Debug, nameof(GsxSimConnectService), $"Jetway state changed to {newValue}");
+
             if (newValue != oldValue)
             {
-                var status = GetStatusFromGsxState((int)newValue);
+                ServiceStatus status = newValue == 5 ? ServiceStatus.Completed :
+                                       newValue == 1 ? ServiceStatus.Disconnected :
+                                       ServiceStatus.Inactive;
                 EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Jetway", status));
-                Logger.Log(LogLevel.Information, nameof(GsxSimConnectService), $"Jetway state changed to {status}");
             }
         }
 
@@ -329,11 +332,14 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// </summary>
         private void OnStairsStateChanged(float newValue, float oldValue, string lvarName)
         {
+            Logger.Log(LogLevel.Debug, nameof(GsxSimConnectService), $"Stairs state changed to {newValue}");
+
             if (newValue != oldValue)
             {
-                var status = GetStatusFromGsxState((int)newValue);
+                ServiceStatus status = newValue == 5 ? ServiceStatus.Completed :
+                                       newValue == 1 ? ServiceStatus.Disconnected :
+                                       ServiceStatus.Inactive;
                 EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Stairs", status));
-                Logger.Log(LogLevel.Information, nameof(GsxSimConnectService), $"Stairs state changed to {status}");
             }
         }
 
