@@ -131,6 +131,7 @@ namespace Prosim2GSX.Services
                     _gsxSimConnectService,
                     _gsxMenuService,
                     _flightPlanService,
+                    _refuelingService,
                     _model);
 
                 Logger.Log(LogLevel.Information, nameof(ProsimServiceProvider),

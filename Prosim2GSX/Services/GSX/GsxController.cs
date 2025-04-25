@@ -73,6 +73,7 @@ namespace Prosim2GSX.Services.GSX
             // Get services from ServiceLocator
             _prosimInterface = ServiceLocator.ProsimInterface;
             _flightPlanService = ServiceLocator.FlightPlanService;
+            _passengerService = ServiceLocator.PassengerService;
 
             // Get GSX services - add null checking here
             _flightStateService = ServiceLocator.GsxFlightStateService ?? 
@@ -405,7 +406,19 @@ namespace Prosim2GSX.Services.GSX
             {
                 _flightStateService.TransitionToState(FlightState.DEPARTURE);
                 _flightPlanID = _flightPlanService.FlightPlanID;
-                _boardingService.SetPassengers(_passengerService.GetPlannedPassengers());
+
+                // Add null check for passenger service
+                if (_passengerService != null)
+                {
+                    _boardingService.SetPassengers(_passengerService.GetPlannedPassengers());
+                }
+                else
+                {
+                    // Fallback to default value
+                    Logger.Log(LogLevel.Warning, nameof(GsxController),
+                        "PassengerService is null. Using default passenger count.");
+                    _boardingService.SetPassengers(0);
+                }
 
                 Logger.Log(LogLevel.Information, nameof(GsxController),
                     "State Change: Preparation -> DEPARTURE (Waiting for Refueling and Boarding)");
@@ -421,11 +434,32 @@ namespace Prosim2GSX.Services.GSX
             if (!_prelimLoadsheetGenerated)
             {
                 bool fuelTargetSet = _prosimInterface.GetStatusFunction("aircraft.refuel.fuelTarget") >= 1;
+                bool fuelHoseConnected = _simConnectService.ReadGsxLvar("FSDT_GSX_FUELHOSE_CONNECTED") == 1;
+                int refuelingState = _simConnectService.GetRefuelingState();
 
-                if (fuelTargetSet)
+                // Only generate loadsheet when all conditions are met: 
+                // 1. Fuel target is set
+                // 2. Fuel hose is connected
+                // 3. GSX refueling state is active (5)
+                if (fuelTargetSet && fuelHoseConnected && refuelingState == 5)
                 {
+                    Logger.Log(LogLevel.Information, nameof(GsxController),
+                        "Fuel target set, fuel hose connected, and refueling active - generating preliminary loadsheet");
                     GeneratePreliminaryLoadsheet();
                     return;
+                }
+                else if (fuelTargetSet)
+                {
+                    if (!fuelHoseConnected)
+                    {
+                        Logger.Log(LogLevel.Debug, nameof(GsxController),
+                            "Fuel target set but waiting for fuel hose connection before generating loadsheet");
+                    }
+                    else if (refuelingState != 5)
+                    {
+                        Logger.Log(LogLevel.Debug, nameof(GsxController),
+                            $"Fuel target set and hose connected, but refueling not active (state={refuelingState}). Waiting for active refueling.");
+                    }
                 }
                 else
                 {
@@ -437,6 +471,7 @@ namespace Prosim2GSX.Services.GSX
             // Check refueling and boarding state
             bool refuelingComplete = _refuelingService.IsRefuelingComplete;
             bool boardingComplete = _boardingService.IsBoardingComplete;
+            bool refuelingRequested = _simConnectService.GetRefuelingState() >= 4; // State 4 = Requested, 5 = Active, 6 = Completed
 
             if (!refuelingComplete || !boardingComplete)
             {
@@ -455,18 +490,40 @@ namespace Prosim2GSX.Services.GSX
                         _initialFluidsSet = true;
                     }
 
-                    // Request refueling if needed
-                    if (!_refuelingService.IsRefueling && !refuelingComplete)
+                    // Request refueling only if not already requested/active/completed
+                    if (!_refuelingService.IsRefueling && !refuelingComplete && !refuelingRequested)
                     {
                         Logger.Log(LogLevel.Information, nameof(GsxController), "Calling Refuel Service");
                         _refuelingService.RequestRefuelingService();
                         return;
                     }
 
-                    // Process refueling if active
+                    // Process refueling if active and not paused
                     if (_refuelingService.IsRefueling && !_refuelingService.IsRefuelingComplete)
                     {
-                        _refuelingService.ProcessRefueling();
+                        // Check if the fuel hose is connected to determine if we should be refueling
+                        bool fuelHoseConnected = _simConnectService.IsFuelHoseConnected();
+
+                        // Update refueling state based on fuel hose connection
+                        // This ensures we only actively refuel when the hose is connected
+                        if (fuelHoseConnected && _refuelingService.IsRefuelingPaused)
+                        {
+                            Logger.Log(LogLevel.Information, nameof(GsxController),
+                                "Fuel hose connected - resuming refueling");
+                            _refuelingService.ResumeRefueling();
+                        }
+                        else if (!fuelHoseConnected && !_refuelingService.IsRefuelingPaused)
+                        {
+                            Logger.Log(LogLevel.Information, nameof(GsxController),
+                                "Fuel hose disconnected - pausing refueling");
+                            _refuelingService.PauseRefueling();
+                        }
+
+                        // Only process refueling if not paused (which means hose is connected)
+                        if (!_refuelingService.IsRefuelingPaused)
+                        {
+                            _refuelingService.ProcessRefueling();
+                        }
                     }
                 }
 

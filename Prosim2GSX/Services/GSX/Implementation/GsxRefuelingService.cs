@@ -44,12 +44,14 @@ namespace Prosim2GSX.Services.GSX.Implementation
             IGsxSimConnectService simConnectService,
             IGsxMenuService menuService,
             IFlightPlanService flightPlanService,
+            IRefuelingService refuelingService,
             ServiceModel model)
         {
             _prosimInterface = prosimInterface ?? throw new ArgumentNullException(nameof(prosimInterface));
             _simConnectService = simConnectService ?? throw new ArgumentNullException(nameof(simConnectService));
             _menuService = menuService ?? throw new ArgumentNullException(nameof(menuService));
             _flightPlanService = flightPlanService ?? throw new ArgumentNullException(nameof(flightPlanService));
+            _refuelingService = refuelingService ?? throw new ArgumentNullException(nameof(refuelingService));
             _model = model ?? throw new ArgumentNullException(nameof(model));
 
             // Subscribe to refueling state changes
@@ -102,6 +104,28 @@ namespace Prosim2GSX.Services.GSX.Implementation
             Logger.Log(LogLevel.Debug, nameof(GsxRefuelingService),
                 $"Fuel hose state changed from {oldValue} to {newValue}");
 
+            if (_isRefueling)
+            {
+                if (newValue == 1 && oldValue == 0)
+                {
+                    // Fuel hose was just connected
+                    Logger.Log(LogLevel.Information, nameof(GsxRefuelingService),
+                        $"Fuel hose connected - starting fuel transfer");
+                    _isRefuelingPaused = false;
+
+                    // Start the actual fuel transfer process
+                    ResumeRefueling();
+                }
+                else if (newValue == 0 && oldValue == 1)
+                {
+                    // Fuel hose was just disconnected
+                    Logger.Log(LogLevel.Information, nameof(GsxRefuelingService),
+                        $"Fuel hose disconnected - pausing fuel transfer");
+                    _isRefuelingPaused = true;
+                    PauseRefueling();
+                }
+            }
+
             // Call the handler for external use
             HandleFuelHoseStateChange(newValue == 1);
         }
@@ -122,6 +146,9 @@ namespace Prosim2GSX.Services.GSX.Implementation
 
                 // Set the start time
                 _refuelingStartTime = DateTime.Now;
+
+                // Delegate to the RefuelingService to initialize the refueling process
+                _refuelingService.StartRefueling();
 
                 // Set flags
                 _isRefueling = true;
@@ -146,6 +173,9 @@ namespace Prosim2GSX.Services.GSX.Implementation
 
             try
             {
+                // Delegate to the RefuelingService to stop the refueling process
+                _refuelingService.StopRefueling();
+
                 // Set flags
                 _isRefueling = false;
                 _isRefuelingComplete = true;
@@ -175,6 +205,9 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 // Set flags
                 _isRefuelingPaused = true;
 
+                // Delegate to the RefuelingService to pause the refueling process
+                _refuelingService.PauseRefueling();
+
                 Logger.Log(LogLevel.Information, nameof(GsxRefuelingService),
                     $"Refueling paused. Current: {GetCurrentFuelAmount():F1}, Target: {_targetFuelAmount:F1}");
             }
@@ -195,6 +228,9 @@ namespace Prosim2GSX.Services.GSX.Implementation
             {
                 // Set flags
                 _isRefuelingPaused = false;
+
+                // Delegate to the RefuelingService to resume the refueling process
+                _refuelingService.ResumeRefueling();
 
                 Logger.Log(LogLevel.Information, nameof(GsxRefuelingService),
                     $"Refueling resumed. Current: {GetCurrentFuelAmount():F1}, Target: {_targetFuelAmount:F1}");
@@ -231,16 +267,32 @@ namespace Prosim2GSX.Services.GSX.Implementation
                     return true;
                 }
 
-                // Increment fuel amount
-                IncrementFuelAmount();
+                // Only process refueling if hose is connected
+                bool fuelHoseConnected = _simConnectService.IsFuelHoseConnected();
+                if (fuelHoseConnected)
+                {
+                    // Delegate to the Prosim RefuelingService to handle the actual fuel transfer
+                    bool isComplete = _refuelingService.ProcessRefueling();
 
-                // Calculate progress
-                double progress = (currentFuel - _initialFuelAmount) / (_targetFuelAmount - _initialFuelAmount) * 100.0;
-                progress = Math.Min(progress, 100.0);
-                progress = Math.Max(progress, 0.0);
+                    // If Prosim's refueling service says we're done, stop our service too
+                    if (isComplete)
+                    {
+                        StopRefueling();
+                        return true;
+                    }
 
-                Logger.Log(LogLevel.Debug, nameof(GsxRefuelingService),
-                    $"Refueling progress: {progress:F1}%. Current: {currentFuel:F1}, Target: {_targetFuelAmount:F1}");
+                    double progress = (currentFuel - _initialFuelAmount) / (_targetFuelAmount - _initialFuelAmount) * 100.0;
+                    progress = Math.Min(progress, 100.0);
+                    progress = Math.Max(progress, 0.0);
+
+                    Logger.Log(LogLevel.Debug, nameof(GsxRefuelingService),
+                        $"Refueling progress: {progress:F1}%. Current: {currentFuel:F1}, Target: {_targetFuelAmount:F1}");
+                }
+                else
+                {
+                    Logger.Log(LogLevel.Debug, nameof(GsxRefuelingService),
+                        $"Waiting for fuel hose connection. Current: {currentFuel:F1}, Target: {_targetFuelAmount:F1}");
+                }
 
                 return false;
             }
@@ -354,23 +406,34 @@ namespace Prosim2GSX.Services.GSX.Implementation
         {
             try
             {
-                // Check if there's a planned fuel amount from the flight plan
-                double plannedFuel = _refuelingService?.PlannedFuel ?? 0;
+                // First try to get the planned fuel from the dedicated refueling service
+                if (_refuelingService != null)
+                {
+                    double plannedFuel = _refuelingService.PlannedFuel;
+                    if (plannedFuel > 0)
+                    {
+                        Logger.Log(LogLevel.Debug, nameof(GsxRefuelingService),
+                            $"Using planned fuel from RefuelingService: {plannedFuel}");
+                        return plannedFuel;
+                    }
+                }
 
-                // If there's a valid planned fuel amount, use it
-                if (plannedFuel > 0)
-                    return plannedFuel;
-
-                // Otherwise, try to get from Prosim
+                // If that fails, try other methods...
                 var targetRef = _prosimInterface.GetProsimVariable("aircraft.refuel.fuelTarget");
                 if (targetRef != null)
                 {
                     double targetFuel = Convert.ToDouble(targetRef);
                     if (targetFuel > 0)
+                    {
+                        Logger.Log(LogLevel.Debug, nameof(GsxRefuelingService),
+                            $"Using fuel target from Prosim dataref: {targetFuel}");
                         return targetFuel;
+                    }
                 }
 
                 // Fallback to a default value
+                Logger.Log(LogLevel.Warning, nameof(GsxRefuelingService),
+                    "Could not determine fuel target, using default of 10000");
                 return 10000; // Default fallback
             }
             catch (Exception ex)
