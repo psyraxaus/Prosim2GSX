@@ -39,8 +39,6 @@ namespace Prosim2GSX.Services.GSX.Implementation
             SubscribeToGsxLvar("FSDT_GSX_BOARDING_STATE", OnBoardingStateChanged);
             SubscribeToGsxLvar("FSDT_GSX_DEBOARDING_STATE", OnDeboardingStateChanged);
             SubscribeToGsxLvar("FSDT_GSX_DEPARTURE_STATE", OnDepartureStateChanged);
-            SubscribeToGsxLvar("FSDT_GSX_BOARDING_CARGO", OnCargoLoadingChanged);
-            SubscribeToGsxLvar("FSDT_GSX_DEBOARDING_CARGO", OnCargoLoadingChanged);
 
             // Subscribe to other LVARs without callbacks
             _simConnect.SubscribeLvar("FSDT_GSX_COUATL_STARTED");
@@ -378,18 +376,6 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 var status = GetStatusFromGsxState((int)newValue);
                 EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Pushback", status));
                 LogService.Log(LogLevel.Information, nameof(GsxSimConnectService), $"Departure state changed to {status}");
-            }
-        }
-
-        /// <summary>
-        /// Handler for cargo loading/unloading changes
-        /// </summary>
-        private void OnCargoLoadingChanged(float newValue, float oldValue, string lvarName)
-        {
-            if (newValue != oldValue)
-            {
-                // This just logs the change - the actual status updates come from the cargo percentage
-                LogService.Log(LogLevel.Debug, nameof(GsxSimConnectService), $"Cargo operation {lvarName} changed from {oldValue} to {newValue}", LogCategory.SimConnect);
             }
         }
 
