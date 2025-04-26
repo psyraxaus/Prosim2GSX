@@ -36,7 +36,6 @@ namespace Prosim2GSX.Services.GSX.Implementation
             // Subscribe to LVARs with callbacks
             SubscribeToGsxLvar("FSDT_GSX_JETWAY", OnJetwayStateChanged);
             SubscribeToGsxLvar("FSDT_GSX_STAIRS", OnStairsStateChanged);
-            SubscribeToGsxLvar("FSDT_GSX_CATERING_STATE", OnCateringStateChanged);
             SubscribeToGsxLvar("FSDT_GSX_BOARDING_STATE", OnBoardingStateChanged);
             SubscribeToGsxLvar("FSDT_GSX_DEBOARDING_STATE", OnDeboardingStateChanged);
             SubscribeToGsxLvar("FSDT_GSX_DEPARTURE_STATE", OnDepartureStateChanged);
@@ -340,19 +339,6 @@ namespace Prosim2GSX.Services.GSX.Implementation
                                        newValue == 1 ? ServiceStatus.Disconnected :
                                        ServiceStatus.Inactive;
                 EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Stairs", status));
-            }
-        }
-
-        /// <summary>
-        /// Handler for catering state changes
-        /// </summary>
-        private void OnCateringStateChanged(float newValue, float oldValue, string lvarName)
-        {
-            if (newValue != oldValue)
-            {
-                var status = GetStatusFromGsxState((int)newValue);
-                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Catering", status));
-                LogService.Log(LogLevel.Information, nameof(GsxSimConnectService), $"Catering state changed to {status}");
             }
         }
 
