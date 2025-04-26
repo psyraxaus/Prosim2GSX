@@ -206,6 +206,9 @@ namespace Prosim2GSX
 
         protected void LoadSettings()
         {
+            // Set debug verbosity dropdown
+            SetDebugVerbosityComboBox();
+
             // Set audio API radio buttons
             rbCoreAudio.IsChecked = serviceModel.AudioApiType == AudioApiType.CoreAudio;
             rbVoiceMeeter.IsChecked = serviceModel.AudioApiType == AudioApiType.VoiceMeeter;
@@ -1541,6 +1544,171 @@ namespace Prosim2GSX
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
             }
+        }
+
+        private void SetDebugVerbosityComboBox()
+        {
+            string verbosity = serviceModel.DebugLogVerbosity;
+
+            // First check for predefined values
+            foreach (ComboBoxItem item in cboDebugVerbosity.Items)
+            {
+                if (item.Tag.ToString() == verbosity)
+                {
+                    cboDebugVerbosity.SelectedItem = item;
+                    // Add null check here too
+                    if (pnlCustomVerbosity != null)
+                    {
+                        pnlCustomVerbosity.Visibility = Visibility.Collapsed;
+                    }
+                    return;
+                }
+            }
+
+            // If not found, it's a custom list
+            foreach (ComboBoxItem item in cboDebugVerbosity.Items)
+            {
+                if (item.Tag.ToString() == "Custom")
+                {
+                    cboDebugVerbosity.SelectedItem = item;
+                    // Add null check here too
+                    if (pnlCustomVerbosity != null && txtCustomVerbosity != null)
+                    {
+                        txtCustomVerbosity.Text = verbosity;
+                        pnlCustomVerbosity.Visibility = Visibility.Visible;
+                    }
+                    return;
+                }
+            }
+        }
+
+        private void cboDebugVerbosity_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (cboDebugVerbosity.SelectedItem is ComboBoxItem item)
+            {
+                string tag = item.Tag.ToString();
+
+                // Add null check before accessing the panel
+                if (pnlCustomVerbosity != null)
+                {
+                    // Show/hide custom panel if "Custom" is selected
+                    if (tag == "Custom")
+                    {
+                        pnlCustomVerbosity.Visibility = Visibility.Visible;
+
+                        // Don't update settings yet - wait for custom text entry
+                        return;
+                    }
+                    else
+                    {
+                        pnlCustomVerbosity.Visibility = Visibility.Collapsed;
+
+                        // Update settings with predefined value
+                        serviceModel.SetSetting("debugLogVerbosity", tag);
+                        serviceModel.DebugLogVerbosity = tag;
+
+                        // Update the log service
+                        LogService.SetDebugVerbosity(tag);
+                    }
+                }
+            }
+        }
+
+        private void txtCustomVerbosity_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Enter && txtCustomVerbosity != null)
+            {
+                UpdateCustomVerbosity();
+            }
+        }
+
+        private void txtCustomVerbosity_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (txtCustomVerbosity != null)
+            {
+                UpdateCustomVerbosity();
+            }
+        }
+
+        private void UpdateCustomVerbosity()
+        {
+            if (txtCustomVerbosity != null)
+            {
+                string customValue = txtCustomVerbosity.Text.Trim();
+
+                // Verify the custom input has valid categories
+                bool isValid = VerifyCustomCategories(customValue);
+
+                if (isValid)
+                {
+                    // Update settings
+                    serviceModel.SetSetting("debugLogVerbosity", customValue);
+                    serviceModel.DebugLogVerbosity = customValue;
+
+                    // Update the log service
+                    LogService.SetDebugVerbosity(customValue);
+
+                    // Provide feedback
+                    LogService.Log(LogLevel.Information, nameof(MainWindow),
+                        $"Debug verbosity set to: {customValue}", LogCategory.All);
+                }
+                else
+                {
+                    // Provide feedback for invalid categories
+                    MessageBox.Show(
+                        "One or more category names are invalid. Please check the list of available categories.",
+                        "Invalid Categories",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
+            }
+        }
+
+        private bool VerifyCustomCategories(string categoriesString)
+        {
+            if (string.IsNullOrWhiteSpace(categoriesString) ||
+                categoriesString.Equals("All", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            string[] categories = categoriesString.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (string category in categories)
+            {
+                string trimmed = category.Trim();
+
+                // Try parse directly
+                bool isValid = Enum.TryParse<LogCategory>(trimmed, true, out _);
+
+                // Check known friendly names if direct parse fails
+                if (!isValid)
+                {
+                    isValid = IsKnownFriendlyName(trimmed);
+                }
+
+                if (!isValid)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private bool IsKnownFriendlyName(string name)
+        {
+            string lowered = name.ToLowerInvariant();
+
+            return lowered switch
+            {
+                "all" or "all categories" or "gsx" or "gsxcontroller" or "refuel" or "refueling" or
+                "board" or "boarding" or "cater" or "catering" or "ground" or "groundservices" or
+                "ground services" or "sim" or "simconnect" or "ps" or "prosim" or "event" or
+                "events" or "menu" or "menus" or "audio" or "sound" or "config" or "configuration" or
+                "door" or "doors" or "cargo" or "load" or "loadsheet" => true,
+                _ => false
+            };
         }
     }
 }

@@ -950,6 +950,39 @@
                             </StackPanel>
                         </Border>
 
+                        <!-- Debug Log Configuration Section -->
+                        <GroupBox Header="Logging" Margin="5">
+                            <StackPanel>
+                                <Label Content="Debug Log Verbosity:" />
+                                <ComboBox x:Name="cboDebugVerbosity" 
+                 SelectedIndex="0" 
+                 SelectionChanged="cboDebugVerbosity_SelectionChanged" 
+                 Margin="0,5,0,10">
+                                    <ComboBoxItem Content="All Categories" Tag="All" />
+                                    <ComboBoxItem Content="Refueling" Tag="Refueling" />
+                                    <ComboBoxItem Content="Boarding" Tag="Boarding" />
+                                    <ComboBoxItem Content="Catering" Tag="Catering" />
+                                    <ComboBoxItem Content="Ground Services" Tag="GroundServices" />
+                                    <ComboBoxItem Content="SimConnect" Tag="SimConnect" />
+                                    <ComboBoxItem Content="Prosim" Tag="Prosim" />
+                                    <ComboBoxItem Content="Custom..." Tag="Custom" />
+                                </ComboBox>
+
+                                <!-- Custom Categories Input (initially hidden) -->
+                                <StackPanel x:Name="pnlCustomVerbosity" Visibility="Collapsed">
+                                    <Label Content="Enter comma-separated categories:" />
+                                    <TextBox x:Name="txtCustomVerbosity" 
+                    Margin="0,5,0,5"
+                    KeyDown="txtCustomVerbosity_KeyDown"
+                    LostFocus="txtCustomVerbosity_LostFocus" />
+                                    <Label Content="Available categories:" />
+                                    <TextBlock TextWrapping="Wrap" Margin="5">
+                All, GsxController, Refueling, Boarding, Catering, GroundServices, SimConnect, Prosim, Events, Menu, Audio, Configuration, Doors, Cargo, Loadsheet
+                                    </TextBlock>
+                                </StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+
                         <!-- Appearance Settings -->
                         <TextBlock Text="EXTERNAL DEPENDENCIES" Style="{StaticResource CategoryHeaderStyle}" Margin="0,20,0,0"/>
                         <Border Style="{StaticResource SectionBorderStyle}">

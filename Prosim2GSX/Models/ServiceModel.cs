@@ -38,6 +38,7 @@ namespace Prosim2GSX.Models
         public bool IsSimRunning { get; set; } = false;
         public string LogFilePath { get; set; }
         public string LogLevel { get; set; }
+        public string DebugLogVerbosity { get; set; }
         public float OperatorDelay { get; set; }
         public bool PcaOnlyJetways { get; set; }
         public string ProsimHostname { get; set; }
@@ -221,6 +222,7 @@ namespace Prosim2GSX.Models
             IntLatchMute = Convert.ToBoolean(ConfigurationFile.GetSetting("intLatchMute", "true"));
             LogFilePath = Convert.ToString(ConfigurationFile.GetSetting("logFilePath", "Prosim2GSX.log"));
             LogLevel = Convert.ToString(ConfigurationFile.GetSetting("logLevel", "Debug"));
+            DebugLogVerbosity = Convert.ToString(ConfigurationFile.GetSetting("debugLogVerbosity", "All"));
             PcaOnlyJetways = Convert.ToBoolean(ConfigurationFile.GetSetting("pcaOnlyJetway", "true"));
             PaVolumeApp = Convert.ToString(ConfigurationFile.GetSetting("paVolumeApp", ""));
             PaVolumeControl = Convert.ToBoolean(ConfigurationFile.GetSetting("paVolumeControl", "false"));
