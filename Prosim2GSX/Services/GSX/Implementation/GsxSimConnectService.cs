@@ -36,8 +36,6 @@ namespace Prosim2GSX.Services.GSX.Implementation
             // Subscribe to LVARs with callbacks
             SubscribeToGsxLvar("FSDT_GSX_JETWAY", OnJetwayStateChanged);
             SubscribeToGsxLvar("FSDT_GSX_STAIRS", OnStairsStateChanged);
-            SubscribeToGsxLvar("FSDT_GSX_BOARDING_STATE", OnBoardingStateChanged);
-            SubscribeToGsxLvar("FSDT_GSX_DEBOARDING_STATE", OnDeboardingStateChanged);
             SubscribeToGsxLvar("FSDT_GSX_DEPARTURE_STATE", OnDepartureStateChanged);
 
             // Subscribe to other LVARs without callbacks
@@ -337,32 +335,6 @@ namespace Prosim2GSX.Services.GSX.Implementation
                                        newValue == 1 ? ServiceStatus.Disconnected :
                                        ServiceStatus.Inactive;
                 EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Stairs", status));
-            }
-        }
-
-        /// <summary>
-        /// Handler for boarding state changes
-        /// </summary>
-        private void OnBoardingStateChanged(float newValue, float oldValue, string lvarName)
-        {
-            if (newValue != oldValue)
-            {
-                var status = GetStatusFromGsxState((int)newValue);
-                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Boarding", status));
-                LogService.Log(LogLevel.Information, nameof(GsxSimConnectService), $"Boarding state changed to {status}");
-            }
-        }
-
-        /// <summary>
-        /// Handler for deboarding state changes
-        /// </summary>
-        private void OnDeboardingStateChanged(float newValue, float oldValue, string lvarName)
-        {
-            if (newValue != oldValue)
-            {
-                var status = GetStatusFromGsxState((int)newValue);
-                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Deboarding", status));
-                LogService.Log(LogLevel.Information, nameof(GsxSimConnectService), $"Deboarding state changed to {status}");
             }
         }
 
