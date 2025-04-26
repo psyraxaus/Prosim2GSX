@@ -5,6 +5,8 @@ using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 
 namespace Prosim2GSX.Services
 {
@@ -54,12 +56,12 @@ namespace Prosim2GSX.Services
             {
                 var response = await httpClient.PostAsync(AcarsNetworkUrl, content);
 
-                Logger.Log(LogLevel.Debug, "AcarsClient:SendMessageToAcars", $"PACKET SENT: {toCallsign} | {messageType} | {packetData} ");
+                LogService.Log(LogLevel.Debug, "AcarsClient:SendMessageToAcars", $"PACKET SENT: {toCallsign} | {messageType} | {packetData} ");
 
                 var responseString = await response.Content.ReadAsStringAsync();
                 string printString = responseString.ToString().ToUpper().Trim();
 
-                Logger.Log(LogLevel.Debug, "AcarsClient:SendMessageToAcars", $"RECEIVED: {responseString}");
+                LogService.Log(LogLevel.Debug, "AcarsClient:SendMessageToAcars", $"RECEIVED: {responseString}");
 
                 if (printString.Contains("ERROR"))
                 {
@@ -70,7 +72,7 @@ namespace Prosim2GSX.Services
             {
                 if (!isErrorState)
                 {
-                    Logger.Log(LogLevel.Debug, "AcarsClient:SendMessageToAcars", $"{e.GetType().FullName}: {e.Message}");
+                    LogService.Log(LogLevel.Debug, "AcarsClient:SendMessageToAcars", $"{e.GetType().FullName}: {e.Message}");
                     isErrorState = true;
                 }
             }

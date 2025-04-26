@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 
 namespace Prosim2GSX.Services
 {
@@ -37,7 +39,7 @@ namespace Prosim2GSX.Services
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(DllLoader),
+                LogService.Log(LogLevel.Error, nameof(DllLoader),
                     $"Error adding DLL directory {directory}: {ex.Message}");
                 return false;
             }
@@ -67,7 +69,7 @@ namespace Prosim2GSX.Services
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(DllLoader),
+                LogService.Log(LogLevel.Error, nameof(DllLoader),
                     $"Error loading DLL {dllPath}: {ex.Message}");
                 return IntPtr.Zero;
             }
@@ -90,7 +92,7 @@ namespace Prosim2GSX.Services
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(DllLoader),
+                LogService.Log(LogLevel.Error, nameof(DllLoader),
                     $"Error getting function pointer for {functionName}: {ex.Message}");
                 return IntPtr.Zero;
             }
@@ -112,7 +114,7 @@ namespace Prosim2GSX.Services
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(DllLoader),
+                LogService.Log(LogLevel.Error, nameof(DllLoader),
                     $"Error freeing DLL: {ex.Message}");
                 return false;
             }

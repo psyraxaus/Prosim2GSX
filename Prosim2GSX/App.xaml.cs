@@ -4,6 +4,8 @@ using H.NotifyIcon;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
 using Prosim2GSX.Services.Audio;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 using Prosim2GSX.Themes;
 using Serilog;
 using System;
@@ -74,14 +76,14 @@ namespace Prosim2GSX
                     // If the user cancels, exit the application
                     if (result != true)
                     {
-                        Logger.Log(LogLevel.Information, "App:OnStartup",
+                        LogService.Log(LogLevel.Information, "App:OnStartup",
                             "User cancelled first-time setup. Exiting application.");
                         Current.Shutdown();
                         return;
                     }
 
                     // At this point, the user has entered a valid SimBrief ID
-                    Logger.Log(LogLevel.Information, "App:OnStartup",
+                    LogService.Log(LogLevel.Information, "App:OnStartup",
                         $"User entered SimBrief ID: {serviceModel.SimBriefID}");
                 }
 
@@ -93,7 +95,7 @@ namespace Prosim2GSX
                     string.IsNullOrEmpty(serviceModel.ProsimSDKPath))
                 {
                     needsExternalDependenciesConfig = true;
-                    Logger.Log(LogLevel.Warning, "App:OnStartup",
+                    LogService.Log(LogLevel.Warning, "App:OnStartup",
                         "ProSimSDK.dll not found in default location and custom path not set");
                 }
 
@@ -102,7 +104,7 @@ namespace Prosim2GSX
                     string.IsNullOrEmpty(serviceModel.VoicemeeterDllPath))
                 {
                     needsExternalDependenciesConfig = true;
-                    Logger.Log(LogLevel.Warning, "App:OnStartup",
+                    LogService.Log(LogLevel.Warning, "App:OnStartup",
                         "VoicemeeterRemote64.dll not found in default location and custom path not set");
                 }
 
@@ -115,7 +117,7 @@ namespace Prosim2GSX
                     // If the user cancels, show a warning but continue
                     if (result != true)
                     {
-                        Logger.Log(LogLevel.Warning, "App:OnStartup",
+                        LogService.Log(LogLevel.Warning, "App:OnStartup",
                             "User cancelled external dependencies setup. Some features may not work correctly.");
                         MessageBox.Show(
                             "External dependencies have not been configured. Some features related to Prosim and Voicemeeter may not work correctly.",
@@ -125,7 +127,7 @@ namespace Prosim2GSX
                     }
                     else
                     {
-                        Logger.Log(LogLevel.Information, "App:OnStartup",
+                        LogService.Log(LogLevel.Information, "App:OnStartup",
                             "User configured external dependencies.");
                     }
                 }
@@ -145,7 +147,7 @@ namespace Prosim2GSX
                         {
                             // Add ProsimSDK directory to DLL search path
                             Services.DllLoader.AddDllDirectory(prosimDir);
-                            Logger.Log(LogLevel.Information, "App:OnStartup",
+                            LogService.Log(LogLevel.Information, "App:OnStartup",
                                 $"Added ProsimSDK directory to DLL search path: {prosimDir}");
                         }
                     }
@@ -156,13 +158,13 @@ namespace Prosim2GSX
 
                     try
                     {
-                        Logger.Log(LogLevel.Information, "App:OnStartup", "Initializing ServiceLocator");
+                        LogService.Log(LogLevel.Information, "App:OnStartup", "Initializing ServiceLocator");
                         ServiceLocator.Initialize(serviceModel);
-                        Logger.Log(LogLevel.Information, "App:OnStartup", "ServiceLocator initialized successfully");
+                        LogService.Log(LogLevel.Information, "App:OnStartup", "ServiceLocator initialized successfully");
                     }
                     catch (Exception ex)
                     {
-                        Logger.Log(LogLevel.Critical, "App:OnStartup", $"Failed to initialize ServiceLocator: {ex.Message}\n{ex.StackTrace}");
+                        LogService.Log(LogLevel.Critical, "App:OnStartup", $"Failed to initialize ServiceLocator: {ex.Message}\n{ex.StackTrace}");
                         MessageBox.Show(
                             $"Failed to initialize core services:\n\n{ex.Message}\n\nApplication will now exit.",
                             "Critical Error",
@@ -187,7 +189,7 @@ namespace Prosim2GSX
                         catch (Exception ex)
                         {
                             // Log the exception
-                            Logger.Log(LogLevel.Critical, "App:OnStartup", 
+                            LogService.Log(LogLevel.Critical, "App:OnStartup", 
                                 $"Critical exception in Controller.Run: {ex.GetType()} - {ex.Message}\n{ex.StackTrace}");
                         }
                     });
@@ -204,7 +206,7 @@ namespace Prosim2GSX
                 else
                 {
                     // This should never happen, but just in case
-                    Logger.Log(LogLevel.Critical, "App:OnStartup", 
+                    LogService.Log(LogLevel.Critical, "App:OnStartup", 
                         "Invalid SimBrief ID after setup. Exiting application.");
                     MessageBox.Show(
                         "Invalid SimBrief ID. Please restart the application and enter a valid ID.",
@@ -217,7 +219,7 @@ namespace Prosim2GSX
             catch (Exception ex)
             {
                 // Log the exception
-                Logger.Log(LogLevel.Critical, "App:OnStartup", 
+                LogService.Log(LogLevel.Critical, "App:OnStartup", 
                     $"Critical exception during application startup: {ex.GetType()} - {ex.Message}\n{ex.StackTrace}");
                 
                 // Show a message box with the error
@@ -254,7 +256,7 @@ namespace Prosim2GSX
             Cef.Shutdown();
             base.OnExit(e);
 
-            Logger.Log(LogLevel.Information, "App:OnExit", "Prosim2GSX exiting ...");
+            LogService.Log(LogLevel.Information, "App:OnExit", "Prosim2GSX exiting ...");
         }
 
         protected void OnTick(object sender, EventArgs e)
@@ -279,12 +281,12 @@ namespace Prosim2GSX
                 loggerConfiguration.MinimumLevel.Information();
             Log.Logger = loggerConfiguration.CreateLogger();
             Log.Information($"-----------------------------------------------------------------------");
-            Logger.Log(LogLevel.Information, "App:InitLog", $"Prosim2GSX started! Log Level: {logLevel} Log File: {logFilePath}");
+            LogService.Log(LogLevel.Information, "App:InitLog", $"Prosim2GSX started! Log Level: {logLevel} Log File: {logFilePath}");
         }
 
         protected void InitSystray()
         {
-            Logger.Log(LogLevel.Information, "App:InitSystray", $"Creating SysTray Icon ...");
+            LogService.Log(LogLevel.Information, "App:InitSystray", $"Creating SysTray Icon ...");
             notifyIcon = (TaskbarIcon)FindResource("NotifyIcon");
             notifyIcon.Icon = GetIcon("logo.ico");
             notifyIcon.ForceCreate(false);
@@ -292,7 +294,7 @@ namespace Prosim2GSX
 
         protected void InitCef()
         {
-            Logger.Log(LogLevel.Information, "App:InitCef", $"Initializing Cef Browser ...");
+            LogService.Log(LogLevel.Information, "App:InitCef", $"Initializing Cef Browser ...");
             var settings = new CefSettings();
             if (Cef.IsInitialized != true)  // Handle nullable boolean from newer CEF version
                 Cef.Initialize(settings, performDependencyCheck: true, browserProcessHandler: null);

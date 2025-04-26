@@ -1,5 +1,7 @@
 ﻿using Prosim2GSX.Events;
 using Prosim2GSX.Models;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 using Prosim2GSX.Services.Prosim.Interfaces;
 using System;
 using System.Threading;
@@ -29,7 +31,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(ProsimConnectionService), $"Error initializing: {ex.Message}");
+                LogService.Log(LogLevel.Error, nameof(ProsimConnectionService), $"Error initializing: {ex.Message}");
                 return false;
             }
         }
@@ -48,7 +50,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(ProsimConnectionService), $"Error connecting: {ex.Message}");
+                LogService.Log(LogLevel.Error, nameof(ProsimConnectionService), $"Error connecting: {ex.Message}");
                 EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("Prosim", false));
                 return false;
             }
@@ -68,7 +70,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             Thread.Sleep(5000);
 
             bool isProsimReady = IsConnected;
-            Logger.Log(LogLevel.Debug, nameof(ProsimConnectionService), $"Prosim Available: {isProsimReady}");
+            LogService.Log(LogLevel.Debug, nameof(ProsimConnectionService), $"Prosim Available: {isProsimReady}", LogCategory.Prosim);
 
             // If already connected or not running, return immediately
             if (isProsimReady || !_model.IsSimRunning)
@@ -82,7 +84,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             // Wait for connection (polling)
             while (_model.IsSimRunning && !isProsimReady && !checkCancellation())
             {
-                Logger.Log(LogLevel.Information, nameof(ProsimConnectionService),
+                LogService.Log(LogLevel.Information, nameof(ProsimConnectionService),
                     $"Is Prosim available? {isProsimReady} - waiting {_waitDuration / 1000}s for Retry");
 
                 Connect();
@@ -92,7 +94,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
 
             if (!isProsimReady || !_model.IsSimRunning)
             {
-                Logger.Log(LogLevel.Error, nameof(ProsimConnectionService), "Prosim not available - aborting");
+                LogService.Log(LogLevel.Error, nameof(ProsimConnectionService), "Prosim not available - aborting");
                 return false;
             }
 

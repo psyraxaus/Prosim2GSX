@@ -1,6 +1,8 @@
 ﻿using Prosim2GSX.Services.Prosim.Interfaces;
 using System;
 using Prosim2GSX.Models;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 
 namespace Prosim2GSX.Services.Prosim.Implementation
 {
@@ -34,9 +36,9 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                         _prosimService.SetProsimVariable("aircraft.cargo.aft.amount", Convert.ToDouble(flightPlan.CargoTotal / 2));
                         _prosimService.SetProsimVariable("aircraft.cargo.forward.amount", Convert.ToDouble(flightPlan.CargoTotal / 2));
 
-                        Logger.Log(LogLevel.Debug, nameof(CargoService),
+                        LogService.Log(LogLevel.Debug, nameof(CargoService),
                             $"Temp Cargo set: forward {_prosimService.GetProsimVariable("aircraft.cargo.forward.amount")} " +
-                            $"aft {_prosimService.GetProsimVariable("aircraft.cargo.aft.amount")}");
+                            $"aft {_prosimService.GetProsimVariable("aircraft.cargo.aft.amount")}", LogCategory.Cargo);
                     }
                 }
 /*
@@ -50,7 +52,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(CargoService),
+                LogService.Log(LogLevel.Error, nameof(CargoService),
                     $"Exception during UpdateCargoData: {ex.Message}");
             }
         }
@@ -66,8 +68,8 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             _prosimService.SetProsimVariable("aircraft.cargo.forward.amount", (float)cargo * _cargoDistMain);
             _prosimService.SetProsimVariable("aircraft.cargo.aft.amount", (float)cargo * _cargoDistMain);
 
-            Logger.Log(LogLevel.Debug, nameof(CargoService),
-                $"Cargo updated: {cargoPercentage}% of {PlannedCargo}kg");
+            LogService.Log(LogLevel.Debug, nameof(CargoService),
+                $"Cargo updated: {cargoPercentage}% of {PlannedCargo}kg", LogCategory.Cargo);
         }
     }
 }

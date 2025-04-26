@@ -1,5 +1,7 @@
 ﻿using Prosim2GSX.Events;
 using Prosim2GSX.Models;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 using Prosim2GSX.Services.Prosim.Interfaces;
 using System;
 
@@ -66,12 +68,12 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                 if (_fuelUnits == "LBS")
                     _plannedFuel /= _weightConversion;
 
-                Logger.Log(LogLevel.Debug, nameof(RefuelingService),
-                    $"Updated fuel data - Current: {_currentFuel}kg, Planned: {_plannedFuel}kg, Units: {_fuelUnits}");
+                LogService.Log(LogLevel.Debug, nameof(RefuelingService),
+                    $"Updated fuel data - Current: {_currentFuel}kg, Planned: {_plannedFuel}kg, Units: {_fuelUnits}", LogCategory.Refueling);
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(RefuelingService),
+                LogService.Log(LogLevel.Error, nameof(RefuelingService),
                     $"Exception during UpdateFuelData: {ex.Message}");
             }
         }
@@ -87,7 +89,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(RefuelingService),
+                LogService.Log(LogLevel.Error, nameof(RefuelingService),
                     $"Error getting fuel amount: {ex.Message}");
                 return 0;
             }
@@ -100,21 +102,21 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             {
                 if (_model.SetZeroFuel)
                 {
-                    Logger.Log(LogLevel.Information, nameof(RefuelingService),
+                    LogService.Log(LogLevel.Information, nameof(RefuelingService),
                         "Start at Zero Fuel amount - Resetting to 0kg (0lbs)");
                     _prosimInterface.SetProsimVariable("aircraft.fuel.total.amount.kg", 0.0D);
                     _currentFuel = 0D;
                 }
                 else if (_model.SetSaveFuel)
                 {
-                    Logger.Log(LogLevel.Information, nameof(RefuelingService),
+                    LogService.Log(LogLevel.Information, nameof(RefuelingService),
                         $"Using saved fuel value - Resetting to {_model.SavedFuelAmount}");
                     _prosimInterface.SetProsimVariable("aircraft.fuel.total.amount.kg", _model.SavedFuelAmount);
                     _currentFuel = _model.SavedFuelAmount;
                 }
                 else if (_currentFuel > _plannedFuel && _plannedFuel > 0)
                 {
-                    Logger.Log(LogLevel.Information, nameof(RefuelingService),
+                    LogService.Log(LogLevel.Information, nameof(RefuelingService),
                         "Current Fuel higher than planned - Resetting to 1500kg (3307lbs)");
                     _prosimInterface.SetProsimVariable("aircraft.fuel.total.amount.kg", 1500.0D);
                     _currentFuel = 1500D;
@@ -133,7 +135,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(RefuelingService),
+                LogService.Log(LogLevel.Error, nameof(RefuelingService),
                     $"Error setting initial fuel: {ex.Message}");
             }
         }
@@ -152,12 +154,12 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                 _prosimInterface.SetProsimVariable("aircraft.refuel.fuelTarget", _targetFuel);
                 _prosimInterface.SetProsimVariable("efb.plannedfuel", _targetFuel);
 
-                Logger.Log(LogLevel.Information, nameof(RefuelingService),
+                LogService.Log(LogLevel.Information, nameof(RefuelingService),
                     $"Fuel target set to {_targetFuel:F1}kg");
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(RefuelingService),
+                LogService.Log(LogLevel.Error, nameof(RefuelingService),
                     $"Error setting fuel target: {ex.Message}");
             }
         }
@@ -171,12 +173,12 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                 _prosimInterface.SetProsimVariable("aircraft.hydraulics.green.quantity", _model.HydaulicsGreenAmount);
                 _prosimInterface.SetProsimVariable("aircraft.hydraulics.yellow.quantity", _model.HydaulicsYellowAmount);
 
-                Logger.Log(LogLevel.Debug, nameof(RefuelingService),
-                    "Initial hydraulic fluids set successfully");
+                LogService.Log(LogLevel.Debug, nameof(RefuelingService),
+                    "Initial hydraulic fluids set successfully", LogCategory.Refueling);
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(RefuelingService),
+                LogService.Log(LogLevel.Error, nameof(RefuelingService),
                     $"Error setting initial fluids: {ex.Message}");
             }
         }
@@ -199,7 +201,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(RefuelingService),
+                LogService.Log(LogLevel.Error, nameof(RefuelingService),
                     $"Error getting hydraulic fluid values: {ex.Message}");
                 return (0, 0, 0);
             }
@@ -236,12 +238,12 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                 _isRefuelingActive = false;
                 _isRefuelingComplete = false;
 
-                Logger.Log(LogLevel.Information, nameof(RefuelingService),
+                LogService.Log(LogLevel.Information, nameof(RefuelingService),
                     $"Refueling initialized. Current: {_currentFuel:F1}kg, Target: {_targetFuel:F1}kg");
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(RefuelingService),
+                LogService.Log(LogLevel.Error, nameof(RefuelingService),
                     $"Error starting refueling: {ex.Message}");
             }
         }
@@ -260,7 +262,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                 _isRefuelingComplete = true;
 
                 // Log the completion
-                Logger.Log(LogLevel.Information, nameof(RefuelingService),
+                LogService.Log(LogLevel.Information, nameof(RefuelingService),
                     $"Refueling completed. Final: {_currentFuel:F1}kg");
 
                 // Publish event
@@ -268,7 +270,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(RefuelingService),
+                LogService.Log(LogLevel.Error, nameof(RefuelingService),
                     $"Error stopping refueling: {ex.Message}");
             }
         }
@@ -284,7 +286,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
 
                 _isRefuelingActive = false;
 
-                Logger.Log(LogLevel.Information, nameof(RefuelingService),
+                LogService.Log(LogLevel.Information, nameof(RefuelingService),
                     $"Refueling paused at {_currentFuel:F1}kg");
 
                 // Publish event
@@ -292,7 +294,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(RefuelingService),
+                LogService.Log(LogLevel.Error, nameof(RefuelingService),
                     $"Error pausing refueling: {ex.Message}");
             }
         }
@@ -308,7 +310,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
 
                 _isRefuelingActive = true;
 
-                Logger.Log(LogLevel.Information, nameof(RefuelingService),
+                LogService.Log(LogLevel.Information, nameof(RefuelingService),
                     $"Refueling resumed. Current: {_currentFuel:F1}kg, Target: {_targetFuel:F1}kg");
 
                 // Publish event
@@ -316,7 +318,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(RefuelingService),
+                LogService.Log(LogLevel.Error, nameof(RefuelingService),
                     $"Error resuming refueling: {ex.Message}");
             }
         }
@@ -359,14 +361,14 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                 _prosimInterface.SetProsimVariable("aircraft.fuel.total.amount.kg", newFuel);
                 _currentFuel = newFuel;
 
-                Logger.Log(LogLevel.Debug, nameof(RefuelingService),
-                    $"Fuel incremented by {step:F1}kg: {_currentFuel - step:F1} -> {newFuel:F1}kg (Rate: {_model.GetFuelRateKGS():F1}kg/s)");
+                LogService.Log(LogLevel.Debug, nameof(RefuelingService),
+                    $"Fuel incremented by {step:F1}kg: {_currentFuel - step:F1} -> {newFuel:F1}kg (Rate: {_model.GetFuelRateKGS():F1}kg/s)", LogCategory.Refueling);
 
                 return false;
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(RefuelingService),
+                LogService.Log(LogLevel.Error, nameof(RefuelingService),
                     $"Error processing refueling: {ex.Message}");
                 return false;
             }

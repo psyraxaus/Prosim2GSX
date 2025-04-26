@@ -8,6 +8,8 @@ using Prosim2GSX.Services.GSX.Implementation;
 using Prosim2GSX.Services.GSX.Interfaces;
 using System;
 using Prosim2GSX.Services.GSX;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 
 namespace Prosim2GSX.Services
 {
@@ -78,12 +80,12 @@ namespace Prosim2GSX.Services
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log(LogLevel.Error, nameof(ProsimServiceProvider),
+                    LogService.Log(LogLevel.Error, nameof(ProsimServiceProvider),
                         $"Error creating GSX services: {ex.Message}");
                 }
             }
 
-            Logger.Log(LogLevel.Information, nameof(ProsimServiceProvider),
+            LogService.Log(LogLevel.Information, nameof(ProsimServiceProvider),
                 "Service provider initialized");
         }
 
@@ -157,12 +159,12 @@ namespace Prosim2GSX.Services
                 // Subscribe to cargo events
                 _gsxCargoService.SubscribeToCargoEvents();
 
-                Logger.Log(LogLevel.Information, nameof(ProsimServiceProvider),
+                LogService.Log(LogLevel.Information, nameof(ProsimServiceProvider),
                     "GSX services updated successfully");
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(ProsimServiceProvider),
+                LogService.Log(LogLevel.Error, nameof(ProsimServiceProvider),
                     $"Error updating GSX services: {ex.Message}");
                 throw; // Rethrow to let the caller handle it
             }

@@ -3,6 +3,9 @@ using Prosim2GSX.Services.Prosim.Interfaces;
 using Prosim2GSX.Services.GSX.Interfaces;
 using System;
 using Prosim2GSX.Services.Connection.Interfaces;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Interfaces;
+using Prosim2GSX.Services.Logger.Implementation;
 
 namespace Prosim2GSX.Services
 {
@@ -13,6 +16,7 @@ namespace Prosim2GSX.Services
     {
         private static ProsimServiceProvider _serviceProvider;
         private static ServiceModel _serviceModel;
+        private static ILogService _logService;
 
         /// <summary>
         /// Initialize the service locator
@@ -33,11 +37,11 @@ namespace Prosim2GSX.Services
                 var test = ProsimInterface;
                 var test2 = FlightPlanService;
 
-                Logger.Log(LogLevel.Information, nameof(ServiceLocator), "ServiceLocator initialized successfully");
+                LogService.Log(LogLevel.Information, nameof(ServiceLocator), "ServiceLocator initialized successfully");
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Critical, nameof(ServiceLocator),
+                LogService.Log(LogLevel.Critical, nameof(ServiceLocator),
                     $"Failed to initialize ServiceLocator: {ex.Message}");
                 throw; // Rethrow to let caller handle it
             }
@@ -188,7 +192,7 @@ namespace Prosim2GSX.Services
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(ServiceLocator), $"Exception during UpdateAllServices: {ex.Message}");
+                LogService.Log(LogLevel.Error, nameof(ServiceLocator), $"Exception during UpdateAllServices: {ex.Message}");
             }
         }
 
@@ -207,12 +211,12 @@ namespace Prosim2GSX.Services
         {
             if (simConnect == null)
             {
-                Logger.Log(LogLevel.Warning, nameof(ServiceLocator),
+                LogService.Log(LogLevel.Warning, nameof(ServiceLocator),
                     "Cannot update GSX services: SimConnect is null");
                 return;
             }
 
-            Logger.Log(LogLevel.Information, nameof(ServiceLocator),
+            LogService.Log(LogLevel.Information, nameof(ServiceLocator),
                 "Updating GSX services with current SimConnect instance");
 
             try
@@ -221,7 +225,7 @@ namespace Prosim2GSX.Services
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(ServiceLocator),
+                LogService.Log(LogLevel.Error, nameof(ServiceLocator),
                     $"Error updating GSX services: {ex.Message}");
             }
         }
@@ -239,5 +243,10 @@ namespace Prosim2GSX.Services
         public static IGsxCargoService GsxCargoService =>
             _serviceProvider?.GetGsxCargoService() ??
             throw new InvalidOperationException("ServiceLocator not initialized");
+
+        /// <summary>
+        /// Gets the log service for categorized logging
+        /// </summary>
+        public static ILogService LogService => _logService ??= new LogServiceWrapper();
     }
 }

@@ -2,6 +2,8 @@
 using Prosim2GSX.Models;
 using Prosim2GSX.Services.GSX.Enums;
 using Prosim2GSX.Services.GSX.Interfaces;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 using Prosim2GSX.Services.Prosim.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -87,7 +89,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
         {
             _cateringState = (int)newValue;
 
-            Logger.Log(LogLevel.Debug, nameof(GsxCateringService), $"Catering state changed to {newValue}");
+            LogService.Log(LogLevel.Debug, nameof(GsxCateringService), $"Catering state changed to {newValue}", LogCategory.Catering);
 
             if (newValue != oldValue)
             {
@@ -103,7 +105,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             if (newValue == (int)GsxServiceState.Completed && !_cateringComplete)
             {
                 _cateringComplete = true;
-                Logger.Log(LogLevel.Information, nameof(GsxCateringService), "Catering service completed");
+                LogService.Log(LogLevel.Information, nameof(GsxCateringService), "Catering service completed");
             }
         }
 
@@ -112,8 +114,8 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// </summary>
         private void OnServiceToggleChanged(float newValue, float oldValue, string lvarName)
         {
-            Logger.Log(LogLevel.Debug, nameof(GsxCateringService),
-                $"Service toggle {lvarName} changed from {oldValue} to {newValue}");
+            LogService.Log(LogLevel.Debug, nameof(GsxCateringService),
+                $"Service toggle {lvarName} changed from {oldValue} to {newValue}", LogCategory.Catering);
 
             // Check if this is one of our monitored service toggles
             if (_serviceToggles.ContainsKey(lvarName))
@@ -133,7 +135,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             if (_cateringRequested || _cateringComplete)
                 return;
 
-            Logger.Log(LogLevel.Information, nameof(GsxCateringService), "Calling Catering Service");
+            LogService.Log(LogLevel.Information, nameof(GsxCateringService), "Calling Catering Service");
 
             _menuService.OpenMenu();
             _menuService.SelectMenuItem(2);
@@ -153,7 +155,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
         public void ToggleFrontDoor()
         {
             // Operate front door based on catering state
-            Logger.Log(LogLevel.Debug, nameof(GsxCateringService), "Command to operate Front Door");
+            LogService.Log(LogLevel.Debug, nameof(GsxCateringService), "Command to operate Front Door", LogCategory.Catering);
 
             if (_model.SetOpenCateringDoor)
             {
@@ -161,12 +163,12 @@ namespace Prosim2GSX.Services.GSX.Implementation
                     (_cateringState == (int)GsxServiceState.Active && !_prosimInterface.GetProsimVariable("doors.entry.right.fwd")))
                 {
                     _doorControlService.SetForwardRightDoor(true);
-                    Logger.Log(LogLevel.Information, nameof(GsxCateringService), "Opened forward right door for catering");
+                    LogService.Log(LogLevel.Information, nameof(GsxCateringService), "Opened forward right door for catering");
                 }
                 else if (_cateringState == (int)GsxServiceState.Active && _prosimInterface.GetProsimVariable("doors.entry.right.fwd"))
                 {
                     _doorControlService.SetForwardRightDoor(false);
-                    Logger.Log(LogLevel.Information, nameof(GsxCateringService), "Closed forward right door");
+                    LogService.Log(LogLevel.Information, nameof(GsxCateringService), "Closed forward right door");
                 }
             }
         }
@@ -175,7 +177,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
         public void ToggleAftDoor()
         {
             // Operate aft door based on catering state
-            Logger.Log(LogLevel.Debug, nameof(GsxCateringService), "Command to operate Aft Door");
+            LogService.Log(LogLevel.Debug, nameof(GsxCateringService), "Command to operate Aft Door", LogCategory.Catering);
 
             if (_model.SetOpenCateringDoor)
             {
@@ -183,12 +185,12 @@ namespace Prosim2GSX.Services.GSX.Implementation
                     (_cateringState == (int)GsxServiceState.Active && !_prosimInterface.GetProsimVariable("doors.entry.right.aft")))
                 {
                     _doorControlService.SetAftRightDoor(true);
-                    Logger.Log(LogLevel.Information, nameof(GsxCateringService), "Opened aft right door for catering");
+                    LogService.Log(LogLevel.Information, nameof(GsxCateringService), "Opened aft right door for catering");
                 }
                 else if (_cateringState == (int)GsxServiceState.Active && _prosimInterface.GetProsimVariable("doors.entry.right.aft"))
                 {
                     _doorControlService.SetAftRightDoor(false);
-                    Logger.Log(LogLevel.Information, nameof(GsxCateringService), "Closed aft right door");
+                    LogService.Log(LogLevel.Information, nameof(GsxCateringService), "Closed aft right door");
                 }
             }
         }

@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 
 namespace Prosim2GSX.Events
 {
@@ -38,7 +40,7 @@ namespace Prosim2GSX.Events
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log(LogLevel.Error, "EventAggregator:Publish", 
+                    LogService.Log(LogLevel.Error, "EventAggregator:Publish", 
                         $"Exception in event handler for {typeof(TEvent).Name}: {ex.Message}");
                 }
             }

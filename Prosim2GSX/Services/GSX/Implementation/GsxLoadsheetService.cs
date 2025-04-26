@@ -1,6 +1,8 @@
 ﻿using Newtonsoft.Json;
 using Prosim2GSX.Services.GSX.Interfaces;
 using Prosim2GSX.Services.GSX.Models;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 using Prosim2GSX.Services.Prosim.Interfaces;
 using System;
 using System.Net;
@@ -57,7 +59,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             // Ensure we don't have multiple attempts running simultaneously
             if (!await _prelimLock.WaitAsync(0))
             {
-                Logger.Log(LogLevel.Warning, nameof(GsxLoadsheetService),
+                LogService.Log(LogLevel.Warning, nameof(GsxLoadsheetService),
                     "Another preliminary loadsheet generation is already in progress");
                 return LoadsheetResult.CreateFailure("Another generation already in progress");
             }
@@ -67,7 +69,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 // Check if we've recently tried
                 if (DateTime.Now - _lastPrelimAttemptTime < _minTimeBetweenAttempts)
                 {
-                    Logger.Log(LogLevel.Warning, nameof(GsxLoadsheetService),
+                    LogService.Log(LogLevel.Warning, nameof(GsxLoadsheetService),
                         $"Attempted to generate preliminary loadsheet too soon after previous attempt. " +
                         $"Please wait {_minTimeBetweenAttempts.TotalSeconds} seconds between attempts.");
                     return LoadsheetResult.CreateFailure("Please wait between generation attempts");
@@ -95,7 +97,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 // Update state on error
                 _prelimLoadsheetState = LoadsheetState.Failed;
 
-                Logger.Log(LogLevel.Error, nameof(GsxLoadsheetService),
+                LogService.Log(LogLevel.Error, nameof(GsxLoadsheetService),
                     $"Exception generating preliminary loadsheet: {ex.Message}");
                 return LoadsheetResult.CreateFailure($"Exception: {ex.Message}");
             }
@@ -112,7 +114,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             // Ensure we don't have multiple attempts running simultaneously
             if (!await _finalLock.WaitAsync(0))
             {
-                Logger.Log(LogLevel.Warning, nameof(GsxLoadsheetService),
+                LogService.Log(LogLevel.Warning, nameof(GsxLoadsheetService),
                     "Another final loadsheet generation is already in progress");
                 return LoadsheetResult.CreateFailure("Another generation already in progress");
             }
@@ -122,7 +124,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 // Check if we've recently tried
                 if (DateTime.Now - _lastFinalAttemptTime < _minTimeBetweenAttempts)
                 {
-                    Logger.Log(LogLevel.Warning, nameof(GsxLoadsheetService),
+                    LogService.Log(LogLevel.Warning, nameof(GsxLoadsheetService),
                         $"Attempted to generate final loadsheet too soon after previous attempt. " +
                         $"Please wait {_minTimeBetweenAttempts.TotalSeconds} seconds between attempts.");
                     return LoadsheetResult.CreateFailure("Please wait between generation attempts");
@@ -150,7 +152,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 // Update state on error
                 _finalLoadsheetState = LoadsheetState.Failed;
 
-                Logger.Log(LogLevel.Error, nameof(GsxLoadsheetService),
+                LogService.Log(LogLevel.Error, nameof(GsxLoadsheetService),
                     $"Exception generating final loadsheet: {ex.Message}");
                 return LoadsheetResult.CreateFailure($"Exception: {ex.Message}");
             }
@@ -183,7 +185,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
 
                 // Construct the URL for loadsheet generation
                 string url = $"{baseUrl}/generateLoadsheet/{type.ToLower()}";
-                Logger.Log(LogLevel.Debug, nameof(GsxLoadsheetService), $"Generating {type} loadsheet with URL: {url}");
+                LogService.Log(LogLevel.Debug, nameof(GsxLoadsheetService), $"Generating {type} loadsheet with URL: {url}", LogCategory.Loadsheet);
 
                 // Make the request with timeout
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20)))
@@ -196,18 +198,18 @@ namespace Prosim2GSX.Services.GSX.Implementation
 
                     if (response.IsSuccessStatusCode)
                     {
-                        Logger.Log(LogLevel.Information, nameof(GsxLoadsheetService),
+                        LogService.Log(LogLevel.Information, nameof(GsxLoadsheetService),
                             $"{type} loadsheet generated successfully");
                         return LoadsheetResult.CreateSuccess();
                     }
                     else
                     {
                         string errorMessage = $"Failed to generate {type} loadsheet. Status code: {response.StatusCode}";
-                        Logger.Log(LogLevel.Error, nameof(GsxLoadsheetService), errorMessage);
+                        LogService.Log(LogLevel.Error, nameof(GsxLoadsheetService), errorMessage);
 
                         if (!string.IsNullOrEmpty(responseContent))
                         {
-                            Logger.Log(LogLevel.Error, nameof(GsxLoadsheetService), $"Response content: {responseContent}");
+                            LogService.Log(LogLevel.Error, nameof(GsxLoadsheetService), $"Response content: {responseContent}");
                         }
 
                         return LoadsheetResult.CreateFailure(response.StatusCode, errorMessage, responseContent);
@@ -217,13 +219,13 @@ namespace Prosim2GSX.Services.GSX.Implementation
             catch (TaskCanceledException)
             {
                 string errorMessage = $"Request timeout generating {type} loadsheet";
-                Logger.Log(LogLevel.Error, nameof(GsxLoadsheetService), errorMessage);
+                LogService.Log(LogLevel.Error, nameof(GsxLoadsheetService), errorMessage);
                 return LoadsheetResult.CreateFailure(errorMessage);
             }
             catch (HttpRequestException ex)
             {
                 string errorMessage = $"HTTP request exception generating {type} loadsheet: {ex.Message}";
-                Logger.Log(LogLevel.Error, nameof(GsxLoadsheetService), errorMessage);
+                LogService.Log(LogLevel.Error, nameof(GsxLoadsheetService), errorMessage);
 
                 // Include status code if available
                 if (ex.StatusCode.HasValue)
@@ -236,7 +238,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             catch (Exception ex)
             {
                 string errorMessage = $"Unexpected error generating {type} loadsheet: {ex.Message}";
-                Logger.Log(LogLevel.Error, nameof(GsxLoadsheetService), errorMessage);
+                LogService.Log(LogLevel.Error, nameof(GsxLoadsheetService), errorMessage);
                 return LoadsheetResult.CreateFailure(errorMessage);
             }
         }
@@ -259,12 +261,12 @@ namespace Prosim2GSX.Services.GSX.Implementation
 
                     if (response.IsSuccessStatusCode)
                     {
-                        Logger.Log(LogLevel.Debug, nameof(GsxLoadsheetService), "Server status check successful");
+                        LogService.Log(LogLevel.Debug, nameof(GsxLoadsheetService), "Server status check successful", LogCategory.Loadsheet);
                         return true;
                     }
                     else
                     {
-                        Logger.Log(LogLevel.Warning, nameof(GsxLoadsheetService),
+                        LogService.Log(LogLevel.Warning, nameof(GsxLoadsheetService),
                             $"Server status check failed. Status code: {response.StatusCode}");
                         return false;
                     }
@@ -272,7 +274,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Warning, nameof(GsxLoadsheetService),
+                LogService.Log(LogLevel.Warning, nameof(GsxLoadsheetService),
                     $"Error checking server status: {ex.Message}");
                 return false;
             }
@@ -288,7 +290,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(GsxLoadsheetService),
+                LogService.Log(LogLevel.Error, nameof(GsxLoadsheetService),
                     $"Error checking {type} loadsheet: {ex.Message}");
                 return false;
             }
@@ -303,7 +305,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(GsxLoadsheetService),
+                LogService.Log(LogLevel.Error, nameof(GsxLoadsheetService),
                     $"Error getting {type} loadsheet data: {ex.Message}");
                 return null;
             }
@@ -323,7 +325,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             // Reset flight plan ID
             _loadsheetFlightPlanId = null;
 
-            Logger.Log(LogLevel.Information, nameof(GsxLoadsheetService),
+            LogService.Log(LogLevel.Information, nameof(GsxLoadsheetService),
                 "Loadsheet states reset");
         }
 
@@ -332,8 +334,8 @@ namespace Prosim2GSX.Services.GSX.Implementation
         {
             // Subscribe to relevant datarefs if needed
             // For now, this is a placeholder as the current implementation doesn't require subscriptions
-            Logger.Log(LogLevel.Debug, nameof(GsxLoadsheetService),
-                "Subscribed to loadsheet changes");
+            LogService.Log(LogLevel.Debug, nameof(GsxLoadsheetService),
+                "Subscribed to loadsheet changes", LogCategory.Loadsheet);
         }
     }
 }

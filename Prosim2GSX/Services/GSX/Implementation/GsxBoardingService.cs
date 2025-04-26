@@ -2,6 +2,8 @@
 using Prosim2GSX.Models;
 using Prosim2GSX.Services.GSX.Enums;
 using Prosim2GSX.Services.GSX.Interfaces;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 using Prosim2GSX.Services.Prosim.Interfaces;
 using System;
 
@@ -62,8 +64,8 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// </summary>
         private void OnBoardingStateChanged(float newValue, float oldValue, string lvarName)
         {
-            Logger.Log(LogLevel.Debug, nameof(GsxBoardingService),
-                $"Boarding state changed from {oldValue} to {newValue}");
+            LogService.Log(LogLevel.Debug, nameof(GsxBoardingService),
+                $"Boarding state changed from {oldValue} to {newValue}", LogCategory.Boarding);
 
             if (newValue != oldValue)
             {
@@ -79,7 +81,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 {
                     _isBoarding = false;
                     _isBoardingComplete = true;
-                    Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
+                    LogService.Log(LogLevel.Information, nameof(GsxBoardingService),
                         "Boarding completed automatically");
                 }
 
@@ -88,7 +90,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 {
                     _isBoarding = true;
                     _isBoardingComplete = false;
-                    Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
+                    LogService.Log(LogLevel.Information, nameof(GsxBoardingService),
                         "Boarding started automatically");
                 }
             }
@@ -99,8 +101,8 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// </summary>
         private void OnDeboardingStateChanged(float newValue, float oldValue, string lvarName)
         {
-            Logger.Log(LogLevel.Debug, nameof(GsxBoardingService),
-                $"Deboarding state changed from {oldValue} to {newValue}");
+            LogService.Log(LogLevel.Debug, nameof(GsxBoardingService),
+                $"Deboarding state changed from {oldValue} to {newValue}", LogCategory.Boarding);
 
             if (newValue != oldValue)
             {
@@ -116,7 +118,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 {
                     _isDeboarding = false;
                     _isDeboardingComplete = true;
-                    Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
+                    LogService.Log(LogLevel.Information, nameof(GsxBoardingService),
                         "Deboarding completed automatically");
                 }
 
@@ -125,7 +127,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 {
                     _isDeboarding = true;
                     _isDeboardingComplete = false;
-                    Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
+                    LogService.Log(LogLevel.Information, nameof(GsxBoardingService),
                         "Deboarding started automatically");
                 }
             }
@@ -137,7 +139,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             _isBoarding = true;
             _isBoardingComplete = false;
 
-            Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
+            LogService.Log(LogLevel.Information, nameof(GsxBoardingService),
                 "Boarding service started");
         }
 
@@ -149,7 +151,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
 
             // We no longer manipulate doors here
 
-            Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
+            LogService.Log(LogLevel.Information, nameof(GsxBoardingService),
                 "Boarding service stopped");
         }
 
@@ -159,7 +161,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             _isDeboarding = true;
             _isDeboardingComplete = false;
 
-            Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
+            LogService.Log(LogLevel.Information, nameof(GsxBoardingService),
                 "Deboarding service started");
         }
 
@@ -171,7 +173,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
 
             // We no longer manipulate doors here
 
-            Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
+            LogService.Log(LogLevel.Information, nameof(GsxBoardingService),
                 "Deboarding service stopped");
         }
 
@@ -184,7 +186,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             // Check if GSX considers boarding complete
             if (_simConnectService.GetBoardingState() == (int)GsxServiceState.Completed)
             {
-                Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
+                LogService.Log(LogLevel.Information, nameof(GsxBoardingService),
                     "GSX reports boarding completed");
 
                 return true;
@@ -193,15 +195,15 @@ namespace Prosim2GSX.Services.GSX.Implementation
             // Check if cargo is fully loaded and passengers are boarded
             if (cargoPercent >= 99 && paxCurrent >= GetPlannedPassengers())
             {
-                Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
+                LogService.Log(LogLevel.Information, nameof(GsxBoardingService),
                     $"Boarding is complete: Cargo {cargoPercent}%, Passengers {paxCurrent}/{GetPlannedPassengers()}");
 
                 // Boarding is complete but doors should already be closed at this point
                 return true;
             }
 
-            Logger.Log(LogLevel.Debug, nameof(GsxBoardingService),
-                $"Boarding progress: Cargo {cargoPercent}%, Passengers {paxCurrent}/{GetPlannedPassengers()}");
+            LogService.Log(LogLevel.Debug, nameof(GsxBoardingService),
+                $"Boarding progress: Cargo {cargoPercent}%, Passengers {paxCurrent}/{GetPlannedPassengers()}", LogCategory.Boarding);
 
             return false;
         }
@@ -215,7 +217,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             // Check if GSX considers deboarding complete
             if (_simConnectService.GetDeboardingState() == (int)GsxServiceState.Completed)
             {
-                Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
+                LogService.Log(LogLevel.Information, nameof(GsxBoardingService),
                     "GSX reports deboarding completed");
 
                 return true;
@@ -224,15 +226,15 @@ namespace Prosim2GSX.Services.GSX.Implementation
             // Check if cargo is fully unloaded and all passengers have deboarded
             if (cargoPercent >= 99 && paxCurrent <= 0)
             {
-                Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
+                LogService.Log(LogLevel.Information, nameof(GsxBoardingService),
                     $"Deboarding is complete: Cargo {cargoPercent}%, Passengers {paxCurrent}/{GetPlannedPassengers()}");
 
                 // Deboarding is complete but doors should already be closed at this point
                 return true;
             }
 
-            Logger.Log(LogLevel.Debug, nameof(GsxBoardingService),
-                $"Deboarding progress: Cargo {cargoPercent}%, Passengers {paxCurrent}/{GetPlannedPassengers()}");
+            LogService.Log(LogLevel.Debug, nameof(GsxBoardingService),
+                $"Deboarding progress: Cargo {cargoPercent}%, Passengers {paxCurrent}/{GetPlannedPassengers()}", LogCategory.Boarding);
 
             return false;
         }
@@ -248,7 +250,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 // Update the GSX LVAR
                 _simConnectService.WriteGsxLvar("FSDT_GSX_NUMPASSENGERS", numPax);
 
-                Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
+                LogService.Log(LogLevel.Information, nameof(GsxBoardingService),
                     $"Passenger count set to {numPax}");
 
                 // Handle crew settings if needed
@@ -262,13 +264,13 @@ namespace Prosim2GSX.Services.GSX.Implementation
                     _simConnectService.WriteGsxLvar("FSDT_GSX_NUMPILOTS", 0);
                     _simConnectService.WriteGsxLvar("FSDT_GSX_CREW_ON_BOARD", 1);
 
-                    Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
+                    LogService.Log(LogLevel.Information, nameof(GsxBoardingService),
                         "Crew boarding disabled");
                 }
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(GsxBoardingService),
+                LogService.Log(LogLevel.Error, nameof(GsxBoardingService),
                     $"Error setting passenger count: {ex.Message}");
             }
         }
@@ -285,12 +287,12 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 // Handle operator selection if needed
                 _menuService.HandleOperatorSelection((int)_model.OperatorDelay);
 
-                Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
+                LogService.Log(LogLevel.Information, nameof(GsxBoardingService),
                     "Boarding service requested");
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(GsxBoardingService),
+                LogService.Log(LogLevel.Error, nameof(GsxBoardingService),
                     $"Error requesting boarding service: {ex.Message}");
             }
         }
@@ -307,12 +309,12 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 // Handle operator selection if needed
                 _menuService.HandleOperatorSelection((int)_model.OperatorDelay);
 
-                Logger.Log(LogLevel.Information, nameof(GsxBoardingService),
+                LogService.Log(LogLevel.Information, nameof(GsxBoardingService),
                     "Deboarding service requested");
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(GsxBoardingService),
+                LogService.Log(LogLevel.Error, nameof(GsxBoardingService),
                     $"Error requesting deboarding service: {ex.Message}");
             }
         }
@@ -339,7 +341,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(GsxBoardingService),
+                LogService.Log(LogLevel.Error, nameof(GsxBoardingService),
                     $"Error getting current passengers: {ex.Message}");
                 return 0;
             }
@@ -375,7 +377,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(GsxBoardingService),
+                LogService.Log(LogLevel.Error, nameof(GsxBoardingService),
                     $"Error getting planned passengers: {ex.Message}");
                 return 0;
             }

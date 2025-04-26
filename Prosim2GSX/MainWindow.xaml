@@ -332,6 +332,7 @@
 
                         <!-- Log Messages -->
                         <TextBlock Text="LOG MESSAGES" Style="{StaticResource CategoryHeaderStyle}"/>
+                    
                         <Border Style="{StaticResource SectionBorderStyle}" MinHeight="120" Height="137">
                             <ListView x:Name="lvLogMessages" 
                                       MaxHeight="120"

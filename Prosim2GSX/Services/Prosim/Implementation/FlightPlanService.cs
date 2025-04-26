@@ -3,6 +3,8 @@ using System;
 using System.Xml;
 using Newtonsoft.Json.Linq;
 using Prosim2GSX.Models;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 
 namespace Prosim2GSX.Services.Prosim.Implementation
 {
@@ -47,7 +49,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
 
                 if (string.IsNullOrEmpty(fmsXmlstr))
                 {
-                    Logger.Log(LogLevel.Debug, nameof(FlightPlanService), "No flight plan XML available");
+                    LogService.Log(LogLevel.Debug, nameof(FlightPlanService), "No flight plan XML available");
                     return string.Empty;
                 }
 
@@ -58,18 +60,18 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                 if (flightNumberNode != null && !string.IsNullOrEmpty(flightNumberNode.InnerText))
                 {
                     flightNumber = flightNumberNode.InnerText;
-                    Logger.Log(LogLevel.Debug, nameof(FlightPlanService), $"Flight Number: {flightNumber}");
+                    LogService.Log(LogLevel.Debug, nameof(FlightPlanService), $"Flight Number: {flightNumber}");
                 }
                 else
                 {
-                    Logger.Log(LogLevel.Debug, nameof(FlightPlanService), "No Flight number loaded in FMS");
+                    LogService.Log(LogLevel.Debug, nameof(FlightPlanService), "No Flight number loaded in FMS");
                 }
 
                 return flightNumber;
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(FlightPlanService), $"Error getting FMS flight number: {ex.Message}");
+                LogService.Log(LogLevel.Error, nameof(FlightPlanService), $"Error getting FMS flight number: {ex.Message}");
                 return string.Empty;
             }
         }
@@ -82,13 +84,13 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                 {
                     if (_flightPlan == null)
                     {
-                        Logger.Log(LogLevel.Warning, nameof(FlightPlanService), "Flight plan not set");
+                        LogService.Log(LogLevel.Warning, nameof(FlightPlanService), "Flight plan not set");
                         return;
                     }
 
                     if (FlightPlanID != _flightPlan.FlightPlanID)
                     {
-                        Logger.Log(LogLevel.Information, nameof(FlightPlanService),
+                        LogService.Log(LogLevel.Information, nameof(FlightPlanService),
                             $"New FlightPlan with ID {_flightPlan.FlightPlanID} detected!");
                         FlightPlanID = _flightPlan.FlightPlanID;
                         FlightNumber = _flightPlan.Flight;
@@ -103,7 +105,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
 
                     if (FlightPlanID != innerJson)
                     {
-                        Logger.Log(LogLevel.Information, nameof(FlightPlanService),
+                        LogService.Log(LogLevel.Information, nameof(FlightPlanService),
                             $"New FlightPlan with ID {innerJson} detected!");
                         FlightPlanID = innerJson;
                     }
@@ -111,7 +113,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(FlightPlanService), $"Exception during Update: {ex.Message}");
+                LogService.Log(LogLevel.Error, nameof(FlightPlanService), $"Exception during Update: {ex.Message}");
             }
         }
 
@@ -124,7 +126,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(FlightPlanService),
+                LogService.Log(LogLevel.Error, nameof(FlightPlanService),
                     $"Error checking {type} loadsheet: {ex.Message}");
                 return false;
             }
@@ -138,7 +140,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(FlightPlanService),
+                LogService.Log(LogLevel.Error, nameof(FlightPlanService),
                     $"Error getting {type} loadsheet data: {ex.Message}");
                 return null;
             }

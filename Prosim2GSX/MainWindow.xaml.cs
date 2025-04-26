@@ -15,6 +15,8 @@ using Prosim2GSX.Services.GSX.Enums;
 using System.Threading;
 using static Prosim2GSX.Services.Audio.AudioChannelConfig;
 using Prosim2GSX.Services;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 
 namespace Prosim2GSX
 {
@@ -27,6 +29,7 @@ namespace Prosim2GSX
         private bool _isLoadingSettings = false;
         private ObservableCollection<LogEntry> _logEntries = new ObservableCollection<LogEntry>();
         private const int MaxLogEntries = 5;
+        private LogLevel _uiLogLevel = LogLevel.Information;
         public MainWindow(NotifyIconViewModel notifyModel, ServiceModel serviceModel)
         {
             InitializeComponent();
@@ -331,20 +334,27 @@ namespace Prosim2GSX
         protected void UpdateLogArea()
         {
             // Process all available log entries from the new LogEntryQueue
-            while (Logger.LogEntryQueue.TryDequeue(out LogEntry entry))
+            while (LogService.LogEntryQueue.TryDequeue(out LogEntry entry))
             {
+                // Only show Information, Warning, Error, and Critical messages in the UI
+                if (entry.Level <= LogLevel.Debug)  // Debug is 1, Verbose is 0
+                {
+                    // Skip Debug and Verbose messages
+                    continue;
+                }
+
                 // Add to the observable collection on the UI thread
                 Dispatcher.Invoke(() =>
                 {
                     // Add the new entry
                     _logEntries.Add(entry);
-                    
+
                     // Remove oldest entries if we exceed the maximum
                     while (_logEntries.Count > MaxLogEntries)
                     {
                         _logEntries.RemoveAt(0);
                     }
-                    
+
                     // Scroll to the bottom to show the latest entry
                     if (lvLogMessages.Items.Count > 0)
                     {
@@ -352,12 +362,12 @@ namespace Prosim2GSX
                     }
                 });
             }
-            
+
             // Process the old MessageQueue for backward compatibility
-            while (Logger.MessageQueue.Count > 0)
+            while (LogService.MessageQueue.Count > 0)
             {
                 // Just dequeue the messages to keep the queue from growing
-                Logger.MessageQueue.Dequeue();
+                LogService.MessageQueue.Dequeue();
             }
         }
 
@@ -766,7 +776,7 @@ namespace Prosim2GSX
                 serviceModel.SetSetting("pilotID", id);
                 
                 // Provide positive feedback
-                Logger.Log(LogLevel.Information, "MainWindow", $"Simbrief ID set to {id}");
+                LogService.Log(LogLevel.Information, "MainWindow", $"Simbrief ID set to {id}");
                 
                 // If we have a valid ID and there's a pending flight plan load, trigger a retry
                 if (serviceModel.IsValidSimbriefId())
@@ -890,7 +900,7 @@ namespace Prosim2GSX
                 }
                 
                 // Run the diagnostics
-                Logger.Log(LogLevel.Information, "MainWindow", "Starting VoiceMeeter diagnostics...");
+                LogService.Log(LogLevel.Information, "MainWindow", "Starting VoiceMeeter diagnostics...");
                 bool success = serviceController.PerformVoiceMeeterDiagnostics();
                 
                 // Show a message box with the result
@@ -913,7 +923,7 @@ namespace Prosim2GSX
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, "MainWindow", $"Error running VoiceMeeter diagnostics: {ex.Message}");
+                LogService.Log(LogLevel.Error, "MainWindow", $"Error running VoiceMeeter diagnostics: {ex.Message}");
                 MessageBox.Show(
                     $"Error running VoiceMeeter diagnostics: {ex.Message}",
                     "Diagnostics Error",
@@ -946,7 +956,7 @@ namespace Prosim2GSX
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Warning, "MainWindow", $"Error loading themes: {ex.Message}");
+                LogService.Log(LogLevel.Warning, "MainWindow", $"Error loading themes: {ex.Message}");
             }
         }
 
@@ -962,7 +972,7 @@ namespace Prosim2GSX
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Warning, "MainWindow", $"Error changing theme: {ex.Message}");
+                LogService.Log(LogLevel.Warning, "MainWindow", $"Error changing theme: {ex.Message}");
             }
         }
 
@@ -975,7 +985,7 @@ namespace Prosim2GSX
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Warning, "MainWindow", $"Error refreshing themes: {ex.Message}");
+                LogService.Log(LogLevel.Warning, "MainWindow", $"Error refreshing themes: {ex.Message}");
             }
         }
         
@@ -1175,7 +1185,7 @@ namespace Prosim2GSX
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Warning, "MainWindow", $"Error loading VoiceMeeter strips: {ex.Message}");
+                LogService.Log(LogLevel.Warning, "MainWindow", $"Error loading VoiceMeeter strips: {ex.Message}");
                 MessageBox.Show(
                     $"Error loading VoiceMeeter strips: {ex.Message}",
                     "Error",
@@ -1353,7 +1363,7 @@ namespace Prosim2GSX
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Warning, "MainWindow", $"Error loading VoiceMeeter devices for channel {channel}: {ex.Message}");
+                LogService.Log(LogLevel.Warning, "MainWindow", $"Error loading VoiceMeeter devices for channel {channel}: {ex.Message}");
             }
         }
 

@@ -2,6 +2,8 @@
 using System;
 using System.Linq;
 using Prosim2GSX.Models;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 
 namespace Prosim2GSX.Services.Prosim.Implementation
 {
@@ -44,7 +46,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                     if (!_randomizePaxSeat)
                     {
                         _paxPlanned = RandomizePassengerSeating(flightPlan.Passenger);
-                        Logger.Log(LogLevel.Debug, nameof(PassengerService),
+                        LogService.Log(LogLevel.Debug, nameof(PassengerService),
                             $"seatOccupation bool: {string.Join(", ", _paxPlanned)}");
 
                         _prosimService.SetProsimVariable("aircraft.passengers.seatOccupation", _paxPlanned);
@@ -69,7 +71,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(PassengerService),
+                LogService.Log(LogLevel.Error, nameof(PassengerService),
                     $"Exception during UpdatePassengerData: {ex.Message}");
             }
         }
@@ -92,7 +94,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             // Check if trueCount exceeds maximum capacity
             if (trueCount > 132)
             {
-                Logger.Log(LogLevel.Warning, nameof(PassengerService),
+                LogService.Log(LogLevel.Warning, nameof(PassengerService),
                     $"Requested passenger count {trueCount} exceeds maximum capacity. Reducing to 132.");
                 actualCount = 132;
             }
@@ -159,7 +161,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
 
         public void StartDeboarding()
         {
-            Logger.Log(LogLevel.Debug, nameof(PassengerService),
+            LogService.Log(LogLevel.Debug, nameof(PassengerService),
                 $"(planned {GetPlannedPassengers()}) (current {GetCurrentPassengers()})");
 
             _paxLast = GetPlannedPassengers();
@@ -186,7 +188,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             for (int i = 0; i < _paxCurrent.Length; i++)
                 _paxCurrent[i] = false;
 
-            Logger.Log(LogLevel.Debug, nameof(PassengerService), "Sending SeatString");
+            LogService.Log(LogLevel.Debug, nameof(PassengerService), "Sending SeatString");
             SendSeatString(true);
 
             _paxCurrent = new bool[132];
@@ -197,16 +199,16 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         {
             if (num < 0)
             {
-                Logger.Log(LogLevel.Debug, nameof(PassengerService), "Passenger Num was below 0!");
+                LogService.Log(LogLevel.Debug, nameof(PassengerService), "Passenger Num was below 0!");
                 return;
             }
             else if (num > 15)
             {
-                Logger.Log(LogLevel.Debug, nameof(PassengerService), "Passenger Num was above 15!");
+                LogService.Log(LogLevel.Debug, nameof(PassengerService), "Passenger Num was above 15!");
                 return;
             }
             else
-                Logger.Log(LogLevel.Debug, nameof(PassengerService),
+                LogService.Log(LogLevel.Debug, nameof(PassengerService),
                     $"(num {num}) (current {GetCurrentPassengers()}) (planned ({GetPlannedPassengers()}))");
 
             int n = 0;
@@ -224,16 +226,16 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         {
             if (num < 0)
             {
-                Logger.Log(LogLevel.Debug, nameof(PassengerService), "Passenger Num was below 0!");
+                LogService.Log(LogLevel.Debug, nameof(PassengerService), "Passenger Num was below 0!");
                 return;
             }
             else if (num > 15)
             {
-                Logger.Log(LogLevel.Debug, nameof(PassengerService), "Passenger Num was above 15!");
+                LogService.Log(LogLevel.Debug, nameof(PassengerService), "Passenger Num was above 15!");
                 return;
             }
             else
-                Logger.Log(LogLevel.Debug, nameof(PassengerService),
+                LogService.Log(LogLevel.Debug, nameof(PassengerService),
                     $"(num {num}) (current {GetCurrentPassengers()}) (planned ({GetPlannedPassengers()}))");
 
             int n = 0;
@@ -271,7 +273,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                 }
             }
 
-            Logger.Log(LogLevel.Debug, nameof(PassengerService), seatString);
+            LogService.Log(LogLevel.Debug, nameof(PassengerService), seatString);
             _prosimService.SetProsimVariable("aircraft.passengers.seatOccupation.string", seatString);
         }
     }

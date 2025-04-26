@@ -1,6 +1,8 @@
 ﻿using Prosim2GSX.Models;
 using Prosim2GSX.Services.GSX.Enums;
 using Prosim2GSX.Services.GSX.Interfaces;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 using Prosim2GSX.Services.Prosim.Interfaces;
 using System;
 
@@ -56,7 +58,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// <inheritdoc/>
         public void RequestRefuelingService()
         {
-            Logger.Log(LogLevel.Information, nameof(GsxRefuelingService), "Requesting refueling service");
+            LogService.Log(LogLevel.Information, nameof(GsxRefuelingService), "Requesting refueling service");
 
             // Initialize refueling in the Prosim service
             _refuelingService.StartRefueling();
@@ -88,16 +90,16 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 // Start fuel transfer if hose connected but not active
                 _refuelingService.ResumeRefueling();
 
-                Logger.Log(LogLevel.Debug, nameof(GsxRefuelingService),
-                    "Fuel hose connected but transfer not active - starting transfer");
+                LogService.Log(LogLevel.Debug, nameof(GsxRefuelingService),
+                    "Fuel hose connected but transfer not active - starting transfer", LogCategory.Refueling);
             }
             else if (!fuelHoseConnected && _refuelingService.IsRefuelingActive)
             {
                 // Pause fuel transfer if hose disconnected but active
                 _refuelingService.PauseRefueling();
 
-                Logger.Log(LogLevel.Debug, nameof(GsxRefuelingService),
-                    "Fuel hose disconnected but transfer active - pausing transfer");
+                LogService.Log(LogLevel.Debug, nameof(GsxRefuelingService),
+                    "Fuel hose disconnected but transfer active - pausing transfer", LogCategory.Refueling);
             }
 
             // Process fuel transfer if active
@@ -130,20 +132,20 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// </summary>
         private void OnFuelHoseStateChanged(float newValue, float oldValue, string lvarName)
         {
-            Logger.Log(LogLevel.Debug, nameof(GsxRefuelingService),
-                $"Fuel hose state changed from {oldValue} to {newValue}");
+            LogService.Log(LogLevel.Debug, nameof(GsxRefuelingService),
+                $"Fuel hose state changed from {oldValue} to {newValue}", LogCategory.Refueling);
 
             bool connected = newValue == 1;
 
             if (connected && !_refuelingService.IsRefuelingActive)
             {
-                Logger.Log(LogLevel.Information, nameof(GsxRefuelingService),
+                LogService.Log(LogLevel.Information, nameof(GsxRefuelingService),
                     "Fuel hose connected - starting fuel transfer");
                 _refuelingService.ResumeRefueling();
             }
             else if (!connected && _refuelingService.IsRefuelingActive)
             {
-                Logger.Log(LogLevel.Information, nameof(GsxRefuelingService),
+                LogService.Log(LogLevel.Information, nameof(GsxRefuelingService),
                     "Fuel hose disconnected - pausing fuel transfer");
                 _refuelingService.PauseRefueling();
             }
@@ -154,8 +156,8 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// </summary>
         private void OnRefuelingStateChanged(float newValue, float oldValue, string lvarName)
         {
-            Logger.Log(LogLevel.Debug, nameof(GsxRefuelingService),
-                $"GSX refueling state changed from {oldValue} to {newValue}");
+            LogService.Log(LogLevel.Debug, nameof(GsxRefuelingService),
+                $"GSX refueling state changed from {oldValue} to {newValue}", LogCategory.Refueling);
 
             if (newValue >= (int)GsxServiceState.Requested && !_refuelingRequested)
             {

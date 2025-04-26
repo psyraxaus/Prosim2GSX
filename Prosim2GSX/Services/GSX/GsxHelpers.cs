@@ -1,4 +1,6 @@
 ﻿using Microsoft.Win32;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 using System;
 using System.IO;
 
@@ -26,7 +28,7 @@ namespace Prosim2GSX.Services.GSX
 
                 if (string.IsNullOrEmpty(rootPath))
                 {
-                    Logger.Log(LogLevel.Warning, nameof(GsxHelpers),
+                    LogService.Log(LogLevel.Warning, nameof(GsxHelpers),
                         "GSX root path not found in registry");
                     return string.Empty;
                 }
@@ -41,14 +43,14 @@ namespace Prosim2GSX.Services.GSX
                 }
                 else
                 {
-                    Logger.Log(LogLevel.Warning, nameof(GsxHelpers),
+                    LogService.Log(LogLevel.Warning, nameof(GsxHelpers),
                         $"GSX menu file not found at {menuPath}");
                     return string.Empty;
                 }
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(GsxHelpers),
+                LogService.Log(LogLevel.Error, nameof(GsxHelpers),
                     $"Error getting GSX menu file path: {ex.Message}");
                 return string.Empty;
             }
@@ -72,7 +74,7 @@ namespace Prosim2GSX.Services.GSX
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(GsxHelpers),
+                LogService.Log(LogLevel.Error, nameof(GsxHelpers),
                     $"Error checking GSX availability: {ex.Message}");
                 return false;
             }

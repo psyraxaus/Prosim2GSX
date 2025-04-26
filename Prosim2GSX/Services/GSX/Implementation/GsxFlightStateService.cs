@@ -1,6 +1,8 @@
 ﻿using Prosim2GSX.Events;
 using Prosim2GSX.Services.GSX.Enums;
 using Prosim2GSX.Services.GSX.Interfaces;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 using System;
 using System.Collections.Generic;
 
@@ -39,7 +41,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log(LogLevel.Error, nameof(GsxFlightStateService),
+                    LogService.Log(LogLevel.Error, nameof(GsxFlightStateService),
                         $"Error in state change handler: {ex.Message}");
                 }
             }
@@ -47,7 +49,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             // Publish event
             EventAggregator.Instance.Publish(new FlightPhaseChangedEvent(_previousState, _currentState));
 
-            Logger.Log(LogLevel.Information, nameof(GsxFlightStateService),
+            LogService.Log(LogLevel.Information, nameof(GsxFlightStateService),
                 $"State Change: {_previousState} -> {_currentState}");
         }
 
@@ -92,7 +94,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             // Publish event
             EventAggregator.Instance.Publish(new FlightPhaseChangedEvent(_previousState, _currentState));
 
-            Logger.Log(LogLevel.Information, nameof(GsxFlightStateService),
+            LogService.Log(LogLevel.Information, nameof(GsxFlightStateService),
                 $"State reset to {_currentState}");
         }
 

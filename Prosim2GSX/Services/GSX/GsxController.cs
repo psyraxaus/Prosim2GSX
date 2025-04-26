@@ -6,6 +6,8 @@ using Prosim2GSX.Services.Audio;
 using Prosim2GSX.Services.GSX.Enums;
 using Prosim2GSX.Services.GSX.Implementation;
 using Prosim2GSX.Services.GSX.Interfaces;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 using Prosim2GSX.Services.Prosim.Interfaces;
 using System;
 using System.Text;
@@ -109,7 +111,7 @@ namespace Prosim2GSX.Services.GSX
                 ServiceLocator.UpdateAllServices(true, _flightPlan);
             }
 
-            Logger.Log(LogLevel.Information, nameof(GsxController), "GSX controller initialized");
+            LogService.Log(LogLevel.Information, nameof(GsxController), "GSX controller initialized");
         }
 
         /// <summary>
@@ -146,19 +148,19 @@ namespace Prosim2GSX.Services.GSX
                 var dataRefService = ServiceLocator.DataRefService;
 
                 // Log current status of monitoring service
-                Logger.Log(LogLevel.Information, nameof(GsxController),
+                LogService.Log(LogLevel.Information, nameof(GsxController),
                     $"DataRef monitoring active: {dataRefService.IsMonitoringActive}");
 
                 // Force start monitoring if needed
                 if (!dataRefService.IsMonitoringActive)
                 {
-                    Logger.Log(LogLevel.Warning, nameof(GsxController),
+                    LogService.Log(LogLevel.Warning, nameof(GsxController),
                         "DataRef monitoring not active, starting it manually");
                     dataRefService.StartMonitoring();
                 }
 
                 // Subscribe to cockpit door state changes
-                Logger.Log(LogLevel.Information, nameof(GsxController),
+                LogService.Log(LogLevel.Information, nameof(GsxController),
                     "Subscribing to cockpit door state changes");
                 dataRefService.SubscribeToDataRef("system.switches.S_PED_COCKPIT_DOOR", _cockpitDoorHandler);
 
@@ -166,12 +168,12 @@ namespace Prosim2GSX.Services.GSX
                 RegisterDataRefHandlers();
 
                 // Log successful initialization
-                Logger.Log(LogLevel.Information, nameof(GsxController),
+                LogService.Log(LogLevel.Information, nameof(GsxController),
                     "Successfully subscribed to all required datarefs");
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(GsxController),
+                LogService.Log(LogLevel.Error, nameof(GsxController),
                     $"Error during initialization: {ex.Message}");
             }
         }
@@ -191,7 +193,7 @@ namespace Prosim2GSX.Services.GSX
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(GsxController),
+                LogService.Log(LogLevel.Error, nameof(GsxController),
                     $"Error registering data ref handlers: {ex.Message}");
             }
         }
@@ -229,13 +231,13 @@ namespace Prosim2GSX.Services.GSX
                         // In-flight restart
                         if (_flightStateService.CurrentFlightState <= FlightState.DEPARTURE)
                         {
-                            Logger.Log(LogLevel.Information, nameof(GsxController), "In-Flight restart detected");
+                            LogService.Log(LogLevel.Information, nameof(GsxController), "In-Flight restart detected");
                             ServiceLocator.UpdateAllServices(true, _flightPlan);
                             _flightPlanID = _flightPlanService.FlightPlanID;
                         }
 
                         _flightStateService.TransitionToState(FlightState.FLIGHT);
-                        Logger.Log(LogLevel.Information, nameof(GsxController), "State Change: Taxi-Out -> Flight");
+                        LogService.Log(LogLevel.Information, nameof(GsxController), "State Change: Taxi-Out -> Flight");
                         Interval = 180000; // Longer interval during flight
                         return;
                     }
@@ -244,7 +246,7 @@ namespace Prosim2GSX.Services.GSX
                     else if (_flightStateService.CurrentFlightState == FlightState.FLIGHT && simOnGround)
                     {
                         _flightStateService.TransitionToState(FlightState.TAXIIN);
-                        Logger.Log(LogLevel.Information, nameof(GsxController),
+                        LogService.Log(LogLevel.Information, nameof(GsxController),
                             "State Change: Flight -> Taxi-In (Waiting for Engines stopped and Beacon off)");
 
                         Interval = 2500;
@@ -295,7 +297,7 @@ namespace Prosim2GSX.Services.GSX
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(GsxController),
+                LogService.Log(LogLevel.Error, nameof(GsxController),
                     $"Error in RunServices: {ex.Message}\n{ex.StackTrace}");
             }
         }
@@ -310,14 +312,14 @@ namespace Prosim2GSX.Services.GSX
 
             _flightStateService.TransitionToState(FlightState.FLIGHT);
             Interval = 180000;
-            Logger.Log(LogLevel.Information, nameof(GsxController), "Current State is Flight.");
+            LogService.Log(LogLevel.Information, nameof(GsxController), "Current State is Flight.");
 
             bool simOnGround = _simConnectService.IsSimOnGround();
             bool enginesRunning = _flightPlanService.EnginesRunning;
 
             if (simOnGround && enginesRunning)
             {
-                Logger.Log(LogLevel.Information, nameof(GsxController), "Starting on Runway - Removing Ground Equipment");
+                LogService.Log(LogLevel.Information, nameof(GsxController), "Starting on Runway - Removing Ground Equipment");
                 _groundServicesService.DisconnectAllGroundServices();
             }
         }
@@ -343,7 +345,7 @@ namespace Prosim2GSX.Services.GSX
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log(LogLevel.Error, nameof(GsxController),
+                    LogService.Log(LogLevel.Error, nameof(GsxController),
                         $"Unable to set opsCallSign - Error: {ex.Message}");
                 }
             }
@@ -353,7 +355,7 @@ namespace Prosim2GSX.Services.GSX
             {
                 _flightStateService.TransitionToState(FlightState.FLIGHT);
                 ServiceLocator.UpdateAllServices(true, _flightPlan);
-                Logger.Log(LogLevel.Information, nameof(GsxController), "Test Arrival - Plane is in 'Flight'");
+                LogService.Log(LogLevel.Information, nameof(GsxController), "Test Arrival - Plane is in 'Flight'");
                 return;
             }
 
@@ -363,7 +365,7 @@ namespace Prosim2GSX.Services.GSX
             // Check if Couatl engine is running
             if (!_simConnectService.IsCouatlRunning())
             {
-                Logger.Log(LogLevel.Information, nameof(GsxController), "Couatl Engine not running");
+                LogService.Log(LogLevel.Information, nameof(GsxController), "Couatl Engine not running");
                 return;
             }
 
@@ -376,7 +378,7 @@ namespace Prosim2GSX.Services.GSX
             else if (!_model.RepositionPlane && !_planePositioned)
             {
                 _planePositioned = true;
-                Logger.Log(LogLevel.Information, nameof(GsxController), "Repositioning was skipped (disabled in Settings)");
+                LogService.Log(LogLevel.Information, nameof(GsxController), "Repositioning was skipped (disabled in Settings)");
             }
 
             // Auto-connect jetway/stairs if enabled
@@ -391,7 +393,7 @@ namespace Prosim2GSX.Services.GSX
             if (_model.ConnectPCA && !_pcaCalled &&
                 (!_model.PcaOnlyJetways || (_model.PcaOnlyJetways && _simConnectService.ReadGsxLvar("FSDT_GSX_JETWAY") != 2)))
             {
-                Logger.Log(LogLevel.Information, nameof(GsxController), "Connecting PCA");
+                LogService.Log(LogLevel.Information, nameof(GsxController), "Connecting PCA");
                 _groundServicesService.ConnectPca();
                 _pcaCalled = true;
                 return;
@@ -400,10 +402,10 @@ namespace Prosim2GSX.Services.GSX
             // First run initialization
             if (_firstRun)
             {
-                Logger.Log(LogLevel.Information, nameof(GsxController), "Setting GPU and Chocks");
+                LogService.Log(LogLevel.Information, nameof(GsxController), "Setting GPU and Chocks");
                 _groundServicesService.SetChocks(true);
                 _groundServicesService.ConnectGpu();
-                Logger.Log(LogLevel.Information, nameof(GsxController), "State: Preparation (Waiting for Flightplan import)");
+                LogService.Log(LogLevel.Information, nameof(GsxController), "State: Preparation (Waiting for Flightplan import)");
                 _firstRun = false;
             }
 
@@ -421,12 +423,12 @@ namespace Prosim2GSX.Services.GSX
                 else
                 {
                     // Fallback to default value
-                    Logger.Log(LogLevel.Warning, nameof(GsxController),
+                    LogService.Log(LogLevel.Warning, nameof(GsxController),
                         "PassengerService is null. Using default passenger count.");
                     _boardingService.SetPassengers(0);
                 }
 
-                Logger.Log(LogLevel.Information, nameof(GsxController),
+                LogService.Log(LogLevel.Information, nameof(GsxController),
                     "State Change: Preparation -> DEPARTURE (Waiting for Refueling and Boarding)");
             }
         }
@@ -451,7 +453,7 @@ namespace Prosim2GSX.Services.GSX
                 // 3. Refueling is active
                 if (fuelTargetSet && fuelHoseConnected && refuelingActive)
                 {
-                    Logger.Log(LogLevel.Information, nameof(GsxController),
+                    LogService.Log(LogLevel.Information, nameof(GsxController),
                         "Generating preliminary loadsheet - all conditions met");
                     GeneratePreliminaryLoadsheet();
                     return;
@@ -461,17 +463,17 @@ namespace Prosim2GSX.Services.GSX
                     // Log which condition is not met
                     if (!fuelTargetSet)
                     {
-                        Logger.Log(LogLevel.Debug, nameof(GsxController),
+                        LogService.Log(LogLevel.Debug, nameof(GsxController),
                             "Fuel target not set yet - waiting to generate preliminary loadsheet");
                     }
                     else if (!fuelHoseConnected)
                     {
-                        Logger.Log(LogLevel.Debug, nameof(GsxController),
+                        LogService.Log(LogLevel.Debug, nameof(GsxController),
                             "Fuel hose not connected - waiting to generate preliminary loadsheet");
                     }
                     else if (!refuelingActive)
                     {
-                        Logger.Log(LogLevel.Debug, nameof(GsxController),
+                        LogService.Log(LogLevel.Debug, nameof(GsxController),
                             $"Refueling not active (state: {_refuelingService.IsRefuelingComplete}) - waiting to generate preliminary loadsheet");
                     }
                 }
@@ -504,7 +506,7 @@ namespace Prosim2GSX.Services.GSX
                     // Request refueling if not already requested
                     if (!_refuelingService.IsRefuelingRequested && _simConnectService.GetRefuelingState() < 4)
                     {
-                        Logger.Log(LogLevel.Information, nameof(GsxController), "Requesting refueling service");
+                        LogService.Log(LogLevel.Information, nameof(GsxController), "Requesting refueling service");
                         _refuelingService.RequestRefuelingService();
                         return;
                     }
@@ -524,7 +526,7 @@ namespace Prosim2GSX.Services.GSX
                 // Handle catering service
                 if (_model.CallCatering && !cateringRequested && !cateringComplete)
                 {
-                    Logger.Log(LogLevel.Information, nameof(GsxController), "Requesting catering service");
+                    LogService.Log(LogLevel.Information, nameof(GsxController), "Requesting catering service");
                     _cateringService.RequestCateringService();
                     return;
                 }
@@ -542,12 +544,12 @@ namespace Prosim2GSX.Services.GSX
                     if (refuelingComplete)
                     {
                         if (_delayCounter == 0)
-                            Logger.Log(LogLevel.Information, nameof(GsxController), "Waiting 90s before calling Boarding");
+                            LogService.Log(LogLevel.Information, nameof(GsxController), "Waiting 90s before calling Boarding");
 
                         if (_delayCounter < 90)
                         {
                             _delayCounter++;
-                            Logger.Log(LogLevel.Debug, nameof(GsxController), $"Boarding delay counter: {_delayCounter}/90");
+                            LogService.Log(LogLevel.Debug, nameof(GsxController), $"Boarding delay counter: {_delayCounter}/90");
                         }
                         else
                         {
@@ -585,7 +587,7 @@ namespace Prosim2GSX.Services.GSX
                     {
                         _loadsheetDelay = new Random().Next(90, 150);
                         _delayCounter = 0;
-                        Logger.Log(LogLevel.Information, nameof(GsxController), $"Final Loadsheet in {_loadsheetDelay}s");
+                        LogService.Log(LogLevel.Information, nameof(GsxController), $"Final Loadsheet in {_loadsheetDelay}s");
                     }
 
                     if (_delayCounter < _loadsheetDelay)
@@ -611,7 +613,7 @@ namespace Prosim2GSX.Services.GSX
                     {
                         _equipmentRemoved = true;
 
-                        Logger.Log(LogLevel.Information, nameof(GsxController), "Preparing for Pushback - removing Equipment");
+                        LogService.Log(LogLevel.Information, nameof(GsxController), "Preparing for Pushback - removing Equipment");
 
                         // Remove jetway/stairs if needed
                         int jetwayState = (int)_simConnectService.ReadGsxLvar("FSDT_GSX_JETWAY");
@@ -637,7 +639,7 @@ namespace Prosim2GSX.Services.GSX
                     EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Chocks", ServiceStatus.Inactive));
                     EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Refuel", ServiceStatus.Inactive));
 
-                    Logger.Log(LogLevel.Information, nameof(GsxController), "State Change: DEPARTURE -> Taxi-Out");
+                    LogService.Log(LogLevel.Information, nameof(GsxController), "State Change: DEPARTURE -> Taxi-Out");
 
                     // Reset counters
                     _loadsheetDelay = 0;
@@ -663,7 +665,7 @@ namespace Prosim2GSX.Services.GSX
             bool groundSpeedNearZero = _simConnectService.ReadGsxLvar("GPS GROUND SPEED") < 0.5;
 
             // Log the current state of each condition for debugging
-            Logger.Log(LogLevel.Debug, nameof(GsxController),
+            LogService.Log(LogLevel.Debug, nameof(GsxController),
                 $"TAXIIN conditions: Engines Off={enginesAreOff}, Parking Brake={parkingBrakeSet}, " +
                 $"Beacon Off={beaconIsOff}, Low Speed={groundSpeedNearZero}");
 
@@ -673,7 +675,7 @@ namespace Prosim2GSX.Services.GSX
                 // Additional check for low ground speed to ensure aircraft has fully stopped
                 if (groundSpeedNearZero)
                 {
-                    Logger.Log(LogLevel.Information, nameof(GsxController),
+                    LogService.Log(LogLevel.Information, nameof(GsxController),
                         $"Aircraft appears to be at final parking position, initiating arrival services");
 
                     // Transition to ARRIVAL state
@@ -684,7 +686,7 @@ namespace Prosim2GSX.Services.GSX
                 }
                 else
                 {
-                    Logger.Log(LogLevel.Debug, nameof(GsxController),
+                    LogService.Log(LogLevel.Debug, nameof(GsxController),
                         $"Waiting for aircraft to come to a complete stop");
                 }
             }
@@ -715,7 +717,7 @@ namespace Prosim2GSX.Services.GSX
                     // Deboarding complete, transition to TURNAROUND
                     _boardingService.StopDeboarding();
                     _flightStateService.TransitionToState(FlightState.TURNAROUND);
-                    Logger.Log(LogLevel.Information, nameof(GsxController),
+                    LogService.Log(LogLevel.Information, nameof(GsxController),
                         "State Change: Arrival -> Turn-Around (Waiting for new Flightplan)");
                     Interval = 10000;
                 }
@@ -755,7 +757,7 @@ namespace Prosim2GSX.Services.GSX
                 _delayCounter = 0;
                 _loadsheetDelay = 0;
 
-                Logger.Log(LogLevel.Information, nameof(GsxController),
+                LogService.Log(LogLevel.Information, nameof(GsxController),
                     "State Change: Turn-Around -> DEPARTURE (Waiting for Refueling and Boarding)");
             }
         }
@@ -765,7 +767,7 @@ namespace Prosim2GSX.Services.GSX
         /// </summary>
         private void GeneratePreliminaryLoadsheet()
         {
-            Logger.Log(LogLevel.Information, nameof(GsxController),
+            LogService.Log(LogLevel.Information, nameof(GsxController),
                 "Generating preliminary loadsheet using Prosim native functionality");
 
             // Check server status and generate loadsheet
@@ -773,7 +775,7 @@ namespace Prosim2GSX.Services.GSX
             {
                 if (serverCheckTask.IsFaulted)
                 {
-                    Logger.Log(LogLevel.Error, nameof(GsxController),
+                    LogService.Log(LogLevel.Error, nameof(GsxController),
                         $"Error checking Prosim EFB server status: {serverCheckTask.Exception?.InnerException?.Message ?? "Unknown error"}");
                     return;
                 }
@@ -781,14 +783,14 @@ namespace Prosim2GSX.Services.GSX
                 bool serverAvailable = serverCheckTask.Result;
                 if (!serverAvailable)
                 {
-                    Logger.Log(LogLevel.Error, nameof(GsxController),
+                    LogService.Log(LogLevel.Error, nameof(GsxController),
                         "Prosim EFB server is not available. Cannot generate loadsheet. " +
                         "Check if Prosim is running and the EFB server is properly configured.");
                     return;
                 }
 
                 // Server is available, proceed with loadsheet generation
-                Logger.Log(LogLevel.Information, nameof(GsxController),
+                LogService.Log(LogLevel.Information, nameof(GsxController),
                     "Prosim EFB server is available. Proceeding with loadsheet generation.");
 
                 // Generate preliminary loadsheet using Prosim's native functionality with enhanced error handling
@@ -797,7 +799,7 @@ namespace Prosim2GSX.Services.GSX
                     if (task.IsFaulted)
                     {
                         // Handle task failure (exception in the task itself)
-                        Logger.Log(LogLevel.Error, nameof(GsxController),
+                        LogService.Log(LogLevel.Error, nameof(GsxController),
                             $"Task exception while generating preliminary loadsheet: {task.Exception?.InnerException?.Message ?? "Unknown error"}");
                         return;
                     }
@@ -806,13 +808,13 @@ namespace Prosim2GSX.Services.GSX
                     if (result.Success)
                     {
                         _prelimLoadsheetGenerated = true;
-                        Logger.Log(LogLevel.Information, nameof(GsxController),
+                        LogService.Log(LogLevel.Information, nameof(GsxController),
                             "Preliminary loadsheet generated successfully");
                     }
                     else
                     {
                         // Log the error but don't retry immediately - the service handles rate limiting
-                        Logger.Log(LogLevel.Error, nameof(GsxController),
+                        LogService.Log(LogLevel.Error, nameof(GsxController),
                             $"Failed to generate preliminary loadsheet: {result.ErrorMessage}");
                     }
                 });
@@ -824,7 +826,7 @@ namespace Prosim2GSX.Services.GSX
         /// </summary>
         private void GenerateFinalLoadsheet()
         {
-            Logger.Log(LogLevel.Information, nameof(GsxController),
+            LogService.Log(LogLevel.Information, nameof(GsxController),
                 "Generating final loadsheet using Prosim native functionality");
 
             // Check server status and generate loadsheet
@@ -832,7 +834,7 @@ namespace Prosim2GSX.Services.GSX
             {
             if (serverCheckTask.IsFaulted)
             {
-                Logger.Log(LogLevel.Error, nameof(GsxController),
+                LogService.Log(LogLevel.Error, nameof(GsxController),
                     $"Error checking Prosim EFB server status: {serverCheckTask.Exception?.InnerException?.Message ?? "Unknown error"}");
                 return;
             }
@@ -840,14 +842,14 @@ namespace Prosim2GSX.Services.GSX
             bool serverAvailable = serverCheckTask.Result;
             if (!serverAvailable)
             {
-                Logger.Log(LogLevel.Error, nameof(GsxController),
+                LogService.Log(LogLevel.Error, nameof(GsxController),
                     "Prosim EFB server is not available. Cannot generate final loadsheet. " +
                     "Check if Prosim is running and the EFB server is properly configured.");
                 return;
             }
 
             // Server is available, proceed with loadsheet generation
-            Logger.Log(LogLevel.Information, nameof(GsxController),
+            LogService.Log(LogLevel.Information, nameof(GsxController),
                 "Prosim EFB server is available. Proceeding with final loadsheet generation.");
 
             // Generate final loadsheet using Prosim's native functionality with enhanced error handling
@@ -856,7 +858,7 @@ namespace Prosim2GSX.Services.GSX
             if (task.IsFaulted)
             {
                 // Handle task failure (exception in the task itself)
-                Logger.Log(LogLevel.Error, nameof(GsxController),
+                LogService.Log(LogLevel.Error, nameof(GsxController),
                     $"Task exception while generating final loadsheet: {task.Exception?.InnerException?.Message ?? "Unknown error"}");
                 return;
             }
@@ -865,7 +867,7 @@ namespace Prosim2GSX.Services.GSX
                 if (result.Success)
                 {
                     _finalLoadsheetSent = true;
-                    Logger.Log(LogLevel.Information, nameof(GsxController),
+                    LogService.Log(LogLevel.Information, nameof(GsxController),
                         "Final loadsheet generated and sent to MCDU successfully");
 
                     // If ACARS is enabled, send the loadsheet data via ACARS
@@ -885,7 +887,7 @@ namespace Prosim2GSX.Services.GSX
                         }
                         catch (Exception ex)
                         {
-                            Logger.Log(LogLevel.Error, nameof(GsxController),
+                            LogService.Log(LogLevel.Error, nameof(GsxController),
                                 $"Error sending loadsheet to ACARS: {ex.Message}");
                         }
                     }
@@ -893,7 +895,7 @@ namespace Prosim2GSX.Services.GSX
                 else
                 {
                     // Log the error but don't retry immediately - the service handles rate limiting
-                    Logger.Log(LogLevel.Error, nameof(GsxController),
+                    LogService.Log(LogLevel.Error, nameof(GsxController),
                         $"Failed to generate final loadsheet: {result.ErrorMessage}");
                 }
             });
@@ -906,7 +908,7 @@ namespace Prosim2GSX.Services.GSX
         private void SetupArrivalServices()
         {
             // First, set ground services
-            Logger.Log(LogLevel.Information, nameof(GsxController), "Setting GPU and Chocks");
+            LogService.Log(LogLevel.Information, nameof(GsxController), "Setting GPU and Chocks");
             _groundServicesService.SetChocks(true);
             _groundServicesService.ConnectGpu();
 
@@ -916,7 +918,7 @@ namespace Prosim2GSX.Services.GSX
             // Handle beacon state check separately - if beacon is still on, don't connect PCA or call stairs/jetway
             if (_prosimInterface.GetStatusFunction("system.switches.S_OH_EXT_LT_BEACON") == 1)
             {
-                Logger.Log(LogLevel.Information, nameof(GsxController),
+                LogService.Log(LogLevel.Information, nameof(GsxController),
                     "Waiting for beacon to be turned off before connecting PCA or calling boarding equipment");
                 return;
             }
@@ -934,7 +936,7 @@ namespace Prosim2GSX.Services.GSX
             if (_model.ConnectPCA && !_pcaCalled &&
                 (!_model.PcaOnlyJetways || (_model.PcaOnlyJetways && _simConnectService.ReadGsxLvar("FSDT_GSX_JETWAY") != 2)))
             {
-                Logger.Log(LogLevel.Information, nameof(GsxController), "Connecting PCA");
+                LogService.Log(LogLevel.Information, nameof(GsxController), "Connecting PCA");
                 _groundServicesService.ConnectPca();
                 _pcaCalled = true;
                 // Return to allow PCA to connect
@@ -944,7 +946,7 @@ namespace Prosim2GSX.Services.GSX
             // Now that all services are set up, initiate deboarding if needed
             if (_model.AutoDeboarding && _simConnectService.GetDeboardingState() < 4)
             {
-                Logger.Log(LogLevel.Information, nameof(GsxController), "Calling Deboarding Service");
+                LogService.Log(LogLevel.Information, nameof(GsxController), "Calling Deboarding Service");
                 _boardingService.RequestDeboardingService();
             }
 
@@ -956,11 +958,11 @@ namespace Prosim2GSX.Services.GSX
                     // Get fuel amount directly from Prosim interface instead
                     double arrivalFuel = Convert.ToDouble(_prosimInterface.GetProsimVariable("aircraft.fuel.total"));
                     _model.SavedFuelAmount = arrivalFuel;
-                    Logger.Log(LogLevel.Information, nameof(GsxController), $"Saved arrival fuel amount: {arrivalFuel}");
+                    LogService.Log(LogLevel.Information, nameof(GsxController), $"Saved arrival fuel amount: {arrivalFuel}");
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log(LogLevel.Error, nameof(GsxController),
+                    LogService.Log(LogLevel.Error, nameof(GsxController),
                         $"Error saving fuel amount: {ex.Message}");
                 }
             }
@@ -971,7 +973,7 @@ namespace Prosim2GSX.Services.GSX
         /// </summary>
         private void RepositionPlane()
         {
-            Logger.Log(LogLevel.Information, nameof(GsxController),
+            LogService.Log(LogLevel.Information, nameof(GsxController),
                 $"Waiting {_model.RepositionDelay}s before Repositioning ...");
 
             _groundServicesService.SetChocks(true);
@@ -979,7 +981,7 @@ namespace Prosim2GSX.Services.GSX
             // Sleep for the configured delay
             Thread.Sleep((int)(_model.RepositionDelay * 1000.0f));
 
-            Logger.Log(LogLevel.Information, nameof(GsxController), "Repositioning Plane");
+            LogService.Log(LogLevel.Information, nameof(GsxController), "Repositioning Plane");
 
             // Open the menu
             _menuService.OpenMenu();
@@ -1004,7 +1006,7 @@ namespace Prosim2GSX.Services.GSX
         /// </summary>
         private string FlightCallsignToOpsCallsign(string flightNumber)
         {
-            Logger.Log(LogLevel.Debug, nameof(GsxController),
+            LogService.Log(LogLevel.Debug, nameof(GsxController),
                 $"Flight Number obtained from flight plan: {flightNumber}");
 
             var count = 0;
@@ -1033,7 +1035,7 @@ namespace Prosim2GSX.Services.GSX
             // Add OPS prefix
             sb.Insert(0, "OPS");
 
-            Logger.Log(LogLevel.Debug, nameof(GsxController),
+            LogService.Log(LogLevel.Debug, nameof(GsxController),
                 $"Changed OPS callsign: {sb.ToString()}");
 
             return sb.ToString();
@@ -1062,13 +1064,13 @@ namespace Prosim2GSX.Services.GSX
                     // Update GSX LVAR to match door state (0=closed, 1=open)
                     _simConnectService.WriteGsxLvar("FSDT_GSX_COCKPIT_DOOR_OPEN", doorOpen ? 1 : 0);
 
-                    Logger.Log(LogLevel.Information, nameof(GsxController),
+                    LogService.Log(LogLevel.Information, nameof(GsxController),
                         $"Cockpit door state changed to {newDoorState} ({(doorOpen ? "opened" : "closed")})");
                 }
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, nameof(GsxController),
+                LogService.Log(LogLevel.Error, nameof(GsxController),
                     $"Error handling cockpit door state change: {ex.Message}");
             }
         }
