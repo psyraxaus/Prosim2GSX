@@ -951,13 +951,14 @@
                         </Border>
 
                         <!-- Debug Log Configuration Section -->
-                        <GroupBox Header="Logging" Margin="5">
+                        <TextBlock Text="LOGGING" Style="{StaticResource CategoryHeaderStyle}"/>
+                        <Border Style="{StaticResource SectionBorderStyle}">
                             <StackPanel>
                                 <Label Content="Debug Log Verbosity:" />
                                 <ComboBox x:Name="cboDebugVerbosity" 
-                 SelectedIndex="0" 
-                 SelectionChanged="cboDebugVerbosity_SelectionChanged" 
-                 Margin="0,5,0,10">
+                                     SelectedIndex="0" 
+                                     SelectionChanged="cboDebugVerbosity_SelectionChanged" 
+                                     Margin="0,5,0,10">
                                     <ComboBoxItem Content="All Categories" Tag="All" />
                                     <ComboBoxItem Content="Refueling" Tag="Refueling" />
                                     <ComboBoxItem Content="Boarding" Tag="Boarding" />
@@ -981,7 +982,7 @@
                                     </TextBlock>
                                 </StackPanel>
                             </StackPanel>
-                        </GroupBox>
+                        </Border>
 
                         <!-- Appearance Settings -->
                         <TextBlock Text="EXTERNAL DEPENDENCIES" Style="{StaticResource CategoryHeaderStyle}" Margin="0,20,0,0"/>
