@@ -1,4 +1,5 @@
-﻿using Prosim2GSX.Models;
+﻿using Prosim2GSX.Events;
+using Prosim2GSX.Models;
 using Prosim2GSX.Services.GSX.Enums;
 using Prosim2GSX.Services.GSX.Interfaces;
 using Prosim2GSX.Services.Logger.Enums;
@@ -21,7 +22,9 @@ namespace Prosim2GSX.Services.GSX.Implementation
         private readonly ServiceModel _model;
 
         private bool _refuelingRequested = false;
+        private bool _refuelingCompleted = false;
         private bool _initialFuelSet = false;
+        private int _refuelingState = 0;
 
         /// <inheritdoc/>
         public bool IsRefuelingRequested => _refuelingRequested;
@@ -156,20 +159,25 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// </summary>
         private void OnRefuelingStateChanged(float newValue, float oldValue, string lvarName)
         {
-            LogService.Log(LogLevel.Debug, nameof(GsxRefuelingService),
-                $"GSX refueling state changed from {oldValue} to {newValue}", LogCategory.Refueling);
+            _refuelingState = (int)newValue;
 
-            if (newValue >= (int)GsxServiceState.Requested && !_refuelingRequested)
+            LogService.Log(LogLevel.Debug, nameof(GsxRefuelingService), $"Refueling state changed to {newValue}", LogCategory.Refueling);
+
+            if (newValue != oldValue)
             {
-                _refuelingRequested = true;
-                // Start the refueling in Prosim service
-                _refuelingService.StartRefueling();
+                ServiceStatus status = newValue == (int)GsxServiceState.Completed ? ServiceStatus.Completed :
+                                      newValue == (int)GsxServiceState.Active ? ServiceStatus.Active :
+                                      newValue == (int)GsxServiceState.Requested ? ServiceStatus.Requested :
+                                      ServiceStatus.Inactive;
+
+                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Refuel", status));
             }
 
-            if (newValue == (int)GsxServiceState.Completed && !_refuelingService.IsRefuelingComplete)
+            // Set refuelignComplete when refueling reaches completed state
+            if (newValue == (int)GsxServiceState.Completed && !_refuelingCompleted)
             {
-                // GSX considers refueling complete
-                _refuelingService.StopRefueling();
+                _refuelingCompleted = true;
+                LogService.Log(LogLevel.Information, nameof(GsxRefuelingService), "Refueling service completed");
             }
         }
     }

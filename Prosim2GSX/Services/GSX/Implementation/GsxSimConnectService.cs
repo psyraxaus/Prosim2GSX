@@ -37,13 +37,11 @@ namespace Prosim2GSX.Services.GSX.Implementation
             SubscribeToGsxLvar("FSDT_GSX_JETWAY", OnJetwayStateChanged);
             SubscribeToGsxLvar("FSDT_GSX_STAIRS", OnStairsStateChanged);
             SubscribeToGsxLvar("FSDT_GSX_CATERING_STATE", OnCateringStateChanged);
-            SubscribeToGsxLvar("FSDT_GSX_REFUELING_STATE", OnRefuelingStateChanged);
             SubscribeToGsxLvar("FSDT_GSX_BOARDING_STATE", OnBoardingStateChanged);
             SubscribeToGsxLvar("FSDT_GSX_DEBOARDING_STATE", OnDeboardingStateChanged);
             SubscribeToGsxLvar("FSDT_GSX_DEPARTURE_STATE", OnDepartureStateChanged);
             SubscribeToGsxLvar("FSDT_GSX_BOARDING_CARGO", OnCargoLoadingChanged);
             SubscribeToGsxLvar("FSDT_GSX_DEBOARDING_CARGO", OnCargoLoadingChanged);
-            SubscribeToGsxLvar("FSDT_GSX_FUELHOSE_CONNECTED", OnFuelHoseStateChanged);
 
             // Subscribe to other LVARs without callbacks
             _simConnect.SubscribeLvar("FSDT_GSX_COUATL_STARTED");
@@ -359,19 +357,6 @@ namespace Prosim2GSX.Services.GSX.Implementation
         }
 
         /// <summary>
-        /// Handler for refueling state changes
-        /// </summary>
-        private void OnRefuelingStateChanged(float newValue, float oldValue, string lvarName)
-        {
-            if (newValue != oldValue)
-            {
-                var status = GetStatusFromGsxState((int)newValue);
-                EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Refuel", status));
-                LogService.Log(LogLevel.Information, nameof(GsxSimConnectService), $"Refueling state changed to {status}");
-            }
-        }
-
-        /// <summary>
         /// Handler for boarding state changes
         /// </summary>
         private void OnBoardingStateChanged(float newValue, float oldValue, string lvarName)
@@ -419,27 +404,6 @@ namespace Prosim2GSX.Services.GSX.Implementation
             {
                 // This just logs the change - the actual status updates come from the cargo percentage
                 LogService.Log(LogLevel.Debug, nameof(GsxSimConnectService), $"Cargo operation {lvarName} changed from {oldValue} to {newValue}", LogCategory.SimConnect);
-            }
-        }
-
-        /// <summary>
-        /// Handler for fuel hose connection changes
-        /// </summary>
-        private void OnFuelHoseStateChanged(float newValue, float oldValue, string lvarName)
-        {
-            if (newValue != oldValue)
-            {
-                LogService.Log(LogLevel.Information, nameof(GsxSimConnectService),
-                    $"Fuel hose {(newValue == 1 ? "connected" : "disconnected")}");
-
-                // If refueling state is active and fuel hose state changes, update the refueling status
-                int refuelingState = GetRefuelingState();
-                if (refuelingState == 5)
-                {
-                    // If refueling is active, update status based on fuel hose
-                    var status = newValue == 1 ? ServiceStatus.Active : ServiceStatus.Waiting;
-                    EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Refuel", status));
-                }
             }
         }
 
