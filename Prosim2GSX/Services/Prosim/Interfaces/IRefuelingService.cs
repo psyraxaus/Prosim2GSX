@@ -1,4 +1,6 @@
-﻿namespace Prosim2GSX.Services.Prosim.Interfaces
+﻿using Prosim2GSX.Services.Prosim.Enums;
+
+namespace Prosim2GSX.Services.Prosim.Interfaces
 {
     /// <summary>
     /// Service for managing aircraft refueling
@@ -6,56 +8,67 @@
     public interface IRefuelingService
     {
         /// <summary>
-        /// Gets the planned fuel amount in kg
-        /// </summary>
-        double PlannedFuel { get; }
-
-        /// <summary>
-        /// Gets the current fuel amount in kg
+        /// The current fuel amount in kg
         /// </summary>
         double CurrentFuel { get; }
 
         /// <summary>
-        /// Gets the fuel units (KG or LBS)
+        /// The planned or target fuel amount in kg
+        /// </summary>
+        double PlannedFuel { get; }
+
+        /// <summary>
+        /// The fuel units (KG or LBS)
         /// </summary>
         string FuelUnits { get; }
 
         /// <summary>
-        /// Gets whether the refueling is active
+        /// Gets the current refueling state
+        /// </summary>
+        RefuelingState State { get; }
+
+        /// <summary>
+        /// Whether refueling is currently active
         /// </summary>
         bool IsRefuelingActive { get; }
 
         /// <summary>
-        /// Gets whether the refueling is completed
+        /// Whether the refueling process is complete
         /// </summary>
         bool IsRefuelingComplete { get; }
 
         /// <summary>
-        /// Update fuel data from the flight plan
+        /// Update the fuel data with the latest from the flight plan
         /// </summary>
-        /// <param name="flightPlan">The flight plan</param>
+        /// <param name="flightPlan">The current flight plan</param>
         void UpdateFuelData(FlightPlan flightPlan);
 
         /// <summary>
-        /// Get the current fuel amount
+        /// Get the current fuel amount from the simulator
         /// </summary>
-        /// <returns>Current fuel amount in kg</returns>
+        /// <returns>Current fuel in kg</returns>
         double GetFuelAmount();
 
         /// <summary>
-        /// Set the initial fuel amount
+        /// Set the initial fuel target and state
         /// </summary>
         void SetInitialFuel();
 
         /// <summary>
-        /// Set initial hydraulic fluid levels
+        /// Set the fuel target amount
+        /// </summary>
+        /// <param name="amount">Target amount in kg</param>
+        void SetFuelTarget(double amount);
+
+        /// <summary>
+        /// Set the initial hydraulic fluids
         /// </summary>
         void SetInitialFluids();
 
         /// <summary>
         /// Get the hydraulic fluid values
         /// </summary>
-        /// <returns>Tuple of blue, green, and yellow hydraulic fluid values</returns>
+        /// <returns>Tuple of blue, green, yellow hydraulic fluid amounts</returns>
         (double, double, double) GetHydraulicFluidValues();
 
         /// <summary>
@@ -79,15 +92,9 @@
         void ResumeRefueling();
 
         /// <summary>
-        /// Process one step of the refueling
+        /// Process one iteration of refueling
         /// </summary>
-        /// <returns>True if refueling is complete</returns>
+        /// <returns>True if refueling is complete, false otherwise</returns>
         bool ProcessRefueling();
-
-        /// <summary>
-        /// Set the target fuel amount
-        /// </summary>
-        /// <param name="amount">The target amount in kg</param>
-        void SetFuelTarget(double amount);
     }
 }

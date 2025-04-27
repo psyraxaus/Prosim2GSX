@@ -160,10 +160,10 @@ namespace Prosim2GSX.Services
         /// <summary>
         /// Get the GSX refueling service
         /// </summary>
-        public static IGsxRefuelingService GsxRefuelingService =>
+       public static IGsxRefuelingService GsxRefuelingService =>
             _serviceProvider?.GetGsxRefuelingService() ??
             throw new InvalidOperationException("ServiceLocator not initialized");
-
+       
         /// <summary>
         /// Get the GSX SimConnect service
         /// </summary>

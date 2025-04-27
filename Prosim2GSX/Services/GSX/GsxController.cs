@@ -30,12 +30,14 @@ namespace Prosim2GSX.Services.GSX
         private readonly IGsxRefuelingService _refuelingService;
         private readonly IGsxSimConnectService _simConnectService;
         private readonly IProsimInterface _prosimInterface;
+        private readonly IRefuelingService _prosimRefuelingService;
         private readonly IFlightPlanService _flightPlanService;
         private readonly IPassengerService _passengerService;
         private readonly IAudioService _audioService;
         private readonly ServiceModel _model;
         private readonly FlightPlan _flightPlan;
         private DataRefChangedHandler _cockpitDoorHandler;
+        private AcarsClient _acarsClient;
 
         // State tracking variables
         private string _flightPlanID = "0";
@@ -54,7 +56,14 @@ namespace Prosim2GSX.Services.GSX
         private int _loadsheetDelay = 0;
         private bool _opsCallsignSet = false;
         private string _opsCallsign = "";
-        private AcarsClient _acarsClient;
+        private bool _refuelingRequested = false;
+        private bool _refuelingActive = false;
+        private bool _refuelingPaused = false;
+        private bool _refuelingFinished = false;
+        //private bool _refuelingComplete = false;
+        private bool _fuelHoseConnected = false;
+        private bool _cateringRequested = false;
+        private bool _boardingRequested = false;
 
         /// <summary>
         /// The interval between service loop iterations in milliseconds
@@ -78,6 +87,7 @@ namespace Prosim2GSX.Services.GSX
             _prosimInterface = ServiceLocator.ProsimInterface;
             _flightPlanService = ServiceLocator.FlightPlanService;
             _passengerService = ServiceLocator.PassengerService;
+            _prosimRefuelingService = ServiceLocator.RefuelingService;
 
             // Get GSX services - add null checking here
             _flightStateService = ServiceLocator.GsxFlightStateService ?? 
@@ -164,8 +174,8 @@ namespace Prosim2GSX.Services.GSX
                     "Subscribing to cockpit door state changes");
                 dataRefService.SubscribeToDataRef("system.switches.S_PED_COCKPIT_DOOR", _cockpitDoorHandler);
 
-                // Register other data ref handlers
-                RegisterDataRefHandlers();
+                // Subscibe to LVARs for changes
+                SubscribeToLVARsForMonitoring();
 
                 // Log successful initialization
                 LogService.Log(LogLevel.Information, nameof(GsxController),
@@ -181,7 +191,7 @@ namespace Prosim2GSX.Services.GSX
         /// <summary>
         /// Register data ref change handlers
         /// </summary>
-        private void RegisterDataRefHandlers()
+        private void SubscribeToLVARsForMonitoring()
         {
             try
             {
@@ -438,103 +448,102 @@ namespace Prosim2GSX.Services.GSX
         /// </summary>
         private void HandleDepartureState()
         {
-            // First, check if preliminary loadsheet needs to be generated
-            if (!_prelimLoadsheetGenerated)
-            {
-                // Get refueling state from LVARs and services
-                bool fuelTargetSet = _prosimInterface.GetStatusFunction("aircraft.refuel.fuelTarget") >= 1;
-                bool fuelHoseConnected = _simConnectService.ReadGsxLvar("FSDT_GSX_FUELHOSE_CONNECTED") == 1;
-                int refuelingState = _simConnectService.GetRefuelingState();
-                bool refuelingActive = !_refuelingService.IsRefuelingComplete && _refuelingService.IsFuelHoseConnected;
+            /*
+                        // Sync refueling state at the beginning to ensure consistency
+                        if (_refuelingService.IsRefuelingRequested && !_refuelingService.IsRefuelingComplete)
+                        {
+                            _refuelingService.SynchronizeState();
+                        }
+                        // First, check if preliminary loadsheet needs to be generated
+                        if (!_prelimLoadsheetGenerated)
+                        {
+                            // Get refueling state information
+                            bool fuelTargetSet = _prosimInterface.GetStatusFunction("aircraft.refuel.fuelTarget") >= 1;
+                            bool fuelHoseConnected = _refuelingService.IsFuelHoseConnected;
+                            bool refuelingActive = !_refuelingService.IsRefuelingComplete && fuelHoseConnected;
 
-                // Only generate loadsheet when all conditions are met: 
-                // 1. Fuel target is set
-                // 2. Fuel hose is connected
-                // 3. Refueling is active
-                if (fuelTargetSet && fuelHoseConnected && refuelingActive)
-                {
-                    LogService.Log(LogLevel.Information, nameof(GsxController),
-                        "Generating preliminary loadsheet - all conditions met");
-                    GeneratePreliminaryLoadsheet();
-                    return;
-                }
-                else
-                {
-                    // Log which condition is not met
-                    if (!fuelTargetSet)
-                    {
-                        LogService.Log(LogLevel.Debug, nameof(GsxController),
-                            "Fuel target not set yet - waiting to generate preliminary loadsheet");
-                    }
-                    else if (!fuelHoseConnected)
-                    {
-                        LogService.Log(LogLevel.Debug, nameof(GsxController),
-                            "Fuel hose not connected - waiting to generate preliminary loadsheet");
-                    }
-                    else if (!refuelingActive)
-                    {
-                        LogService.Log(LogLevel.Debug, nameof(GsxController),
-                            $"Refueling not active (state: {_refuelingService.IsRefuelingComplete}) - waiting to generate preliminary loadsheet");
-                    }
-                }
-            }
+                            // Log current conditions for debugging
+                            LogService.Log(LogLevel.Debug, nameof(GsxController),
+                                $"Loadsheet conditions: Target Set={fuelTargetSet}, Hose Connected={fuelHoseConnected}, " +
+                                $"Refueling Active={refuelingActive}", LogCategory.Refueling);
 
+                            // Only generate loadsheet when all conditions are met
+                            if (fuelTargetSet && fuelHoseConnected && refuelingActive)
+                            {
+                                LogService.Log(LogLevel.Information, nameof(GsxController),
+                                    "Generating preliminary loadsheet - all conditions met");
+                                GeneratePreliminaryLoadsheet();
+                                return;
+                            }
+                        }
+            */
             // Check refueling and boarding state
             bool refuelingComplete = _refuelingService.IsRefuelingComplete;
+            bool initialFuelSet = _refuelingService.IsInitialFuelSet;
+            bool initialFluidsSet = _refuelingService.IsHydraulicFluidsSet;
+            bool refuelingRequested = _refuelingService.IsRefuelingRequested;
+            bool refuelingActive = _refuelingService.IsRefuelingActive;
+            bool refuelingPaused = _refuelingService.IsRefuelingPaused;
             bool boardingComplete = _boardingService.IsBoardingComplete;
+            bool boardingRequested = _boardingService.IsBoardingRequested;
             bool cateringComplete = _cateringService.IsCateringComplete;
-            bool refuelingRequested = _simConnectService.GetRefuelingState() >= 4;
-            bool cateringRequested = _cateringService.CateringState >= 4;
+            bool cateringRequested = _cateringService.IsCateringRequested;
 
-            if (!refuelingComplete || !boardingComplete || (_model.CallCatering && !cateringComplete))
+            if (!refuelingComplete || !boardingComplete || !cateringComplete)
             {
                 // Handle refueling service
                 if (_model.AutoRefuel)
                 {
-                    if (!_initialFuelSet)
-                    {
+                    if (!initialFuelSet)
                         _refuelingService.SetInitialFuel();
-                        _initialFuelSet = true;
-                    }
 
-                    if (_model.SetSaveHydraulicFluids && !_initialFluidsSet)
-                    {
-                        // Service will handle the actual setting
-                        _initialFluidsSet = true;
-                    }
+                    if (_model.SetSaveHydraulicFluids && !initialFluidsSet)
+                        _refuelingService.SetHydraulicFluidLevels();
 
-                    // Request refueling if not already requested
-                    if (!_refuelingService.IsRefuelingRequested && _simConnectService.GetRefuelingState() < 4)
+                    // Request refueling if needed
+                    LogService.Log(LogLevel.Debug, nameof(GsxController), $"_refuelingRequested: {refuelingRequested}, GetRefuelingState: {_simConnectService.GetRefuelingState()}", LogCategory.Refueling);
+                    if (!refuelingRequested && _simConnectService.GetRefuelingState() != 6)
                     {
-                        LogService.Log(LogLevel.Information, nameof(GsxController), "Requesting refueling service");
-                        _refuelingService.RequestRefuelingService();
+                        LogService.Log(LogLevel.Information, nameof(GsxController), "Calling Refuel Service");
+                        _refuelingService.RequestRefueling();
                         return;
                     }
 
-                    // Process refueling - let the service handle all the details
-                    bool refuelingProcessComplete = _refuelingService.ProcessRefueling();
-    
-                    // Check for preliminary loadsheet generation
-                    if (refuelingProcessComplete && !_prelimLoadsheetGenerated)
+                    if (_model.CallCatering && !cateringRequested && _simConnectService.GetCateringState() != 6)
                     {
-                        // Generate preliminary loadsheet when refueling is complete
-                        GeneratePreliminaryLoadsheet();
+                        LogService.Log(LogLevel.Information, nameof(GsxController), "Requesting catering service");
+                        _cateringService.RequestCateringService();
+                        return;
                     }
-                }
+
+                    // If refueling not active and GSX state is active, set active
+                    LogService.Log(LogLevel.Debug, nameof(GsxController), $"_refuelingActive: {refuelingActive}, _refuelingFinished: {refuelingComplete}, GetRefuelingState: {_simConnectService.GetRefuelingState()}", LogCategory.Refueling);
+                    if (!refuelingActive && _simConnectService.GetRefuelingState() == 5)
+                        _refuelingService.SetRefuelingActive();
+
+                    // Process refueling if active
+                    else if (refuelingActive)
+                    {
+                        LogService.Log(LogLevel.Debug, nameof(GsxController), $"_refuelingActive: {refuelingActive}, _refuelingPaused: {refuelingPaused}", LogCategory.Refueling);
+
+                        // Only perform active refueling when not paused
+                        if (!refuelingPaused && _simConnectService.ReadGsxLvar("FSDT_GSX_FUELHOSE_CONNECTED") == 1)
+                            _refuelingService.ProcessRefueling();
 
 
-                // Handle catering service
-                if (_model.CallCatering && !cateringRequested && !cateringComplete)
-                {
-                    LogService.Log(LogLevel.Information, nameof(GsxController), "Requesting catering service");
-                    _cateringService.RequestCateringService();
-                    return;
-                }
+                        // Add state transition check for GSX refueling state
+                        if ((int)_simConnectService.ReadGsxLvar("FSDT_GSX_REFUELING_STATE") == 6) // Check if GSX considers refueling completed
+                        {
+                            if (!refuelingComplete)
+                                _refuelingService.StopRefueling();
+                        }
+                    }
 
-                // Process catering
-                if (_model.CallCatering && cateringRequested && !cateringComplete)
-                {
-                    _cateringService.ProcessCatering();
+                    if (refuelingComplete && !boardingRequested)
+                    {
+                        LogService.Log(LogLevel.Debug, nameof(GsxController),
+                            $"Refueling finished. AutoBoarding: {_model.AutoBoarding}, CateringFinished: {cateringComplete}, CallCatering: {_model.CallCatering}, DelayCounter: {_delayCounter}");
+                    }
                 }
 
                 // Handle boarding service
@@ -555,7 +564,6 @@ namespace Prosim2GSX.Services.GSX
                         {
                             _boardingService.SetPassengers(_passengerService.GetPlannedPassengers());
                             _boardingService.RequestBoardingService();
-                            _cargoService.ProcessCargoOperations();
                             _delayCounter = 0;
                         }
                         return;
@@ -744,6 +752,12 @@ namespace Prosim2GSX.Services.GSX
                 _loadsheetService.ResetLoadsheetStates();
                 _prelimLoadsheetGenerated = false;
                 _finalLoadsheetSent = false;
+
+                // Reset refueling state for new flight
+                _refuelingRequested = false;
+                //_refuelingComplete = false;
+                _fuelHoseConnected = false;
+                _initialFuelSet = false;
 
                 // Reset all state tracking variables
                 _flightStateService.TransitionToState(FlightState.DEPARTURE);

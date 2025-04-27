@@ -22,6 +22,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
 
         private bool _isBoarding = false;
         private bool _isBoardingComplete = false;
+        private bool _isBoardingRequested = false;
         private bool _isDeboarding = false;
         private bool _isDeboardingComplete = false;
         private int _plannedPassengers = 0;
@@ -31,6 +32,9 @@ namespace Prosim2GSX.Services.GSX.Implementation
 
         /// <inheritdoc/>
         public bool IsBoardingComplete => _isBoardingComplete;
+
+        /// <inheritdoc/>
+        public bool IsBoardingRequested => _isBoardingRequested;
 
         /// <inheritdoc/>
         public bool IsDeboarding => _isDeboarding;
@@ -76,10 +80,21 @@ namespace Prosim2GSX.Services.GSX.Implementation
 
                 EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Boarding", status));
 
+                // If boarding is requested, mark as requested
+                if(newValue == 4 && !_isBoardingRequested)
+                {
+                    _isBoarding = false;
+                    _isBoardingRequested = true;
+                    _isBoardingComplete = false;
+                    LogService.Log(LogLevel.Information, nameof(GsxBoardingService),
+                        "Boarding requested");
+                }
+
                 // If boarding is completed, mark as complete
                 if (newValue == 6 && !_isBoardingComplete)
                 {
                     _isBoarding = false;
+                    _isBoardingRequested = false;
                     _isBoardingComplete = true;
                     LogService.Log(LogLevel.Information, nameof(GsxBoardingService),
                         "Boarding completed automatically");
@@ -89,6 +104,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 if (newValue == 5 && !_isBoarding)
                 {
                     _isBoarding = true;
+                    _isBoardingRequested = false;
                     _isBoardingComplete = false;
                     LogService.Log(LogLevel.Information, nameof(GsxBoardingService),
                         "Boarding started automatically");

@@ -6,30 +6,34 @@
     public interface IGsxRefuelingService
     {
         /// <summary>
-        /// Whether refueling was requested from GSX
-        /// </summary>
-        bool IsRefuelingRequested { get; }
-
-        /// <summary>
-        /// Whether fuel hose is connected
-        /// </summary>
-        bool IsFuelHoseConnected { get; }
-
-        /// <summary>
         /// Whether the refueling process is complete
         /// </summary>
         bool IsRefuelingComplete { get; }
 
         /// <summary>
-        /// Request refueling service through GSX menu
+        /// Whether the initial fuel amount has been set
         /// </summary>
-        void RequestRefuelingService();
+        bool IsInitialFuelSet { get; }
 
         /// <summary>
-        /// Process the current refueling state
+        /// Whether the initial hydraulic fluid levels have been set
         /// </summary>
-        /// <returns>True if refueling is complete</returns>
-        bool ProcessRefueling();
+        bool IsHydraulicFluidsSet { get; }
+
+        /// <summary>
+        /// Whether refueling was requested from GSX
+        /// </summary>
+        bool IsRefuelingRequested { get; }
+
+        /// <summary>
+        /// Whether refueling is active
+        /// </summary>
+        bool IsRefuelingActive { get; }
+
+        /// <summary>
+        /// Whether refueling is paused
+        /// </summary>
+        bool IsRefuelingPaused { get; }
 
         /// <summary>
         /// Set initial fuel target
@@ -37,8 +41,28 @@
         void SetInitialFuel();
 
         /// <summary>
-        /// Get the current fuel amount
+        /// Set hydraulic fluid levels
         /// </summary>
-        double GetCurrentFuelAmount();
+        void SetHydraulicFluidLevels();
+
+        /// <summary>
+        /// Request refueling
+        /// </summary>
+        void RequestRefueling();
+
+        /// <summary>
+        /// Set refueling active
+        /// </summary>
+        void SetRefuelingActive();
+
+        /// <summary>
+        /// Process refueling
+        /// </summary>
+        void ProcessRefueling();
+
+        /// <summary>
+        /// Stop Refueling
+        /// </summary>
+        void StopRefueling();
     }
 }

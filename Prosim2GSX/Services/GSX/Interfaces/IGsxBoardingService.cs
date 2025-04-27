@@ -16,6 +16,11 @@
         bool IsBoardingComplete { get; }
 
         /// <summary>
+        /// Whether boarding is requested
+        /// </summary>
+        bool IsBoardingRequested { get; }
+
+        /// <summary>
         /// Whether deboarding is active
         /// </summary>
         bool IsDeboarding { get; }

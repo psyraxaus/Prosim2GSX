@@ -134,9 +134,7 @@ namespace Prosim2GSX.Services
                     _prosimInterface,
                     _gsxSimConnectService,
                     _gsxMenuService,
-                    _flightPlanService,
-                    _refuelingService,
-                    _model);
+                    _refuelingService);
 
                 // Create catering service
                 _gsxCateringService = new GsxCateringService(

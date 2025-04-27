@@ -49,6 +49,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             _simConnect.SubscribeLvar("FSDT_GSX_DEBOARDING_CARGO_PERCENT");
             _simConnect.SubscribeLvar("FSDT_GSX_OPERATEJETWAYS_STATE");
             _simConnect.SubscribeLvar("FSDT_GSX_OPERATESTAIRS_STATE");
+            _simConnect.SubscribeLvar("FSDT_GSX_REFUELING_STATE");
 
             // Subscribe to SimVars
             _simConnect.SubscribeSimVar("SIM ON GROUND", "Bool");
