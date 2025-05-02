@@ -301,7 +301,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 _menuService.SelectMenuItem(4);
 
                 // Handle operator selection if needed
-                _menuService.HandleOperatorSelection((int)_model.OperatorDelay);
+                _menuService.HandleOperatorSelection();
 
                 LogService.Log(LogLevel.Information, nameof(GsxBoardingService),
                     "Boarding service requested");
@@ -323,7 +323,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 _menuService.SelectMenuItem(1);
 
                 // Handle operator selection if needed
-                _menuService.HandleOperatorSelection((int)_model.OperatorDelay);
+                _menuService.HandleOperatorSelection();
 
                 LogService.Log(LogLevel.Information, nameof(GsxBoardingService),
                     "Deboarding service requested");

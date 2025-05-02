@@ -47,7 +47,6 @@ namespace Prosim2GSX.Services.GSX
         private bool _initialFuelSet = false;
         private bool _initialFluidsSet = false;
         private bool _firstRun = true;
-        private bool _operatorWasSelected = false;
         private bool _equipmentRemoved = false;
         private bool _finalLoadsheetSent = false;
         private bool _prelimLoadsheetGenerated = false;
@@ -60,7 +59,6 @@ namespace Prosim2GSX.Services.GSX
         private bool _refuelingActive = false;
         private bool _refuelingPaused = false;
         private bool _refuelingFinished = false;
-        //private bool _refuelingComplete = false;
         private bool _fuelHoseConnected = false;
         private bool _cateringRequested = false;
         private bool _boardingRequested = false;

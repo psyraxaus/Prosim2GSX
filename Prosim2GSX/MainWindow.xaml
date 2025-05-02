@@ -966,6 +966,7 @@
                                     <ComboBoxItem Content="Ground Services" Tag="GroundServices" />
                                     <ComboBoxItem Content="SimConnect" Tag="SimConnect" />
                                     <ComboBoxItem Content="Prosim" Tag="Prosim" />
+                                    <ComboBoxItem Content="Menu" Tag="Menu" />
                                     <ComboBoxItem Content="Custom..." Tag="Custom" />
                                 </ComboBox>
 

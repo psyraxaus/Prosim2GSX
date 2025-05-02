@@ -105,7 +105,7 @@ namespace Prosim2GSX.Services
 
                 // Create the menu service
                 string menuFile = GsxHelpers.GetGsxMenuFilePath();
-                _gsxMenuService = new GsxMenuService(_gsxSimConnectService, menuFile);
+                _gsxMenuService = new GsxMenuService(_gsxSimConnectService, menuFile, _model, simConnect);
 
                 // Create the flight state service
                 _gsxFlightStateService = new GsxFlightStateService();

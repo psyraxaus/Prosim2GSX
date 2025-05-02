@@ -33,6 +33,6 @@
         /// </summary>
         /// <param name="operatorDelay">Delay before selecting an operator</param>
         /// <returns>True if operator was selected</returns>
-        bool HandleOperatorSelection(int operatorDelay = 2000);
+        void HandleOperatorSelection();
     }
 }

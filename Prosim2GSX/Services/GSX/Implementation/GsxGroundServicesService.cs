@@ -264,7 +264,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 {
                     LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService), "Calling Jetway");
                     _menuService.SelectMenuItem(6);
-                    _menuService.HandleOperatorSelection((int)_model.OperatorDelay);
+                    _menuService.HandleOperatorSelection();
 
                     // Wait for jetway to connect before calling stairs
                     Thread.Sleep(1500);
@@ -277,7 +277,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 {
                     LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService), "Calling Jetway");
                     _menuService.SelectMenuItem(6);
-                    _menuService.HandleOperatorSelection((int)_model.OperatorDelay);
+                    _menuService.HandleOperatorSelection();
 
                     // Reduce wait time from 1500ms to 500ms
                     Thread.Sleep(500);  // Was 1500ms
@@ -303,7 +303,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 {
                     LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService), "Removing Jetway");
                     _menuService.SelectMenuItem(6);
-                    _menuService.HandleOperatorSelection((int)_model.OperatorDelay);
+                    _menuService.HandleOperatorSelection();
 
                     // Wait for jetway to disconnect before removing stairs
                     Thread.Sleep(1500);
@@ -316,7 +316,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                     _menuService.OpenMenu();
                     LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService), "Removing Stairs");
                     _menuService.SelectMenuItem(7);
-                    _menuService.HandleOperatorSelection((int)_model.OperatorDelay);
+                    _menuService.HandleOperatorSelection();
                 }
             }
             catch (Exception ex)

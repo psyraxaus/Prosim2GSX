@@ -162,6 +162,9 @@ namespace Prosim2GSX.Services.Logger.Implementation
                 case "prosim":
                     SetActiveCategories(LogCategory.Prosim);
                     break;
+                case "menu":
+                    SetActiveCategories(LogCategory.Menu);
+                    break;
                 case "critical":
                     // Only log critical errors and up across all categories
                     SetActiveCategories(LogCategory.All);

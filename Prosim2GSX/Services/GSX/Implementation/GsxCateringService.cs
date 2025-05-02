@@ -139,7 +139,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
 
             _menuService.OpenMenu();
             _menuService.SelectMenuItem(2);
-            _menuService.HandleOperatorSelection((int)_model.OperatorDelay);
+            _menuService.HandleOperatorSelection();
 
             _cateringRequested = true;
         }
