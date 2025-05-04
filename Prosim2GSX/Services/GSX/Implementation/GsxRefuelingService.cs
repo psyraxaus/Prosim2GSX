@@ -66,6 +66,9 @@ namespace Prosim2GSX.Services.GSX.Implementation
         public bool IsRefuelingPaused => _refuelingPaused;
 
         /// <inheritdoc/>
+        public bool IsFuelHoseConnected => _fuelHoseConnected;
+
+        /// <inheritdoc/>
         public void SetInitialFuel()
         {
             LogService.Log(LogLevel.Debug, nameof(GsxRefuelingService), "Setting initial fuel");

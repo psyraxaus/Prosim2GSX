@@ -36,6 +36,11 @@
         bool IsRefuelingPaused { get; }
 
         /// <summary>
+        /// Whether refueling hose connected
+        /// </summary>
+        bool IsFuelHoseConnected { get; }
+
+        /// <summary>
         /// Set initial fuel target
         /// </summary>
         void SetInitialFuel();

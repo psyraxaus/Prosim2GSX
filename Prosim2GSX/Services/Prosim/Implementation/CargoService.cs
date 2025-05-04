@@ -35,6 +35,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
 
                         _prosimService.SetProsimVariable("aircraft.cargo.aft.amount", Convert.ToDouble(flightPlan.CargoTotal / 2));
                         _prosimService.SetProsimVariable("aircraft.cargo.forward.amount", Convert.ToDouble(flightPlan.CargoTotal / 2));
+                        _prosimService.SetProsimVariable("efb.plannedCargoKg", flightPlan.CargoTotal);
 
                         LogService.Log(LogLevel.Debug, nameof(CargoService),
                             $"Temp Cargo set: forward {_prosimService.GetProsimVariable("aircraft.cargo.forward.amount")} " +

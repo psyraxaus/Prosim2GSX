@@ -31,6 +31,7 @@ namespace Prosim2GSX.Services
         private readonly IDoorControlService _doorControlService;
         private readonly IRefuelingService _refuelingService;
         private readonly IGroundServiceInterface _groundService;
+        private readonly ILoadsheetService _loadsheetService;
 
         // New connection service
         private readonly IConnectionService _applicationConnectionService;
@@ -38,7 +39,6 @@ namespace Prosim2GSX.Services
         // GSX services
         private IGsxFlightStateService _gsxFlightStateService;
         private IGsxMenuService _gsxMenuService;
-        private IGsxLoadsheetService _gsxLoadsheetService;
         private IGsxGroundServicesService _gsxGroundServicesService;
         private IGsxBoardingService _gsxBoardingService;
         private IGsxRefuelingService _gsxRefuelingService;
@@ -70,6 +70,7 @@ namespace Prosim2GSX.Services
             _doorControlService = new DoorControlService(_prosimInterface);
             _refuelingService = new RefuelingService(_prosimInterface, _model);
             _groundService = new GroundServiceImplementation(_prosimInterface);
+            _loadsheetService = new LoadsheetService(_prosimInterface, _flightPlanService, _dataRefService);
 
             // Create GSX services if SimConnect is available
             if (IPCManager.SimConnect != null)
@@ -109,9 +110,6 @@ namespace Prosim2GSX.Services
 
                 // Create the flight state service
                 _gsxFlightStateService = new GsxFlightStateService();
-
-                // Create loadsheet service
-                _gsxLoadsheetService = new GsxLoadsheetService(_prosimInterface, _flightPlanService);
 
                 // Create ground services service
                 _gsxGroundServicesService = new GsxGroundServicesService(
@@ -178,6 +176,7 @@ namespace Prosim2GSX.Services
         public IDoorControlService GetDoorControlService() => _doorControlService;
         public IRefuelingService GetRefuelingService() => _refuelingService;
         public IGroundServiceInterface GetGroundService() => _groundService;
+        public ILoadsheetService GetLoadsheetService() => _loadsheetService;
 
         // New service getter
         public IConnectionService GetApplicationConnectionService() => _applicationConnectionService;
@@ -185,7 +184,6 @@ namespace Prosim2GSX.Services
         // GSX service getters
         public IGsxFlightStateService GetGsxFlightStateService() => _gsxFlightStateService;
         public IGsxMenuService GetGsxMenuService() => _gsxMenuService;
-        public IGsxLoadsheetService GetGsxLoadsheetService() => _gsxLoadsheetService;
         public IGsxGroundServicesService GetGsxGroundServicesService() => _gsxGroundServicesService;
         public IGsxBoardingService GetGsxBoardingService() => _gsxBoardingService;
         public IGsxRefuelingService GetGsxRefuelingService() => _gsxRefuelingService;

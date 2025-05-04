@@ -50,6 +50,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                             $"seatOccupation bool: {string.Join(", ", _paxPlanned)}");
 
                         _prosimService.SetProsimVariable("aircraft.passengers.seatOccupation", _paxPlanned);
+                        _prosimService.SetProsimVariable("efb.passengers.booked", _paxPlanned);
 
                         PassengersZone1 = _prosimService.GetProsimVariable("aircraft.passengers.zone1.amount");
                         PassengersZone2 = _prosimService.GetProsimVariable("aircraft.passengers.zone2.amount");

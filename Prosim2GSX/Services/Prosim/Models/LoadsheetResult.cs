@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace Prosim2GSX.Services.GSX.Models
+namespace Prosim2GSX.Services.Prosim.Models
 {
     /// <summary>
     /// Represents the result of a loadsheet generation operation

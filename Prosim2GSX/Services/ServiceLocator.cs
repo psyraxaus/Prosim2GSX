@@ -123,6 +123,13 @@ namespace Prosim2GSX.Services
             throw new InvalidOperationException("ServiceLocator not initialized");
 
         /// <summary>
+        /// Get the loadsheet service interface
+        /// </summary>
+        public static ILoadsheetService LoadsheetService =>
+            _serviceProvider?.GetLoadsheetService() ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
+
+        /// <summary>
         /// Get the GSX flight state service
         /// </summary>
         public static IGsxFlightStateService GsxFlightStateService =>
@@ -134,13 +141,6 @@ namespace Prosim2GSX.Services
         /// </summary>
         public static IGsxMenuService GsxMenuService =>
             _serviceProvider?.GetGsxMenuService() ??
-            throw new InvalidOperationException("ServiceLocator not initialized");
-
-        /// <summary>
-        /// Get the GSX loadsheet service
-        /// </summary>
-        public static IGsxLoadsheetService GsxLoadsheetService =>
-            _serviceProvider?.GetGsxLoadsheetService() ??
             throw new InvalidOperationException("ServiceLocator not initialized");
 
         /// <summary>

@@ -22,7 +22,6 @@ namespace Prosim2GSX.Services.GSX
     {
         private readonly IGsxFlightStateService _flightStateService;
         private readonly IGsxMenuService _menuService;
-        private readonly IGsxLoadsheetService _loadsheetService;
         private readonly IGsxGroundServicesService _groundServicesService;
         private readonly IGsxCargoService _cargoService;
         private readonly IGsxCateringService _cateringService;
@@ -33,6 +32,7 @@ namespace Prosim2GSX.Services.GSX
         private readonly IRefuelingService _prosimRefuelingService;
         private readonly IFlightPlanService _flightPlanService;
         private readonly IPassengerService _passengerService;
+        private readonly ILoadsheetService _loadsheetService;
         private readonly IAudioService _audioService;
         private readonly ServiceModel _model;
         private readonly FlightPlan _flightPlan;
@@ -48,20 +48,11 @@ namespace Prosim2GSX.Services.GSX
         private bool _initialFluidsSet = false;
         private bool _firstRun = true;
         private bool _equipmentRemoved = false;
-        private bool _finalLoadsheetSent = false;
-        private bool _prelimLoadsheetGenerated = false;
         private bool _pcaRemoved = false;
         private int _delayCounter = 0;
         private int _loadsheetDelay = 0;
         private bool _opsCallsignSet = false;
         private string _opsCallsign = "";
-        private bool _refuelingRequested = false;
-        private bool _refuelingActive = false;
-        private bool _refuelingPaused = false;
-        private bool _refuelingFinished = false;
-        private bool _fuelHoseConnected = false;
-        private bool _cateringRequested = false;
-        private bool _boardingRequested = false;
 
         /// <summary>
         /// The interval between service loop iterations in milliseconds
@@ -86,14 +77,13 @@ namespace Prosim2GSX.Services.GSX
             _flightPlanService = ServiceLocator.FlightPlanService;
             _passengerService = ServiceLocator.PassengerService;
             _prosimRefuelingService = ServiceLocator.RefuelingService;
+            _loadsheetService = ServiceLocator.LoadsheetService;
 
             // Get GSX services - add null checking here
             _flightStateService = ServiceLocator.GsxFlightStateService ?? 
                 throw new InvalidOperationException("GsxFlightStateService is not available");
             _menuService = ServiceLocator.GsxMenuService ?? 
                 throw new InvalidOperationException("GsxMenuService is not available");
-            _loadsheetService = ServiceLocator.GsxLoadsheetService ?? 
-                throw new InvalidOperationException("GsxLoadsheetService is not available");
             _groundServicesService = ServiceLocator.GsxGroundServicesService ?? 
                 throw new InvalidOperationException("GsxGroundServicesService is not available");
             _boardingService = ServiceLocator.GsxBoardingService ?? 
@@ -446,36 +436,7 @@ namespace Prosim2GSX.Services.GSX
         /// </summary>
         private void HandleDepartureState()
         {
-            /*
-                        // Sync refueling state at the beginning to ensure consistency
-                        if (_refuelingService.IsRefuelingRequested && !_refuelingService.IsRefuelingComplete)
-                        {
-                            _refuelingService.SynchronizeState();
-                        }
-                        // First, check if preliminary loadsheet needs to be generated
-                        if (!_prelimLoadsheetGenerated)
-                        {
-                            // Get refueling state information
-                            bool fuelTargetSet = _prosimInterface.GetStatusFunction("aircraft.refuel.fuelTarget") >= 1;
-                            bool fuelHoseConnected = _refuelingService.IsFuelHoseConnected;
-                            bool refuelingActive = !_refuelingService.IsRefuelingComplete && fuelHoseConnected;
-
-                            // Log current conditions for debugging
-                            LogService.Log(LogLevel.Debug, nameof(GsxController),
-                                $"Loadsheet conditions: Target Set={fuelTargetSet}, Hose Connected={fuelHoseConnected}, " +
-                                $"Refueling Active={refuelingActive}", LogCategory.Refueling);
-
-                            // Only generate loadsheet when all conditions are met
-                            if (fuelTargetSet && fuelHoseConnected && refuelingActive)
-                            {
-                                LogService.Log(LogLevel.Information, nameof(GsxController),
-                                    "Generating preliminary loadsheet - all conditions met");
-                                GeneratePreliminaryLoadsheet();
-                                return;
-                            }
-                        }
-            */
-            // Check refueling and boarding state
+            // Check refueling, boarding, and cargo states
             bool refuelingComplete = _refuelingService.IsRefuelingComplete;
             bool initialFuelSet = _refuelingService.IsInitialFuelSet;
             bool initialFluidsSet = _refuelingService.IsHydraulicFluidsSet;
@@ -486,6 +447,32 @@ namespace Prosim2GSX.Services.GSX
             bool boardingRequested = _boardingService.IsBoardingRequested;
             bool cateringComplete = _cateringService.IsCateringComplete;
             bool cateringRequested = _cateringService.IsCateringRequested;
+            bool fuelTargetSet = _prosimInterface.GetStatusFunction("aircraft.refuel.fuelTarget") >= 1 && _prosimInterface.GetStatusFunction("efb.plannedfuel") >= 1;
+            bool cargoTargeteSet = _prosimInterface.GetStatusFunction("efb.plannedCargoKg") >= 1;
+            bool passengerTargetSet = _prosimInterface.GetProsimVariable("efb.passengers.booked") == _prosimInterface.GetProsimVariable("aircraft.passengers.seatOccupation");
+            bool prelimLoadsheetGenerated = _prosimInterface.GetProsimVariable("efb.prelimLoadsheet");
+            bool finalLoadsheetGenerated = _prosimInterface.GetProsimVariable("efb.finalLoadsheet");
+
+            // First, check if preliminary loadsheet needs to be generated
+            if (!prelimLoadsheetGenerated)
+            {
+                // Get refueling state information
+
+                bool fuelHoseConnected = _refuelingService.IsFuelHoseConnected;
+
+                // Log current conditions for debugging
+                LogService.Log(LogLevel.Debug, nameof(GsxController),
+                    $"Loadsheet conditions: Fuel Target Set={fuelTargetSet}, Cargo Target Set: {cargoTargeteSet} Hose Connected: {fuelHoseConnected}, Refueling Active: {refuelingActive}, Refueling Complete: {refuelingComplete}", LogCategory.Refueling);
+
+                // Only generate loadsheet when all conditions are met
+                if (fuelTargetSet && cargoTargeteSet && fuelHoseConnected && refuelingActive && !refuelingComplete)
+                {
+                    LogService.Log(LogLevel.Information, nameof(GsxController),
+                        "Generating preliminary loadsheet - all conditions met");
+                    _loadsheetService.GenerateLoadsheet("Preliminary");
+                    return;
+                }
+            }
 
             if (!refuelingComplete || !boardingComplete || !cateringComplete)
             {
@@ -587,7 +574,7 @@ namespace Prosim2GSX.Services.GSX
             if (refuelingComplete && boardingComplete)
             {
                 // Handle final loadsheet generation
-                if (!_finalLoadsheetSent)
+                if (!finalLoadsheetGenerated)
                 {
                     if (_loadsheetDelay == 0)
                     {
@@ -603,7 +590,7 @@ namespace Prosim2GSX.Services.GSX
                     }
                     else
                     {
-                        GenerateFinalLoadsheet();
+                        _loadsheetService.GenerateLoadsheet("Final");
                         return;
                     }
                 }
@@ -747,14 +734,9 @@ namespace Prosim2GSX.Services.GSX
                 }
 
                 // Reset loadsheet state
-                _loadsheetService.ResetLoadsheetStates();
-                _prelimLoadsheetGenerated = false;
-                _finalLoadsheetSent = false;
+                _loadsheetService.ResetLoadsheets();
 
                 // Reset refueling state for new flight
-                _refuelingRequested = false;
-                //_refuelingComplete = false;
-                _fuelHoseConnected = false;
                 _initialFuelSet = false;
 
                 // Reset all state tracking variables
@@ -772,146 +754,6 @@ namespace Prosim2GSX.Services.GSX
                 LogService.Log(LogLevel.Information, nameof(GsxController),
                     "State Change: Turn-Around -> DEPARTURE (Waiting for Refueling and Boarding)");
             }
-        }
-
-        /// <summary>
-        /// Generate preliminary loadsheet
-        /// </summary>
-        private void GeneratePreliminaryLoadsheet()
-        {
-            LogService.Log(LogLevel.Information, nameof(GsxController),
-                "Generating preliminary loadsheet using Prosim native functionality");
-
-            // Check server status and generate loadsheet
-            _loadsheetService.CheckServerStatus().ContinueWith(serverCheckTask =>
-            {
-                if (serverCheckTask.IsFaulted)
-                {
-                    LogService.Log(LogLevel.Error, nameof(GsxController),
-                        $"Error checking Prosim EFB server status: {serverCheckTask.Exception?.InnerException?.Message ?? "Unknown error"}");
-                    return;
-                }
-
-                bool serverAvailable = serverCheckTask.Result;
-                if (!serverAvailable)
-                {
-                    LogService.Log(LogLevel.Error, nameof(GsxController),
-                        "Prosim EFB server is not available. Cannot generate loadsheet. " +
-                        "Check if Prosim is running and the EFB server is properly configured.");
-                    return;
-                }
-
-                // Server is available, proceed with loadsheet generation
-                LogService.Log(LogLevel.Information, nameof(GsxController),
-                    "Prosim EFB server is available. Proceeding with loadsheet generation.");
-
-                // Generate preliminary loadsheet using Prosim's native functionality with enhanced error handling
-                _loadsheetService.GeneratePreliminaryLoadsheet().ContinueWith(task =>
-                {
-                    if (task.IsFaulted)
-                    {
-                        // Handle task failure (exception in the task itself)
-                        LogService.Log(LogLevel.Error, nameof(GsxController),
-                            $"Task exception while generating preliminary loadsheet: {task.Exception?.InnerException?.Message ?? "Unknown error"}");
-                        return;
-                    }
-
-                    var result = task.Result;
-                    if (result.Success)
-                    {
-                        _prelimLoadsheetGenerated = true;
-                        LogService.Log(LogLevel.Information, nameof(GsxController),
-                            "Preliminary loadsheet generated successfully");
-                    }
-                    else
-                    {
-                        // Log the error but don't retry immediately - the service handles rate limiting
-                        LogService.Log(LogLevel.Error, nameof(GsxController),
-                            $"Failed to generate preliminary loadsheet: {result.ErrorMessage}");
-                    }
-                });
-            });
-        }
-
-        /// <summary>
-        /// Generate final loadsheet
-        /// </summary>
-        private void GenerateFinalLoadsheet()
-        {
-            LogService.Log(LogLevel.Information, nameof(GsxController),
-                "Generating final loadsheet using Prosim native functionality");
-
-            // Check server status and generate loadsheet
-            _loadsheetService.CheckServerStatus().ContinueWith(serverCheckTask =>
-            {
-            if (serverCheckTask.IsFaulted)
-            {
-                LogService.Log(LogLevel.Error, nameof(GsxController),
-                    $"Error checking Prosim EFB server status: {serverCheckTask.Exception?.InnerException?.Message ?? "Unknown error"}");
-                return;
-            }
-
-            bool serverAvailable = serverCheckTask.Result;
-            if (!serverAvailable)
-            {
-                LogService.Log(LogLevel.Error, nameof(GsxController),
-                    "Prosim EFB server is not available. Cannot generate final loadsheet. " +
-                    "Check if Prosim is running and the EFB server is properly configured.");
-                return;
-            }
-
-            // Server is available, proceed with loadsheet generation
-            LogService.Log(LogLevel.Information, nameof(GsxController),
-                "Prosim EFB server is available. Proceeding with final loadsheet generation.");
-
-            // Generate final loadsheet using Prosim's native functionality with enhanced error handling
-            _loadsheetService.GenerateFinalLoadsheet().ContinueWith(task =>
-            {
-            if (task.IsFaulted)
-            {
-                // Handle task failure (exception in the task itself)
-                LogService.Log(LogLevel.Error, nameof(GsxController),
-                    $"Task exception while generating final loadsheet: {task.Exception?.InnerException?.Message ?? "Unknown error"}");
-                return;
-            }
-
-                var result = task.Result;
-                if (result.Success)
-                {
-                    _finalLoadsheetSent = true;
-                    LogService.Log(LogLevel.Information, nameof(GsxController),
-                        "Final loadsheet generated and sent to MCDU successfully");
-
-                    // If ACARS is enabled, send the loadsheet data via ACARS
-                    if (_model.UseAcars)
-                    {
-                        try
-                        {
-                            // Get the loadsheet data from the service
-                            var loadsheetData = _loadsheetService.GetLoadsheetData("Final");
-                            if (loadsheetData != null)
-                            {
-                                // Parse the loadsheet data and send it via ACARS
-                                string finalLoadsheetString = loadsheetData.ToString();
-                                _acarsClient.SendMessageToAcars(
-                                    _flightPlanService.GetFMSFlightNumber(), "telex", finalLoadsheetString);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            LogService.Log(LogLevel.Error, nameof(GsxController),
-                                $"Error sending loadsheet to ACARS: {ex.Message}");
-                        }
-                    }
-                }
-                else
-                {
-                    // Log the error but don't retry immediately - the service handles rate limiting
-                    LogService.Log(LogLevel.Error, nameof(GsxController),
-                        $"Failed to generate final loadsheet: {result.ErrorMessage}");
-                }
-            });
-            });
         }
 
         /// <summary>
