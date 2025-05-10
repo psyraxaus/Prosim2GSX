@@ -86,5 +86,15 @@
         /// <param name="flightPlan">The flight plan</param>
         /// <param name="forceCurrent">Whether to force current values</param>
         void UpdatePassengerData(FlightPlan flightPlan, bool forceCurrent);
+
+        /// <summary>
+        /// Updates the passenger statistics object in Prosim to support loadsheet generation.
+        /// 
+        /// This method creates and sets the "efb.passengerStatistics" object that Prosim's
+        /// loadsheet generation requires. It attempts to read passenger distribution data from
+        /// zone amounts, but gracefully handles cases where zone data is not yet available by
+        /// implementing a fallback distribution algorithm.
+        /// </summary>
+        void UpdatePassengerStatistics();
     }
 }

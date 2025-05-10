@@ -21,84 +21,37 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         private readonly IProsimInterface _prosimService;
         private readonly IFlightPlanService _flightPlanService;
         private readonly IDataRefMonitoringService _dataRefMonitoringService;
-        private DataRefChangedHandler _prelimLoadsheetHandler;
-        private DataRefChangedHandler _finalLoadsheetHandler;
+
 
         // Track if we've already generated a loadsheet for the current flight
-        private bool _prelimLoadsheetGenerated = false;
-        private bool _finalLoadsheetGenerated = false;
+        private bool _preliminaryLoadsheetRequested = false;
+        private bool _finalLoadsheetRequested = false;
+        private readonly object _loadsheetLock = new object();
+        private bool _preliminaryLoadsheetGenerating = false;
+        private bool _finalLoadsheetGenerating = false;
 
         /// <summary>
         /// Event raised when a loadsheet is received
         /// </summary>
         public event EventHandler<LoadsheetReceivedEventArgs> LoadsheetReceived;
 
-        public LoadsheetService(IProsimInterface prosimService, IFlightPlanService flightPlanService, IDataRefMonitoringService dataRefMonitoringService)
+        public LoadsheetService(IProsimInterface prosimService, IFlightPlanService flightPlanService)
         {
             _prosimService = prosimService ?? throw new ArgumentNullException(nameof(prosimService));
             _flightPlanService = flightPlanService ?? throw new ArgumentNullException(nameof(flightPlanService));
-            _dataRefMonitoringService = dataRefMonitoringService ?? throw new ArgumentNullException(nameof(dataRefMonitoringService));
-            _prelimLoadsheetHandler = new DataRefChangedHandler(OnPrelimLoadsheetChanged);
-            _finalLoadsheetHandler = new DataRefChangedHandler(OnFinalLoadsheetChanged);
-        }
-
-        /// <summary>
-        /// Safely check if a dataref exists
-        /// </summary>
-        /// <param name="dataRef">The dataref to check</param>
-        /// <returns>True if the dataref exists, false otherwise</returns>
-        private bool DataRefExists(string dataRef)
-        {
-            try
-            {
-                var value = _prosimService.GetProsimVariable(dataRef);
-                return true;
-            }
-            catch (Exception)
-            {
-                return false;
-            }
         }
 
         /// <inheritdoc/>
-        public void SubscribeToLoadsheetChanges()
-        {
-            if (!_flightPlanService.IsFlightplanLoaded())
-            {
-                LogService.Log(LogLevel.Warning, nameof(LoadsheetService), "Cannot subscribe to loadsheet changes - flight plan not loaded");
-                return;
-            }
+        public bool PreliminaryLoadsheetRequested => _preliminaryLoadsheetRequested;
 
-            // Check if the datarefs exist before subscribing
-            bool prelimExists = DataRefExists("efb.prelimLoadsheet");
-            bool finalExists = DataRefExists("efb.finalLoadsheet");
+        /// <inheritdoc/>
+        public bool FinalLoadsheetRequested => _finalLoadsheetRequested;
 
-            if (prelimExists)
-            {
-                _dataRefMonitoringService.SubscribeToDataRef("efb.prelimLoadsheet", _prelimLoadsheetHandler);
-                LogService.Log(LogLevel.Information, nameof(LoadsheetService), "Subscribed to preliminary loadsheet changes");
-            }
-
-            if (finalExists)
-            {
-                _dataRefMonitoringService.SubscribeToDataRef("efb.finalLoadsheet", _finalLoadsheetHandler);
-                LogService.Log(LogLevel.Information, nameof(LoadsheetService), "Subscribed to final loadsheet changes");
-            }
-
-            if (!prelimExists && !finalExists)
-            {
-                LogService.Log(LogLevel.Warning, nameof(LoadsheetService),
-                    "Loadsheet datarefs don't exist yet. They will be created after successful loadsheet generation.");
-            }
-        }
-
-        /// <summary>
-        /// Reset loadsheet generation flags when flight plan changes
-        /// </summary>
+        /// <inheritdoc/>
         public void ResetLoadsheetFlags()
         {
-            _prelimLoadsheetGenerated = false;
-            _finalLoadsheetGenerated = false;
+            _preliminaryLoadsheetRequested = false;
+            _finalLoadsheetRequested = false;
             LogService.Log(LogLevel.Information, nameof(LoadsheetService),
                 "Loadsheet generation flags reset for new flight");
         }
@@ -106,182 +59,205 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         /// <inheritdoc/>
         public async Task<LoadsheetResult> GenerateLoadsheet(string type, int maxRetries = 3, bool force = false)
         {
-            // Check if we've already generated this type of loadsheet
-            if (type == "Preliminary" && _prelimLoadsheetGenerated && !force)
+            // Use a lock to check and set the "generating" flag
+            bool shouldGenerate = false;
+            lock (_loadsheetLock)
             {
-                LogService.Log(LogLevel.Information, nameof(LoadsheetService),
-                    "Preliminary loadsheet already generated for this flight. Skipping generation.");
-                return LoadsheetResult.CreateSuccess();
+                if (type == "Preliminary")
+                {
+                    if (!_preliminaryLoadsheetRequested && !_preliminaryLoadsheetGenerating || force)
+                    {
+                        _preliminaryLoadsheetGenerating = true;
+                        shouldGenerate = true;
+                    }
+                }
+                else if (type == "Final")
+                {
+                    if (!_finalLoadsheetRequested && !_finalLoadsheetGenerating || force)
+                    {
+                        _finalLoadsheetGenerating = true;
+                        shouldGenerate = true;
+                    }
+                }
             }
-            else if (type == "Final" && _finalLoadsheetGenerated && !force)
+
+            // If we shouldn't generate, return early
+            if (!shouldGenerate)
             {
                 LogService.Log(LogLevel.Information, nameof(LoadsheetService),
-                    "Final loadsheet already generated for this flight. Skipping generation.");
+                    $"{type} loadsheet already generated or being generated for this flight. Skipping generation.");
                 return LoadsheetResult.CreateSuccess();
             }
 
             int retryCount = 0;
 
-            while (retryCount <= maxRetries)
+            try
             {
-                try
+                while (retryCount <= maxRetries)
                 {
-                    using (var client = new HttpClient())
+                    try
                     {
-                        string fullUrl = $"{_prosimService.GetBackendUrl()}/loadsheet/generate?type={type}";
-
-                        // Set headers to match exactly what's in the JavaScript request
-                        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
-                        client.DefaultRequestHeaders.Add("Origin", "http://10.0.1.22:5010");
-                        client.DefaultRequestHeaders.Add("Referer", "http://10.0.1.22:5010/");
-                        client.DefaultRequestHeaders.Add("User-Agent", "C#HttpClient");
-
-                        // Make sure the content is exactly the same format
-                        var content = new StringContent("{}", Encoding.UTF8, "application/json");
-
-                        // Validate the backend URL
-                        if (string.IsNullOrEmpty(_prosimService.GetBackendUrl()))
+                        using (var client = new HttpClient())
                         {
-                            LogService.Log(LogLevel.Error, nameof(LoadsheetService),
-                                "Backend URL is empty. Prosim EFB server may not be running or properly configured.");
-                            return LoadsheetResult.CreateFailure(
-                                "Backend URL is empty. Prosim EFB server may not be running or properly configured.");
-                        }
+                            string fullUrl = $"{_prosimService.GetBackendUrl()}/loadsheet/generate?type={type}";
 
-                        // Log the exact request being sent
-                        LogService.Log(LogLevel.Debug, nameof(LoadsheetService),
-                            $"Sending request to URL: {fullUrl}, Content: {await content.ReadAsStringAsync()}");
+                            // Make sure the content is exactly the same format - empty JSON object
+                            var content = new StringContent("{}", Encoding.UTF8, "application/json");
 
-                        // Set timeout to detect connection issues faster
-                        client.Timeout = TimeSpan.FromSeconds(10);
-
-                        // Send the request and capture detailed timing
-                        DateTime requestStart = DateTime.Now;
-                        HttpResponseMessage response;
-
-                        try
-                        {
-                            response = await client.PostAsync(fullUrl, content);
-                        }
-                        catch (TaskCanceledException)
-                        {
-                            // Handle timeout specifically
-                            TimeSpan elapsed = DateTime.Now - requestStart;
-                            LogService.Log(LogLevel.Error, nameof(LoadsheetService),
-                                $"Request timed out after {elapsed.TotalSeconds:F1} seconds. Check if Prosim EFB server is running and responsive.");
-
-                            if (retryCount < maxRetries)
+                            // Validate the backend URL
+                            if (string.IsNullOrEmpty(_prosimService.GetBackendUrl()))
                             {
-                                retryCount++;
-                                int delayMs = 1000 * retryCount;
-                                LogService.Log(LogLevel.Warning, nameof(LoadsheetService),
-                                    $"Retrying in {delayMs / 1000} seconds (attempt {retryCount}/{maxRetries})...");
-                                await Task.Delay(delayMs);
-                                continue;
+                                LogService.Log(LogLevel.Error, nameof(LoadsheetService),
+                                    "Backend URL is empty. Prosim EFB server may not be running or properly configured.");
+                                return LoadsheetResult.CreateFailure(
+                                    "Backend URL is empty. Prosim EFB server may not be running or properly configured.");
                             }
 
-                            return LoadsheetResult.CreateFailure(
-                                "Request timed out. Check if Prosim EFB server is running and responsive.");
-                        }
-                        catch (HttpRequestException ex)
-                        {
-                            // Handle connection issues
-                            LogService.Log(LogLevel.Error, nameof(LoadsheetService),
-                                $"HTTP request error: {ex.Message}. " +
-                                "Check network connectivity and if Prosim EFB server is running.");
+                            // Log the exact request being sent
+                            LogService.Log(LogLevel.Debug, nameof(LoadsheetService),
+                                $"Sending request to URL: {fullUrl}, Content: {await content.ReadAsStringAsync()}", LogCategory.Loadsheet);
 
-                            if (retryCount < maxRetries)
+                            // Set timeout to detect connection issues faster
+                            client.Timeout = TimeSpan.FromSeconds(10);
+
+                            // Send the request and capture detailed timing
+                            DateTime requestStart = DateTime.Now;
+                            HttpResponseMessage response;
+
+                            try
                             {
-                                retryCount++;
-                                int delayMs = 1000 * retryCount;
-                                LogService.Log(LogLevel.Warning, nameof(LoadsheetService),
-                                    $"Retrying in {delayMs / 1000} seconds (attempt {retryCount}/{maxRetries})...");
-                                await Task.Delay(delayMs);
-                                continue;
+                                response = await client.PostAsync(fullUrl, content);
+                            }
+                            catch (TaskCanceledException)
+                            {
+                                // Handle timeout specifically
+                                TimeSpan elapsed = DateTime.Now - requestStart;
+                                LogService.Log(LogLevel.Error, nameof(LoadsheetService),
+                                    $"Request timed out after {elapsed.TotalSeconds:F1} seconds. Check if Prosim EFB server is running and responsive.");
+
+                                if (retryCount < maxRetries)
+                                {
+                                    retryCount++;
+                                    int delayMs = 1000 * retryCount;
+                                    LogService.Log(LogLevel.Warning, nameof(LoadsheetService),
+                                        $"Retrying in {delayMs / 1000} seconds (attempt {retryCount}/{maxRetries})...");
+                                    await Task.Delay(delayMs);
+                                    continue;
+                                }
+
+                                return LoadsheetResult.CreateFailure(
+                                    "Request timed out. Check if Prosim EFB server is running and responsive.");
+                            }
+                            catch (HttpRequestException ex)
+                            {
+                                // Handle connection issues
+                                LogService.Log(LogLevel.Error, nameof(LoadsheetService),
+                                    $"HTTP request error: {ex.Message}. " +
+                                    "Check network connectivity and if Prosim EFB server is running.");
+
+                                if (retryCount < maxRetries)
+                                {
+                                    retryCount++;
+                                    int delayMs = 1000 * retryCount;
+                                    LogService.Log(LogLevel.Warning, nameof(LoadsheetService),
+                                        $"Retrying in {delayMs / 1000} seconds (attempt {retryCount}/{maxRetries})...");
+                                    await Task.Delay(delayMs);
+                                    continue;
+                                }
+
+                                return LoadsheetResult.CreateFailure(
+                                    $"HTTP request error: {ex.Message}. Check network connectivity and if Prosim EFB server is running.");
                             }
 
-                            return LoadsheetResult.CreateFailure(
-                                $"HTTP request error: {ex.Message}. Check network connectivity and if Prosim EFB server is running.");
-                        }
+                            // Calculate and log request duration
+                            TimeSpan requestDuration = DateTime.Now - requestStart;
+                            LogService.Log(LogLevel.Debug, nameof(LoadsheetService),
+                                $"Request completed in {requestDuration.TotalMilliseconds:F0}ms", LogCategory.Loadsheet);
 
-                        // Calculate and log request duration
-                        TimeSpan requestDuration = DateTime.Now - requestStart;
-                        LogService.Log(LogLevel.Debug, nameof(LoadsheetService),
-                            $"Request completed in {requestDuration.TotalMilliseconds:F0}ms");
+                            string responseContent = await response.Content.ReadAsStringAsync();
 
-                        string responseContent = await response.Content.ReadAsStringAsync();
+                            // Always log response for debugging
+                            LogService.Log(LogLevel.Debug, nameof(LoadsheetService),
+                                $"Response Status: {response.StatusCode}, Content: {responseContent}", LogCategory.Loadsheet);
 
-                        // Always log response for debugging
-                        LogService.Log(LogLevel.Debug, nameof(LoadsheetService),
-                            $"Response Status: {response.StatusCode}, Content: {responseContent}");
-
-                        if (response.IsSuccessStatusCode)
-                        {
-                            // After successful generation, try to subscribe to the loadsheet datarefs
-                            // as they should now exist
-                            SubscribeToLoadsheetChanges();
-
-                            // Set the flag to indicate we've generated this type of loadsheet
-                            if (type == "Preliminary")
-                                _prelimLoadsheetGenerated = true;
-                            else if (type == "Final")
-                                _finalLoadsheetGenerated = true;
-
-                            LogService.Log(LogLevel.Information, nameof(LoadsheetService),
-                                $"{type} loadsheet generated successfully");
-
-                            return LoadsheetResult.CreateSuccess();
-                        }
-                        else
-                        {
-                            if (retryCount < maxRetries)
+                            if (response.IsSuccessStatusCode)
                             {
-                                // If we have retries left, log and retry
-                                retryCount++;
-                                int delayMs = 1000 * retryCount; // Exponential backoff
+                                // Set the flag to indicate we've generated this type of loadsheet
+                                lock (_loadsheetLock)
+                                {
+                                    if (type == "Preliminary")
+                                        _preliminaryLoadsheetRequested = true;
+                                    else if (type == "Final")
+                                        _finalLoadsheetRequested = true;
+                                }
 
-                                LogService.Log(LogLevel.Warning, nameof(LoadsheetService),
-                                    $"Failed to generate {type} loadsheet (attempt {retryCount}/{maxRetries}). " +
-                                    $"Retrying in {delayMs / 1000} seconds...");
+                                LogService.Log(LogLevel.Information, nameof(LoadsheetService),
+                                    $"{type} loadsheet generated successfully");
 
-                                await Task.Delay(delayMs);
-                                continue;
+                                return LoadsheetResult.CreateSuccess();
                             }
+                            else
+                            {
+                                if (retryCount < maxRetries)
+                                {
+                                    // If we have retries left, log and retry
+                                    retryCount++;
+                                    int delayMs = 1000 * retryCount; // Exponential backoff
 
-                            // If we've exhausted retries or this is the last attempt, return the failure
-                            return LoadsheetResult.CreateFailure(
-                                response.StatusCode,
-                                $"Failed to generate {type} loadsheet after {maxRetries + 1} attempts. Status: {response.StatusCode}",
-                                responseContent
-                            );
+                                    LogService.Log(LogLevel.Warning, nameof(LoadsheetService),
+                                        $"Failed to generate {type} loadsheet (attempt {retryCount}/{maxRetries}). " +
+                                        $"Retrying in {delayMs / 1000} seconds...");
+
+                                    await Task.Delay(delayMs);
+                                    continue;
+                                }
+
+                                // If we've exhausted retries or this is the last attempt, return the failure
+                                return LoadsheetResult.CreateFailure(
+                                    response.StatusCode,
+                                    $"Failed to generate {type} loadsheet after {maxRetries + 1} attempts. Status: {response.StatusCode}",
+                                    responseContent
+                                );
+                            }
                         }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (retryCount < maxRetries)
+                        {
+                            // If we have retries left, log and retry
+                            retryCount++;
+                            int delayMs = 1000 * retryCount; // Exponential backoff
+
+                            LogService.Log(LogLevel.Warning, nameof(LoadsheetService),
+                                $"Exception generating {type} loadsheet (attempt {retryCount}/{maxRetries}): {ex.Message}. " +
+                                $"Retrying in {delayMs / 1000} seconds...");
+
+                            await Task.Delay(delayMs);
+                            continue;
+                        }
+
+                        // Simplified error handling for debugging
+                        string errorMessage = $"Exception after {maxRetries + 1} attempts: {ex.GetType().Name}, Message: {ex.Message}";
+                        LogService.Log(LogLevel.Error, nameof(LoadsheetService), errorMessage);
+                        return LoadsheetResult.CreateFailure(errorMessage);
                     }
                 }
-                catch (Exception ex)
+
+                // This should never be reached, but just in case
+                return LoadsheetResult.CreateFailure($"Unexpected error generating {type} loadsheet after {maxRetries + 1} attempts");
+            }
+            finally
+            {
+                // Always reset the "generating" flag when the method exits (success or failure)
+                lock (_loadsheetLock)
                 {
-                    if (retryCount < maxRetries)
-                    {
-                        // If we have retries left, log and retry
-                        retryCount++;
-                        int delayMs = 1000 * retryCount; // Exponential backoff
-
-                        LogService.Log(LogLevel.Warning, nameof(LoadsheetService),
-                            $"Exception generating {type} loadsheet (attempt {retryCount}/{maxRetries}): {ex.Message}. " +
-                            $"Retrying in {delayMs / 1000} seconds...");
-
-                        await Task.Delay(delayMs);
-                        continue;
-                    }
-
-                    // Simplified error handling for debugging
-                    string errorMessage = $"Exception after {maxRetries + 1} attempts: {ex.GetType().Name}, Message: {ex.Message}";
-                    LogService.Log(LogLevel.Error, nameof(LoadsheetService), errorMessage);
-                    return LoadsheetResult.CreateFailure(errorMessage);
+                    if (type == "Preliminary")
+                        _preliminaryLoadsheetGenerating = false;
+                    else if (type == "Final")
+                        _finalLoadsheetGenerating = false;
                 }
             }
-
-            // This should never be reached, but just in case
-            return LoadsheetResult.CreateFailure($"Unexpected error generating {type} loadsheet after {maxRetries + 1} attempts");
         }
 
         /// <inheritdoc/>

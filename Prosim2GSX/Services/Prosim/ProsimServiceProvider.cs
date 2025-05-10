@@ -70,7 +70,7 @@ namespace Prosim2GSX.Services
             _doorControlService = new DoorControlService(_prosimInterface);
             _refuelingService = new RefuelingService(_prosimInterface, _model);
             _groundService = new GroundServiceImplementation(_prosimInterface);
-            _loadsheetService = new LoadsheetService(_prosimInterface, _flightPlanService, _dataRefService);
+            _loadsheetService = new LoadsheetService(_prosimInterface, _flightPlanService);
 
             // Create GSX services if SimConnect is available
             if (IPCManager.SimConnect != null)

@@ -136,10 +136,7 @@ namespace Prosim2GSX.Services.GSX
         {
             try
             {
-                // Subscribe to loadsheet changes if the service is available
-                _loadsheetService?.SubscribeToLoadsheetChanges();
-
-                // Create and register cockpit door handler
+                 // Create and register cockpit door handler
                 _cockpitDoorHandler = new DataRefChangedHandler(OnCockpitDoorStateChanged);
 
                 // Get the data ref monitoring service
@@ -434,7 +431,7 @@ namespace Prosim2GSX.Services.GSX
         /// <summary>
         /// Handle the DEPARTURE state
         /// </summary>
-        private void HandleDepartureState()
+        private async void HandleDepartureState()
         {
             // Check refueling, boarding, and cargo states
             bool refuelingComplete = _refuelingService.IsRefuelingComplete;
@@ -443,6 +440,7 @@ namespace Prosim2GSX.Services.GSX
             bool refuelingRequested = _refuelingService.IsRefuelingRequested;
             bool refuelingActive = _refuelingService.IsRefuelingActive;
             bool refuelingPaused = _refuelingService.IsRefuelingPaused;
+            bool fuelHoseConnected = _refuelingService.IsFuelHoseConnected;
             bool boardingComplete = _boardingService.IsBoardingComplete;
             bool boardingRequested = _boardingService.IsBoardingRequested;
             bool cateringComplete = _cateringService.IsCateringComplete;
@@ -450,26 +448,29 @@ namespace Prosim2GSX.Services.GSX
             bool fuelTargetSet = _prosimInterface.GetStatusFunction("aircraft.refuel.fuelTarget") >= 1 && _prosimInterface.GetStatusFunction("efb.plannedfuel") >= 1;
             bool cargoTargeteSet = _prosimInterface.GetStatusFunction("efb.plannedCargoKg") >= 1;
             bool passengerTargetSet = _prosimInterface.GetProsimVariable("efb.passengers.booked") == _prosimInterface.GetProsimVariable("aircraft.passengers.seatOccupation");
-            bool prelimLoadsheetGenerated = _prosimInterface.GetProsimVariable("efb.prelimLoadsheet");
-            bool finalLoadsheetGenerated = _prosimInterface.GetProsimVariable("efb.finalLoadsheet");
+            bool preliminaryLoadsheetRequested = _loadsheetService.PreliminaryLoadsheetRequested;
+            bool finalLoadsheetRequested = _loadsheetService.FinalLoadsheetRequested;
 
             // First, check if preliminary loadsheet needs to be generated
-            if (!prelimLoadsheetGenerated)
+            if (!preliminaryLoadsheetRequested && fuelHoseConnected)
             {
-                // Get refueling state information
-
-                bool fuelHoseConnected = _refuelingService.IsFuelHoseConnected;
-
                 // Log current conditions for debugging
                 LogService.Log(LogLevel.Debug, nameof(GsxController),
                     $"Loadsheet conditions: Fuel Target Set={fuelTargetSet}, Cargo Target Set: {cargoTargeteSet} Hose Connected: {fuelHoseConnected}, Refueling Active: {refuelingActive}, Refueling Complete: {refuelingComplete}", LogCategory.Refueling);
 
                 // Only generate loadsheet when all conditions are met
-                if (fuelTargetSet && cargoTargeteSet && fuelHoseConnected && refuelingActive && !refuelingComplete)
+                if (fuelTargetSet && cargoTargeteSet && refuelingActive && !refuelingComplete)
                 {
                     LogService.Log(LogLevel.Information, nameof(GsxController),
                         "Generating preliminary loadsheet - all conditions met");
-                    _loadsheetService.GenerateLoadsheet("Preliminary");
+
+                    // Update passenger statistics before generating loadsheet
+                    _passengerService.UpdatePassengerStatistics();
+
+                    // Now generate the loadsheet
+                    await _loadsheetService.GenerateLoadsheet("Preliminary");
+                    // Update local state:
+                    preliminaryLoadsheetRequested = true;
                     return;
                 }
             }
@@ -574,7 +575,7 @@ namespace Prosim2GSX.Services.GSX
             if (refuelingComplete && boardingComplete)
             {
                 // Handle final loadsheet generation
-                if (!finalLoadsheetGenerated)
+                if (!finalLoadsheetRequested)
                 {
                     if (_loadsheetDelay == 0)
                     {

@@ -10,10 +10,14 @@ namespace Prosim2GSX.Services.Prosim.Interfaces
     public interface ILoadsheetService
     {
         /// <summary>
-        /// Subscribe to loadsheet data changes - should only be called after flight plan is loaded
-        /// and loadsheet datarefs exist
+        /// Whether the preliminary loadsheet has been requested
         /// </summary>
-        void SubscribeToLoadsheetChanges();
+        bool PreliminaryLoadsheetRequested { get; }
+
+        /// <summary>
+        /// Whether the final loadsheet has been requested
+        /// </summary>
+        bool FinalLoadsheetRequested { get; }
 
         /// <summary>
         /// Generate a loadsheet using Prosim's native functionality
@@ -39,5 +43,10 @@ namespace Prosim2GSX.Services.Prosim.Interfaces
         /// Reset all loadsheets
         /// </summary>
         Task<bool> ResetLoadsheets();
+
+        /// <<summary>
+        /// Reset loadsheet generation flags when flight plan changes
+        /// </summary>>
+        void ResetLoadsheetFlags();
     }
 }

@@ -66,6 +66,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                 else
                 {
                     _paxPlanned = _prosimService.GetProsimVariable("efb.passengers.booked");
+
                     if (forceCurrent)
                         _paxCurrent = _paxPlanned;
                 }
@@ -276,6 +277,87 @@ namespace Prosim2GSX.Services.Prosim.Implementation
 
             LogService.Log(LogLevel.Debug, nameof(PassengerService), seatString);
             _prosimService.SetProsimVariable("aircraft.passengers.seatOccupation.string", seatString);
+        }
+
+        /// <inheritdoc/>
+        public void UpdatePassengerStatistics()
+        {
+            try
+            {
+                // Read the zone amounts, catching any exceptions
+                int business = 0, economy1 = 0, economy2 = 0, economy3 = 0;
+
+                try { business = _prosimService.GetProsimVariable("aircraft.passengers.zone1.amount"); } catch { }
+                try { economy1 = _prosimService.GetProsimVariable("aircraft.passengers.zone2.amount"); } catch { }
+                try { economy2 = _prosimService.GetProsimVariable("aircraft.passengers.zone3.amount"); } catch { }
+                try { economy3 = _prosimService.GetProsimVariable("aircraft.passengers.zone4.amount"); } catch { }
+
+                int totalZones = business + economy1 + economy2 + economy3;
+
+                // Count the total number of true values in _paxPlanned (occupied seats)
+                int totalPlannedPassengers = 0;
+                if (_paxPlanned != null && _paxPlanned is bool[])
+                {
+                    bool[] seatOccupation = _paxPlanned as bool[];
+                    totalPlannedPassengers = seatOccupation.Count(seat => seat);
+                }
+
+                // If zones aren't populated, distribute passengers evenly
+                if (totalZones == 0 && totalPlannedPassengers > 0)
+                {
+                    LogService.Log(LogLevel.Warning, nameof(PassengerService),
+                        "Zone amounts not available. Distributing passengers evenly across zones.");
+
+                    // Simple even distribution algorithm - you can adjust based on your A320 cabin config
+                    int remaining = totalPlannedPassengers;
+
+                    // Distribute across zones based on seating capacity ratios
+                    // Adjust these percentages based on your A320 model's cabin layout
+                    business = (int)(remaining * 0.4); // 40% in first zone
+                    remaining -= business;
+
+                    economy1 = (int)(remaining * 0.5); // 50% of remaining in second zone
+                    remaining -= economy1;
+
+                    // Split the remainder between Zone3 and Zone4
+                    economy2 = (int)(remaining * 0.7); // 70% of remaining to zone3
+                    economy3 = remaining - economy2; // Rest to zone4
+
+                    LogService.Log(LogLevel.Debug, nameof(PassengerService),
+                        $"Distributed {totalPlannedPassengers} passengers: Business: {business}, Economy 1: {economy1}, Economy 2: {economy2}, Economy 3: {economy3}");
+                }
+
+                // Calculate totals
+                int totalPax = totalZones > 0 ? totalZones : totalPlannedPassengers;
+                int businessPax = business; // Adjust based on your configuration if needed
+                int economyPax = totalPax - businessPax;
+
+                // Combine Zone3 and Zone4 for Section3
+                int paxSection3 = economy2 + economy3;
+
+                // Create the passenger statistics object
+                var passengerStatistics = new
+                {
+                    NumOfPaxInBusiness = businessPax,
+                    NumOfPaxInEconomy = economyPax,
+                    NumOfPaxInSection1 = business,
+                    NumOfPaxInSection2 = economy1,
+                    NumOfPaxInSection3 = paxSection3, // Combined Zone3 and Zone4
+                    Total = totalPax
+                };
+
+                // Serialize and set in Prosim
+                string passengerJson = Newtonsoft.Json.JsonConvert.SerializeObject(passengerStatistics);
+                LogService.Log(LogLevel.Debug, nameof(PassengerService),
+                    $"Setting efb.passengerStatistics: {passengerJson}");
+
+                _prosimService.SetProsimVariable("efb.passengerStatistics", passengerJson);
+            }
+            catch (Exception ex)
+            {
+                LogService.Log(LogLevel.Error, nameof(PassengerService),
+                    $"Exception during UpdatePassengerStatistics: {ex.Message}");
+            }
         }
     }
 }
