@@ -332,6 +332,7 @@
 
                         <!-- Log Messages -->
                         <TextBlock Text="LOG MESSAGES" Style="{StaticResource CategoryHeaderStyle}"/>
+                    
                         <Border Style="{StaticResource SectionBorderStyle}" MinHeight="120" Height="137">
                             <ListView x:Name="lvLogMessages" 
                                       MaxHeight="120"
@@ -949,7 +950,58 @@
                             </StackPanel>
                         </Border>
 
+                        <!-- Debug Log Configuration Section -->
+                        <TextBlock Text="LOGGING" Style="{StaticResource CategoryHeaderStyle}"/>
+                        <Border Style="{StaticResource SectionBorderStyle}">
+                            <StackPanel>
+                                <Label Content="Debug Log Verbosity:" />
+                                <ComboBox x:Name="cboDebugVerbosity" 
+                                     SelectedIndex="0" 
+                                     SelectionChanged="cboDebugVerbosity_SelectionChanged" 
+                                     Margin="0,5,0,10">
+                                    <ComboBoxItem Content="All Categories" Tag="All" />
+                                    <ComboBoxItem Content="Refueling" Tag="Refueling" />
+                                    <ComboBoxItem Content="Boarding" Tag="Boarding" />
+                                    <ComboBoxItem Content="Catering" Tag="Catering" />
+                                    <ComboBoxItem Content="Ground Services" Tag="GroundServices" />
+                                    <ComboBoxItem Content="SimConnect" Tag="SimConnect" />
+                                    <ComboBoxItem Content="Prosim" Tag="Prosim" />
+                                    <ComboBoxItem Content="Menu" Tag="Menu" />
+                                    <ComboBoxItem Content="Custom..." Tag="Custom" />
+                                </ComboBox>
+
+                                <!-- Custom Categories Input (initially hidden) -->
+                                <StackPanel x:Name="pnlCustomVerbosity" Visibility="Collapsed">
+                                    <Label Content="Enter comma-separated categories:" />
+                                    <TextBox x:Name="txtCustomVerbosity" 
+                    Margin="0,5,0,5"
+                    KeyDown="txtCustomVerbosity_KeyDown"
+                    LostFocus="txtCustomVerbosity_LostFocus" />
+                                    <Label Content="Available categories:" />
+                                    <TextBlock TextWrapping="Wrap" Margin="5">
+                All, GsxController, Refueling, Boarding, Catering, GroundServices, SimConnect, Prosim, Events, Menu, Audio, Configuration, Doors, Cargo, Loadsheet
+                                    </TextBlock>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Appearance Settings -->
+                        <TextBlock Text="EXTERNAL DEPENDENCIES" Style="{StaticResource CategoryHeaderStyle}" Margin="0,20,0,0"/>
+                        <Border Style="{StaticResource SectionBorderStyle}">
+                            <StackPanel>
+                                <Button Content="Configure External Dependencies" 
+                HorizontalAlignment="Left"
+                Padding="10,5"
+                Margin="0,5,0,5"
+                Background="{DynamicResource PrimaryColor}"
+                Foreground="{DynamicResource HeaderText}"
+                Click="btnConfigureExternalDependencies_Click"/>
+                                <TextBlock Text="Configure paths to external DLL files (ProsimSDK.dll and VoicemeeterRemote64.dll)"
+                   TextWrapping="Wrap"
+                   Margin="0,5,0,0"
+                   Foreground="#808080"/>
+                            </StackPanel>
+                        </Border>
                         <TextBlock Text="APPEARANCE" Style="{StaticResource CategoryHeaderStyle}"/>
                         <Border Style="{StaticResource SectionBorderStyle}">
                             <StackPanel>

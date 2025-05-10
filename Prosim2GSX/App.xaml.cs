@@ -2,7 +2,10 @@
 using CefSharp.OffScreen;
 using H.NotifyIcon;
 using Prosim2GSX.Models;
+using Prosim2GSX.Services;
 using Prosim2GSX.Services.Audio;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 using Prosim2GSX.Themes;
 using Serilog;
 using System;
@@ -60,42 +63,120 @@ namespace Prosim2GSX
             try
             {
                 // Create the service model
-                Model = new();
-                
-                // Check for default SimBrief ID (0) before proceeding
-                if (Model.SimBriefID == "0")
+                var serviceModel = new ServiceModel();
+                Model = serviceModel;
+
+                // First check for SimBrief ID
+                if (serviceModel.SimBriefID == "0")
                 {
                     // Show the first-time setup dialog
-                    var setupDialog = new FirstTimeSetupDialog(Model);
+                    var setupDialog = new FirstTimeSetupDialog(serviceModel);
                     bool? result = setupDialog.ShowDialog();
-                    
+
                     // If the user cancels, exit the application
                     if (result != true)
                     {
-                        Logger.Log(LogLevel.Information, "App:OnStartup", 
+                        LogService.Log(LogLevel.Information, "App:OnStartup",
                             "User cancelled first-time setup. Exiting application.");
                         Current.Shutdown();
                         return;
                     }
-                    
+
                     // At this point, the user has entered a valid SimBrief ID
-                    Logger.Log(LogLevel.Information, "App:OnStartup", 
-                        $"User entered SimBrief ID: {Model.SimBriefID}");
+                    LogService.Log(LogLevel.Information, "App:OnStartup",
+                        $"User entered SimBrief ID: {serviceModel.SimBriefID}");
                 }
-                
+
+                // Now check for external dependencies configuration
+                bool needsExternalDependenciesConfig = false;
+
+                // Check if we need custom ProsimSDK.dll (if it's not in the expected location)
+                if (!File.Exists(Path.Combine(AppDir, "lib", "ProSimSDK.dll")) &&
+                    string.IsNullOrEmpty(serviceModel.ProsimSDKPath))
+                {
+                    needsExternalDependenciesConfig = true;
+                    LogService.Log(LogLevel.Warning, "App:OnStartup",
+                        "ProSimSDK.dll not found in default location and custom path not set");
+                }
+
+                // Check if we need custom VoicemeeterRemote64.dll (if it's not in the expected location)
+                if (!File.Exists(Path.Combine(AppDir, "VoicemeeterRemote64.dll")) &&
+                    string.IsNullOrEmpty(serviceModel.VoicemeeterDllPath))
+                {
+                    needsExternalDependenciesConfig = true;
+                    LogService.Log(LogLevel.Warning, "App:OnStartup",
+                        "VoicemeeterRemote64.dll not found in default location and custom path not set");
+                }
+
+                if (needsExternalDependenciesConfig)
+                {
+                    // Show the external dependencies dialog
+                    var dependenciesDialog = new ExternalDependenciesDialog(serviceModel);
+                    bool? result = dependenciesDialog.ShowDialog();
+
+                    // If the user cancels, show a warning but continue
+                    if (result != true)
+                    {
+                        LogService.Log(LogLevel.Warning, "App:OnStartup",
+                            "User cancelled external dependencies setup. Some features may not work correctly.");
+                        MessageBox.Show(
+                            "External dependencies have not been configured. Some features related to Prosim and Voicemeeter may not work correctly.",
+                            "Warning",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                    }
+                    else
+                    {
+                        LogService.Log(LogLevel.Information, "App:OnStartup",
+                            "User configured external dependencies.");
+                    }
+                }
+
                 // Only proceed with normal initialization if we have a valid SimBrief ID
-                if (Model.IsValidSimbriefId())
+                if (serviceModel.IsValidSimbriefId())
                 {
                     InitLog();
                     InitSystray();
                     InitCef();
-                    
+
+                    // Set up DLL search paths if they have been configured
+                    if (!string.IsNullOrEmpty(serviceModel.ProsimSDKPath) && File.Exists(serviceModel.ProsimSDKPath))
+                    {
+                        string prosimDir = Path.GetDirectoryName(serviceModel.ProsimSDKPath);
+                        if (!string.IsNullOrEmpty(prosimDir))
+                        {
+                            // Add ProsimSDK directory to DLL search path
+                            Services.DllLoader.AddDllDirectory(prosimDir);
+                            LogService.Log(LogLevel.Information, "App:OnStartup",
+                                $"Added ProsimSDK directory to DLL search path: {prosimDir}");
+                        }
+                    }
+
                     // Initialize theme manager
-                    ThemeManager.Instance.SetServiceModel(Model);
+                    ThemeManager.Instance.SetServiceModel(serviceModel);
                     ThemeManager.Instance.Initialize();
 
-                    Controller = new(Model);
-                    
+                    try
+                    {
+                        LogService.Log(LogLevel.Information, "App:OnStartup", "Initializing ServiceLocator");
+                        ServiceLocator.Initialize(serviceModel);
+                        LogService.Log(LogLevel.Information, "App:OnStartup", "ServiceLocator initialized successfully");
+                    }
+                    catch (Exception ex)
+                    {
+                        LogService.Log(LogLevel.Critical, "App:OnStartup", $"Failed to initialize ServiceLocator: {ex.Message}\n{ex.StackTrace}");
+                        MessageBox.Show(
+                            $"Failed to initialize core services:\n\n{ex.Message}\n\nApplication will now exit.",
+                            "Critical Error",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Error);
+                        Current.Shutdown();
+                        return;
+                    }
+
+                    // Then create the controller that uses ServiceLocator
+                    Controller = new ServiceController(serviceModel);
+
                     // Store the ServiceController in IPCManager for access from other components
                     IPCManager.ServiceController = Controller;
                     
@@ -108,7 +189,7 @@ namespace Prosim2GSX
                         catch (Exception ex)
                         {
                             // Log the exception
-                            Logger.Log(LogLevel.Critical, "App:OnStartup", 
+                            LogService.Log(LogLevel.Critical, "App:OnStartup", 
                                 $"Critical exception in Controller.Run: {ex.GetType()} - {ex.Message}\n{ex.StackTrace}");
                         }
                     });
@@ -120,12 +201,12 @@ namespace Prosim2GSX
                     timer.Tick += OnTick;
                     timer.Start();
 
-                    MainWindow = new MainWindow(notifyIcon.DataContext as NotifyIconViewModel, Model);
+                    MainWindow = new MainWindow(notifyIcon.DataContext as NotifyIconViewModel, serviceModel);
                 }
                 else
                 {
                     // This should never happen, but just in case
-                    Logger.Log(LogLevel.Critical, "App:OnStartup", 
+                    LogService.Log(LogLevel.Critical, "App:OnStartup", 
                         "Invalid SimBrief ID after setup. Exiting application.");
                     MessageBox.Show(
                         "Invalid SimBrief ID. Please restart the application and enter a valid ID.",
@@ -138,7 +219,7 @@ namespace Prosim2GSX
             catch (Exception ex)
             {
                 // Log the exception
-                Logger.Log(LogLevel.Critical, "App:OnStartup", 
+                LogService.Log(LogLevel.Critical, "App:OnStartup", 
                     $"Critical exception during application startup: {ex.GetType()} - {ex.Message}\n{ex.StackTrace}");
                 
                 // Show a message box with the error
@@ -175,7 +256,7 @@ namespace Prosim2GSX
             Cef.Shutdown();
             base.OnExit(e);
 
-            Logger.Log(LogLevel.Information, "App:OnExit", "Prosim2GSX exiting ...");
+            LogService.Log(LogLevel.Information, "App:OnExit", "Prosim2GSX exiting ...");
         }
 
         protected void OnTick(object sender, EventArgs e)
@@ -200,12 +281,12 @@ namespace Prosim2GSX
                 loggerConfiguration.MinimumLevel.Information();
             Log.Logger = loggerConfiguration.CreateLogger();
             Log.Information($"-----------------------------------------------------------------------");
-            Logger.Log(LogLevel.Information, "App:InitLog", $"Prosim2GSX started! Log Level: {logLevel} Log File: {logFilePath}");
+            LogService.Log(LogLevel.Information, "App:InitLog", $"Prosim2GSX started! Log Level: {logLevel} Log File: {logFilePath}");
         }
 
         protected void InitSystray()
         {
-            Logger.Log(LogLevel.Information, "App:InitSystray", $"Creating SysTray Icon ...");
+            LogService.Log(LogLevel.Information, "App:InitSystray", $"Creating SysTray Icon ...");
             notifyIcon = (TaskbarIcon)FindResource("NotifyIcon");
             notifyIcon.Icon = GetIcon("logo.ico");
             notifyIcon.ForceCreate(false);
@@ -213,7 +294,7 @@ namespace Prosim2GSX
 
         protected void InitCef()
         {
-            Logger.Log(LogLevel.Information, "App:InitCef", $"Initializing Cef Browser ...");
+            LogService.Log(LogLevel.Information, "App:InitCef", $"Initializing Cef Browser ...");
             var settings = new CefSettings();
             if (Cef.IsInitialized != true)  // Handle nullable boolean from newer CEF version
                 Cef.Initialize(settings, performDependencyCheck: true, browserProcessHandler: null);

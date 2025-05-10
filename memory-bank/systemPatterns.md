@@ -82,6 +82,48 @@ graph TD
 
 ## Design Patterns
 
+### State Tracking Pattern
+The system implements a comprehensive state tracking pattern across multiple services:
+
+- **Core Approach**:
+  - Boolean flags track the state of various operations
+  - Public properties expose the state to other components
+  - State transitions are clearly defined and logged
+  - State is reset appropriately when operations complete
+  - Thread synchronization ensures consistent state
+
+- **Implementation in Key Services**:
+  - **LoadsheetService**: Tracks generation state for preliminary and final loadsheets
+  - **GsxRefuelingService**: Tracks refueling process state (requested, active, paused, completed)
+  - **GsxMenuService**: Tracks menu readiness and operator selection
+
+- **Benefits**:
+  - Better coordination between components
+  - Improved error detection and recovery
+  - Enhanced logging with context-aware messages
+  - Clear visibility of system state for debugging
+  - Prevention of duplicate operations
+  - Thread-safe state transitions
+
+- **Example from GsxRefuelingService**:
+  ```csharp
+  // State tracking properties
+  private bool _refuelingCompleted = false;
+  private bool _initialFuelSet = false;
+  private bool _refuelingRequested = false;
+  private bool _refuelingActive = false;
+  private bool _refuelingPaused = false;
+  private bool _fuelHoseConnected = false;
+
+  // Public interface for state access
+  public bool IsRefuelingComplete => _refuelingCompleted;
+  public bool IsInitialFuelSet => _initialFuelSet;
+  public bool IsRefuelingRequested => _refuelingRequested;
+  public bool IsRefuelingActive => _refuelingActive;
+  public bool IsRefuelingPaused => _refuelingPaused;
+  public bool IsFuelHoseConnected => _fuelHoseConnected;
+  ```
+
 ### Event Aggregator Pattern
 The system implements an event aggregator pattern to decouple components and improve UI responsiveness:
 
@@ -90,6 +132,9 @@ The system implements an event aggregator pattern to decouple components and imp
   - `IEventAggregator`: Interface defining publish/subscribe methods
   - `EventAggregator`: Singleton implementation with thread-safe operations
   - `SubscriptionToken`: Token-based system for managing subscriptions
+  - `Dictionary<Type, List<object>>`: Internal storage for event subscriptions
+  - `Dictionary<SubscriptionToken, object>`: Mapping between tokens and subscriptions
+  - Thread-safe locking mechanism using a private `_lockObject`
 
 - **Event Types**:
   - `ServiceStatusChangedEvent`: For ground service status changes
@@ -97,6 +142,9 @@ The system implements an event aggregator pattern to decouple components and imp
   - `FlightPhaseChangedEvent`: For flight phase transitions
   - `DataRefChangedEvent`: For Prosim dataref changes
   - `LvarChangedEvent`: For MSFS LVAR changes
+  - `FlightPlanChangedEvent`: For flight plan updates
+  - `RetryFlightPlanLoadEvent`: For triggering flight plan reload attempts
+  - `AudioStateChangedEvent`: For audio system state changes
 
 - **Implementation**:
   - Publishers call `EventAggregator.Instance.Publish<TEvent>(event)` to broadcast events
@@ -105,6 +153,9 @@ The system implements an event aggregator pattern to decouple components and imp
   - Thread-safe implementation ensures reliable operation in a multi-threaded environment
   - UI components use `Dispatcher.Invoke` to update UI elements from event handlers
   - Proper cleanup is implemented to prevent memory leaks
+  - Exception handling in the Publish method prevents event handler exceptions from affecting other handlers
+  - Events are processed synchronously to ensure proper ordering
+  - The EventAggregator is implemented as a singleton using Lazy<T> with LazyThreadSafetyMode.ExecutionAndPublication
 
 - **Example**:
   ```csharp
@@ -422,14 +473,38 @@ The system implements a callback pattern for LVAR value changes:
   ```
 - Error handling is built into the callback execution to prevent crashes
 
-### State Machine
-The service flow follows a state machine pattern:
+### Flight Phase State Machine
+The service flow follows a sophisticated state machine pattern:
 
-- Each flight phase has defined states (pre-flight, boarding, departure, etc.)
-- Transitions between states are triggered by specific events
-- Actions are performed when entering or exiting states
-- The refueling process implements a mini-state machine with states for active, paused, and completed
-- State transitions are triggered by both GSX events and fuel hose connection status
+- **Flight States**:
+  - `PREFLIGHT`: Initial state when the application starts
+  - `DEPARTURE`: After flight plan is loaded, during boarding and refueling
+  - `TAXIOUT`: After ground equipment is removed, during taxi to runway
+  - `FLIGHT`: When aircraft is airborne
+  - `TAXIIN`: After landing, during taxi to gate
+  - `ARRIVAL`: After engines off and parking brake set, during deboarding
+  - `TURNAROUND`: After deboarding complete, waiting for new flight plan
+
+- **State Transitions**:
+  - `PREFLIGHT` → `DEPARTURE`: Triggered by flight plan loading
+  - `DEPARTURE` → `TAXIOUT`: Triggered by parking brake set, beacon on, and external power disconnected
+  - `TAXIOUT` → `FLIGHT`: Triggered by aircraft becoming airborne
+  - `FLIGHT` → `TAXIIN`: Triggered by aircraft landing
+  - `TAXIIN` → `ARRIVAL`: Triggered by engines off, parking brake set, and ground speed near zero
+  - `ARRIVAL` → `TURNAROUND`: Triggered by deboarding completion
+  - `TURNAROUND` → `DEPARTURE`: Triggered by new flight plan loading
+
+- **State Handlers**:
+  - Each state has a dedicated handler method in GsxController (e.g., HandlePreflightState)
+  - Handlers implement state-specific logic and check for transition conditions
+  - State transitions are managed by the FlightStateService
+  - Events are published when state transitions occur
+
+- **Sub-State Machines**:
+  - The refueling process implements a mini-state machine with states for active, paused, and completed
+  - Boarding and deboarding processes have their own state tracking
+  - Ground services (jetway, GPU, PCA) have individual state tracking
+  - State transitions are triggered by both GSX events and aircraft conditions
 
 ### Dependency Injection
 Components are designed with loose coupling in mind:
@@ -453,6 +528,26 @@ The system uses dictionary-based action mapping for service toggles:
 - Actions are triggered based on LVAR state changes
 - The pattern allows for easy addition of new service toggle mappings
 - Similar mapping approach is used for other state-based actions like refueling control
+- Implementation in GsxController:
+  ```csharp
+  // Dictionary to map service toggle LVAR names to door operations
+  private readonly Dictionary<string, Action> serviceToggles = new Dictionary<string, Action>();
+  
+  // Initialization in constructor
+  serviceToggles.Add("FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE", () => OperateFrontDoor());
+  serviceToggles.Add("FSDT_GSX_AIRCRAFT_SERVICE_2_TOGGLE", () => OperateAftDoor());
+  serviceToggles.Add("FSDT_GSX_AIRCRAFT_CARGO_1_TOGGLE", () => OperateFrontCargoDoor());
+  serviceToggles.Add("FSDT_GSX_AIRCRAFT_CARGO_2_TOGGLE", () => OperateAftCargoDoor());
+  
+  // Usage in callback handler
+  private void OnServiceToggleChanged(float newValue, float oldValue, string lvarName)
+  {
+      if (serviceToggles.ContainsKey(lvarName) && oldValue == SERVICE_TOGGLE_OFF && newValue == SERVICE_TOGGLE_ON)
+      {
+          serviceToggles[lvarName]();
+      }
+  }
+  ```
 - Catering service door operations are implemented using this pattern:
   ```csharp
   // Dictionary to map service toggle LVAR names to door operations
@@ -473,6 +568,10 @@ The system uses dictionary-based action mapping for service toggles:
 3. MainWindow, which has subscribed to these events, receives the event notification
 4. Event handlers in MainWindow update the UI elements using Dispatcher.Invoke for thread safety
 5. This decoupled approach allows the UI to be updated without direct dependencies on the controllers
+6. The MainWindow subscribes to events in its constructor and unsubscribes in its Closing handler
+7. Each event type has a dedicated handler method in MainWindow (e.g., OnServiceStatusChanged)
+8. UI elements are updated based on the event data, such as changing indicator colors for service status
+9. The event aggregator ensures that events are delivered to all subscribers regardless of where they were published
 6. Example flow for service status updates:
    - GsxController detects a change in jetway status
    - GsxController publishes a ServiceStatusChangedEvent
@@ -487,6 +586,8 @@ The system uses dictionary-based action mapping for service toggles:
 5. GSX uses this LVAR to control cabin sound muffling when the cockpit door is closed
 6. The cockpit door indicator in Prosim is also updated to reflect the current state
 7. Additionally, a DataRefChangedEvent is published through the EventAggregator
+8. The event is received by any components that have subscribed to DataRefChangedEvent
+9. This allows for real-time UI updates and other components to react to door state changes
 
 ### Initialization Flow
 1. Application starts and initializes core components
@@ -504,83 +605,87 @@ The system uses dictionary-based action mapping for service toggles:
 5. When service completes, state is synchronized between systems
 
 ### Refueling Process Flow
-1. GSXController initiates refueling by calling the GSX refueling service
-2. ProsimController initializes refueling with target fuel calculation (rounded to nearest 100)
-3. Fuel hose connection state is monitored via LVAR callbacks
-4. When hose is connected, refueling is active; when disconnected, refueling is paused
-5. Refueling continues until target fuel level is reached or GSX reports completion
-6. Center of gravity calculations are performed for accurate loadsheet data using the GetZfwCG() and GetTowCG() methods
+1. **Initialization and State Setup:**
+   - `GsxRefuelingService` initializes with connections to required services
+   - `SetInitialFuel()` prepares the initial fuel state in Prosim
+   - `SetHydraulicFluidLevels()` sets initial hydraulic fluid values
+   - State tracking ensures these initialization steps happen only once
+
+2. **Refueling Request:**
+   - GSX controller checks for refueling conditions
+   - `RequestRefueling()` opens the GSX menu and selects the refueling option
+   - `_refuelingRequested` flag is set to track that refueling has been requested
+   - A `ServiceStatusChangedEvent` is published to notify the system
+
+3. **Activation and Monitoring:**
+   - `SetRefuelingActive()` changes state to active and starts in paused state
+   - `_refuelingActive` and `_refuelingPaused` flags track the current state
+   - `StartRefueling()` is called on the Prosim refueling service to prepare fuel systems
+   - LVAR callback monitors for fuel hose connection/disconnection
+
+4. **Fuel Hose Management:**
+   - `OnFuelHoseStateChanged()` callback handles fuel hose state changes
+   - When hose connects: `_fuelHoseConnected = true`, `_refuelingPaused = false`, `ResumeRefueling()`
+   - When hose disconnects: `_fuelHoseConnected = false`, `_refuelingPaused = true`, `PauseRefueling()`
+   - All state changes are logged with appropriate level and category
+
+5. **Processing and Completion:**
+   - `ProcessRefueling()` is called regularly to check progress and update fuel levels
+   - Prosim refueling service handles the actual fuel addition
+   - When refueling completes: `_refuelingActive = false`, `_refuelingCompleted = true`, `StopRefueling()`
+   - `StopRefueling()` explicitly terminates the refueling process and publishes completion events
 
 ### Loadsheet Generation Flow
-1. **Server Status Checking:**
+1. **Thread-Safe Generation Process:**
+   - The loadsheet generation process is protected by a dedicated lock object (`_loadsheetLock`)
+   - State tracking flags prevent multiple simultaneous attempts to generate the same loadsheet type
+   - A clear distinction between "requested" state and "generating" process is maintained
+   - The `finally` block ensures state flags are always reset, even on exceptions
+   - Loadsheet generation is tracked for both preliminary and final loadsheets independently
+
+2. **Server Status Checking:**
    - Before attempting to generate a loadsheet, the system checks if the Prosim EFB server is running and accessible
    - A simple GET request is sent to the server's health endpoint
    - If the server is not available, the operation is aborted with a clear error message
    - This prevents unnecessary attempts to generate loadsheets when the server is not available
+   - The server status check is implemented in both GsxLoadsheetService and ProsimLoadsheetService
+   - The check uses a short timeout (5 seconds) to avoid hanging the application
+   - The result is returned as a Task<bool> that can be awaited by the caller
 
-2. **Loadsheet Generation:**
+3. **Loadsheet Generation:**
    - The system uses Prosim's native loadsheet functionality to generate loadsheets
    - A POST request is sent to the Prosim EFB server's loadsheet generation endpoint
    - The request includes the type of loadsheet to generate (Preliminary or Final)
-   - The system tracks whether a loadsheet has already been generated for the current flight to avoid duplicate generation
+   - The system tracks whether a loadsheet has already been requested for the current flight
    - Flags are reset when a new flight plan is loaded
+   - Comprehensive logging with loadsheet-specific categories aids in troubleshooting
 
-3. **Error Handling:**
+4. **Error Handling:**
    - Detailed HTTP status code interpretation with specific troubleshooting steps for different error types
    - Retry logic with exponential backoff for transient failures
    - Comprehensive logging of request/response details for troubleshooting
    - Timeout handling to detect connection issues quickly
-   - Specific error messages for common failure scenarios (server not available, network issues, etc.)
+   - Exception handling for TaskCanceledException (timeout), HttpRequestException (network issues), and general exceptions
 
-4. **Loadsheet Data Usage:**
-   - Loadsheet data is received via dataref subscription callbacks
-   - The system subscribes to the preliminary and final loadsheet datarefs
-   - When a loadsheet is received, an event is raised to notify interested components
-   - The loadsheet data can be sent to ACARS if enabled
+### Menu Service Flow
+1. **Menu Opening:**
+   - `OpenMenu()` resets the menu ready flag and activates the GSX menu
+   - Writing to LVAR `FSDT_GSX_MENU_OPEN` triggers the menu display
+   - Menu opening is logged with `LogCategory.Menu` for better filtering
 
-### Catering Service Door Flow
-1. GSXController monitors catering service state via LVAR callbacks
-2. When catering service enters waiting state (state 4), passenger doors can be opened
-3. Service toggle LVARs trigger door operation callbacks when changed from 0 to 1
-4. Door operations are executed based on the current catering state:
-   - During waiting state: Doors are opened to allow catering service
-   - During finished state: Doors are closed if they were open
-   - During completed state: Cargo doors can be opened for loading
-5. Cargo doors are automatically closed when cargo loading reaches 100%
-6. ProsimController executes the actual door operations in Prosim A320
+2. **Menu Item Selection:**
+   - `SelectMenuItem()` includes optional waiting for menu readiness
+   - Menu ready flag is reset before selection to track new selection
+   - LVAR `FSDT_GSX_MENU_CHOICE` is set with adjusted index value
+   - Small delay (100ms) follows selection to allow GSX to process
+   - Selection is logged with detailed information about the choice
 
-### Data Flow
-1. Flight plan data flows from Prosim to Prosim2GSX
-2. Service requests flow from Prosim2GSX to GSX
-3. Service status flows from GSX to Prosim2GSX
-4. Synchronized state flows from Prosim2GSX to Prosim
-5. Configuration flows bidirectionally between UI and ConfigurationFile
-6. LVAR changes flow from MSFS to registered callbacks via MobiSimConnect
-7. Door operation commands flow from GSXController to ProsimController
-8. CG calculation data flows from ProsimController to GsxController for loadsheet generation
-9. Loadsheet data flows from GsxController to ACARS system (when enabled)
-10. Events flow from controllers to UI components via the EventAggregator
+3. **Menu Readiness Management:**
+   - `WaitForMenuReady()` polls the `IsGsxMenuReady` flag with a counter
+   - Reasonable timeout (1000 iterations * 100ms = 100 seconds) prevents infinite waiting
+   - Completion time is logged for performance analysis
 
-## Error Handling
-
-- Enhanced HTTP error handling with detailed status code interpretation and troubleshooting steps
-- Server status checking before attempting critical operations
-- Graceful degradation when components are unavailable
-- Sophisticated retry mechanisms with exponential backoff for transient failures
-- Detailed logging of errors with context for effective troubleshooting
-- User notifications for critical issues
-- Recovery procedures for common failure scenarios
-- Exception handling in LVAR callbacks to prevent cascading failures
-- Value change validation to prevent unnecessary callback executions
-- Exception handling in event handlers to prevent event propagation failures
-- Thread-safe event publishing and subscription management
-- Timeout handling for network operations
-- Detailed request/response logging for API interactions
-- Context-aware state handling to prevent incorrect state transitions
-- Specific error handling for loadsheet generation failures:
-  - HTTP 404 (Not Found): Guidance for checking if Prosim's EFB server is running on port 5000
-  - HTTP 400 (Bad Request): Suggestions for verifying flight plan, fuel, passenger, and cargo data
-  - HTTP 401/403 (Unauthorized/Forbidden): Tips for checking Prosim API access configuration
-  - HTTP 500 (Internal Server Error): Steps to check Prosim logs and restart the EFB server
-  - HTTP 503 (Service Unavailable): Guidance for checking if Prosim is running or overloaded
-  - HTTP 408 (Request Timeout): Suggestions for checking network connectivity and server responsiveness
+4. **Operator Selection Handling:**
+   - `IsOperatorSelectionActive()` checks menu file content
+   - Detects specific text patterns indicating operator selection is required
+   - Returns -1 (

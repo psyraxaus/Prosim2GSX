@@ -1,6 +1,8 @@
-﻿using Prosim2GSX;
-using Prosim2GSX.Behaviours;
+﻿using Prosim2GSX.Behaviours;
+using Prosim2GSX.Services;
 using Prosim2GSX.Services.Audio;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -36,6 +38,7 @@ namespace Prosim2GSX.Models
         public bool IsSimRunning { get; set; } = false;
         public string LogFilePath { get; set; }
         public string LogLevel { get; set; }
+        public string DebugLogVerbosity { get; set; }
         public float OperatorDelay { get; set; }
         public bool PcaOnlyJetways { get; set; }
         public string ProsimHostname { get; set; }
@@ -86,6 +89,21 @@ namespace Prosim2GSX.Models
 
         public Dictionary<AudioChannel, string> VoiceMeeterStripLabels { get; private set; } = new Dictionary<AudioChannel, string>();
 
+        /// <summary>
+        /// Path to the ProsimSDK.dll file
+        /// </summary>
+        public string ProsimSDKPath { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Path to the VoicemeeterRemote64.dll file
+        /// </summary>
+        public string VoicemeeterDllPath { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Whether external dependencies have been configured
+        /// </summary>
+        public bool ExternalDependenciesConfigured { get; set; } = false;
+
         public ServiceModel()
         {
             LoadConfiguration();
@@ -100,7 +118,7 @@ namespace Prosim2GSX.Models
             bool hasCoreAudioApp = !string.IsNullOrEmpty(Vhf1VolumeApp);
             
             // Log the result for debugging
-            Logger.Log(Prosim2GSX.LogLevel.Debug, "ServiceModel", 
+            LogService.Log(Services.Logger.Enums.LogLevel.Debug, "ServiceModel", 
                 $"IsVhf1Controllable: Control={Vhf1VolumeControl}, API={AudioApiType}, " +
                 $"HasStrip={hasVoiceMeeterStrip}, HasApp={hasCoreAudioApp}, " +
                 $"Result={Vhf1VolumeControl && (hasVoiceMeeterStrip || hasCoreAudioApp)}");
@@ -117,7 +135,7 @@ namespace Prosim2GSX.Models
             bool hasCoreAudioApp = !string.IsNullOrEmpty(Vhf2VolumeApp);
             
             // Log the result for debugging
-            Logger.Log(Prosim2GSX.LogLevel.Debug, "ServiceModel", 
+            LogService.Log(Services.Logger.Enums.LogLevel.Debug, "ServiceModel", 
                 $"IsVhf2Controllable: Control={Vhf2VolumeControl}, API={AudioApiType}, " +
                 $"HasStrip={hasVoiceMeeterStrip}, HasApp={hasCoreAudioApp}, " +
                 $"Result={Vhf2VolumeControl && (hasVoiceMeeterStrip || hasCoreAudioApp)}");
@@ -134,7 +152,7 @@ namespace Prosim2GSX.Models
             bool hasCoreAudioApp = !string.IsNullOrEmpty(Vhf3VolumeApp);
             
             // Log the result for debugging
-            Logger.Log(Prosim2GSX.LogLevel.Debug, "ServiceModel", 
+            LogService.Log(Services.Logger.Enums.LogLevel.Debug, "ServiceModel", 
                 $"IsVhf3Controllable: Control={Vhf3VolumeControl}, API={AudioApiType}, " +
                 $"HasStrip={hasVoiceMeeterStrip}, HasApp={hasCoreAudioApp}, " +
                 $"Result={Vhf3VolumeControl && (hasVoiceMeeterStrip || hasCoreAudioApp)}");
@@ -151,7 +169,7 @@ namespace Prosim2GSX.Models
             bool hasCoreAudioApp = !string.IsNullOrEmpty(CabVolumeApp);
             
             // Log the result for debugging
-            Logger.Log(Prosim2GSX.LogLevel.Debug, "ServiceModel", 
+            LogService.Log(Services.Logger.Enums.LogLevel.Debug, "ServiceModel", 
                 $"IsCabControllable: Control={CabVolumeControl}, API={AudioApiType}, " +
                 $"HasStrip={hasVoiceMeeterStrip}, HasApp={hasCoreAudioApp}, " +
                 $"Result={CabVolumeControl && (hasVoiceMeeterStrip || hasCoreAudioApp)}");
@@ -168,7 +186,7 @@ namespace Prosim2GSX.Models
             bool hasCoreAudioApp = !string.IsNullOrEmpty(PaVolumeApp);
             
             // Log the result for debugging
-            Logger.Log(Prosim2GSX.LogLevel.Debug, "ServiceModel", 
+            LogService.Log(Services.Logger.Enums.LogLevel.Debug, "ServiceModel", 
                 $"IsPaControllable: Control={PaVolumeControl}, API={AudioApiType}, " +
                 $"HasStrip={hasVoiceMeeterStrip}, HasApp={hasCoreAudioApp}, " +
                 $"Result={PaVolumeControl && (hasVoiceMeeterStrip || hasCoreAudioApp)}");
@@ -204,6 +222,7 @@ namespace Prosim2GSX.Models
             IntLatchMute = Convert.ToBoolean(ConfigurationFile.GetSetting("intLatchMute", "true"));
             LogFilePath = Convert.ToString(ConfigurationFile.GetSetting("logFilePath", "Prosim2GSX.log"));
             LogLevel = Convert.ToString(ConfigurationFile.GetSetting("logLevel", "Debug"));
+            DebugLogVerbosity = Convert.ToString(ConfigurationFile.GetSetting("debugLogVerbosity", "All"));
             PcaOnlyJetways = Convert.ToBoolean(ConfigurationFile.GetSetting("pcaOnlyJetway", "true"));
             PaVolumeApp = Convert.ToString(ConfigurationFile.GetSetting("paVolumeApp", ""));
             PaVolumeControl = Convert.ToBoolean(ConfigurationFile.GetSetting("paVolumeControl", "false"));
@@ -236,6 +255,9 @@ namespace Prosim2GSX.Models
             Vhf3VolumeControl = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf3VolumeControl", "false"));
             Vhf3LatchMute = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf3LatchMute", "true"));
             WaitForConnect = Convert.ToBoolean(ConfigurationFile.GetSetting("waitForConnect", "true"));
+            ProsimSDKPath = Convert.ToString(ConfigurationFile.GetSetting("prosimSDKPath", ""));
+            VoicemeeterDllPath = Convert.ToString(ConfigurationFile.GetSetting("voicemeeterDllPath", ""));
+            ExternalDependenciesConfigured = Convert.ToBoolean(ConfigurationFile.GetSetting("externalDependenciesConfigured", "false"));
 
             foreach (var channel in Enum.GetValues(typeof(AudioChannel)).Cast<AudioChannel>())
             {
@@ -343,12 +365,37 @@ namespace Prosim2GSX.Models
                 LoadConfiguration();
         }
 
+        /// <summary>
+        /// Gets the fuel rate in kilograms per second
+        /// </summary>
+        /// <returns>Fuel rate in kg/s</returns>
         public float GetFuelRateKGS()
         {
-            if (RefuelUnit == "KGS")
-                return RefuelRate;
-            else
-                return RefuelRate / ProsimController.weightConversion;
+            // The weight conversion factor (2.205 lbs per kg)
+            const float WeightConversion = 2.205f;
+
+            // Get the current weight units from config
+            string units = RefuelUnit ?? "KG"; // Default to KG if not set
+
+            // If units are in KG, return the rate directly
+            if (units.Equals("KG", StringComparison.OrdinalIgnoreCase))
+            {
+                return RefuelRate; // Return the rate directly in kg/s
+            }
+            // If units are in LBS, convert to KG
+            else if (units.Equals("LBS", StringComparison.OrdinalIgnoreCase))
+            {
+                // Convert from lbs/s to kg/s
+                float rateInKgPerSecond = RefuelRate / WeightConversion;
+
+                LogService.Log(Services.Logger.Enums.LogLevel.Debug, nameof(ServiceModel),
+                    $"Converting fuel rate from LBS: {RefuelRate} lbs/s = {rateInKgPerSecond} kg/s");
+
+                return rateInKgPerSecond;
+            }
+
+            // Default fallback
+            return RefuelRate;
         }
 
         public void SetVoiceMeeterStrip(AudioChannel channel, string stripName, string stripLabel)
@@ -380,5 +427,7 @@ namespace Prosim2GSX.Models
                    SimBriefID != "0" && 
                    int.TryParse(SimBriefID, out _); // Ensure it's a valid number
         }
+
+
     }
 }

@@ -6,6 +6,8 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
 using Prosim2GSX.Models;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 
 namespace Prosim2GSX.Themes
 {
@@ -30,7 +32,7 @@ namespace Prosim2GSX.Themes
         {
             if (_serviceModel == null)
             {
-                Logger.Log(LogLevel.Warning, "ThemeManager", "ServiceModel not set. Theme functionality will be limited.");
+                LogService.Log(LogLevel.Warning, "ThemeManager", "ServiceModel not set. Theme functionality will be limited.");
                 return;
             }
             
@@ -58,7 +60,7 @@ namespace Prosim2GSX.Themes
             else
             {
                 // If no themes are available, log a warning
-                Logger.Log(LogLevel.Warning, "ThemeManager", "No theme files found in the Themes directory.");
+                LogService.Log(LogLevel.Warning, "ThemeManager", "No theme files found in the Themes directory.");
                 return;
             }
             
@@ -87,12 +89,12 @@ namespace Prosim2GSX.Themes
                     if (theme != null && !string.IsNullOrEmpty(theme.Name))
                     {
                         _themes[theme.Name] = theme;
-                        Logger.Log(LogLevel.Debug, "ThemeManager", $"Loaded theme: {theme.Name}");
+                        LogService.Log(LogLevel.Debug, "ThemeManager", $"Loaded theme: {theme.Name}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log(LogLevel.Warning, "ThemeManager", $"Failed to load theme file {file}: {ex.Message}");
+                    LogService.Log(LogLevel.Warning, "ThemeManager", $"Failed to load theme file {file}: {ex.Message}");
                 }
             }
         }
@@ -116,7 +118,7 @@ namespace Prosim2GSX.Themes
         {
             if (_serviceModel == null)
             {
-                Logger.Log(LogLevel.Warning, "ThemeManager", "ServiceModel not set. Cannot apply theme.");
+                LogService.Log(LogLevel.Warning, "ThemeManager", "ServiceModel not set. Cannot apply theme.");
                 return;
             }
             

@@ -11,8 +11,12 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services.Audio;
+using Prosim2GSX.Services.GSX.Enums;
 using System.Threading;
 using static Prosim2GSX.Services.Audio.AudioChannelConfig;
+using Prosim2GSX.Services;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 
 namespace Prosim2GSX
 {
@@ -25,6 +29,7 @@ namespace Prosim2GSX
         private bool _isLoadingSettings = false;
         private ObservableCollection<LogEntry> _logEntries = new ObservableCollection<LogEntry>();
         private const int MaxLogEntries = 5;
+        private LogLevel _uiLogLevel = LogLevel.Information;
         public MainWindow(NotifyIconViewModel notifyModel, ServiceModel serviceModel)
         {
             InitializeComponent();
@@ -201,6 +206,9 @@ namespace Prosim2GSX
 
         protected void LoadSettings()
         {
+            // Set debug verbosity dropdown
+            SetDebugVerbosityComboBox();
+
             // Set audio API radio buttons
             rbCoreAudio.IsChecked = serviceModel.AudioApiType == AudioApiType.CoreAudio;
             rbVoiceMeeter.IsChecked = serviceModel.AudioApiType == AudioApiType.VoiceMeeter;
@@ -329,20 +337,27 @@ namespace Prosim2GSX
         protected void UpdateLogArea()
         {
             // Process all available log entries from the new LogEntryQueue
-            while (Logger.LogEntryQueue.TryDequeue(out LogEntry entry))
+            while (LogService.LogEntryQueue.TryDequeue(out LogEntry entry))
             {
+                // Only show Information, Warning, Error, and Critical messages in the UI
+                if (entry.Level <= LogLevel.Debug)  // Debug is 1, Verbose is 0
+                {
+                    // Skip Debug and Verbose messages
+                    continue;
+                }
+
                 // Add to the observable collection on the UI thread
                 Dispatcher.Invoke(() =>
                 {
                     // Add the new entry
                     _logEntries.Add(entry);
-                    
+
                     // Remove oldest entries if we exceed the maximum
                     while (_logEntries.Count > MaxLogEntries)
                     {
                         _logEntries.RemoveAt(0);
                     }
-                    
+
                     // Scroll to the bottom to show the latest entry
                     if (lvLogMessages.Items.Count > 0)
                     {
@@ -350,12 +365,12 @@ namespace Prosim2GSX
                     }
                 });
             }
-            
+
             // Process the old MessageQueue for backward compatibility
-            while (Logger.MessageQueue.Count > 0)
+            while (LogService.MessageQueue.Count > 0)
             {
                 // Just dequeue the messages to keep the queue from growing
-                Logger.MessageQueue.Dequeue();
+                LogService.MessageQueue.Dequeue();
             }
         }
 
@@ -764,7 +779,7 @@ namespace Prosim2GSX
                 serviceModel.SetSetting("pilotID", id);
                 
                 // Provide positive feedback
-                Logger.Log(LogLevel.Information, "MainWindow", $"Simbrief ID set to {id}");
+                LogService.Log(LogLevel.Information, "MainWindow", $"Simbrief ID set to {id}");
                 
                 // If we have a valid ID and there's a pending flight plan load, trigger a retry
                 if (serviceModel.IsValidSimbriefId())
@@ -792,14 +807,14 @@ namespace Prosim2GSX
 
             if (sender == unitKGS && serviceModel.RefuelUnit == "LBS")
             {
-                fuelRate /= ProsimController.weightConversion;
+                fuelRate /= ServiceLocator.WeightConversion;
                 serviceModel.SetSetting("refuelRate", Convert.ToString(fuelRate, CultureInfo.InvariantCulture));
                 serviceModel.SetSetting("refuelUnit", "KGS");
                 txtRefuelRate.Text = Convert.ToString(fuelRate, CultureInfo.InvariantCulture);
             }
             else if (sender == unitLBS && serviceModel.RefuelUnit == "KGS")
             {
-                fuelRate *= ProsimController.weightConversion;
+                fuelRate *= ServiceLocator.WeightConversion;
                 serviceModel.SetSetting("refuelRate", Convert.ToString(fuelRate, CultureInfo.InvariantCulture));
                 serviceModel.SetSetting("refuelUnit", "LBS");
                 txtRefuelRate.Text = Convert.ToString(fuelRate, CultureInfo.InvariantCulture);
@@ -888,7 +903,7 @@ namespace Prosim2GSX
                 }
                 
                 // Run the diagnostics
-                Logger.Log(LogLevel.Information, "MainWindow", "Starting VoiceMeeter diagnostics...");
+                LogService.Log(LogLevel.Information, "MainWindow", "Starting VoiceMeeter diagnostics...");
                 bool success = serviceController.PerformVoiceMeeterDiagnostics();
                 
                 // Show a message box with the result
@@ -911,7 +926,7 @@ namespace Prosim2GSX
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, "MainWindow", $"Error running VoiceMeeter diagnostics: {ex.Message}");
+                LogService.Log(LogLevel.Error, "MainWindow", $"Error running VoiceMeeter diagnostics: {ex.Message}");
                 MessageBox.Show(
                     $"Error running VoiceMeeter diagnostics: {ex.Message}",
                     "Diagnostics Error",
@@ -944,7 +959,7 @@ namespace Prosim2GSX
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Warning, "MainWindow", $"Error loading themes: {ex.Message}");
+                LogService.Log(LogLevel.Warning, "MainWindow", $"Error loading themes: {ex.Message}");
             }
         }
 
@@ -960,7 +975,7 @@ namespace Prosim2GSX
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Warning, "MainWindow", $"Error changing theme: {ex.Message}");
+                LogService.Log(LogLevel.Warning, "MainWindow", $"Error changing theme: {ex.Message}");
             }
         }
 
@@ -973,7 +988,7 @@ namespace Prosim2GSX
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Warning, "MainWindow", $"Error refreshing themes: {ex.Message}");
+                LogService.Log(LogLevel.Warning, "MainWindow", $"Error refreshing themes: {ex.Message}");
             }
         }
         
@@ -1173,7 +1188,7 @@ namespace Prosim2GSX
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Warning, "MainWindow", $"Error loading VoiceMeeter strips: {ex.Message}");
+                LogService.Log(LogLevel.Warning, "MainWindow", $"Error loading VoiceMeeter strips: {ex.Message}");
                 MessageBox.Show(
                     $"Error loading VoiceMeeter strips: {ex.Message}",
                     "Error",
@@ -1351,7 +1366,7 @@ namespace Prosim2GSX
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Warning, "MainWindow", $"Error loading VoiceMeeter devices for channel {channel}: {ex.Message}");
+                LogService.Log(LogLevel.Warning, "MainWindow", $"Error loading VoiceMeeter devices for channel {channel}: {ex.Message}");
             }
         }
 
@@ -1510,6 +1525,190 @@ namespace Prosim2GSX
                 FlightNumberDisplay.Text = string.IsNullOrEmpty(flightNumber) ?
                     "No Flight" : flightNumber;
             });
+        }
+
+        private void btnConfigureExternalDependencies_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new ExternalDependenciesDialog(serviceModel);
+            dialog.Owner = this;
+            bool? result = dialog.ShowDialog();
+
+            if (result == true)
+            {
+                // No need for explicit save - settings are saved via SetSetting
+
+                // Show restart message
+                MessageBox.Show(
+                    "The external dependencies configuration has been updated. Please restart the application for the changes to take effect.",
+                    "Configuration Updated",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+        }
+
+        private void SetDebugVerbosityComboBox()
+        {
+            string verbosity = serviceModel.DebugLogVerbosity;
+
+            // First check for predefined values
+            foreach (ComboBoxItem item in cboDebugVerbosity.Items)
+            {
+                if (item.Tag.ToString() == verbosity)
+                {
+                    cboDebugVerbosity.SelectedItem = item;
+                    // Add null check here too
+                    if (pnlCustomVerbosity != null)
+                    {
+                        pnlCustomVerbosity.Visibility = Visibility.Collapsed;
+                    }
+                    return;
+                }
+            }
+
+            // If not found, it's a custom list
+            foreach (ComboBoxItem item in cboDebugVerbosity.Items)
+            {
+                if (item.Tag.ToString() == "Custom")
+                {
+                    cboDebugVerbosity.SelectedItem = item;
+                    // Add null check here too
+                    if (pnlCustomVerbosity != null && txtCustomVerbosity != null)
+                    {
+                        txtCustomVerbosity.Text = verbosity;
+                        pnlCustomVerbosity.Visibility = Visibility.Visible;
+                    }
+                    return;
+                }
+            }
+        }
+
+        private void cboDebugVerbosity_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (cboDebugVerbosity.SelectedItem is ComboBoxItem item)
+            {
+                string tag = item.Tag.ToString();
+
+                // Add null check before accessing the panel
+                if (pnlCustomVerbosity != null)
+                {
+                    // Show/hide custom panel if "Custom" is selected
+                    if (tag == "Custom")
+                    {
+                        pnlCustomVerbosity.Visibility = Visibility.Visible;
+
+                        // Don't update settings yet - wait for custom text entry
+                        return;
+                    }
+                    else
+                    {
+                        pnlCustomVerbosity.Visibility = Visibility.Collapsed;
+
+                        // Update settings with predefined value
+                        serviceModel.SetSetting("debugLogVerbosity", tag);
+                        serviceModel.DebugLogVerbosity = tag;
+
+                        // Update the log service
+                        LogService.SetDebugVerbosity(tag);
+                    }
+                }
+            }
+        }
+
+        private void txtCustomVerbosity_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Enter && txtCustomVerbosity != null)
+            {
+                UpdateCustomVerbosity();
+            }
+        }
+
+        private void txtCustomVerbosity_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (txtCustomVerbosity != null)
+            {
+                UpdateCustomVerbosity();
+            }
+        }
+
+        private void UpdateCustomVerbosity()
+        {
+            if (txtCustomVerbosity != null)
+            {
+                string customValue = txtCustomVerbosity.Text.Trim();
+
+                // Verify the custom input has valid categories
+                bool isValid = VerifyCustomCategories(customValue);
+
+                if (isValid)
+                {
+                    // Update settings
+                    serviceModel.SetSetting("debugLogVerbosity", customValue);
+                    serviceModel.DebugLogVerbosity = customValue;
+
+                    // Update the log service
+                    LogService.SetDebugVerbosity(customValue);
+
+                    // Provide feedback
+                    LogService.Log(LogLevel.Information, nameof(MainWindow),
+                        $"Debug verbosity set to: {customValue}", LogCategory.All);
+                }
+                else
+                {
+                    // Provide feedback for invalid categories
+                    MessageBox.Show(
+                        "One or more category names are invalid. Please check the list of available categories.",
+                        "Invalid Categories",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
+            }
+        }
+
+        private bool VerifyCustomCategories(string categoriesString)
+        {
+            if (string.IsNullOrWhiteSpace(categoriesString) ||
+                categoriesString.Equals("All", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            string[] categories = categoriesString.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (string category in categories)
+            {
+                string trimmed = category.Trim();
+
+                // Try parse directly
+                bool isValid = Enum.TryParse<LogCategory>(trimmed, true, out _);
+
+                // Check known friendly names if direct parse fails
+                if (!isValid)
+                {
+                    isValid = IsKnownFriendlyName(trimmed);
+                }
+
+                if (!isValid)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private bool IsKnownFriendlyName(string name)
+        {
+            string lowered = name.ToLowerInvariant();
+
+            return lowered switch
+            {
+                "all" or "all categories" or "gsx" or "gsxcontroller" or "refuel" or "refueling" or
+                "board" or "boarding" or "cater" or "catering" or "ground" or "groundservices" or
+                "ground services" or "sim" or "simconnect" or "ps" or "prosim" or "event" or
+                "events" or "menu" or "menus" or "audio" or "sound" or "config" or "configuration" or
+                "door" or "doors" or "cargo" or "load" or "loadsheet" => true,
+                _ => false
+            };
         }
     }
 }

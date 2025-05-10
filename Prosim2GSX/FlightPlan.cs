@@ -1,6 +1,8 @@
 ﻿using Prosim2GSX.Behaviours;
 using Prosim2GSX.Events;
 using Prosim2GSX.Models;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 using System;
 using System.Globalization;
 using System.Net.Http;
@@ -52,7 +54,7 @@ namespace Prosim2GSX
         {
             if (!Model.IsValidSimbriefId())
             {
-                Logger.Log(LogLevel.Error, "FlightPlan:LoadWithValidation", "Invalid Simbrief ID");
+                LogService.Log(LogLevel.Error, "FlightPlan:LoadWithValidation", "Invalid Simbrief ID");
                 return LoadResult.InvalidId;
             }
             
@@ -61,7 +63,7 @@ namespace Prosim2GSX
                 XmlNode sbOFP = LoadOFP();
                 if (sbOFP == null)
                 {
-                    Logger.Log(LogLevel.Error, "FlightPlan:LoadWithValidation", "Failed to load OFP");
+                    LogService.Log(LogLevel.Error, "FlightPlan:LoadWithValidation", "Failed to load OFP");
                     return LoadResult.NetworkError;
                 }
                 
@@ -104,7 +106,7 @@ namespace Prosim2GSX
 
                 if (lastID != FlightPlanID)
                 {
-                    Logger.Log(LogLevel.Information, "FlightPlan:LoadWithValidation", $"New OFP for Flight {Flight} loaded. ({Origin} -> {Destination})");
+                    LogService.Log(LogLevel.Information, "FlightPlan:LoadWithValidation", $"New OFP for Flight {Flight} loaded. ({Origin} -> {Destination})");
                     EventAggregator.Instance.Publish(new FlightPlanChangedEvent(Flight));
                 }
                 
@@ -112,7 +114,7 @@ namespace Prosim2GSX
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, "FlightPlan:LoadWithValidation", $"Exception: {ex.Message}");
+                LogService.Log(LogLevel.Error, "FlightPlan:LoadWithValidation", $"Exception: {ex.Message}");
                 return LoadResult.ParseError;
             }
         }
@@ -121,7 +123,7 @@ namespace Prosim2GSX
         {
             if (!Model.IsValidSimbriefId())
             {
-                Logger.Log(LogLevel.Error, "FlightPlan:FetchOnline", $"SimBrief ID is not set or invalid!");
+                LogService.Log(LogLevel.Error, "FlightPlan:FetchOnline", $"SimBrief ID is not set or invalid!");
                 return null;
             }
 
@@ -133,19 +135,19 @@ namespace Prosim2GSX
                 string responseBody = GetHttpContent(response).Result;
                 if (responseBody != null && responseBody.Length > 0)
                 {
-                    Logger.Log(LogLevel.Debug, "FlightPlan:FetchOnline", $"HTTP Request succeded!");
+                    LogService.Log(LogLevel.Debug, "FlightPlan:FetchOnline", $"HTTP Request succeded!");
                     XmlDocument xmlDoc = new();
                     xmlDoc.LoadXml(responseBody);
                     return xmlDoc.ChildNodes[1];
                 }
                 else
                 {
-                    Logger.Log(LogLevel.Error, "FlightPlan:FetchOnline", $"SimBrief Response Body is empty!");
+                    LogService.Log(LogLevel.Error, "FlightPlan:FetchOnline", $"SimBrief Response Body is empty!");
                 }
             }
             else
             {
-                Logger.Log(LogLevel.Error, "FlightPlan:FetchOnline", $"HTTP Request failed! Response Code: {response.StatusCode} Message: {response.ReasonPhrase}");
+                LogService.Log(LogLevel.Error, "FlightPlan:FetchOnline", $"HTTP Request failed! Response Code: {response.StatusCode} Message: {response.ReasonPhrase}");
             }
 
             return null;
@@ -199,7 +201,7 @@ namespace Prosim2GSX
 
                 if (lastID != FlightPlanID)
                 {
-                    Logger.Log(LogLevel.Information, "FlightPlan:Load", $"New OFP for Flight {Flight} loaded. ({Origin} -> {Destination})");
+                    LogService.Log(LogLevel.Information, "FlightPlan:Load", $"New OFP for Flight {Flight} loaded. ({Origin} -> {Destination})");
                     EventAggregator.Instance.Publish(new FlightPlanChangedEvent(Flight));
                 }
 

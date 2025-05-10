@@ -1,5 +1,7 @@
 ﻿using Microsoft.FlightSimulator.SimConnect;
 using Prosim2GSX.Events;
+using Prosim2GSX.Services.Logger.Enums;
+using Prosim2GSX.Services.Logger.Implementation;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -73,7 +75,7 @@ namespace Prosim2GSX
                 simConnectHandle = new IntPtr(simConnectThread.ManagedThreadId);
                 simConnectThread.Start();
 
-                Logger.Log(LogLevel.Information, "MobiSimConnect:Connect", $"SimConnect Connection open");
+                LogService.Log(LogLevel.Information, "MobiSimConnect:Connect", $"SimConnect Connection open");
                 return true;
             }
             catch (Exception ex)
@@ -83,7 +85,7 @@ namespace Prosim2GSX
                 cancelThread = true;
                 simConnect = null;
 
-                Logger.Log(LogLevel.Error, "MobiSimConnect:Connect", $"Exception while opening SimConnect! (Exception: {ex.GetType()} {ex.Message})");
+                LogService.Log(LogLevel.Error, "MobiSimConnect:Connect", $"Exception while opening SimConnect! (Exception: {ex.GetType()} {ex.Message})");
             }
 
             return false;
@@ -98,11 +100,11 @@ namespace Prosim2GSX
                 simConnect.OnRecvEvent += new SimConnect.RecvEventEventHandler(SimConnect_OnReceiveEvent);
                 CreateDataAreaDefaultChannel();
                 CreateEventSubscription();
-                Logger.Log(LogLevel.Information, "MobiSimConnect:SimConnect_OnOpen", $"SimConnect OnOpen received");
+                LogService.Log(LogLevel.Information, "MobiSimConnect:SimConnect_OnOpen", $"SimConnect OnOpen received");
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, "MobiSimConnect:SimConnect_OnOpen", $"Exception during SimConnect OnOpen! (Exception: {ex.GetType()} {ex.Message})");
+                LogService.Log(LogLevel.Error, "MobiSimConnect:SimConnect_OnOpen", $"Exception during SimConnect OnOpen! (Exception: {ex.GetType()} {ex.Message})");
             }
         }
 
@@ -121,7 +123,7 @@ namespace Prosim2GSX
 
                     if (isSimConnected && !isMobiConnected && ticks % (ulong)repeat == 0)
                     {
-                        Logger.Log(LogLevel.Debug, "MobiSimConnect:SimConnect_ReceiveThread", $"Sending Ping to MobiFlight WASM Module");
+                        LogService.Log(LogLevel.Debug, "MobiSimConnect:SimConnect_ReceiveThread", $"Sending Ping to MobiFlight WASM Module");
                         SendMobiWasmCmd("MF.DummyCmd");
                         SendMobiWasmCmd("MF.Ping");
                     }
@@ -132,7 +134,7 @@ namespace Prosim2GSX
                     if (errors > 6)
                     {
                         isReceiveRunning = false;
-                        Logger.Log(LogLevel.Error, "MobiSimConnect:SimConnect_ReceiveThread", $"Maximum Errors reached, closing Receive Thread! (Exception: {ex.GetType()})");
+                        LogService.Log(LogLevel.Error, "MobiSimConnect:SimConnect_ReceiveThread", $"Maximum Errors reached, closing Receive Thread! (Exception: {ex.GetType()})");
                         return;
                     }
                 }
@@ -198,7 +200,7 @@ namespace Prosim2GSX
                     {
                         if (!isMobiConnected)
                         {
-                            Logger.Log(LogLevel.Information, "MobiSimConnect:SimConnect_OnClientData", $"MobiFlight WASM Ping acknowledged - opening Client Connection");
+                            LogService.Log(LogLevel.Information, "MobiSimConnect:SimConnect_OnClientData", $"MobiFlight WASM Ping acknowledged - opening Client Connection");
                             SendMobiWasmCmd($"MF.Clients.Add.{CLIENT_NAME}");
                         }
                     }
@@ -208,7 +210,7 @@ namespace Prosim2GSX
                         isMobiConnected = true;
                         SendClientWasmCmd("MF.SimVars.Clear");
                         SendClientWasmCmd("MF.Config.MAX_VARS_PER_FRAME.Set.15");
-                        Logger.Log(LogLevel.Information, "MobiSimConnect:SimConnect_OnClientData", $"MobiFlight WASM Client Connection opened");
+                        LogService.Log(LogLevel.Information, "MobiSimConnect:SimConnect_OnClientData", $"MobiFlight WASM Client Connection opened");
                     }
                 }
                 else
@@ -253,7 +255,7 @@ namespace Prosim2GSX
                                             catch (Exception callbackEx)
                                             {
                                                 // Log callback exceptions
-                                                Logger.Log(LogLevel.Error, "MobiSimConnect:LvarCallback",
+                                                LogService.Log(LogLevel.Error, "MobiSimConnect:LvarCallback",
                                                     $"Exception in callback for LVAR '{lvarName}'! (Exception: {callbackEx.GetType()}) (Message: {callbackEx.Message})");
                                             }
                                         }
@@ -263,12 +265,12 @@ namespace Prosim2GSX
                         }
                     }
                     else
-                        Logger.Log(LogLevel.Warning, "MobiSimConnect:SimConnect_OnClientData", $"The received ID '{data.dwRequestID}' is not subscribed! (Data: {data})");
+                        LogService.Log(LogLevel.Warning, "MobiSimConnect:SimConnect_OnClientData", $"The received ID '{data.dwRequestID}' is not subscribed! (Data: {data})");
                 }
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, "MobiSimConnect:SimConnect_OnClientData", $"Exception during SimConnect OnClientData! (Exception: {ex.GetType()}) (Data: {data})");
+                LogService.Log(LogLevel.Error, "MobiSimConnect:SimConnect_OnClientData", $"Exception during SimConnect OnClientData! (Exception: {ex.GetType()}) (Data: {data})");
             }
         }
 
@@ -305,11 +307,11 @@ namespace Prosim2GSX
                 nextID = 1;
                 simVars.Clear();
                 addressToIndex.Clear();
-                Logger.Log(LogLevel.Information, "MobiSimConnect:Disconnect", $"SimConnect Connection closed");
+                LogService.Log(LogLevel.Information, "MobiSimConnect:Disconnect", $"SimConnect Connection closed");
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, "MobiSimConnect:Disconnect", $"Exception during disconnecting from SimConnect! (Exception: {ex.GetType()} {ex.Message})");
+                LogService.Log(LogLevel.Error, "MobiSimConnect:Disconnect", $"Exception during disconnecting from SimConnect! (Exception: {ex.GetType()} {ex.Message})");
             }
         }
 
@@ -348,7 +350,7 @@ namespace Prosim2GSX
         protected void SimConnect_OnException(SimConnect sender, SIMCONNECT_RECV_EXCEPTION data)
         {
             if (data.dwException != 3 && data.dwException != 29)
-                Logger.Log(LogLevel.Error, "MobiSimConnect:SimConnect_OnException", $"Exception received: (Exception: {data.dwException})");
+                LogService.Log(LogLevel.Error, "MobiSimConnect:SimConnect_OnException", $"Exception received: (Exception: {data.dwException})");
         }
 
         // Overloaded method that accepts a callback
@@ -398,11 +400,11 @@ namespace Prosim2GSX
                     nextID++;
                 }
                 else
-                    Logger.Log(LogLevel.Warning, "MobiSimConnect:SubscribeAddress", $"The Address '{address}' is already subscribed");
+                    LogService.Log(LogLevel.Warning, "MobiSimConnect:SubscribeAddress", $"The Address '{address}' is already subscribed");
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, "MobiSimConnect:SubscribeAddress", $"Exception while subscribing SimVar '{address}'! (Exception: {ex.GetType()}) (Message: {ex.Message})");
+                LogService.Log(LogLevel.Error, "MobiSimConnect:SubscribeAddress", $"Exception while subscribing SimVar '{address}'! (Exception: {ex.GetType()}) (Message: {ex.Message})");
             }
         }
 
@@ -451,7 +453,7 @@ namespace Prosim2GSX
             }
             catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, "MobiSimConnect:UnsubscribeAll", $"Exception while unsubscribing SimVars! (Exception: {ex.GetType()}) (Message: {ex.Message})");
+                LogService.Log(LogLevel.Error, "MobiSimConnect:UnsubscribeAll", $"Exception while unsubscribing SimVars! (Exception: {ex.GetType()}) (Message: {ex.Message})");
             }
         }
 
