@@ -17,6 +17,8 @@ using static Prosim2GSX.Services.Audio.AudioChannelConfig;
 using Prosim2GSX.Services;
 using Prosim2GSX.Services.Logger.Enums;
 using Prosim2GSX.Services.Logger.Implementation;
+using Prosim2GSX.ViewModels;
+
 
 namespace Prosim2GSX
 {
@@ -30,25 +32,28 @@ namespace Prosim2GSX
         private ObservableCollection<LogEntry> _logEntries = new ObservableCollection<LogEntry>();
         private const int MaxLogEntries = 5;
         private LogLevel _uiLogLevel = LogLevel.Information;
+
+        private MainViewModel _viewModel;
+
         public MainWindow(NotifyIconViewModel notifyModel, ServiceModel serviceModel)
         {
             InitializeComponent();
+
             this.notifyModel = notifyModel;
             this.serviceModel = serviceModel;
 
-            // Initialize the log entries collection and bind it to the ListView
-            lvLogMessages.ItemsSource = _logEntries;
+            // Create the ViewModel and register it with the locator
+            _viewModel = new MainViewModel(serviceModel, notifyModel);
+            ViewModelLocator.Instance.RegisterViewModel(_viewModel);
 
-            timer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromSeconds(1)
-            };
-            timer.Tick += OnTick;
-            
-            // Subscribe to events
-            SubscribeToEvents();
+            // Set the DataContext for data binding
+            DataContext = _viewModel;
+
+            // Load settings when window is created
+            LoadSettings();
         }
-        
+
+
         private void SubscribeToEvents()
         {
             // Subscribe to connection status events
@@ -866,15 +871,12 @@ namespace Prosim2GSX
         {
             e.Cancel = true;
             Hide();
-            
-            // Unsubscribe from all events
-            foreach (var token in _subscriptionTokens)
-            {
-                EventAggregator.Instance.Unsubscribe<EventBase>(token);
-            }
-            _subscriptionTokens.Clear();
+
+            // Clean up ViewModel resources
+            _viewModel.Cleanup();
         }
-        
+
+
         private void btnRunVoiceMeeterDiagnostics_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -991,40 +993,27 @@ namespace Prosim2GSX
                 LogService.Log(LogLevel.Warning, "MainWindow", $"Error refreshing themes: {ex.Message}");
             }
         }
-        
+
         protected void Window_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
             if (!IsVisible)
             {
                 notifyModel.CanExecuteHideWindow = false;
                 notifyModel.CanExecuteShowWindow = true;
-                timer.Stop();
+
+                // Notify ViewModel that window is hidden
+                _viewModel.OnWindowHidden();
             }
             else
             {
                 LoadSettings();
                 LoadThemes(); // Load available themes
-                
-                // Directly update connection status indicators based on current model state
-                MsfsStatusIndicator.Fill = serviceModel.IsSimRunning ?
-                    new SolidColorBrush(Colors.Green) :
-                    new SolidColorBrush(Colors.Red);
 
-                ProsimStatusIndicator.Fill = serviceModel.IsProsimRunning ?
-                    new SolidColorBrush(Colors.Green) :
-                    new SolidColorBrush(Colors.Red);
-
-                SimConnectStatusIndicator.Fill = IPCManager.SimConnect?.IsConnected == true ?
-                    new SolidColorBrush(Colors.Green) :
-                    new SolidColorBrush(Colors.Red);
-
-                SessionStatusIndicator.Fill = serviceModel.IsSessionRunning ?
-                    new SolidColorBrush(Colors.Green) :
-                    new SolidColorBrush(Colors.Red);
-
-                timer.Start();
+                // Notify ViewModel that window is visible
+                _viewModel.OnWindowVisible();
             }
         }
+
 
         private void btnAudioSettings_Click(object sender, RoutedEventArgs e)
         {

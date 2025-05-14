@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Prosim2GSX"
         xmlns:serviceModel="clr-namespace:System.ServiceModel;assembly=System.ServiceModel"
+        xmlns:viewModels="clr-namespace:Prosim2GSX.ViewModels"
         mc:Ignorable="d"
         Title="Prosim2GSX EFB" Height="788" Width="800" 
         ResizeMode="NoResize" 
@@ -137,17 +138,18 @@
 
                 <!-- Center - Flight Number -->
                 <TextBlock Grid.Column="1"
-                   x:Name="FlightNumberDisplay" 
-                   Text="No Flight" 
-                   FontWeight="SemiBold" 
-                   FontSize="16" 
-                   Foreground="{DynamicResource HeaderText}" 
-                   VerticalAlignment="Center"
-                   HorizontalAlignment="Center"
-                   Padding="10,5"
-                   Background="{DynamicResource PrimaryColor}"
-                   MinWidth="120"
-                   TextAlignment="Center"/>
+                    x:Name="FlightNumberDisplay" 
+                    Text="{Binding FlightNumber}" 
+                    FontWeight="SemiBold" 
+                    FontSize="16" 
+                    Foreground="{DynamicResource HeaderText}" 
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    Padding="10,5"
+                    Background="{DynamicResource PrimaryColor}"
+                    MinWidth="120"
+                    TextAlignment="Center"/>
+
 
                 <!-- Right side - Date and Navigation -->
                 <StackPanel Grid.Column="2" 
@@ -180,21 +182,25 @@
 
                     <!-- Date display -->
                     <TextBlock x:Name="CurrentDateTime" 
-                       Text="17.11.2023" 
+                       Text="{Binding CurrentDate}" 
                        FontSize="14" 
                        Foreground="{DynamicResource HeaderText}" 
                        VerticalAlignment="Center"
                        Padding="10,5"
                        Background="{DynamicResource SecondaryColor}"
                        Margin="0,0,15,0"/>
+
                 </StackPanel>
             </Grid>
         </Border>
         <!-- Main Content Area with TabControl -->
         <TabControl Grid.Row="1" 
-                    BorderThickness="0"
-                    Background="Transparent"
-                    x:Name="MainTabControl" Margin="0,0,0,-11">
+            BorderThickness="0"
+            Background="Transparent"
+            x:Name="MainTabControl" 
+            SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}"
+            Margin="0,0,0,-11">
+
 
             <!-- Flight Status Tab -->
             <TabItem Header="FLIGHT STATUS" x:Name="StatusTab">
@@ -203,40 +209,50 @@
                         <TextBlock Text="CONNECTION STATUS" Style="{StaticResource CategoryHeaderStyle}"/>
                         <Border Style="{StaticResource SectionBorderStyle}">
                             <WrapPanel HorizontalAlignment="Center">
-                                <StackPanel Orientation="Horizontal" Margin="0,0,10,0">
-                                    <Ellipse x:Name="MsfsStatusIndicator" Fill="Red" Style="{StaticResource StatusIndicatorStyle}"/>
-                                    <Label Content="MSFS" Style="{StaticResource StatusLabelStyle}"/>
-                                </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,10,0">
+                                <Ellipse x:Name="MsfsStatusIndicator" 
+             Fill="{Binding MsfsStatusBrush}" 
+             Style="{StaticResource StatusIndicatorStyle}"/>
+                                <Label Content="MSFS" Style="{StaticResource StatusLabelStyle}"/>
+                            </StackPanel>
 
-                                <StackPanel Orientation="Horizontal" Margin="0,0,10,0">
-                                    <Ellipse x:Name="SimConnectStatusIndicator" Fill="Red" Style="{StaticResource StatusIndicatorStyle}"/>
-                                    <Label Content="SimConnect" Style="{StaticResource StatusLabelStyle}"/>
-                                </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,10,0">
+                                <Ellipse x:Name="SimConnectStatusIndicator" 
+             Fill="{Binding SimConnectStatusBrush}" 
+             Style="{StaticResource StatusIndicatorStyle}"/>
+                                <Label Content="SimConnect" Style="{StaticResource StatusLabelStyle}"/>
+                            </StackPanel>
 
-                                <StackPanel Orientation="Horizontal" Margin="0,0,10,0">
-                                    <Ellipse x:Name="ProsimStatusIndicator" Fill="Red" Style="{StaticResource StatusIndicatorStyle}"/>
-                                    <Label Content="Prosim" Style="{StaticResource StatusLabelStyle}"/>
-                                </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,10,0">
+                                <Ellipse x:Name="ProsimStatusIndicator" 
+             Fill="{Binding ProsimStatusBrush}" 
+             Style="{StaticResource StatusIndicatorStyle}"/>
+                                <Label Content="Prosim" Style="{StaticResource StatusLabelStyle}"/>
+                            </StackPanel>
 
-                                <StackPanel Orientation="Horizontal" Margin="0,0,10,0">
-                                    <Ellipse x:Name="SessionStatusIndicator" Fill="Red" Style="{StaticResource StatusIndicatorStyle}"/>
-                                    <Label Content="Session" Style="{StaticResource StatusLabelStyle}"/>
-                                </StackPanel>
-                            </WrapPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,10,0">
+                                <Ellipse x:Name="SessionStatusIndicator" 
+             Fill="{Binding SessionStatusBrush}" 
+             Style="{StaticResource StatusIndicatorStyle}"/>
+                                <Label Content="Session" Style="{StaticResource StatusLabelStyle}"/>
+                            </StackPanel>
+
+                        </WrapPanel>
                         </Border>
 
                         <!-- Flight Phase -->
                         <TextBlock Text="FLIGHT PHASE" Style="{StaticResource CategoryHeaderStyle}"/>
                         <Border Style="{StaticResource SectionBorderStyle}">
                             <StackPanel>
-                                <Label x:Name="lblFlightPhase" 
-                                       Content="AT GATE" 
-                                       FontSize="18" 
-                                       FontWeight="Bold" 
-                                       HorizontalAlignment="Center"
-                                       Foreground="{DynamicResource AtGatePhase}"/>
+                            <Label x:Name="lblFlightPhase" 
+                               Content="{Binding FlightPhaseText}" 
+                               FontSize="18" 
+                               FontWeight="Bold" 
+                               HorizontalAlignment="Center"
+                               Foreground="{Binding FlightPhaseBrush}"/>
 
-                                <!-- Progress Bar representing flight phases -->
+
+                            <!-- Progress Bar representing flight phases -->
                                 <Grid Name="progressBar" Margin="0,0,0,0">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -279,8 +295,9 @@
 
                                 <!-- Service Status Indicators -->
                                 <StackPanel Grid.Column="0" Grid.Row="0" Orientation="Horizontal" Margin="0,3">
-                                    <Ellipse x:Name="JetwayStatusIndicator" Fill="#E0E0E0" Style="{StaticResource StatusIndicatorStyle}"/>
-                                    <TextBlock Text="Jetway" VerticalAlignment="Center"/>
+                                <Ellipse x:Name="JetwayStatusIndicator" Fill="{Binding JetwayStatusBrush}" Style="{StaticResource StatusIndicatorStyle}"/>
+
+                                <TextBlock Text="Jetway" VerticalAlignment="Center"/>
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="1" Grid.Row="0" Orientation="Horizontal" Margin="0,3">
@@ -334,29 +351,24 @@
                         <TextBlock Text="LOG MESSAGES" Style="{StaticResource CategoryHeaderStyle}"/>
                     
                         <Border Style="{StaticResource SectionBorderStyle}" MinHeight="120" Height="137">
-                            <ListView x:Name="lvLogMessages" 
-                                      MaxHeight="120"
-                                      BorderThickness="0"
-                                      Background="Transparent"
-                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                                <ListView.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Message}" 
-                                                   TextWrapping="Wrap"
-                                                   Foreground="{Binding LevelBrush}"/>
-                                    </DataTemplate>
-                                </ListView.ItemTemplate>
-                                <ListView.ItemContainerStyle>
-                                    <Style TargetType="ListViewItem">
-                                        <Setter Property="Padding" Value="2,1"/>
-                                        <Setter Property="Background" Value="Transparent"/>
-                                        <Setter Property="BorderThickness" Value="0"/>
-                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                    </Style>
-                                </ListView.ItemContainerStyle>
-                            </ListView>
-                        </Border>
+                        <ListView x:Name="lvLogMessages" 
+          ItemsSource="{Binding LogEntries}"
+          MaxHeight="120"
+          BorderThickness="0"
+          Background="Transparent"
+          ScrollViewer.VerticalScrollBarVisibility="Auto"
+          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Message}" 
+                       TextWrapping="Wrap"
+                       Foreground="{Binding LevelBrush}"/>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                            <!-- ItemContainerStyle remains unchanged -->
+                        </ListView>
+
+                    </Border>
                     </StackPanel>
             </TabItem>
 

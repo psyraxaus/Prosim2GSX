@@ -440,5 +440,6 @@ namespace Prosim2GSX.Services.Logger.Implementation
                     return null;
             }
         }
+
     }
 }

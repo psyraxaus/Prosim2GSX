@@ -86,4 +86,9 @@
 		<None Include="OldControllers\**" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="ViewModels\Components\" />
+	  <Folder Include="Views\Components\" />
+	</ItemGroup>
+
 </Project>
