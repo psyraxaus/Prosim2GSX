@@ -34,7 +34,7 @@
         </Style>
     </UserControl.Resources>
 
-    <Border Background="{DynamicResource HeaderBackground}" Margin="0,0,0,0">
+    <Border Background="{DynamicResource HeaderBackground}" Margin="0,0,0,-3">
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>

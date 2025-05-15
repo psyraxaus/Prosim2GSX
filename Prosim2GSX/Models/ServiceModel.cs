@@ -3,6 +3,7 @@ using Prosim2GSX.Services;
 using Prosim2GSX.Services.Audio;
 using Prosim2GSX.Services.Logger.Enums;
 using Prosim2GSX.Services.Logger.Implementation;
+using Prosim2GSX.ViewModels.Components;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -494,6 +495,32 @@ namespace Prosim2GSX.Models
                    int.TryParse(SimBriefID, out _); // Ensure it's a valid number
         }
 
+        /// <summary>
+        /// Gets a boolean setting value with a default if the setting doesn't exist
+        /// </summary>
+        /// <param name="key">The setting key</param>
+        /// <param name="defaultValue">The default value if setting doesn't exist</param>
+        /// <returns>The boolean value of the setting</returns>
+        public bool GetSettingBool(string key, bool defaultValue)
+        {
+            string stringValue = GetSetting(key, defaultValue.ToString().ToLower());
 
+            if (bool.TryParse(stringValue, out bool result))
+            {
+                return result;
+            }
+
+            // Handle "true"/"false" in lowercase or mixed case
+            if (stringValue.Equals("true", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+            else if (stringValue.Equals("false", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return defaultValue;
+        }
     }
 }

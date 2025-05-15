@@ -2,7 +2,7 @@
 using System.Globalization;
 using System.Windows.Data;
 
-namespace Prosim2GSX.Views.Converters
+namespace Prosim2GSX.Converters
 {
     /// <summary>
     /// Converts a boolean value to different text strings based on true/false state

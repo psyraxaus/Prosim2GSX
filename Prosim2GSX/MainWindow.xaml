@@ -7,6 +7,7 @@
         xmlns:serviceModel="clr-namespace:System.ServiceModel;assembly=System.ServiceModel"
         xmlns:viewModels="clr-namespace:Prosim2GSX.ViewModels"
         xmlns:components="clr-namespace:Prosim2GSX.Views.Components"
+        xmlns:converters="clr-namespace:Prosim2GSX.Converters"
         mc:Ignorable="d"
         Title="Prosim2GSX EFB" Height="810" Width="800" 
         ResizeMode="NoResize" 
@@ -129,7 +130,7 @@
             Background="Transparent"
             x:Name="MainTabControl" 
             SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}"
-            Margin="0,0,0,-21">
+            Margin="0,0,0,-15">
 
 
             <!-- Flight Status Tab -->
@@ -154,289 +155,25 @@
             </TabItem>
 
             <!-- Audio Settings Tab -->
-            <!-- Audio Settings Tab -->
             <TabItem Header="AUDIO SETTINGS" x:Name="AudioSettingsTab">
                 <components:AudioSettingsControl DataContext="{Binding AudioSettings}"/>
             </TabItem>
 
-            <!-- Settings Tab -->
-            <TabItem Header="SETTINGS" x:Name="SettingsTab">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="20">
-                        <!-- Flight Plan Settings -->
-                        <TextBlock Text="FLIGHT PLAN SETTINGS" Style="{StaticResource CategoryHeaderStyle}"/>
-                        <Border Style="{StaticResource SectionBorderStyle}">
-                            <StackPanel>
-                                <TextBlock Text="Load Flight Plan From:" Margin="0,0,0,8"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                    <RadioButton x:Name="eFBPlan" 
-                                                Content="EFB" 
-                                                Style="{StaticResource ModernRadioButtonStyle}"
-                                                Click="flightPlan_Click" 
-                                                IsEnabled="False"/>
-
-                                    <RadioButton x:Name="mCDUPlan" 
-                                                Content="MCDU" 
-                                                Style="{StaticResource ModernRadioButtonStyle}"
-                                                Click="flightPlan_Click" 
-                                                IsChecked="True"/>
-                                </StackPanel>
-
-                                <CheckBox x:Name="chkUseActualPaxValue" 
-                                          Content="Use actual Passenger Count from SimBrief OFP" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Click="chkUseActualPaxValue_Click"/>
-
-                                <CheckBox x:Name="chkUseAcars" 
-                                          Content="Use ACARS for OPS messages" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Checked="chkUseAcars_Checked" 
-                                          Unchecked="chkUseAcars_unChecked"/>
-
-                                <StackPanel Orientation="Horizontal" Margin="24,0,0,0">
-                                    <RadioButton x:Name="acarsHoppie" 
-                                                Content="Hoppie" 
-                                                Style="{StaticResource ModernRadioButtonStyle}"
-                                                Click="acars_Click"/>
-
-                                    <RadioButton x:Name="acarsSayIntentions" 
-                                                Content="Say Intentions" 
-                                                Style="{StaticResource ModernRadioButtonStyle}"
-                                                Click="acars_Click"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Simbrief Settings -->
-                        <TextBlock Text="SIMBRIEF SETTINGS" Style="{StaticResource CategoryHeaderStyle}"/>
-                        <Border Style="{StaticResource SectionBorderStyle}">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Simbrief ID:" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <TextBox x:Name="txtSimbriefID" 
-                                             Style="{StaticResource ModernTextBoxStyle}"
-                                             Width="80" 
-                                             LostFocus="txtSimbriefID_LostFocus" 
-                                             KeyUp="txtSimbriefID_KeyUp"/>
-                                <Button x:Name="btnTestSimbriefConnection" 
-                                        Content="Test Connection" 
-                                        Margin="10,0,0,0"
-                                        Click="btnTestSimbriefConnection_Click"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Prosim Settings -->
-                        <TextBlock Text="PROSIM SETTINGS" Style="{StaticResource CategoryHeaderStyle}"/>
-                        <Border Style="{StaticResource SectionBorderStyle}">
-                            <CheckBox x:Name="chkSaveProsimFluidsOnArrival" 
-                                      Content="Save hydraulic fluids on arrival" 
-                                      Style="{StaticResource ModernCheckboxStyle}"
-                                      Click="chkSaveProsimFluidsOnArrival_Click"/>
-                        </Border>
-
-                        <!-- Service Calls -->
-                        <TextBlock Text="SERVICE CALLS" Style="{StaticResource CategoryHeaderStyle}"/>
-                        <Border Style="{StaticResource SectionBorderStyle}">
-                            <StackPanel>
-                                <CheckBox x:Name="chkAutoReposition" 
-                                          Content="Reposition Plane on Startup (via GSX)" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Click="chkAutoReposition_Click"/>
-
-                                <StackPanel Orientation="Horizontal" Margin="24,5,0,10">
-                                    <TextBlock Text="Reposition Delay:" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBox x:Name="txtRepositionDelay" 
-                                             Style="{StaticResource ModernTextBoxStyle}"
-                                             Width="80" 
-                                             LostFocus="txtRepositionDelay_LostFocus" 
-                                             KeyUp="txtRepositionDelay_KeyUp"/>
-                                    <TextBlock Text="s" VerticalAlignment="Center" Margin="8,0,0,0"/>
-                                </StackPanel>
-
-                                <CheckBox x:Name="chkAutoRefuel" 
-                                          Content="Call Refuel Service on Flightplan Import" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Click="chkAutoRefuel_Click"/>
-
-                                <CheckBox x:Name="chkZeroFuel" 
-                                          Content="Set Zero Fuel at start of refueling" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Margin="24,5,0,5"
-                                          Click="chkZeroFuel_Click"/>
-
-                                <CheckBox x:Name="chkSaveFuel" 
-                                          Content="Save current FOB on engine shutdown" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Margin="24,5,0,5"
-                                          Checked="chkSaveFuel_Checked" 
-                                          Unchecked="chkSaveFuel_unChecked"/>
-
-                                <CheckBox x:Name="chkCallCatering" 
-                                          Content="Call Catering Service together with Refuel Service" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Click="chkCallCatering_Click"/>
-
-                                <CheckBox x:Name="chkOpenDoorCatering" 
-                                          Content="Auto Open/Close Right Doors when catering in position" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Margin="24,5,0,5"
-                                          Click="chkOpenDoorCatering_Click"/>
-
-                                <CheckBox x:Name="chkOpenCargoDoors" 
-                                          Content="Auto Open/Close Cargo Doors after catering has finished" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Click="chkOpenCargoDoors_Click"/>
-
-                                <CheckBox x:Name="chkAutoBoard" 
-                                          Content="Automatically start Boarding when Refuel and Catering are finished" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Click="chkAutoBoard_Click"/>
-
-                                <CheckBox x:Name="chkAutoDeboard" 
-                                          Content="Automatically start Deboarding on Arrival (after Beacon is off)" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Click="chkAutoDeboard_Click"/>
-
-                                <CheckBox x:Name="chkDisableCrewBoarding" 
-                                          Content="Disable Crew De-/Boarding (supress Question/Pop-Up)" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Click="chkDisableCrewBoarding_Click"/>
-
-                                <TextBlock Text="Refuel Rate" Margin="0,10,0,5"/>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBox x:Name="txtRefuelRate" 
-                                             Style="{StaticResource ModernTextBoxStyle}"
-                                             Width="100" 
-                                             Margin="0,0,10,0"
-                                             LostFocus="txtRefuelRate_LostFocus" 
-                                             KeyUp="txtRefuelRate_KeyUp"/>
-
-                                    <RadioButton x:Name="unitKGS" 
-                                               Content="kg/s" 
-                                               Style="{StaticResource ModernRadioButtonStyle}"
-                                               Click="units_Click"/>
-
-                                    <RadioButton x:Name="unitLBS" 
-                                               Content="lbs/s" 
-                                               Style="{StaticResource ModernRadioButtonStyle}"
-                                               Click="units_Click"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Ground Handling -->
-                        <TextBlock Text="GROUND HANDLING" Style="{StaticResource CategoryHeaderStyle}"/>
-                        <Border Style="{StaticResource SectionBorderStyle}">
-                            <StackPanel>
-                                <CheckBox x:Name="chkAutoConnect" 
-                                          Content="Automatic Jetway and Stairs Operation (on Startup, Departure and Arrival)" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Click="chkAutoConnect_Click"/>
-
-                                <CheckBox x:Name="chkJetwayOnly" 
-                                          Content="Jetway Only (no Stairs)" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Margin="24,5,0,5"
-                                          Click="chkJetwayOnly_Click"/>
-
-                                <CheckBox x:Name="chkConnectPCA" 
-                                          Content="Connect/Disconnect PCA (on Startup, Departure and Arrival)" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Click="chkConnectPCA_Click"/>
-
-                                <CheckBox x:Name="chkPcaOnlyJetway" 
-                                          Content="PCA only available on Jetways" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Margin="24,5,0,5"
-                                          Click="chkPcaOnlyJetway_Click"/>
-
-                                <CheckBox x:Name="chkSynchBypass" 
-                                          Content="Synchronize By-Pass Pin State during Push-Back" 
-                                          Style="{StaticResource ModernCheckboxStyle}"
-                                          Click="chkSynchBypass_Click"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Debug Log Configuration Section -->
-                        <TextBlock Text="LOGGING" Style="{StaticResource CategoryHeaderStyle}"/>
-                        <Border Style="{StaticResource SectionBorderStyle}">
-                            <StackPanel>
-                                <Label Content="Debug Log Verbosity:" />
-                                <ComboBox x:Name="cboDebugVerbosity" 
-                                     SelectedIndex="0" 
-                                     SelectionChanged="cboDebugVerbosity_SelectionChanged" 
-                                     Margin="0,5,0,10">
-                                    <ComboBoxItem Content="All Categories" Tag="All" />
-                                    <ComboBoxItem Content="Refueling" Tag="Refueling" />
-                                    <ComboBoxItem Content="Boarding" Tag="Boarding" />
-                                    <ComboBoxItem Content="Catering" Tag="Catering" />
-                                    <ComboBoxItem Content="Ground Services" Tag="GroundServices" />
-                                    <ComboBoxItem Content="SimConnect" Tag="SimConnect" />
-                                    <ComboBoxItem Content="Prosim" Tag="Prosim" />
-                                    <ComboBoxItem Content="Menu" Tag="Menu" />
-                                    <ComboBoxItem Content="Custom..." Tag="Custom" />
-                                </ComboBox>
-
-                                <!-- Custom Categories Input (initially hidden) -->
-                                <StackPanel x:Name="pnlCustomVerbosity" Visibility="Collapsed">
-                                    <Label Content="Enter comma-separated categories:" />
-                                    <TextBox x:Name="txtCustomVerbosity" 
-                    Margin="0,5,0,5"
-                    KeyDown="txtCustomVerbosity_KeyDown"
-                    LostFocus="txtCustomVerbosity_LostFocus" />
-                                    <Label Content="Available categories:" />
-                                    <TextBlock TextWrapping="Wrap" Margin="5">
-                All, GsxController, Refueling, Boarding, Catering, GroundServices, SimConnect, Prosim, Events, Menu, Audio, Configuration, Doors, Cargo, Loadsheet
-                                    </TextBlock>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Appearance Settings -->
-                        <TextBlock Text="EXTERNAL DEPENDENCIES" Style="{StaticResource CategoryHeaderStyle}" Margin="0,20,0,0"/>
-                        <Border Style="{StaticResource SectionBorderStyle}">
-                            <StackPanel>
-                                <Button Content="Configure External Dependencies" 
-                HorizontalAlignment="Left"
-                Padding="10,5"
-                Margin="0,5,0,5"
-                Background="{DynamicResource PrimaryColor}"
-                Foreground="{DynamicResource HeaderText}"
-                Click="btnConfigureExternalDependencies_Click"/>
-                                <TextBlock Text="Configure paths to external DLL files (ProsimSDK.dll and VoicemeeterRemote64.dll)"
-                   TextWrapping="Wrap"
-                   Margin="0,5,0,0"
-                   Foreground="#808080"/>
-                            </StackPanel>
-                        </Border>
-                        <TextBlock Text="APPEARANCE" Style="{StaticResource CategoryHeaderStyle}"/>
-                        <Border Style="{StaticResource SectionBorderStyle}">
-                            <StackPanel>
-                                <TextBlock Text="Theme:" Margin="0,0,0,8"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                    <ComboBox x:Name="cboTheme" 
-                                              Width="200" 
-                                              HorizontalAlignment="Left"
-                                              SelectionChanged="cboTheme_SelectionChanged"/>
-                                    <Button x:Name="btnRefreshThemes" 
-                                            Content="Refresh" 
-                                            Margin="10,0,0,0"
-                                            Click="btnRefreshThemes_Click"/>
-                                </StackPanel>
-                                
-                                <TextBlock Text="Theme files are stored in:" Margin="0,10,0,5"/>
-                                <TextBlock x:Name="txtThemesPath" 
-                                           Text="[Themes Directory Path]" 
-                                           Foreground="#808080"/>
-                                
-                                <TextBlock Text="Create new themes by adding .json files to this directory." 
-                                           TextWrapping="Wrap" 
-                                           Margin="0,5,0,0" 
-                                           Foreground="#808080"/>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </ScrollViewer>
+            <!-- App Settings Tab -->
+            <TabItem Header="APP SETTINGS" x:Name="AppSettingsTab">
+                <components:AppSettingsControl DataContext="{Binding AppSettings}"/>
             </TabItem>
+
+            <!-- GSX Settings Tab -->
+            <TabItem Header="GSX SETTINGS" x:Name="GsxSettingsTab">
+                <components:GsxSettingsControl DataContext="{Binding GsxSettings}"/>
+            </TabItem>
+
+            <!-- Flight Planning Tab -->
+            <TabItem Header="FLIGHT PLANNING" x:Name="FlightPlanningTab">
+                <components:FlightPlanningControl DataContext="{Binding FlightPlanning}"/>
+            </TabItem>
+
         </TabControl>
     </Grid>
 </Window>

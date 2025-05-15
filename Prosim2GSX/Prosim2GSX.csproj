@@ -81,7 +81,4 @@
     <PackageReference Update="chromiumembeddedframework.runtime.win-x86" Version="135.0.17" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Converters\" />
-  </ItemGroup>
 </Project>

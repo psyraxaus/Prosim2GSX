@@ -123,6 +123,21 @@ namespace Prosim2GSX.ViewModels
         public AudioSettingsViewModel AudioSettings { get; }
 
         /// <summary>
+        /// Gets the application settings view model
+        /// </summary>
+        public AppSettingsViewModel AppSettings { get; }
+
+        /// <summary>
+        /// Gets the GSX settings view model
+        /// </summary>
+        public GsxSettingsViewModel GsxSettings { get; }
+
+        /// <summary>
+        /// Gets the flight planning view model
+        /// </summary>
+        public FlightPlanningViewModel FlightPlanning { get; }
+
+        /// <summary>
         /// Gets or sets the active flight phase index (0-4) for the progress bar
         /// </summary>
         public int ActiveFlightPhaseIndex
@@ -283,6 +298,9 @@ namespace Prosim2GSX.ViewModels
                 showHelpAction: ShowHelp
             );
             AudioSettings = new AudioSettingsViewModel(serviceModel);
+            AppSettings = new AppSettingsViewModel(serviceModel);
+            GsxSettings = new GsxSettingsViewModel(serviceModel);
+            FlightPlanning = new FlightPlanningViewModel(serviceModel);
 
             // Initialize commands
             ShowHelpCommand = new RelayCommand(_ => ShowHelp());
@@ -318,6 +336,9 @@ namespace Prosim2GSX.ViewModels
             GroundServices = new GroundServicesViewModel();
             HeaderBar = new HeaderBarViewModel();
             AudioSettings = new AudioSettingsViewModel(new ServiceModel());
+            AppSettings = new AppSettingsViewModel(new ServiceModel());
+            GsxSettings = new GsxSettingsViewModel(new ServiceModel());
+            FlightPlanning = new FlightPlanningViewModel(new ServiceModel());
 
             // Initialize timer
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
