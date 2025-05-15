@@ -108,6 +108,11 @@ namespace Prosim2GSX.ViewModels
         public FlightPhaseViewModel FlightPhase { get; }
 
         /// <summary>
+        /// Gets the view model for ground services visualization
+        /// </summary>
+        public GroundServicesViewModel GroundServices { get; }
+
+        /// <summary>
         /// Gets or sets the active flight phase index (0-4) for the progress bar
         /// </summary>
         public int ActiveFlightPhaseIndex
@@ -261,6 +266,7 @@ namespace Prosim2GSX.ViewModels
             ConnectionStatus = new ConnectionStatusViewModel(serviceModel);
             LogMessages = new LogMessagesViewModel();
             FlightPhase = new FlightPhaseViewModel();
+            GroundServices = new GroundServicesViewModel(serviceModel);
 
             // Initialize commands
             ShowHelpCommand = new RelayCommand(_ => ShowHelp());
@@ -293,6 +299,7 @@ namespace Prosim2GSX.ViewModels
             ConnectionStatus = new ConnectionStatusViewModel(new ServiceModel());
             LogMessages = new LogMessagesViewModel();
             FlightPhase = new FlightPhaseViewModel();
+            GroundServices = new GroundServicesViewModel();
 
             // Initialize timer
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
@@ -326,6 +333,7 @@ namespace Prosim2GSX.ViewModels
             ConnectionStatus.Cleanup();
             LogMessages.Cleanup();
             FlightPhase.Cleanup();
+            GroundServices.Cleanup();
 
             // Unsubscribe from all events
             foreach (var token in _subscriptionTokens)

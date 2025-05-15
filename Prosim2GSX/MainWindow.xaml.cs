@@ -53,75 +53,8 @@ namespace Prosim2GSX
 
         private void SubscribeToEvents()
         {
-            // Subscribe to service status events
-            _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<ServiceStatusChangedEvent>(OnServiceStatusChanged));
-
             // Subscribe to flight number events
             _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<FlightPlanChangedEvent>(OnFlightPlanChanged));
-        }
-        
-        private void OnServiceStatusChanged(ServiceStatusChangedEvent evt)
-        {
-            // Update UI based on service status
-            Dispatcher.Invoke(() => {
-                SolidColorBrush brush;
-                switch (evt.Status)
-                {
-                    case ServiceStatus.Completed:
-                        brush = new SolidColorBrush(Colors.Green);
-                        break;
-                    case ServiceStatus.Active:
-                        brush = new SolidColorBrush(Colors.Gold);
-                        break;
-                    case ServiceStatus.Waiting:
-                        brush = new SolidColorBrush(Colors.Blue);
-                        break;
-                    case ServiceStatus.Requested:
-                        brush = new SolidColorBrush(Colors.Blue);
-                        break;
-                    case ServiceStatus.Disconnected:
-                        brush = new SolidColorBrush(Colors.Red);
-                        break;
-                    default:
-                        brush = new SolidColorBrush(Colors.LightGray);
-                        break;
-                }
-                
-                // Update the appropriate indicator
-                switch (evt.ServiceName)
-                {
-                    case "Jetway":
-                        JetwayStatusIndicator.Fill = brush;
-                        break;
-                    case "Stairs":
-                        StairsStatusIndicator.Fill = brush;
-                        break;
-                    case "Refuel":
-                        RefuelStatusIndicator.Fill = brush;
-                        break;
-                    case "Catering":
-                        CateringStatusIndicator.Fill = brush;
-                        break;
-                    case "Boarding":
-                        BoardingStatusIndicator.Fill = brush;
-                        break;
-                    case "Deboarding":
-                        DeboardingStatusIndicator.Fill = brush;
-                        break;
-                    case "GPU":
-                        GPUStatusIndicator.Fill = brush;
-                        break;
-                    case "PCA":
-                        PCAStatusIndicator.Fill = brush;
-                        break;
-                    case "Pushback":
-                        PushbackStatusIndicator.Fill = brush;
-                        break;
-                    case "Chocks":
-                        ChocksStatusIndicator.Fill = brush;
-                        break;
-                }
-            });
         }
         
         private void OnFlightPlanChanged(FlightPlanChangedEvent evt)

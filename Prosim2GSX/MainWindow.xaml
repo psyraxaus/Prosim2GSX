@@ -216,76 +216,10 @@
                     <components:FlightPhaseControl DataContext="{Binding FlightPhase}"/>
 
                     <!-- Ground Services Status -->
-                        <TextBlock Text="GROUND SERVICES" Style="{StaticResource CategoryHeaderStyle}"/>
-                        <Border Style="{StaticResource SectionBorderStyle}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
+                    <TextBlock Text="GROUND SERVICES" Style="{StaticResource CategoryHeaderStyle}"/>
+                    <components:GroundServicesControl DataContext="{Binding GroundServices}"/>
 
-                                <!-- Service Status Indicators -->
-                                <StackPanel Grid.Column="0" Grid.Row="0" Orientation="Horizontal" Margin="0,3">
-                                <Ellipse x:Name="JetwayStatusIndicator" Fill="{Binding JetwayStatusBrush}" Style="{StaticResource StatusIndicatorStyle}"/>
-
-                                <TextBlock Text="Jetway" VerticalAlignment="Center"/>
-                                </StackPanel>
-
-                                <StackPanel Grid.Column="1" Grid.Row="0" Orientation="Horizontal" Margin="0,3">
-                                    <Ellipse x:Name="StairsStatusIndicator" Fill="#E0E0E0" Style="{StaticResource StatusIndicatorStyle}"/>
-                                    <TextBlock Text="Stairs" VerticalAlignment="Center"/>
-                                </StackPanel>
-
-                                <StackPanel Grid.Column="0" Grid.Row="1" Orientation="Horizontal" Margin="0,3">
-                                    <Ellipse x:Name="RefuelStatusIndicator" Fill="#E0E0E0" Style="{StaticResource StatusIndicatorStyle}"/>
-                                    <TextBlock Text="Refueling" VerticalAlignment="Center"/>
-                                </StackPanel>
-
-                                <StackPanel Grid.Column="1" Grid.Row="1" Orientation="Horizontal" Margin="0,3">
-                                    <Ellipse x:Name="CateringStatusIndicator" Fill="#E0E0E0" Style="{StaticResource StatusIndicatorStyle}"/>
-                                    <TextBlock Text="Catering" VerticalAlignment="Center"/>
-                                </StackPanel>
-
-                                <StackPanel Grid.Column="0" Grid.Row="2" Orientation="Horizontal" Margin="0,3">
-                                    <Ellipse x:Name="BoardingStatusIndicator" Fill="#E0E0E0" Style="{StaticResource StatusIndicatorStyle}"/>
-                                    <TextBlock Text="Boarding" VerticalAlignment="Center"/>
-                                </StackPanel>
-
-                                <StackPanel Grid.Column="1" Grid.Row="2" Orientation="Horizontal" Margin="0,3">
-                                    <Ellipse x:Name="DeboardingStatusIndicator" Fill="#E0E0E0" Style="{StaticResource StatusIndicatorStyle}"/>
-                                    <TextBlock Text="Deboarding" VerticalAlignment="Center"/>
-                                </StackPanel>
-
-                                <StackPanel Grid.Column="0" Grid.Row="3" Orientation="Horizontal" Margin="0,3">
-                                    <Ellipse x:Name="GPUStatusIndicator" Fill="#E0E0E0" Style="{StaticResource StatusIndicatorStyle}"/>
-                                    <TextBlock Text="GPU" VerticalAlignment="Center"/>
-                                </StackPanel>
-
-                                <StackPanel Grid.Column="1" Grid.Row="3" Orientation="Horizontal" Margin="0,3">
-                                    <Ellipse x:Name="PCAStatusIndicator" Fill="#E0E0E0" Style="{StaticResource StatusIndicatorStyle}"/>
-                                    <TextBlock Text="PCA" VerticalAlignment="Center"/>
-                                </StackPanel>
-
-                                <StackPanel Grid.Column="0" Grid.Row="4" Orientation="Horizontal" Margin="0,3">
-                                    <Ellipse x:Name="PushbackStatusIndicator" Fill="#E0E0E0" Style="{StaticResource StatusIndicatorStyle}"/>
-                                    <TextBlock Text="Pushback" VerticalAlignment="Center"/>
-                                </StackPanel>
-
-                                <StackPanel Grid.Column="1" Grid.Row="4" Orientation="Horizontal" Margin="0,3">
-                                    <Ellipse x:Name="ChocksStatusIndicator" Fill="#E0E0E0" Style="{StaticResource StatusIndicatorStyle}"/>
-                                    <TextBlock Text="Chocks" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <!-- Log Messages -->
+                    <!-- Log Messages -->
                     <TextBlock Text="LOG MESSAGES" Style="{StaticResource CategoryHeaderStyle}"/>
                     <components:LogMessagesControl DataContext="{Binding LogMessages}"/>
                 </StackPanel>
