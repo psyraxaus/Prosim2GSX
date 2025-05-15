@@ -1,0 +1,94 @@
+﻿<UserControl x:Class="Prosim2GSX.Views.Components.AudioChannelControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Prosim2GSX.Views.Components"
+             xmlns:vm="clr-namespace:Prosim2GSX.ViewModels.Components"
+             xmlns:converter="clr-namespace:Prosim2GSX.Views.Converters"
+             mc:Ignorable="d" 
+             d:DesignHeight="150" d:DesignWidth="500">
+
+    <UserControl.Resources>
+        <Style x:Key="LocalModernCheckboxStyle" TargetType="CheckBox">
+            <Setter Property="Margin" Value="0,8,0,8"/>
+            <Setter Property="Foreground" Value="{DynamicResource ContentText}"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+
+        <Style x:Key="LocalModernRadioButtonStyle" TargetType="RadioButton">
+            <Setter Property="Margin" Value="0,8,15,8"/>
+            <Setter Property="Foreground" Value="{DynamicResource ContentText}"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+
+        <Style x:Key="LocalModernTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="8,0"/>
+            <Setter Property="Background" Value="#F8F8F8"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </UserControl.Resources>
+
+    <Expander Header="{Binding ChannelName}" IsExpanded="True" Margin="0,5">
+        <StackPanel Margin="20,10,0,10">
+            <CheckBox Content="{Binding ChannelName, StringFormat='Control {} App Audio Volume via the {} Knob on ACP'}" 
+                      Style="{StaticResource LocalModernCheckboxStyle}"
+                      IsChecked="{Binding VolumeControlEnabled}"/>
+
+            <CheckBox Content="Use Record Latch to mute/unmute App (push/pull Knob)" 
+                      Style="{StaticResource LocalModernCheckboxStyle}"
+                      Margin="0,5,0,5"
+                      IsChecked="{Binding LatchMuteEnabled}"/>
+
+            <!-- Core Audio fields -->
+            <StackPanel x:Name="pnlCoreAudio" Orientation="Horizontal" Margin="0,5,0,0"
+                Visibility="{Binding DataContext.IsCoreAudioSelected, 
+                         RelativeSource={RelativeSource AncestorType={x:Type local:AudioSettingsControl}}, 
+                         Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="Process Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBox Style="{StaticResource LocalModernTextBoxStyle}"
+                     Width="120" 
+                     Text="{Binding ProcessName, UpdateSourceTrigger=PropertyChanged}"
+                     KeyDown="ProcessNameTextBox_KeyDown"
+                     LostFocus="ProcessNameTextBox_LostFocus"
+                     IsEnabled="{Binding ProcessNameEnabled}"/>
+
+                <TextBlock Text="(Comma-separated list of process names without .exe extension)" 
+                           VerticalAlignment="Center" 
+                           Margin="8,0,0,0"
+                           Foreground="#808080"/>
+            </StackPanel>
+
+            <!-- VoiceMeeter fields -->
+            <StackPanel x:Name="pnlVoiceMeeter" Orientation="Vertical" Margin="0,5,0,0"
+                Visibility="{Binding DataContext.IsVoiceMeeterSelected, 
+                         RelativeSource={RelativeSource AncestorType={x:Type local:AudioSettingsControl}}, 
+                         Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                    <TextBlock Text="Device Type:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <RadioButton Content="Strip (Input)" 
+                                Style="{StaticResource LocalModernRadioButtonStyle}"
+                                IsChecked="{Binding IsStripSelected}"/>
+                    <RadioButton Content="Bus (Output)" 
+                                Style="{StaticResource LocalModernRadioButtonStyle}"
+                                IsChecked="{Binding IsBusSelected}"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Device Name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox Width="200" 
+                              ItemsSource="{Binding VoiceMeeterDevices}"
+                              SelectedValue="{Binding SelectedDeviceKey}"
+                              DisplayMemberPath="Value"
+                              SelectedValuePath="Key"/>
+                    <Button Content="Refresh" 
+                            Margin="10,0,0,0"
+                            Command="{Binding RefreshDevicesCommand}"/>
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+    </Expander>
+</UserControl>

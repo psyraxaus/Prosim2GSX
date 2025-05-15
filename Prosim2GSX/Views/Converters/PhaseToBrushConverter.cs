@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Windows.Data;
 using System.Windows.Media;
 
-namespace Prosim2GSX.Converters
+namespace Prosim2GSX.Views.Converters
 {
     /// <summary>
     /// Converts phase index to the appropriate brush color

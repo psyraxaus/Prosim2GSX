@@ -26,6 +26,16 @@
         VHF3,
 
         /// <summary>
+        /// VHF1 radio channel
+        /// </summary>
+        HF1,
+
+        /// <summary>
+        /// VHF2 radio channel
+        /// </summary>
+        HF2,
+
+        /// <summary>
         /// Cabin intercom channel
         /// </summary>
         CAB,

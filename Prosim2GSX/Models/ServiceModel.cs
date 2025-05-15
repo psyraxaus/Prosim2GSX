@@ -66,11 +66,15 @@ namespace Prosim2GSX.Models
         public bool Vhf2VolumeControl { get; set; }
         public string Vhf2VolumeApp { get; set; }
         public bool Vhf2LatchMute { get; set; }
-
+        public bool Hf1LatchMute { get; set; }
+        public string Hf1VolumeApp { get; set; }
+        public bool Hf1VolumeControl { get; set; }
+        public bool Hf2VolumeControl { get; set; }
+        public string Hf2VolumeApp { get; set; }
+        public bool Hf2LatchMute { get; set; }
         public bool Vhf3VolumeControl { get; set; }
         public string Vhf3VolumeApp { get; set; }
         public bool Vhf3LatchMute { get; set; }
-
         public bool CabVolumeControl { get; set; }
         public string CabVolumeApp { get; set; }
         public bool CabLatchMute { get; set; }
@@ -158,6 +162,40 @@ namespace Prosim2GSX.Models
                 $"Result={Vhf3VolumeControl && (hasVoiceMeeterStrip || hasCoreAudioApp)}");
             
             return Vhf3VolumeControl && (hasVoiceMeeterStrip || hasCoreAudioApp);
+        }
+
+        public bool IsHf1Controllable()
+        {
+            bool hasVoiceMeeterStrip = AudioApiType == AudioApiType.VoiceMeeter &&
+                                       VoiceMeeterStrips.ContainsKey(AudioChannel.HF1) &&
+                                       !string.IsNullOrEmpty(VoiceMeeterStrips[AudioChannel.HF1]);
+
+            bool hasCoreAudioApp = !string.IsNullOrEmpty(Hf1VolumeApp);
+
+            // Log the result for debugging
+            LogService.Log(Services.Logger.Enums.LogLevel.Debug, "ServiceModel",
+                $"IsHf1Controllable: Control={Hf1VolumeControl}, API={AudioApiType}, " +
+                $"HasStrip={hasVoiceMeeterStrip}, HasApp={hasCoreAudioApp}, " +
+                $"Result={Hf1VolumeControl && (hasVoiceMeeterStrip || hasCoreAudioApp)}");
+
+            return Hf1VolumeControl && (hasVoiceMeeterStrip || hasCoreAudioApp);
+        }
+
+        public bool IsHf2Controllable()
+        {
+            bool hasVoiceMeeterStrip = AudioApiType == AudioApiType.VoiceMeeter &&
+                                       VoiceMeeterStrips.ContainsKey(AudioChannel.HF2) &&
+                                       !string.IsNullOrEmpty(VoiceMeeterStrips[AudioChannel.HF2]);
+
+            bool hasCoreAudioApp = !string.IsNullOrEmpty(Hf2VolumeApp);
+
+            // Log the result for debugging
+            LogService.Log(Services.Logger.Enums.LogLevel.Debug, "ServiceModel",
+                $"IsVhf2Controllable: Control={Hf2VolumeControl}, API={AudioApiType}, " +
+                $"HasStrip={hasVoiceMeeterStrip}, HasApp={hasCoreAudioApp}, " +
+                $"Result={Hf2VolumeControl && (hasVoiceMeeterStrip || hasCoreAudioApp)}");
+
+            return Hf2VolumeControl && (hasVoiceMeeterStrip || hasCoreAudioApp);
         }
 
         public bool IsCabControllable()
@@ -251,6 +289,12 @@ namespace Prosim2GSX.Models
             Vhf2VolumeApp = Convert.ToString(ConfigurationFile.GetSetting("vhf2VolumeApp", ""));
             Vhf2VolumeControl = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf2VolumeControl", "false"));
             Vhf2LatchMute = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf2LatchMute", "true"));
+            Hf1VolumeApp = Convert.ToString(ConfigurationFile.GetSetting("hf1VolumeApp", "vPilot"));
+            Hf1VolumeControl = Convert.ToBoolean(ConfigurationFile.GetSetting("hf1VolumeControl", "false"));
+            Hf1LatchMute = Convert.ToBoolean(ConfigurationFile.GetSetting("hf1LatchMute", "true"));
+            Hf2VolumeApp = Convert.ToString(ConfigurationFile.GetSetting("hf2VolumeApp", ""));
+            Hf2VolumeControl = Convert.ToBoolean(ConfigurationFile.GetSetting("hf2VolumeControl", "false"));
+            Hf2LatchMute = Convert.ToBoolean(ConfigurationFile.GetSetting("hf2LatchMute", "true"));
             Vhf3VolumeApp = Convert.ToString(ConfigurationFile.GetSetting("vhf3VolumeApp", ""));
             Vhf3VolumeControl = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf3VolumeControl", "false"));
             Vhf3LatchMute = Convert.ToBoolean(ConfigurationFile.GetSetting("vhf3LatchMute", "true"));
@@ -328,6 +372,28 @@ namespace Prosim2GSX.Models
                 Enabled = IsVhf3Controllable(),
                 LatchMute = Vhf3LatchMute,
                 VoiceMeeterStrip = VoiceMeeterStrips.ContainsKey(AudioChannel.VHF3) ? VoiceMeeterStrips[AudioChannel.VHF3] : ""
+            };
+
+            // HF1
+            AudioChannels[AudioChannel.HF1] = new AudioChannelConfig
+            {
+                ProcessName = Hf1VolumeApp,
+                VolumeDataRef = "system.analog.A_ASP_HF_1_VOLUME",
+                MuteDataRef = "system.indicators.I_ASP_HF_1_REC",
+                Enabled = IsHf1Controllable(),
+                LatchMute = Hf1LatchMute,
+                VoiceMeeterStrip = VoiceMeeterStrips.ContainsKey(AudioChannel.HF1) ? VoiceMeeterStrips[AudioChannel.HF1] : ""
+            };
+
+            // HF2
+            AudioChannels[AudioChannel.HF2] = new AudioChannelConfig
+            {
+                ProcessName = Hf2VolumeApp,
+                VolumeDataRef = "system.analog.A_ASP_HF_2_VOLUME",
+                MuteDataRef = "system.indicators.I_ASP_HF_2_REC",
+                Enabled = IsHf2Controllable(),
+                LatchMute = Hf2LatchMute,
+                VoiceMeeterStrip = VoiceMeeterStrips.ContainsKey(AudioChannel.HF2) ? VoiceMeeterStrips[AudioChannel.HF2] : ""
             };
 
             // CAB

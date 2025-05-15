@@ -118,6 +118,11 @@ namespace Prosim2GSX.ViewModels
         public HeaderBarViewModel HeaderBar { get; }
 
         /// <summary>
+        /// Gets the view model for audio settings configuration
+        /// </summary>
+        public AudioSettingsViewModel AudioSettings { get; }
+
+        /// <summary>
         /// Gets or sets the active flight phase index (0-4) for the progress bar
         /// </summary>
         public int ActiveFlightPhaseIndex
@@ -273,11 +278,11 @@ namespace Prosim2GSX.ViewModels
             FlightPhase = new FlightPhaseViewModel();
             GroundServices = new GroundServicesViewModel(serviceModel);
             HeaderBar = new HeaderBarViewModel(
-                // Pass the navigation actions
-                showAudioSettingsAction: () => SelectedTabIndex = 1, // Audio Settings tab
-                showSettingsAction: () => SelectedTabIndex = 2,      // Settings tab
+                showAudioSettingsAction: () => SelectedTabIndex = 1,
+                showSettingsAction: () => SelectedTabIndex = 2,
                 showHelpAction: ShowHelp
             );
+            AudioSettings = new AudioSettingsViewModel(serviceModel);
 
             // Initialize commands
             ShowHelpCommand = new RelayCommand(_ => ShowHelp());
@@ -312,6 +317,7 @@ namespace Prosim2GSX.ViewModels
             FlightPhase = new FlightPhaseViewModel();
             GroundServices = new GroundServicesViewModel();
             HeaderBar = new HeaderBarViewModel();
+            AudioSettings = new AudioSettingsViewModel(new ServiceModel());
 
             // Initialize timer
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
@@ -347,6 +353,7 @@ namespace Prosim2GSX.ViewModels
             FlightPhase.Cleanup();
             GroundServices.Cleanup();
             HeaderBar.Cleanup();
+            // Audio settings doesn't have any cleanup to do
 
             // Unsubscribe from all events
             foreach (var token in _subscriptionTokens)
