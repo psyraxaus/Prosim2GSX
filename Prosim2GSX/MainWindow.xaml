@@ -319,28 +319,9 @@
                         </Border>
 
                         <!-- Log Messages -->
-                        <TextBlock Text="LOG MESSAGES" Style="{StaticResource CategoryHeaderStyle}"/>
-                    
-                        <Border Style="{StaticResource SectionBorderStyle}" MinHeight="120" Height="137">
-                        <ListView x:Name="lvLogMessages" 
-          ItemsSource="{Binding LogEntries}"
-          MaxHeight="120"
-          BorderThickness="0"
-          Background="Transparent"
-          ScrollViewer.VerticalScrollBarVisibility="Auto"
-          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                            <ListView.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding Message}" 
-                       TextWrapping="Wrap"
-                       Foreground="{Binding LevelBrush}"/>
-                                </DataTemplate>
-                            </ListView.ItemTemplate>
-                            <!-- ItemContainerStyle remains unchanged -->
-                        </ListView>
-
-                    </Border>
-                    </StackPanel>
+                    <TextBlock Text="LOG MESSAGES" Style="{StaticResource CategoryHeaderStyle}"/>
+                    <components:LogMessagesControl DataContext="{Binding LogMessages}"/>
+                </StackPanel>
             </TabItem>
 
             <!-- Audio Settings Tab -->

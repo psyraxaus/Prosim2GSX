@@ -66,6 +66,11 @@ namespace Prosim2GSX.ViewModels
         public ConnectionStatusViewModel ConnectionStatus { get; }
 
         /// <summary>
+        /// Gets the view model for log messages
+        /// </summary>
+        public LogMessagesViewModel LogMessages { get; }
+
+        /// <summary>
         /// Gets the log entries collection for display in the UI
         /// </summary>
         public ObservableCollection<LogEntry> LogEntries => _logEntries;
@@ -247,8 +252,9 @@ namespace Prosim2GSX.ViewModels
             _serviceModel = serviceModel ?? throw new ArgumentNullException(nameof(serviceModel));
             _notifyModel = notifyModel ?? throw new ArgumentNullException(nameof(notifyModel));
 
-            // Create ConnectionStatusViewModel
+            // Create ViewModels for components
             ConnectionStatus = new ConnectionStatusViewModel(serviceModel);
+            LogMessages = new LogMessagesViewModel();
 
             // Initialize commands
             ShowHelpCommand = new RelayCommand(_ => ShowHelp());
@@ -277,8 +283,9 @@ namespace Prosim2GSX.ViewModels
             ShowSettingsCommand = new RelayCommand(_ => { });
             ShowAudioSettingsCommand = new RelayCommand(_ => { });
 
-            // Create ConnectionStatusViewModel for design-time
+            // Create component ViewModels for design-time
             ConnectionStatus = new ConnectionStatusViewModel(new ServiceModel());
+            LogMessages = new LogMessagesViewModel();
 
             // Initialize timer
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
@@ -311,8 +318,9 @@ namespace Prosim2GSX.ViewModels
         {
             _timer.Stop();
 
-            // Cleanup ConnectionStatusViewModel
+            // Cleanup component ViewModels
             ConnectionStatus.Cleanup();
+            LogMessages.Cleanup();
 
             // Unsubscribe from all events
             foreach (var token in _subscriptionTokens)
@@ -344,7 +352,7 @@ namespace Prosim2GSX.ViewModels
         /// </summary>
         private void OnTick(object sender, EventArgs e)
         {
-            UpdateLogArea();
+            LogMessages.UpdateLogArea();
             UpdateCurrentDate();
         }
 
@@ -354,43 +362,6 @@ namespace Prosim2GSX.ViewModels
         private void UpdateCurrentDate()
         {
             CurrentDate = DateTime.Now.ToString("dd.MM.yyyy");
-        }
-
-        /// <summary>
-        /// Updates the log messages area with new log entries
-        /// </summary>
-        private void UpdateLogArea()
-        {
-            // Process all available log entries from the LogEntryQueue
-            while (LogService.LogEntryQueue.TryDequeue(out LogEntry entry))
-            {
-                // Only show Information, Warning, Error, and Critical messages in the UI
-                if (entry.Level <= LogLevel.Debug)  // Debug is 1, Verbose is 0
-                {
-                    // Skip Debug and Verbose messages
-                    continue;
-                }
-
-                // Add to the observable collection on the UI thread
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    // Add the new entry
-                    _logEntries.Add(entry);
-
-                    // Remove oldest entries if we exceed the maximum
-                    while (_logEntries.Count > 5) // Max log entries
-                    {
-                        _logEntries.RemoveAt(0);
-                    }
-                });
-            }
-
-            // Process the old MessageQueue for backward compatibility
-            while (LogService.MessageQueue.Count > 0)
-            {
-                // Just dequeue the messages to keep the queue from growing
-                LogService.MessageQueue.Dequeue();
-            }
         }
 
         /// <summary>

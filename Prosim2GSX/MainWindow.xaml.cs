@@ -29,9 +29,6 @@ namespace Prosim2GSX
         protected DispatcherTimer timer;
         private List<SubscriptionToken> _subscriptionTokens = new List<SubscriptionToken>();
         private bool _isLoadingSettings = false;
-        private ObservableCollection<LogEntry> _logEntries = new ObservableCollection<LogEntry>();
-        private const int MaxLogEntries = 5;
-        private LogLevel _uiLogLevel = LogLevel.Information;
 
         private MainViewModel _viewModel;
 
@@ -306,46 +303,7 @@ namespace Prosim2GSX
             }
         }
 
-        protected void UpdateLogArea()
-        {
-            // Process all available log entries from the new LogEntryQueue
-            while (LogService.LogEntryQueue.TryDequeue(out LogEntry entry))
-            {
-                // Only show Information, Warning, Error, and Critical messages in the UI
-                if (entry.Level <= LogLevel.Debug)  // Debug is 1, Verbose is 0
-                {
-                    // Skip Debug and Verbose messages
-                    continue;
-                }
-
-                // Add to the observable collection on the UI thread
-                Dispatcher.Invoke(() =>
-                {
-                    // Add the new entry
-                    _logEntries.Add(entry);
-
-                    // Remove oldest entries if we exceed the maximum
-                    while (_logEntries.Count > MaxLogEntries)
-                    {
-                        _logEntries.RemoveAt(0);
-                    }
-
-                    // Scroll to the bottom to show the latest entry
-                    if (lvLogMessages.Items.Count > 0)
-                    {
-                        lvLogMessages.ScrollIntoView(lvLogMessages.Items[lvLogMessages.Items.Count - 1]);
-                    }
-                });
-            }
-
-            // Process the old MessageQueue for backward compatibility
-            while (LogService.MessageQueue.Count > 0)
-            {
-                // Just dequeue the messages to keep the queue from growing
-                LogService.MessageQueue.Dequeue();
-            }
-        }
-
+        
         private void acars_Click(object sender, RoutedEventArgs e)
         {
             if (sender == acarsHoppie)
@@ -660,7 +618,6 @@ namespace Prosim2GSX
 
         protected void OnTick(object sender, EventArgs e)
         {
-            UpdateLogArea();
             UpdateStatus();
         }
         

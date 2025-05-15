@@ -49,9 +49,11 @@ namespace Prosim2GSX.ViewModels
                 if (viewModel is MainViewModel mainViewModel)
                 {
                     RegisterViewModel<ConnectionStatusViewModel>(mainViewModel.ConnectionStatus, false);
+                    RegisterViewModel<LogMessagesViewModel>(mainViewModel.LogMessages, false);
                 }
             }
         }
+
 
         /// <summary>
         /// Removes a view model instance
