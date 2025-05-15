@@ -156,7 +156,10 @@ namespace Prosim2GSX.ViewModels.Components
         /// <param name="evt">The flight phase changed event</param>
         private void OnFlightPhaseChanged(FlightPhaseChangedEvent evt)
         {
-            UpdateFlightPhase(evt.NewState);
+            ExecuteOnUIThread(() =>
+            {
+                UpdateFlightPhase(evt.NewState);
+            });
         }
 
         /// <summary>

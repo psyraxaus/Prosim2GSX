@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Windows;
+using System.Windows.Threading;
 
 namespace Prosim2GSX.ViewModels.Base
 {
@@ -23,7 +25,22 @@ namespace Prosim2GSX.ViewModels.Base
         /// If not provided, the calling member name will be used.</param>
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            PropertyChangedEventHandler handler = PropertyChanged;
+            if (handler != null)
+            {
+                // Ensure property change notifications happen on the UI thread
+                if (Application.Current.Dispatcher.CheckAccess())
+                {
+                    handler(this, new PropertyChangedEventArgs(propertyName));
+                }
+                else
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        handler(this, new PropertyChangedEventArgs(propertyName));
+                    });
+                }
+            }
         }
 
         /// <summary>
@@ -46,6 +63,24 @@ namespace Prosim2GSX.ViewModels.Base
             // Notify that the property has changed
             OnPropertyChanged(propertyName);
             return true;
+        }
+
+        /// <summary>
+        /// Executes an action on the UI thread
+        /// </summary>
+        /// <param name="action">The action to execute</param>
+        protected void ExecuteOnUIThread(Action action)
+        {
+            if (action == null) return;
+
+            if (Application.Current?.Dispatcher?.CheckAccess() == true)
+            {
+                action();
+            }
+            else
+            {
+                Application.Current?.Dispatcher?.Invoke(action);
+            }
         }
     }
 }

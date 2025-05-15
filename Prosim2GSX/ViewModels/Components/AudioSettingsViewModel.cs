@@ -233,34 +233,37 @@ namespace Prosim2GSX.ViewModels.Components
 
             try
             {
-                bool success = false;
+                bool finalSuccess = false;
 
                 // Run diagnostics on a background thread
                 await Task.Run(() => {
                     var serviceController = IPCManager.ServiceController;
                     if (serviceController != null)
                     {
-                        success = serviceController.PerformVoiceMeeterDiagnostics();
+                        finalSuccess = serviceController.PerformVoiceMeeterDiagnostics();
                     }
                 });
 
-                // Show a message box with the result
-                if (success)
-                {
-                    MessageBox.Show(
-                        "VoiceMeeter diagnostics completed successfully. Check the log for details.",
-                        "Diagnostics Successful",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
-                }
-                else
-                {
-                    MessageBox.Show(
-                        "VoiceMeeter diagnostics completed with errors. Check the log for details.",
-                        "Diagnostics Failed",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-                }
+                // Show a message box with the result, ensuring it happens on the UI thread
+                ExecuteOnUIThread(() => {
+                    if (finalSuccess)
+                    {
+                        MessageBox.Show(
+                            "VoiceMeeter diagnostics completed successfully. Check the log for details.",
+                            "Diagnostics Successful",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show(
+                            "VoiceMeeter diagnostics completed with errors. Check the log for details.",
+                            "Diagnostics Failed",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                    }
+                });
+
             }
             catch (Exception ex)
             {

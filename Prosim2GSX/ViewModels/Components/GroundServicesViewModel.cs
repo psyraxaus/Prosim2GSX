@@ -132,6 +132,7 @@ namespace Prosim2GSX.ViewModels.Components
         /// <param name="status">Service status</param>
         private void UpdateServiceStatusBrush(string serviceName, ServiceStatus status)
         {
+            // Create the brush based on status (this can be done on any thread)
             var brush = status switch
             {
                 ServiceStatus.Completed => new SolidColorBrush(Colors.Green),
@@ -142,11 +143,14 @@ namespace Prosim2GSX.ViewModels.Components
                 _ => new SolidColorBrush(Colors.LightGray)
             };
 
-            _serviceStatusBrushes[serviceName] = brush;
-
-            // Notify property changed for the appropriate property
-            OnPropertyChanged($"{serviceName}StatusBrush");
+            // Execute UI updates on the UI thread
+            ExecuteOnUIThread(() =>
+            {
+                _serviceStatusBrushes[serviceName] = brush;
+                OnPropertyChanged($"{serviceName}StatusBrush");
+            });
         }
+
 
         /// <summary>
         /// Handles service status changed events

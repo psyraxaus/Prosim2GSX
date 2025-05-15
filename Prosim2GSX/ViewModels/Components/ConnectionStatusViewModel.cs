@@ -102,7 +102,8 @@ namespace Prosim2GSX.ViewModels.Components
         /// </summary>
         private void OnConnectionStatusChanged(ConnectionStatusChangedEvent evt)
         {
-            Application.Current.Dispatcher.Invoke(() => {
+            ExecuteOnUIThread(() =>
+            {
                 switch (evt.ConnectionName)
                 {
                     case "MSFS":

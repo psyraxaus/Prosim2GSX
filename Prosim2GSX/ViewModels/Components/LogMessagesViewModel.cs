@@ -58,7 +58,7 @@ namespace Prosim2GSX.ViewModels.Components
                 }
 
                 // Add to the observable collection on the UI thread
-                Application.Current.Dispatcher.Invoke(() =>
+                ExecuteOnUIThread(() =>
                 {
                     // Add the new entry
                     _logEntries.Add(entry);
