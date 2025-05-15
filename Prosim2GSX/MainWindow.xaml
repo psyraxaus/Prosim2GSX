@@ -6,12 +6,14 @@
         xmlns:local="clr-namespace:Prosim2GSX"
         xmlns:serviceModel="clr-namespace:System.ServiceModel;assembly=System.ServiceModel"
         xmlns:viewModels="clr-namespace:Prosim2GSX.ViewModels"
+        xmlns:components="clr-namespace:Prosim2GSX.Views.Components"
         mc:Ignorable="d"
         Title="Prosim2GSX EFB" Height="788" Width="800" 
         ResizeMode="NoResize" 
         IsVisibleChanged="Window_IsVisibleChanged" 
         Closing="Window_Closing"
         Background="{DynamicResource ContentBackground}">
+
     <Window.Resources>
         <!-- Modern styles for controls -->
         <Style x:Key="TabButtonStyle" TargetType="Button">
@@ -206,41 +208,10 @@
             <TabItem Header="FLIGHT STATUS" x:Name="StatusTab">
                 <StackPanel Margin="20,0,20,0" Height="665">
                         <!-- Connection Status -->
-                        <TextBlock Text="CONNECTION STATUS" Style="{StaticResource CategoryHeaderStyle}"/>
-                        <Border Style="{StaticResource SectionBorderStyle}">
-                            <WrapPanel HorizontalAlignment="Center">
-                            <StackPanel Orientation="Horizontal" Margin="0,0,10,0">
-                                <Ellipse x:Name="MsfsStatusIndicator" 
-             Fill="{Binding MsfsStatusBrush}" 
-             Style="{StaticResource StatusIndicatorStyle}"/>
-                                <Label Content="MSFS" Style="{StaticResource StatusLabelStyle}"/>
-                            </StackPanel>
+                    <TextBlock Text="CONNECTION STATUS" Style="{StaticResource CategoryHeaderStyle}"/>
+                    <components:ConnectionStatusControl DataContext="{Binding ConnectionStatus}"/>
 
-                            <StackPanel Orientation="Horizontal" Margin="0,0,10,0">
-                                <Ellipse x:Name="SimConnectStatusIndicator" 
-             Fill="{Binding SimConnectStatusBrush}" 
-             Style="{StaticResource StatusIndicatorStyle}"/>
-                                <Label Content="SimConnect" Style="{StaticResource StatusLabelStyle}"/>
-                            </StackPanel>
-
-                            <StackPanel Orientation="Horizontal" Margin="0,0,10,0">
-                                <Ellipse x:Name="ProsimStatusIndicator" 
-             Fill="{Binding ProsimStatusBrush}" 
-             Style="{StaticResource StatusIndicatorStyle}"/>
-                                <Label Content="Prosim" Style="{StaticResource StatusLabelStyle}"/>
-                            </StackPanel>
-
-                            <StackPanel Orientation="Horizontal" Margin="0,0,10,0">
-                                <Ellipse x:Name="SessionStatusIndicator" 
-             Fill="{Binding SessionStatusBrush}" 
-             Style="{StaticResource StatusIndicatorStyle}"/>
-                                <Label Content="Session" Style="{StaticResource StatusLabelStyle}"/>
-                            </StackPanel>
-
-                        </WrapPanel>
-                        </Border>
-
-                        <!-- Flight Phase -->
+                    <!-- Flight Phase -->
                         <TextBlock Text="FLIGHT PHASE" Style="{StaticResource CategoryHeaderStyle}"/>
                         <Border Style="{StaticResource SectionBorderStyle}">
                             <StackPanel>

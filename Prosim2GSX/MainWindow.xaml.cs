@@ -56,9 +56,6 @@ namespace Prosim2GSX
 
         private void SubscribeToEvents()
         {
-            // Subscribe to connection status events
-            _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<ConnectionStatusChangedEvent>(OnConnectionStatusChanged));
-            
             // Subscribe to service status events
             _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<ServiceStatusChangedEvent>(OnServiceStatusChanged));
             
@@ -67,36 +64,6 @@ namespace Prosim2GSX
 
             // Subscribe to flight number events
             _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<FlightPlanChangedEvent>(OnFlightPlanChanged));
-        }
-        
-        private void OnConnectionStatusChanged(ConnectionStatusChangedEvent evt)
-        {
-            // Update UI based on connection status
-            Dispatcher.Invoke(() => {
-                switch (evt.ConnectionName)
-                {
-                    case "MSFS":
-                        MsfsStatusIndicator.Fill = evt.IsConnected ? 
-                            new SolidColorBrush(Colors.Green) : 
-                            new SolidColorBrush(Colors.Red);
-                        break;
-                    case "SimConnect":
-                        SimConnectStatusIndicator.Fill = evt.IsConnected ? 
-                            new SolidColorBrush(Colors.Green) : 
-                            new SolidColorBrush(Colors.Red);
-                        break;
-                    case "Prosim":
-                        ProsimStatusIndicator.Fill = evt.IsConnected ? 
-                            new SolidColorBrush(Colors.Green) : 
-                            new SolidColorBrush(Colors.Red);
-                        break;
-                    case "Session":
-                        SessionStatusIndicator.Fill = evt.IsConnected ? 
-                            new SolidColorBrush(Colors.Green) : 
-                            new SolidColorBrush(Colors.Red);
-                        break;
-                }
-            });
         }
         
         private void OnServiceStatusChanged(ServiceStatusChangedEvent evt)

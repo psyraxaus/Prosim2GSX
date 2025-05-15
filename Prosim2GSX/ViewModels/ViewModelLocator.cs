@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Prosim2GSX.ViewModels.Components;
+using System;
 using System.Collections.Generic;
 
 namespace Prosim2GSX.ViewModels
@@ -37,9 +38,19 @@ namespace Prosim2GSX.ViewModels
         /// </summary>
         /// <typeparam name="T">The type of view model being registered</typeparam>
         /// <param name="viewModel">The view model instance</param>
-        public void RegisterViewModel<T>(T viewModel) where T : class
+        public void RegisterViewModel<T>(T viewModel, bool registerChildViewModels = true) where T : class
         {
             _viewModels[typeof(T)] = viewModel;
+
+            // Register child ViewModels if requested
+            if (registerChildViewModels)
+            {
+                // If this is a MainViewModel, register its child ViewModels
+                if (viewModel is MainViewModel mainViewModel)
+                {
+                    RegisterViewModel<ConnectionStatusViewModel>(mainViewModel.ConnectionStatus, false);
+                }
+            }
         }
 
         /// <summary>

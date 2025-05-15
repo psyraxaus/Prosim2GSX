@@ -6,6 +6,7 @@ using Prosim2GSX.Services.Logger.Enums;
 using Prosim2GSX.Services.Logger.Implementation;
 using Prosim2GSX.ViewModels.Base;
 using Prosim2GSX.ViewModels.Commands;
+using Prosim2GSX.ViewModels.Components;
 using System;
 using System.Collections.ObjectModel;
 using System.Windows;
@@ -30,12 +31,6 @@ namespace Prosim2GSX.ViewModels
 
         // Tab related fields
         private int _selectedTabIndex;
-
-        // Connection status fields
-        private Brush _msfsStatusBrush = new SolidColorBrush(Colors.Red);
-        private Brush _simConnectStatusBrush = new SolidColorBrush(Colors.Red);
-        private Brush _prosimStatusBrush = new SolidColorBrush(Colors.Red);
-        private Brush _sessionStatusBrush = new SolidColorBrush(Colors.Red);
 
         // Flight state fields
         private string _flightPhaseText = "AT GATE";
@@ -66,6 +61,11 @@ namespace Prosim2GSX.ViewModels
         #region Properties
 
         /// <summary>
+        /// Gets the view model for connection status indicators
+        /// </summary>
+        public ConnectionStatusViewModel ConnectionStatus { get; }
+
+        /// <summary>
         /// Gets the log entries collection for display in the UI
         /// </summary>
         public ObservableCollection<LogEntry> LogEntries => _logEntries;
@@ -77,42 +77,6 @@ namespace Prosim2GSX.ViewModels
         {
             get => _selectedTabIndex;
             set => SetProperty(ref _selectedTabIndex, value);
-        }
-
-        /// <summary>
-        /// Gets or sets the status indicator color for MSFS connection
-        /// </summary>
-        public Brush MsfsStatusBrush
-        {
-            get => _msfsStatusBrush;
-            set => SetProperty(ref _msfsStatusBrush, value);
-        }
-
-        /// <summary>
-        /// Gets or sets the status indicator color for SimConnect connection
-        /// </summary>
-        public Brush SimConnectStatusBrush
-        {
-            get => _simConnectStatusBrush;
-            set => SetProperty(ref _simConnectStatusBrush, value);
-        }
-
-        /// <summary>
-        /// Gets or sets the status indicator color for Prosim connection
-        /// </summary>
-        public Brush ProsimStatusBrush
-        {
-            get => _prosimStatusBrush;
-            set => SetProperty(ref _prosimStatusBrush, value);
-        }
-
-        /// <summary>
-        /// Gets or sets the status indicator color for Session status
-        /// </summary>
-        public Brush SessionStatusBrush
-        {
-            get => _sessionStatusBrush;
-            set => SetProperty(ref _sessionStatusBrush, value);
         }
 
         /// <summary>
@@ -283,6 +247,9 @@ namespace Prosim2GSX.ViewModels
             _serviceModel = serviceModel ?? throw new ArgumentNullException(nameof(serviceModel));
             _notifyModel = notifyModel ?? throw new ArgumentNullException(nameof(notifyModel));
 
+            // Create ConnectionStatusViewModel
+            ConnectionStatus = new ConnectionStatusViewModel(serviceModel);
+
             // Initialize commands
             ShowHelpCommand = new RelayCommand(_ => ShowHelp());
             ShowSettingsCommand = new RelayCommand(_ => ShowSettings());
@@ -310,6 +277,9 @@ namespace Prosim2GSX.ViewModels
             ShowSettingsCommand = new RelayCommand(_ => { });
             ShowAudioSettingsCommand = new RelayCommand(_ => { });
 
+            // Create ConnectionStatusViewModel for design-time
+            ConnectionStatus = new ConnectionStatusViewModel(new ServiceModel());
+
             // Initialize timer
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         }
@@ -324,9 +294,6 @@ namespace Prosim2GSX.ViewModels
         /// </summary>
         private void SubscribeToEvents()
         {
-            // Subscribe to connection status events
-            _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<ConnectionStatusChangedEvent>(OnConnectionStatusChanged));
-
             // Subscribe to service status events
             _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<ServiceStatusChangedEvent>(OnServiceStatusChanged));
 
@@ -344,6 +311,9 @@ namespace Prosim2GSX.ViewModels
         {
             _timer.Stop();
 
+            // Cleanup ConnectionStatusViewModel
+            ConnectionStatus.Cleanup();
+
             // Unsubscribe from all events
             foreach (var token in _subscriptionTokens)
             {
@@ -357,7 +327,7 @@ namespace Prosim2GSX.ViewModels
         /// </summary>
         public void OnWindowVisible()
         {
-            UpdateDirectConnectionStatus();
+            ConnectionStatus.UpdateConnectionStatus();
             _timer.Start();
         }
 
@@ -376,30 +346,6 @@ namespace Prosim2GSX.ViewModels
         {
             UpdateLogArea();
             UpdateCurrentDate();
-        }
-
-        /// <summary>
-        /// Updates the connection status indicators based on the current model state
-        /// </summary>
-        private void UpdateDirectConnectionStatus()
-        {
-            if (_serviceModel == null) return;
-
-            MsfsStatusBrush = _serviceModel.IsSimRunning ?
-                new SolidColorBrush(Colors.Green) :
-                new SolidColorBrush(Colors.Red);
-
-            ProsimStatusBrush = _serviceModel.IsProsimRunning ?
-                new SolidColorBrush(Colors.Green) :
-                new SolidColorBrush(Colors.Red);
-
-            SimConnectStatusBrush = IPCManager.SimConnect?.IsConnected == true ?
-                new SolidColorBrush(Colors.Green) :
-                new SolidColorBrush(Colors.Red);
-
-            SessionStatusBrush = _serviceModel.IsSessionRunning ?
-                new SolidColorBrush(Colors.Green) :
-                new SolidColorBrush(Colors.Red);
         }
 
         /// <summary>
@@ -445,38 +391,6 @@ namespace Prosim2GSX.ViewModels
                 // Just dequeue the messages to keep the queue from growing
                 LogService.MessageQueue.Dequeue();
             }
-        }
-
-        /// <summary>
-        /// Handler for connection status changed events
-        /// </summary>
-        private void OnConnectionStatusChanged(ConnectionStatusChangedEvent evt)
-        {
-            Application.Current.Dispatcher.Invoke(() => {
-                switch (evt.ConnectionName)
-                {
-                    case "MSFS":
-                        MsfsStatusBrush = evt.IsConnected ?
-                            new SolidColorBrush(Colors.Green) :
-                            new SolidColorBrush(Colors.Red);
-                        break;
-                    case "SimConnect":
-                        SimConnectStatusBrush = evt.IsConnected ?
-                            new SolidColorBrush(Colors.Green) :
-                            new SolidColorBrush(Colors.Red);
-                        break;
-                    case "Prosim":
-                        ProsimStatusBrush = evt.IsConnected ?
-                            new SolidColorBrush(Colors.Green) :
-                            new SolidColorBrush(Colors.Red);
-                        break;
-                    case "Session":
-                        SessionStatusBrush = evt.IsConnected ?
-                            new SolidColorBrush(Colors.Green) :
-                            new SolidColorBrush(Colors.Red);
-                        break;
-                }
-            });
         }
 
         /// <summary>
