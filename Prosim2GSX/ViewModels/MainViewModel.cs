@@ -103,6 +103,11 @@ namespace Prosim2GSX.ViewModels
         }
 
         /// <summary>
+        /// Gets the view model for flight phase visualization
+        /// </summary>
+        public FlightPhaseViewModel FlightPhase { get; }
+
+        /// <summary>
         /// Gets or sets the active flight phase index (0-4) for the progress bar
         /// </summary>
         public int ActiveFlightPhaseIndex
@@ -255,6 +260,7 @@ namespace Prosim2GSX.ViewModels
             // Create ViewModels for components
             ConnectionStatus = new ConnectionStatusViewModel(serviceModel);
             LogMessages = new LogMessagesViewModel();
+            FlightPhase = new FlightPhaseViewModel();
 
             // Initialize commands
             ShowHelpCommand = new RelayCommand(_ => ShowHelp());
@@ -283,9 +289,10 @@ namespace Prosim2GSX.ViewModels
             ShowSettingsCommand = new RelayCommand(_ => { });
             ShowAudioSettingsCommand = new RelayCommand(_ => { });
 
-            // Create component ViewModels for design-time
+            // Create ViewModels for design-time
             ConnectionStatus = new ConnectionStatusViewModel(new ServiceModel());
             LogMessages = new LogMessagesViewModel();
+            FlightPhase = new FlightPhaseViewModel();
 
             // Initialize timer
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
@@ -304,9 +311,6 @@ namespace Prosim2GSX.ViewModels
             // Subscribe to service status events
             _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<ServiceStatusChangedEvent>(OnServiceStatusChanged));
 
-            // Subscribe to flight phase events
-            _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<FlightPhaseChangedEvent>(OnFlightPhaseChanged));
-
             // Subscribe to flight number events
             _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<FlightPlanChangedEvent>(OnFlightPlanChanged));
         }
@@ -321,6 +325,7 @@ namespace Prosim2GSX.ViewModels
             // Cleanup component ViewModels
             ConnectionStatus.Cleanup();
             LogMessages.Cleanup();
+            FlightPhase.Cleanup();
 
             // Unsubscribe from all events
             foreach (var token in _subscriptionTokens)
@@ -423,49 +428,6 @@ namespace Prosim2GSX.ViewModels
                         break;
                     case "Chocks":
                         ChocksStatusBrush = brush;
-                        break;
-                }
-            });
-        }
-
-        /// <summary>
-        /// Handler for flight phase changed events
-        /// </summary>
-        private void OnFlightPhaseChanged(FlightPhaseChangedEvent evt)
-        {
-            Application.Current.Dispatcher.Invoke(() => {
-                switch (evt.NewState)
-                {
-                    case FlightState.PREFLIGHT:
-                    case FlightState.DEPARTURE:
-                        FlightPhaseText = "AT GATE";
-                        FlightPhaseBrush = new SolidColorBrush(Colors.RoyalBlue);
-                        ActiveFlightPhaseIndex = 0;
-                        break;
-                    case FlightState.TAXIOUT:
-                        FlightPhaseText = "TAXI OUT";
-                        FlightPhaseBrush = new SolidColorBrush(Colors.Gold);
-                        ActiveFlightPhaseIndex = 1;
-                        break;
-                    case FlightState.FLIGHT:
-                        FlightPhaseText = "IN FLIGHT";
-                        FlightPhaseBrush = new SolidColorBrush(Colors.Green);
-                        ActiveFlightPhaseIndex = 2;
-                        break;
-                    case FlightState.TAXIIN:
-                    case FlightState.ARRIVAL:
-                        FlightPhaseText = "APPROACH";
-                        FlightPhaseBrush = new SolidColorBrush(Colors.Purple);
-                        ActiveFlightPhaseIndex = 3;
-                        break;
-                    case FlightState.TURNAROUND:
-                        FlightPhaseText = "ARRIVED";
-                        FlightPhaseBrush = new SolidColorBrush(Colors.Teal);
-                        ActiveFlightPhaseIndex = 4;
-                        break;
-                    default:
-                        FlightPhaseText = "UNKNOWN";
-                        FlightPhaseBrush = new SolidColorBrush(Colors.Gray);
                         break;
                 }
             });

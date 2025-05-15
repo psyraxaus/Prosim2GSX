@@ -2,14 +2,27 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:Prosim2GSX"
+             xmlns:converters="clr-namespace:Prosim2GSX.Converters"
              ShutdownMode="OnExplicitShutdown"
              >
     <Application.Resources>
         <ResourceDictionary>
-                <ResourceDictionary.MergedDictionaries>
+            <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="ThemeResources.xaml" />
                 <ResourceDictionary Source="NotifyIconResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- Common Styles -->
+            <Style x:Key="SectionBorderStyle" TargetType="Border">
+                <Setter Property="Background" Value="{DynamicResource SectionBackground}"/>
+                <Setter Property="BorderBrush" Value="#E0E0E0"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="6"/>
+                <Setter Property="Padding" Value="12"/>
+                <Setter Property="Margin" Value="0,8,0,10"/>
+            </Style>
+            <!-- Converters -->
+            <converters:PhaseToBrushConverter x:Key="PhaseToBrushConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

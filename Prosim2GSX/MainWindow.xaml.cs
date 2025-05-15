@@ -55,9 +55,6 @@ namespace Prosim2GSX
         {
             // Subscribe to service status events
             _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<ServiceStatusChangedEvent>(OnServiceStatusChanged));
-            
-            // Subscribe to flight phase events
-            _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<FlightPhaseChangedEvent>(OnFlightPhaseChanged));
 
             // Subscribe to flight number events
             _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<FlightPlanChangedEvent>(OnFlightPlanChanged));
@@ -127,47 +124,6 @@ namespace Prosim2GSX
             });
         }
         
-        private void OnFlightPhaseChanged(FlightPhaseChangedEvent evt)
-        {
-            // Update flight phase display
-            Dispatcher.Invoke(() => {
-                switch (evt.NewState)
-                {
-                    case FlightState.PREFLIGHT:
-                    case FlightState.DEPARTURE:
-                        lblFlightPhase.Content = "AT GATE";
-                        lblFlightPhase.Foreground = new SolidColorBrush(Colors.RoyalBlue);
-                        HighlightFlightPhaseSection(0);
-                        break;
-                    case FlightState.TAXIOUT:
-                        lblFlightPhase.Content = "TAXI OUT";
-                        lblFlightPhase.Foreground = new SolidColorBrush(Colors.Gold);
-                        HighlightFlightPhaseSection(1);
-                        break;
-                    case FlightState.FLIGHT:
-                        lblFlightPhase.Content = "IN FLIGHT";
-                        lblFlightPhase.Foreground = new SolidColorBrush(Colors.Green);
-                        HighlightFlightPhaseSection(2);
-                        break;
-                    case FlightState.TAXIIN:
-                    case FlightState.ARRIVAL:
-                        lblFlightPhase.Content = "APPROACH";
-                        lblFlightPhase.Foreground = new SolidColorBrush(Colors.Purple);
-                        HighlightFlightPhaseSection(3);
-                        break;
-                    case FlightState.TURNAROUND:
-                        lblFlightPhase.Content = "ARRIVED";
-                        lblFlightPhase.Foreground = new SolidColorBrush(Colors.Teal);
-                        HighlightFlightPhaseSection(4);
-                        break;
-                    default:
-                        lblFlightPhase.Content = "UNKNOWN";
-                        lblFlightPhase.Foreground = new SolidColorBrush(Colors.Gray);
-                        break;
-                }
-            });
-        }
-
         private void OnFlightPlanChanged(FlightPlanChangedEvent evt)
         {
             UpdateFlightNumberDisplay(evt.FlightNumber);
@@ -756,39 +712,6 @@ namespace Prosim2GSX
             CurrentDateTime.Text = DateTime.Now.ToString("dd.MM.yyyy");
             
             // Note: Connection status, service status, and flight phase are now updated via events
-        }
-
-        /// <summary>
-        /// Resets all flight phase progress bar sections to inactive (gray)
-        /// </summary>
-        private void ResetFlightPhaseProgressBar()
-        {
-            // Get all the Border elements in the progress bar
-            var grid = progressBar;
-            if (grid != null)
-            {
-                for (int i = 0; i < 5; i++)
-                {
-                    var border = (Border)grid.Children[i];
-                    border.Background = new SolidColorBrush(Colors.LightGray);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Highlights a specific section of the flight phase progress bar
-        /// </summary>
-        /// <param name="sectionIndex">Index of the section to highlight (0-4)</param>
-        private void HighlightFlightPhaseSection(int sectionIndex)
-        {
-            // Get the Grid that contains the progress bar sections
-            var grid = progressBar;
-            if (grid != null && sectionIndex >= 0 && sectionIndex < 5)
-            {
-                // Highlight the specified section
-                var border = (Border)grid.Children[sectionIndex];
-                border.Background = new SolidColorBrush(Colors.DodgerBlue);
-            }
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
