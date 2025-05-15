@@ -25,6 +25,16 @@ Before the UI update, the focus was on implementing an event aggregator system t
 Previous work also focused on implementing a new Prosim dataref subscription system and enhancing the cockpit door integration between Prosim and GSX. The dataref subscription system involved creating a callback-based monitoring system for Prosim datarefs and implementing synchronization between the cockpit door state in Prosim and the corresponding LVAR in GSX. The implementation allows the cockpit door to muffle cabin sounds when closed, enhancing the realism of the simulation. Additionally, the previous work on cargo door logic, catering service door operation, and refueling process enhancements has been thoroughly tested and verified.
 
 ## Recent Changes
+- Implemented comprehensive thread-safe UI updates:
+  - Added `ExecuteOnUIThread` helper method to ViewModelBase for marshaling operations to the UI thread
+  - Updated EventAggregator to ensure events are published on the UI thread
+  - Fixed double dispatching in ConnectionStatusViewModel
+  - Updated LogMessagesViewModel to use thread-safe update pattern
+  - Ensured all ViewModels that handle events from background threads use thread-safe patterns
+  - Improved thread safety for event handlers in ViewModels with background operations
+  - Fixed thread safety issues in AudioSettingsViewModel for async operations
+  - This resolves UI crashes that could occur during "check of the chocks" stage when UI updates happened on background threads
+
 - Implemented comprehensive thread-safe loadsheet generation:
   - Added proper synchronization with dedicated lock objects to prevent race conditions
   - Implemented state tracking flags for better process control
@@ -165,6 +175,10 @@ Previous work also focused on implementing a new Prosim dataref subscription sys
   - Previously: Updated the application version from 0.3.0 to 0.4.0
 
 ## Active Decisions
+- Using ExecuteOnUIThread pattern for all ViewModels that receive updates from background threads
+- Ensuring EventAggregator dispatches events to UI thread for thread-safe handling
+- Centralizing thread marshaling logic in the ViewModelBase class for consistency
+- Ensuring async operations that update UI elements properly marshal back to the UI thread
 - Using comprehensive state tracking with boolean flags and public properties
 - Implementing service-specific log categories for better troubleshooting
 - Ensuring thread safety with proper synchronization primitives

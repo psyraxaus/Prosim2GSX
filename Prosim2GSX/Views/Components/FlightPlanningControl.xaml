@@ -1,0 +1,113 @@
+﻿<UserControl x:Class="Prosim2GSX.Views.Components.FlightPlanningControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Prosim2GSX.Views.Components"
+             xmlns:vm="clr-namespace:Prosim2GSX.ViewModels.Components"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+
+    <UserControl.Resources>
+        <Style x:Key="LocalCategoryHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="DemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource CategoryText}"/>
+            <Setter Property="Margin" Value="0,10,0,5"/>
+        </Style>
+
+        <Style x:Key="LocalSectionBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource SectionBackground}"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="Margin" Value="0,8,0,10"/>
+        </Style>
+
+        <Style x:Key="LocalCheckBoxStyle" TargetType="CheckBox">
+            <Setter Property="Margin" Value="0,6,0,6"/>
+            <Setter Property="Foreground" Value="{DynamicResource ContentText}"/>
+        </Style>
+
+        <Style x:Key="LocalRadioButtonStyle" TargetType="RadioButton">
+            <Setter Property="Margin" Value="0,6,15,6"/>
+            <Setter Property="Foreground" Value="{DynamicResource ContentText}"/>
+        </Style>
+
+        <Style x:Key="LocalTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="20">
+            <TextBlock Text="SIMBRIEF INTEGRATION" Style="{StaticResource LocalCategoryHeaderStyle}"/>
+            <Border Style="{StaticResource LocalSectionBorderStyle}">
+                <StackPanel>
+                    <CheckBox Content="Use SimBrief for Flight Planning" 
+                             IsChecked="{Binding UseSimBrief}"
+                             Style="{StaticResource LocalCheckBoxStyle}"/>
+
+                    <TextBlock Text="SimBrief Pilot ID:" Margin="0,10,0,5"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBox Name="txtSimbriefId" 
+                                Text="{Binding SimbriefId, UpdateSourceTrigger=PropertyChanged}" 
+                                Width="180"
+                                Style="{StaticResource LocalTextBoxStyle}"
+                                KeyDown="SimbriefId_KeyDown"
+                                LostFocus="SimbriefId_LostFocus"/>
+
+                        <Button Content="Test Connection"
+                               Command="{Binding TestSimbriefConnectionCommand}"
+                               Padding="10,5"
+                               Background="{DynamicResource PrimaryColor}"
+                               Foreground="{DynamicResource HeaderText}"
+                               BorderThickness="0"/>
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding TestConnectionStatus}" 
+                              TextWrapping="Wrap"
+                              Margin="0,5,0,0"
+                              Foreground="{DynamicResource AccentColorBrush}"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="FLIGHT PLAN TYPE" Style="{StaticResource LocalCategoryHeaderStyle}"/>
+            <Border Style="{StaticResource LocalSectionBorderStyle}">
+                <StackPanel>
+                    <RadioButton Content="Use EFB Flight Plan" 
+                                IsChecked="{Binding UseEfbPlan}"
+                                Style="{StaticResource LocalRadioButtonStyle}"/>
+
+                    <RadioButton Content="Use MCDU Flight Plan" 
+                                IsChecked="{Binding UseMcduPlan}"
+                                Style="{StaticResource LocalRadioButtonStyle}"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="ACARS SETTINGS" Style="{StaticResource LocalCategoryHeaderStyle}"/>
+            <Border Style="{StaticResource LocalSectionBorderStyle}">
+                <StackPanel>
+                    <CheckBox Content="Use ACARS Integration" 
+                             IsChecked="{Binding UseAcars}"
+                             Style="{StaticResource LocalCheckBoxStyle}"/>
+
+                    <TextBlock Text="ACARS Network:" Margin="20,10,0,5"/>
+                    <StackPanel Margin="20,0,0,0">
+                        <RadioButton Content="Hoppie" 
+                                    IsChecked="{Binding UseHoppie}"
+                                    IsEnabled="{Binding AcarsOptionsEnabled}"
+                                    Style="{StaticResource LocalRadioButtonStyle}"/>
+
+                        <RadioButton Content="Say Intentions" 
+                                    IsChecked="{Binding UseSayIntentions}"
+                                    IsEnabled="{Binding AcarsOptionsEnabled}"
+                                    Style="{StaticResource LocalRadioButtonStyle}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

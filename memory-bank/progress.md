@@ -84,6 +84,10 @@ The comprehensive Prosim dataref subscription system and cockpit door integratio
 - ✅ Added theme refresh functionality
 
 ### Framework and Infrastructure
+- ✅ Implemented comprehensive thread-safe UI update pattern
+- ✅ Added ExecuteOnUIThread helper method to ViewModelBase
+- ✅ Updated EventAggregator to ensure thread-safe event publishing
+- ✅ Fixed thread safety issues in ViewModels handling background operations
 - ✅ Implemented event aggregator system using the publisher-subscriber pattern
 - ✅ Created base event class (EventBase) for all events in the system
 - ✅ Implemented event aggregator interface (IEventAggregator) with publish/subscribe methods
@@ -230,6 +234,13 @@ Based on the README, there are some known considerations:
 - ⚠️ Balancing event publishing frequency with performance considerations
 
 ## Recently Fixed Issues
+- ✅ Fixed UI thread safety issues causing crashes
+  - Root cause: Background threads updating UI-bound properties without proper thread marshaling
+  - Solution: Implemented ExecuteOnUIThread pattern in ViewModelBase and updated all ViewModels that handle events from background threads
+  - Fixed double-dispatching issue in ConnectionStatusViewModel
+  - Updated EventAggregator to ensure events are published on the UI thread
+  - Improved thread safety for async operations in AudioSettingsViewModel
+
 - ✅ Fixed loadsheet generation race conditions and threading issues
   - Root cause: Multiple concurrent requests could lead to exceptions and inconsistent state
   - Solution: Implemented proper thread synchronization with locks, state tracking flags, and finally blocks for cleanup

@@ -1,0 +1,102 @@
+﻿<UserControl x:Class="Prosim2GSX.Views.Components.AudioSettingsControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Prosim2GSX.Views.Components"
+             xmlns:vm="clr-namespace:Prosim2GSX.ViewModels.Components"
+             xmlns:converter="clr-namespace:Prosim2GSX.Converters"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+
+    <UserControl.Resources>
+        <Style x:Key="LocalCategoryHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="DemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource CategoryText}"/>
+            <Setter Property="Margin" Value="0,10,0,5"/>
+        </Style>
+
+        <Style x:Key="LocalSectionBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource SectionBackground}"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="Margin" Value="0,8,0,10"/>
+        </Style>
+
+        <Style x:Key="LocalModernRadioButtonStyle" TargetType="RadioButton">
+            <Setter Property="Margin" Value="0,8,15,8"/>
+            <Setter Property="Foreground" Value="{DynamicResource ContentText}"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="20">
+            <TextBlock Text="AUDIO API" Style="{StaticResource LocalCategoryHeaderStyle}"/>
+            <Border Style="{StaticResource LocalSectionBorderStyle}">
+                <StackPanel>
+                    <TextBlock Text="Select Audio API:" Margin="0,0,0,8"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <RadioButton Content="Core Audio (Process Control)" 
+                            Style="{StaticResource LocalModernRadioButtonStyle}"
+                            IsChecked="{Binding IsCoreAudioSelected}"/>
+
+                        <RadioButton Content="VoiceMeeter API (Strip Control)" 
+                            Style="{StaticResource LocalModernRadioButtonStyle}"
+                            IsChecked="{Binding IsVoiceMeeterSelected}"/>
+                    </StackPanel>
+
+                    <!-- VoiceMeeter Diagnostics Button -->
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0"
+                                Visibility="{Binding ShowVoiceMeeterDiagnostics, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Button Content="{Binding IsRunningDiagnostics, Converter={StaticResource BoolToButtonTextConverter}, ConverterParameter='Run VoiceMeeter Diagnostics|Running Diagnostics...'}"
+                            Command="{Binding RunDiagnosticsCommand}"
+                            Padding="10,5"
+                            Background="{DynamicResource PrimaryColor}"
+                            Foreground="{DynamicResource HeaderText}"
+                            BorderThickness="0"/>
+                        <TextBlock Text="(Results will be shown in log)" 
+                            VerticalAlignment="Center" 
+                            Margin="10,0,0,0"
+                            Foreground="#808080"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Volume Control -->
+            <TextBlock Text="AUDIO CONTROL PANEL CHANNELS" Style="{StaticResource LocalCategoryHeaderStyle}"/>
+            <Border Style="{StaticResource LocalSectionBorderStyle}">
+                <StackPanel>
+                    <!-- VHF1 Channel -->
+                    <local:AudioChannelControl DataContext="{Binding Vhf1Channel}"/>
+
+                    <!-- VHF2 Channel -->
+                    <local:AudioChannelControl DataContext="{Binding Vhf2Channel}"/>
+
+                    <!-- VHF3 Channel -->
+                    <local:AudioChannelControl DataContext="{Binding Vhf3Channel}"/>
+
+                    <!-- HF1 Channel -->
+                    <local:AudioChannelControl DataContext="{Binding Hf1Channel}"/>
+
+                    <!-- HF2 Channel -->
+                    <local:AudioChannelControl DataContext="{Binding Hf2Channel}"/>
+
+                    <!-- CAB Channel -->
+                    <local:AudioChannelControl DataContext="{Binding CabChannel}"/>
+
+                    <!-- INT Channel -->
+                    <local:AudioChannelControl DataContext="{Binding IntChannel}"/>
+
+                    <!-- PA Channel -->
+                    <local:AudioChannelControl DataContext="{Binding PaChannel}"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,162 @@
+﻿<UserControl x:Class="Prosim2GSX.Views.Components.GsxSettingsControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Prosim2GSX.Views.Components"
+             xmlns:vm="clr-namespace:Prosim2GSX.ViewModels.Components"
+             xmlns:behaviours="clr-namespace:Prosim2GSX.Behaviours"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+
+    <UserControl.Resources>
+        <Style x:Key="LocalCategoryHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="DemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource CategoryText}"/>
+            <Setter Property="Margin" Value="0,10,0,5"/>
+        </Style>
+
+        <Style x:Key="LocalSectionBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource SectionBackground}"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="Margin" Value="0,8,0,10"/>
+        </Style>
+
+        <Style x:Key="LocalCheckBoxStyle" TargetType="CheckBox">
+            <Setter Property="Margin" Value="0,6,0,6"/>
+            <Setter Property="Foreground" Value="{DynamicResource ContentText}"/>
+        </Style>
+
+        <Style x:Key="LocalTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Width" Value="100"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="20">
+            <TextBlock Text="BOARDING SETTINGS" Style="{StaticResource LocalCategoryHeaderStyle}"/>
+            <Border Style="{StaticResource LocalSectionBorderStyle}">
+                <StackPanel>
+                    <CheckBox Content="Auto Boarding" 
+                             IsChecked="{Binding AutoBoarding}"
+                             Style="{StaticResource LocalCheckBoxStyle}"/>
+
+                    <CheckBox Content="Auto Deboarding" 
+                             IsChecked="{Binding AutoDeboarding}"
+                             Style="{StaticResource LocalCheckBoxStyle}"/>
+
+                    <CheckBox Content="Disable Crew Boarding" 
+                             IsChecked="{Binding DisableCrew}"
+                             Style="{StaticResource LocalCheckBoxStyle}"/>
+
+                    <CheckBox Content="Use Actual Passenger Value" 
+                             IsChecked="{Binding UseActualPaxValue}"
+                             Style="{StaticResource LocalCheckBoxStyle}"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="REFUELING SETTINGS" Style="{StaticResource LocalCategoryHeaderStyle}"/>
+            <Border Style="{StaticResource LocalSectionBorderStyle}">
+                <StackPanel>
+                    <CheckBox Content="Auto Refuel" 
+                             IsChecked="{Binding AutoRefuel}"
+                             Style="{StaticResource LocalCheckBoxStyle}"/>
+
+                    <CheckBox Content="Save Fuel State" 
+                             IsChecked="{Binding SaveFuel}"
+                             Style="{StaticResource LocalCheckBoxStyle}"/>
+
+                    <CheckBox Content="Zero Fuel" 
+                             IsChecked="{Binding ZeroFuel}"
+                             IsEnabled="{Binding IsZeroFuelEnabled}"
+                             Style="{StaticResource LocalCheckBoxStyle}"/>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,5">
+                        <TextBlock Text="Refuel Rate:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <TextBox Text="{Binding RefuelRate, UpdateSourceTrigger=LostFocus}" 
+                                Style="{StaticResource LocalTextBoxStyle}"
+                                behaviours:NumericTextBoxBehavior.AllowOnlyNumericInput="True"/>
+
+                        <RadioButton Content="KGS" 
+                                    IsChecked="{Binding IsKgs}"
+                                    Margin="0,0,10,0"
+                                    VerticalAlignment="Center"/>
+
+                        <RadioButton Content="LBS" 
+                                    IsChecked="{Binding IsKgs, Converter={StaticResource InverseBooleanConverter}}"
+                                    VerticalAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="REPOSITIONING SETTINGS" Style="{StaticResource LocalCategoryHeaderStyle}"/>
+            <Border Style="{StaticResource LocalSectionBorderStyle}">
+                <StackPanel>
+                    <CheckBox Content="Auto Reposition Plane" 
+                             IsChecked="{Binding AutoReposition}"
+                             Style="{StaticResource LocalCheckBoxStyle}"/>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,5">
+                        <TextBlock Text="Reposition Delay (seconds):" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <TextBox Text="{Binding RepositionDelay, UpdateSourceTrigger=LostFocus}" 
+                                Style="{StaticResource LocalTextBoxStyle}"
+                                behaviours:NumericTextBoxBehavior.AllowOnlyNumericInput="True"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="DOOR SETTINGS" Style="{StaticResource LocalCategoryHeaderStyle}"/>
+            <Border Style="{StaticResource LocalSectionBorderStyle}">
+                <StackPanel>
+                    <CheckBox Content="Open Cargo Doors" 
+                             IsChecked="{Binding OpenCargoDoors}"
+                             Style="{StaticResource LocalCheckBoxStyle}"/>
+
+                    <CheckBox Content="Open Aft Door for Catering" 
+                             IsChecked="{Binding OpenDoorCatering}"
+                             Style="{StaticResource LocalCheckBoxStyle}"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="JETWAY SETTINGS" Style="{StaticResource LocalCategoryHeaderStyle}"/>
+            <Border Style="{StaticResource LocalSectionBorderStyle}">
+                <StackPanel>
+                    <CheckBox Content="Jetway Only" 
+                             IsChecked="{Binding JetwayOnly}"
+                             Style="{StaticResource LocalCheckBoxStyle}"/>
+
+                    <CheckBox Content="PCA Only for Jetways" 
+                             IsChecked="{Binding PcaOnlyJetway}"
+                             Style="{StaticResource LocalCheckBoxStyle}"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="OTHER GSX SETTINGS" Style="{StaticResource LocalCategoryHeaderStyle}"/>
+            <Border Style="{StaticResource LocalSectionBorderStyle}">
+                <StackPanel>
+                    <CheckBox Content="Call Catering" 
+                             IsChecked="{Binding CallCatering}"
+                             Style="{StaticResource LocalCheckBoxStyle}"/>
+
+                    <CheckBox Content="Connect PCA" 
+                             IsChecked="{Binding ConnectPCA}"
+                             Style="{StaticResource LocalCheckBoxStyle}"/>
+
+                    <CheckBox Content="Synch Bypass" 
+                             IsChecked="{Binding SynchBypass}"
+                             Style="{StaticResource LocalCheckBoxStyle}"/>
+
+                    <CheckBox Content="Save Hydraulic Fluids on Arrival" 
+                             IsChecked="{Binding SaveHydraulicFluids}"
+                             Style="{StaticResource LocalCheckBoxStyle}"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

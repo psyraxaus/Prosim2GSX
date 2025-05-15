@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Windows;
+using System.Windows.Threading;
 using Prosim2GSX.Services.Logger.Enums;
 using Prosim2GSX.Services.Logger.Implementation;
 
@@ -31,6 +33,19 @@ namespace Prosim2GSX.Events
                 subscriptions = subscriptions.ToList();
             }
 
+            // Always dispatch UI-related events to the UI thread
+            if (Application.Current != null && !Application.Current.Dispatcher.CheckAccess())
+            {
+                Application.Current.Dispatcher.Invoke(() => PublishToSubscribers(eventToPublish, subscriptions));
+            }
+            else
+            {
+                PublishToSubscribers(eventToPublish, subscriptions);
+            }
+        }
+
+        private void PublishToSubscribers<TEvent>(TEvent eventToPublish, List<object> subscriptions) where TEvent : EventBase
+        {
             foreach (var subscription in subscriptions)
             {
                 var action = (Action<TEvent>)subscription;
@@ -40,11 +55,12 @@ namespace Prosim2GSX.Events
                 }
                 catch (Exception ex)
                 {
-                    LogService.Log(LogLevel.Error, "EventAggregator:Publish", 
+                    LogService.Log(LogLevel.Error, "EventAggregator:Publish",
                         $"Exception in event handler for {typeof(TEvent).Name}: {ex.Message}");
                 }
             }
         }
+
 
         public SubscriptionToken Subscribe<TEvent>(Action<TEvent> action) where TEvent : EventBase
         {

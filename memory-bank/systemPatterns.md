@@ -124,6 +124,72 @@ The system implements a comprehensive state tracking pattern across multiple ser
   public bool IsFuelHoseConnected => _fuelHoseConnected;
   ```
 
+### Thread-Safe UI Update Pattern
+The system implements a thread-safe UI update pattern to address issues with background threads attempting to update UI elements:
+
+- **Core Components**:
+  - `ExecuteOnUIThread`: Helper method in ViewModelBase that ensures actions are executed on the UI thread
+  - Thread-safe EventAggregator implementation that dispatches events to the UI thread when needed
+  - Consistent pattern for marshaling operations from background threads to the UI thread
+
+- **Implementation**:
+  ```csharp
+  // In ViewModelBase.cs
+  protected void ExecuteOnUIThread(Action action)
+  {
+      if (action == null) return;
+      
+      if (Application.Current?.Dispatcher?.CheckAccess() == true)
+      {
+          action();
+      }
+      else
+      {
+          Application.Current?.Dispatcher?.Invoke(action);
+      }
+  }
+  
+  // Usage in ViewModels 
+  private void OnSomeEventFromBackgroundThread(SomeEventArgs e)
+  {
+      ExecuteOnUIThread(() =>
+      {
+          // Update UI-bound properties here
+          SomeProperty = e.SomeValue;
+          AnotherProperty = e.AnotherValue;
+          OnPropertyChanged(nameof(SomeProperty));
+          OnPropertyChanged(nameof(AnotherProperty));
+      });
+  }
+  ```
+
+- **EventAggregator Thread Safety**:
+  The EventAggregator ensures that events are always published on the UI thread when they might affect UI elements:
+  ```csharp
+  public void Publish<TEvent>(TEvent eventToPublish) where TEvent : EventBase
+  {
+      // ... existing code ...
+  
+      // Always dispatch UI-related events to the UI thread
+      if (Application.Current != null && !Application.Current.Dispatcher.CheckAccess())
+      {
+          Application.Current.Dispatcher.Invoke(() => PublishToSubscribers(eventToPublish, subscriptions));
+      }
+      else
+      {
+          PublishToSubscribers(eventToPublish, subscriptions);
+      }
+  }
+  ```
+
+- **Benefits**:
+  - Prevents InvalidOperationException due to cross-thread access to UI elements
+  - Centralizes thread marshaling logic in a single, reusable method
+  - Provides a consistent pattern for handling thread safety across the application
+  - Improves application stability, especially during operations that trigger multiple UI updates
+  - Eliminates crashes during critical phases like service state changes
+  - Makes code more maintainable by separating thread concerns from business logic
+
 ### Event Aggregator Pattern
 The system implements an event aggregator pattern to decouple components and improve UI responsiveness:
 
