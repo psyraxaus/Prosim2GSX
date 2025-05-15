@@ -113,6 +113,11 @@ namespace Prosim2GSX.ViewModels
         public GroundServicesViewModel GroundServices { get; }
 
         /// <summary>
+        /// Gets the view model for the header bar, including flight information and navigation
+        /// </summary>
+        public HeaderBarViewModel HeaderBar { get; }
+
+        /// <summary>
         /// Gets or sets the active flight phase index (0-4) for the progress bar
         /// </summary>
         public int ActiveFlightPhaseIndex
@@ -267,6 +272,12 @@ namespace Prosim2GSX.ViewModels
             LogMessages = new LogMessagesViewModel();
             FlightPhase = new FlightPhaseViewModel();
             GroundServices = new GroundServicesViewModel(serviceModel);
+            HeaderBar = new HeaderBarViewModel(
+                // Pass the navigation actions
+                showAudioSettingsAction: () => SelectedTabIndex = 1, // Audio Settings tab
+                showSettingsAction: () => SelectedTabIndex = 2,      // Settings tab
+                showHelpAction: ShowHelp
+            );
 
             // Initialize commands
             ShowHelpCommand = new RelayCommand(_ => ShowHelp());
@@ -300,6 +311,7 @@ namespace Prosim2GSX.ViewModels
             LogMessages = new LogMessagesViewModel();
             FlightPhase = new FlightPhaseViewModel();
             GroundServices = new GroundServicesViewModel();
+            HeaderBar = new HeaderBarViewModel();
 
             // Initialize timer
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
@@ -334,6 +346,7 @@ namespace Prosim2GSX.ViewModels
             LogMessages.Cleanup();
             FlightPhase.Cleanup();
             GroundServices.Cleanup();
+            HeaderBar.Cleanup();
 
             // Unsubscribe from all events
             foreach (var token in _subscriptionTokens)

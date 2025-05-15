@@ -50,18 +50,6 @@ namespace Prosim2GSX
             LoadSettings();
         }
 
-
-        private void SubscribeToEvents()
-        {
-            // Subscribe to flight number events
-            _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<FlightPlanChangedEvent>(OnFlightPlanChanged));
-        }
-        
-        private void OnFlightPlanChanged(FlightPlanChangedEvent evt)
-        {
-            UpdateFlightNumberDisplay(evt.FlightNumber);
-        }
-
         protected void LoadSettings()
         {
             // Set debug verbosity dropdown
@@ -504,11 +492,6 @@ namespace Prosim2GSX
                 serviceModel.SetSetting("flightPlanType", "MCDU");
             }
         }
-
-        protected void OnTick(object sender, EventArgs e)
-        {
-            UpdateStatus();
-        }
         
         private void txtRefuelRate_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
         {
@@ -637,14 +620,6 @@ namespace Prosim2GSX
                 serviceModel.SetSetting("refuelUnit", "LBS");
                 txtRefuelRate.Text = Convert.ToString(fuelRate, CultureInfo.InvariantCulture);
             }
-        }
-
-        protected void UpdateStatus()
-        {
-            // Update current date/time
-            CurrentDateTime.Text = DateTime.Now.ToString("dd.MM.yyyy");
-            
-            // Note: Connection status, service status, and flight phase are now updated via events
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -792,30 +767,6 @@ namespace Prosim2GSX
                 // Notify ViewModel that window is visible
                 _viewModel.OnWindowVisible();
             }
-        }
-
-
-        private void btnAudioSettings_Click(object sender, RoutedEventArgs e)
-        {
-            // Switch to the Audio Settings tab
-            MainTabControl.SelectedItem = AudioSettingsTab;
-        }
-
-        private void btnSettings_Click(object sender, RoutedEventArgs e)
-        {
-            // Switch to the Settings tab
-            MainTabControl.SelectedItem = SettingsTab;
-        }
-
-        private void btnHelp_Click(object sender, RoutedEventArgs e)
-        {
-            // Show help information
-            MessageBox.Show(
-                "Prosim2GSX provides integration between Prosim A320 and GSX Pro.\n\n" +
-                "For more information, please refer to the documentation.",
-                "Prosim2GSX Help",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
         }
 
         private void audioApi_Click(object sender, RoutedEventArgs e)
@@ -1286,14 +1237,6 @@ namespace Prosim2GSX
                 btnTestSimbriefConnection.IsEnabled = true;
                 btnTestSimbriefConnection.Content = "Test Connection";
             }
-        }
-
-        private void UpdateFlightNumberDisplay(string flightNumber)
-        {
-            Dispatcher.Invoke(() => {
-                FlightNumberDisplay.Text = string.IsNullOrEmpty(flightNumber) ?
-                    "No Flight" : flightNumber;
-            });
         }
 
         private void btnConfigureExternalDependencies_Click(object sender, RoutedEventArgs e)

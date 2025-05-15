@@ -1,0 +1,107 @@
+﻿<UserControl x:Class="Prosim2GSX.Views.Components.HeaderBarControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Prosim2GSX.Views.Components"
+             xmlns:vm="clr-namespace:Prosim2GSX.ViewModels.Components"
+             mc:Ignorable="d" 
+             d:DesignHeight="60" d:DesignWidth="800">
+
+    <UserControl.Resources>
+        <!-- Copy the relevant styles from MainWindow.xaml -->
+        <Style x:Key="LocalTabButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#606060"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="#1E90FF"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Border Background="{DynamicResource HeaderBackground}" Margin="0,0,0,0">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left side - App Title -->
+            <TextBlock Grid.Column="0"
+                   Text="PROSIM2GSX" 
+                   FontWeight="Bold" 
+                   FontSize="18" 
+                   Foreground="{DynamicResource HeaderText}" 
+                   VerticalAlignment="Center"
+                   Margin="20,0,0,0"/>
+
+            <!-- Center - Flight Number -->
+            <TextBlock Grid.Column="1"
+                Text="{Binding FlightNumber}" 
+                FontWeight="SemiBold" 
+                FontSize="16" 
+                Foreground="{DynamicResource HeaderText}" 
+                VerticalAlignment="Center"
+                HorizontalAlignment="Center"
+                Padding="10,5"
+                Background="{DynamicResource PrimaryColor}"
+                MinWidth="120"
+                TextAlignment="Center"/>
+
+            <!-- Right side - Date and Navigation -->
+            <StackPanel Grid.Column="2" 
+                Orientation="Horizontal" 
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center">
+
+                <!-- Navigation icons -->
+                <Button Style="{StaticResource LocalTabButtonStyle}" 
+                Foreground="{DynamicResource HeaderText}"
+                Content="🔊" 
+                FontSize="16" 
+                Command="{Binding ShowAudioSettingsCommand}"
+                ToolTip="Audio Settings"/>
+
+                <Button Style="{StaticResource LocalTabButtonStyle}" 
+                Foreground="{DynamicResource HeaderText}"
+                Content="⚙" 
+                FontSize="16" 
+                Command="{Binding ShowSettingsCommand}"
+                ToolTip="Settings"/>
+
+                <Button Style="{StaticResource LocalTabButtonStyle}" 
+                Foreground="{DynamicResource HeaderText}"
+                Content="?" 
+                FontSize="16" 
+                Command="{Binding ShowHelpCommand}"
+                ToolTip="Help"/>
+
+                <!-- Date display -->
+                <TextBlock 
+                   Text="{Binding CurrentDate}" 
+                   FontSize="14" 
+                   Foreground="{DynamicResource HeaderText}" 
+                   VerticalAlignment="Center"
+                   Padding="10,5"
+                   Background="{DynamicResource SecondaryColor}"
+                   Margin="0,0,15,0"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>
