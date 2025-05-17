@@ -1,8 +1,7 @@
-﻿using Prosim2GSX.Events;
+﻿using Microsoft.Extensions.Logging;
+using Prosim2GSX.Events;
 using Prosim2GSX.Services.GSX.Enums;
 using Prosim2GSX.Services.GSX.Interfaces;
-using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Implementation;
 using System;
 using System.Collections.Generic;
 
@@ -13,9 +12,20 @@ namespace Prosim2GSX.Services.GSX.Implementation
     /// </summary>
     public class GsxFlightStateService : IGsxFlightStateService
     {
+        private readonly ILogger<GsxFlightStateService> _logger;
         private FlightState _currentState = FlightState.PREFLIGHT;
         private FlightState _previousState = FlightState.PREFLIGHT;
         private readonly List<(SubscriptionToken Token, Action<FlightState, FlightState> Handler)> _handlers = new List<(SubscriptionToken, Action<FlightState, FlightState>)>();
+
+        /// <summary>
+        /// Creates a new instance of GsxFlightStateService
+        /// </summary>
+        /// <param name="logger">Logger for this service</param>
+        public GsxFlightStateService(ILogger<GsxFlightStateService> logger)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _logger.LogInformation("GSX Flight State Service initialized in {InitialState} state", _currentState);
+        }
 
         /// <inheritdoc/>
         public FlightState CurrentFlightState => _currentState;
@@ -41,16 +51,14 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 }
                 catch (Exception ex)
                 {
-                    LogService.Log(LogLevel.Error, nameof(GsxFlightStateService),
-                        $"Error in state change handler: {ex.Message}");
+                    _logger.LogError(ex, "Error in state change handler");
                 }
             }
 
             // Publish event
             EventAggregator.Instance.Publish(new FlightPhaseChangedEvent(_previousState, _currentState));
 
-            LogService.Log(LogLevel.Information, nameof(GsxFlightStateService),
-                $"State Change: {_previousState} -> {_currentState}");
+            _logger.LogInformation("State Change: {PreviousState} -> {CurrentState}", _previousState, _currentState);
         }
 
         /// <inheritdoc/>
@@ -94,8 +102,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             // Publish event
             EventAggregator.Instance.Publish(new FlightPhaseChangedEvent(_previousState, _currentState));
 
-            LogService.Log(LogLevel.Information, nameof(GsxFlightStateService),
-                $"State reset to {_currentState}");
+            _logger.LogInformation("State reset to {CurrentState}", _currentState);
         }
 
         /// <inheritdoc/>
@@ -103,13 +110,21 @@ namespace Prosim2GSX.Services.GSX.Implementation
         {
             var token = new SubscriptionToken();
             _handlers.Add((token, handler));
+            _logger.LogDebug("Added subscription to state changes, total subscribers: {SubscriberCount}", _handlers.Count);
             return token;
         }
 
         /// <inheritdoc/>
         public void UnsubscribeFromStateChanges(SubscriptionToken token)
         {
+            int countBefore = _handlers.Count;
             _handlers.RemoveAll(h => h.Token == token);
+            int countAfter = _handlers.Count;
+
+            if (countBefore != countAfter)
+            {
+                _logger.LogDebug("Removed subscription from state changes, total subscribers: {SubscriberCount}", countAfter);
+            }
         }
     }
 }

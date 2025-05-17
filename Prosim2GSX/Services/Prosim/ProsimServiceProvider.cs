@@ -1,15 +1,14 @@
-﻿using ProSimSDK;
+﻿using Microsoft.Extensions.Logging;
+using ProSimSDK;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services.Connection.Implementation;
 using Prosim2GSX.Services.Connection.Interfaces;
-using Prosim2GSX.Services.Prosim.Implementation;
-using Prosim2GSX.Services.Prosim.Interfaces;
+using Prosim2GSX.Services.GSX;
 using Prosim2GSX.Services.GSX.Implementation;
 using Prosim2GSX.Services.GSX.Interfaces;
+using Prosim2GSX.Services.Prosim.Implementation;
+using Prosim2GSX.Services.Prosim.Interfaces;
 using System;
-using Prosim2GSX.Services.GSX;
-using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Implementation;
 
 namespace Prosim2GSX.Services
 {
@@ -20,6 +19,8 @@ namespace Prosim2GSX.Services
     {
         private readonly ServiceModel _model;
         private readonly ProSimConnect _connection;
+        private readonly ILogger<ProsimServiceProvider> _logger;
+        private readonly ILoggerFactory _loggerFactory;
 
         // Original services
         private readonly IProsimInterface _prosimInterface;
@@ -49,28 +50,70 @@ namespace Prosim2GSX.Services
         /// <summary>
         /// Creates a new instance of the service provider
         /// </summary>
+        /// <param name="loggerFactory">Factory to create loggers for each service</param>
         /// <param name="model">Service model with configuration</param>
-        public ProsimServiceProvider(ServiceModel model)
+        public ProsimServiceProvider(ILoggerFactory loggerFactory, ServiceModel model)
         {
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
+            _logger = loggerFactory.CreateLogger<ProsimServiceProvider>();
             _model = model ?? throw new ArgumentNullException(nameof(model));
             _connection = new ProSimConnect();
 
             // Create core services first
-            _prosimInterface = new ProsimInterface(_model, _connection);
-            _prosimConnectionService = new ProsimConnectionService(_prosimInterface, _model);
-            _dataRefService = new DataRefMonitoringService(_prosimInterface);
+            _prosimInterface = new ProsimInterface(
+                _loggerFactory.CreateLogger<ProsimInterface>(),
+                _model,
+                _connection);
+
+            _prosimConnectionService = new ProsimConnectionService(
+                _loggerFactory.CreateLogger<ProsimConnectionService>(),
+                _prosimInterface,
+                _model);
+
+            _dataRefService = new DataRefMonitoringService(
+                _loggerFactory.CreateLogger<DataRefMonitoringService>(),
+                _prosimInterface);
 
             // Create the application connection service
-            _applicationConnectionService = new ApplicationConnectionService(_model, _prosimConnectionService);
+            _applicationConnectionService = new ApplicationConnectionService(
+                _loggerFactory.CreateLogger<ApplicationConnectionService>(),
+                _model,
+                _prosimConnectionService);
 
             // Create domain services
-            _flightPlanService = new FlightPlanService(_prosimInterface, _model);
-            _cargoService = new CargoService(_prosimInterface, _model);
-            _passengerService = new PassengerService(_prosimInterface, _model, _cargoService);
-            _doorControlService = new DoorControlService(_prosimInterface);
-            _refuelingService = new RefuelingService(_prosimInterface, _model);
-            _groundService = new GroundServiceImplementation(_prosimInterface);
-            _loadsheetService = new LoadsheetService(_prosimInterface, _flightPlanService);
+            _flightPlanService = new FlightPlanService(
+                _loggerFactory.CreateLogger<FlightPlanService>(),
+                _prosimInterface,
+                _model);
+
+            _cargoService = new CargoService(
+                _loggerFactory.CreateLogger<CargoService>(),
+                _prosimInterface,
+                _model);
+
+            _passengerService = new PassengerService(
+                _loggerFactory.CreateLogger<PassengerService>(),
+                _prosimInterface,
+                _model,
+                _cargoService);
+
+            _doorControlService = new DoorControlService(
+                _loggerFactory.CreateLogger<DoorControlService>(),
+                _prosimInterface);
+
+            _refuelingService = new RefuelingService(
+                _loggerFactory.CreateLogger<RefuelingService>(),
+                _prosimInterface,
+                _model);
+
+            _groundService = new GroundServiceImplementation(
+                _loggerFactory.CreateLogger<GroundServiceImplementation>(),
+                _prosimInterface);
+
+            _loadsheetService = new LoadsheetService(
+                _loggerFactory.CreateLogger<LoadsheetService>(),
+                _prosimInterface,
+                _flightPlanService);
 
             // Create GSX services if SimConnect is available
             if (IPCManager.SimConnect != null)
@@ -81,15 +124,17 @@ namespace Prosim2GSX.Services
                 }
                 catch (Exception ex)
                 {
-                    LogService.Log(LogLevel.Error, nameof(ProsimServiceProvider),
-                        $"Error creating GSX services: {ex.Message}");
+                    _logger.LogError(ex, "Error creating GSX services");
                 }
             }
 
-            LogService.Log(LogLevel.Information, nameof(ProsimServiceProvider),
-                "Service provider initialized");
+            _logger.LogInformation("Service provider initialized");
         }
 
+        /// <summary>
+        /// Updates the GSX services with the current SimConnect instance
+        /// </summary>
+        /// <param name="simConnect">The MobiSimConnect instance to use</param>
         /// <summary>
         /// Updates the GSX services with the current SimConnect instance
         /// </summary>
@@ -102,17 +147,26 @@ namespace Prosim2GSX.Services
             try
             {
                 // Create SimConnect service first as other services depend on it
-                _gsxSimConnectService = new GsxSimConnectService(simConnect);
+                _gsxSimConnectService = new GsxSimConnectService(
+                    _loggerFactory.CreateLogger<GsxSimConnectService>(),
+                    simConnect);
 
                 // Create the menu service
                 string menuFile = GsxHelpers.GetGsxMenuFilePath();
-                _gsxMenuService = new GsxMenuService(_gsxSimConnectService, menuFile, _model, simConnect);
+                _gsxMenuService = new GsxMenuService(
+                    _loggerFactory.CreateLogger<GsxMenuService>(),
+                    _gsxSimConnectService,
+                    menuFile,
+                    _model,
+                    simConnect);
 
                 // Create the flight state service
-                _gsxFlightStateService = new GsxFlightStateService();
+                _gsxFlightStateService = new GsxFlightStateService(
+                    _loggerFactory.CreateLogger<GsxFlightStateService>());
 
                 // Create ground services service
                 _gsxGroundServicesService = new GsxGroundServicesService(
+                    _loggerFactory.CreateLogger<GsxGroundServicesService>(),
                     _prosimInterface,
                     _gsxSimConnectService,
                     _gsxMenuService,
@@ -121,6 +175,7 @@ namespace Prosim2GSX.Services
 
                 // Create boarding service
                 _gsxBoardingService = new GsxBoardingService(
+                    _loggerFactory.CreateLogger<GsxBoardingService>(),
                     _prosimInterface,
                     _gsxSimConnectService,
                     _gsxMenuService,
@@ -129,6 +184,7 @@ namespace Prosim2GSX.Services
 
                 // Create refueling service
                 _gsxRefuelingService = new GsxRefuelingService(
+                    _loggerFactory.CreateLogger<GsxRefuelingService>(),
                     _prosimInterface,
                     _gsxSimConnectService,
                     _gsxMenuService,
@@ -136,6 +192,7 @@ namespace Prosim2GSX.Services
 
                 // Create catering service
                 _gsxCateringService = new GsxCateringService(
+                    _loggerFactory.CreateLogger<GsxCateringService>(),
                     _prosimInterface,
                     _gsxSimConnectService,
                     _gsxMenuService,
@@ -144,6 +201,7 @@ namespace Prosim2GSX.Services
 
                 // Create cargo service
                 _gsxCargoService = new GsxCargoService(
+                    _loggerFactory.CreateLogger<GsxCargoService>(),
                     _prosimInterface,
                     _gsxSimConnectService,
                     _doorControlService,
@@ -155,16 +213,15 @@ namespace Prosim2GSX.Services
                 // Subscribe to cargo events
                 _gsxCargoService.SubscribeToCargoEvents();
 
-                LogService.Log(LogLevel.Information, nameof(ProsimServiceProvider),
-                    "GSX services updated successfully");
+                _logger.LogInformation("GSX services updated successfully");
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(ProsimServiceProvider),
-                    $"Error updating GSX services: {ex.Message}");
+                _logger.LogError(ex, "Error updating GSX services");
                 throw; // Rethrow to let the caller handle it
             }
         }
+
 
         // Original service getters
         public IProsimInterface GetProsimInterface() => _prosimInterface;
@@ -195,6 +252,5 @@ namespace Prosim2GSX.Services
         /// </summary>
         /// <returns>The GSX cargo service</returns>
         public IGsxCargoService GetGsxCargoService() => _gsxCargoService;
-
     }
 }

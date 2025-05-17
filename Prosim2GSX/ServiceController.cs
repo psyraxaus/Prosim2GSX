@@ -2,17 +2,16 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Microsoft.FlightSimulator.SimConnect;
 using Prosim2GSX.Events;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
 using Prosim2GSX.Services.Audio;
-using Prosim2GSX.Services.Connection.Enum;
+using Prosim2GSX.Services.Connection.Enums;
 using Prosim2GSX.Services.Connection.Events;
 using Prosim2GSX.Services.Connection.Interfaces;
 using Prosim2GSX.Services.GSX;
-using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Implementation;
 using Prosim2GSX.Services.Prosim.Interfaces;
 
 namespace Prosim2GSX
@@ -28,6 +27,7 @@ namespace Prosim2GSX
         private readonly IProsimInterface _prosimInterface;
         private readonly IDataRefMonitoringService _dataRefService;
         private readonly IFlightPlanService _flightPlanService;
+        private readonly ILogger<ServiceController> _logger;
         private FlightPlan _flightPlan;
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
         private readonly SemaphoreSlim _connectionLock = new SemaphoreSlim(1, 1);
@@ -38,14 +38,22 @@ namespace Prosim2GSX
         /// Creates a new instance of ServiceController
         /// </summary>
         /// <param name="model">The service model</param>
-        public ServiceController(ServiceModel model)
+        /// <param name="logger">The logger for this class</param>
+        public ServiceController(ServiceModel model, ILogger<ServiceController> logger)
         {
             _model = model ?? throw new ArgumentNullException(nameof(model));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _connectionService = ServiceLocator.ConnectionService;
             _prosimInterface = ServiceLocator.ProsimInterface;
             _dataRefService = ServiceLocator.DataRefService;
             _flightPlanService = ServiceLocator.FlightPlanService;
-            _audioService = new AudioService(_prosimInterface, _dataRefService, IPCManager.SimConnect, _model);
+            _audioService = new AudioService(
+                ServiceLocator.GetLogger<AudioService>(),
+                ServiceLocator.GetService<ILoggerFactory>(),
+                _prosimInterface,
+                _dataRefService,
+                IPCManager.SimConnect,
+                _model);
 
             // Add this line to set the AudioService in the ServiceModel
             if (_model is ServiceModel serviceModel)
@@ -89,7 +97,7 @@ namespace Prosim2GSX
             // Retry loading the flight plan
             if (_flightPlan != null && _model.IsValidSimbriefId())
             {
-                LogService.Log(LogLevel.Information, nameof(ServiceController), "Retrying flight plan load with new Simbrief ID");
+                _logger.LogInformation("Retrying flight plan load with new Simbrief ID");
                 _flightPlan.LoadWithValidation();
             }
         }
@@ -101,7 +109,7 @@ namespace Prosim2GSX
         {
             try
             {
-                LogService.Log(LogLevel.Information, nameof(ServiceController), "Service starting...");
+                _logger.LogInformation("Service starting...");
 
                 while (!_model.CancellationRequested)
                 {
@@ -123,14 +131,14 @@ namespace Prosim2GSX
 
                             _model.CancellationRequested = true;
                             _model.ServiceExited = true;
-                            LogService.Log(LogLevel.Critical, nameof(ServiceController), "Session aborted, Retry not possible - exiting Program");
+                            _logger.LogCritical("Session aborted, Retry not possible - exiting Program");
                             return;
                         }
                         else
                         {
                             // Some other connection failed but flight simulator is running
                             await ResetConnectionsAsync();
-                            LogService.Log(LogLevel.Information, nameof(ServiceController), "Session aborted, Retry possible - Waiting for new Session");
+                            _logger.LogInformation("Session aborted, Retry possible - Waiting for new Session");
 
                             // Add a delay before retry
                             await Task.Delay(5000, _cts.Token);
@@ -143,8 +151,7 @@ namespace Prosim2GSX
                     }
                     catch (Exception ex)
                     {
-                        LogService.Log(LogLevel.Error, nameof(ServiceController),
-                            $"Exception in service loop: {ex.Message}. Attempting recovery...");
+                        _logger.LogError(ex, "Exception in service loop: {Message}. Attempting recovery...", ex.Message);
 
                         await ResetConnectionsAsync();
 
@@ -158,8 +165,7 @@ namespace Prosim2GSX
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Critical, nameof(ServiceController),
-                    $"Critical Exception occurred: {ex.Source} - {ex.Message}\n{ex.StackTrace}");
+                _logger.LogCritical(ex, "Critical Exception occurred: {Source} - {Message}", ex.Source, ex.Message);
             }
             finally
             {
@@ -235,7 +241,7 @@ namespace Prosim2GSX
             try
             {
                 // Create and load FlightPlan using the manually entered Simbrief ID
-                _flightPlan = new FlightPlan(_model);
+                _flightPlan = new FlightPlan(_model,ServiceLocator.GetLogger<FlightPlan>());
 
                 // Try to load with validation
                 var loadResult = _flightPlan.LoadWithValidation();
@@ -253,8 +259,7 @@ namespace Prosim2GSX
                         if (_model.SimBriefID == "0")
                         {
                             // Just log a message and return false, don't start a background task
-                            LogService.Log(LogLevel.Warning, nameof(ServiceController),
-                                "Default SimBrief ID detected. Please enter a valid Simbrief ID in Settings tab.");
+                            _logger.LogWarning("Default SimBrief ID detected. Please enter a valid Simbrief ID in Settings tab.");
 
                             // Don't try to load the flight plan or start a background task
                             return false;
@@ -262,8 +267,7 @@ namespace Prosim2GSX
                         else
                         {
                             // For other invalid IDs, wait for user to enter a valid ID
-                            LogService.Log(LogLevel.Warning, nameof(ServiceController),
-                                "Waiting for valid Simbrief ID to be entered in Settings tab...");
+                            _logger.LogWarning("Waiting for valid Simbrief ID to be entered in Settings tab...");
 
                             // Start a background task to periodically check for valid ID
                             _ = Task.Run(async () => {
@@ -283,14 +287,12 @@ namespace Prosim2GSX
                         }
 
                     case FlightPlan.LoadResult.NetworkError:
-                        LogService.Log(LogLevel.Error, nameof(ServiceController),
-                            "Network error loading flight plan. Check your internet connection.");
+                        _logger.LogError("Network error loading flight plan. Check your internet connection.");
                         await Task.Delay(5000, _cts.Token);
                         return false;
 
                     case FlightPlan.LoadResult.ParseError:
-                        LogService.Log(LogLevel.Error, nameof(ServiceController),
-                            "Error parsing flight plan data. The Simbrief API may have changed or returned invalid data.");
+                        _logger.LogError("Error parsing flight plan data. The Simbrief API may have changed or returned invalid data.");
                         await Task.Delay(5000, _cts.Token);
                         return false;
 
@@ -300,8 +302,7 @@ namespace Prosim2GSX
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(ServiceController),
-                    $"Exception initializing flight plan: {ex.Message}");
+                _logger.LogError(ex, "Exception initializing flight plan: {Message}", ex.Message);
                 return false;
             }
         }
@@ -326,8 +327,7 @@ namespace Prosim2GSX
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Critical, nameof(ServiceController),
-                    $"Exception during Reset: {ex.Message}\n{ex.StackTrace}");
+                _logger.LogCritical(ex, "Exception during Reset: {Message}", ex.Message);
             }
             finally
             {
@@ -339,7 +339,7 @@ namespace Prosim2GSX
         {
             try
             {
-                LogService.Log(LogLevel.Debug, nameof(ServiceController), "Ensuring GSX services are initialized");
+                _logger.LogDebug("Ensuring GSX services are initialized");
 
                 // Initialize GSX services if SimConnect is available
                 if (IPCManager.SimConnect != null)
@@ -348,47 +348,41 @@ namespace Prosim2GSX
                     {
                         // Force re-creation of GSX services with the current SimConnect instance
                         ServiceLocator.UpdateGsxServices(IPCManager.SimConnect);
-                        LogService.Log(LogLevel.Information, nameof(ServiceController),
-                            "GSX services initialized successfully");
+                        _logger.LogInformation("GSX services initialized successfully");
                     }
                     catch (Exception ex)
                     {
-                        LogService.Log(LogLevel.Error, nameof(ServiceController),
-                            $"Error initializing GSX services: {ex.Message}. Some features may not work correctly.");
+                        _logger.LogError(ex, "Error initializing GSX services: {Message}. Some features may not work correctly.", ex.Message);
                     }
                 }
                 else
                 {
-                    LogService.Log(LogLevel.Warning, nameof(ServiceController),
-                        "SimConnect is not available. GSX services will not be initialized.");
+                    _logger.LogWarning("SimConnect is not available. GSX services will not be initialized.");
                 }
 
                 // Verify DataRefMonitoringService is initialized and running
-                LogService.Log(LogLevel.Debug, nameof(ServiceController),
-                    $"DataRef monitoring service active: {ServiceLocator.DataRefService.IsMonitoringActive}");
+                _logger.LogDebug("DataRef monitoring service active: {IsActive}", ServiceLocator.DataRefService.IsMonitoringActive);
 
                 // List all monitored datarefs
                 var monitoredRefs = ServiceLocator.DataRefService.GetMonitoredDataRefs().ToList();
-                LogService.Log(LogLevel.Debug, nameof(ServiceController),
-                    $"Currently monitored datarefs ({monitoredRefs.Count}): {string.Join(", ", monitoredRefs)}");
+                _logger.LogDebug("Currently monitored datarefs ({Count}): {Refs}", monitoredRefs.Count, string.Join(", ", monitoredRefs));
 
                 // Force start if needed
                 if (!ServiceLocator.DataRefService.IsMonitoringActive)
                 {
-                    LogService.Log(LogLevel.Warning, nameof(ServiceController),
-                        "DataRef monitoring service not active, starting it manually");
+                    _logger.LogWarning("DataRef monitoring service not active, starting it manually");
                     ServiceLocator.DataRefService.StartMonitoring();
                 }
 
-                LogService.Log(LogLevel.Debug, nameof(ServiceController), "Creating GsxController");
+                _logger.LogDebug("Creating GsxController");
 
                 // Create the GSX controller
-                var gsxController = new GsxController(_model, _flightPlan, _audioService);
+                var gsxController = new GsxController(ServiceLocator.GetLogger<GsxController>(), _model, _flightPlan, _audioService);
 
                 // Store the GsxController in IPCManager
                 IPCManager.GsxController = gsxController;
 
-                LogService.Log(LogLevel.Debug, nameof(ServiceController), "Publishing connection status events");
+                _logger.LogDebug("Publishing connection status events");
                 // Re-publish connection status events
                 EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("MSFS", _model.IsSimRunning));
                 EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("Prosim", _model.IsProsimRunning));
@@ -399,10 +393,10 @@ namespace Prosim2GSX
                 int elapsedMS = gsxController.Interval;
                 int delay = 100;
 
-                LogService.Log(LogLevel.Debug, nameof(ServiceController), "Sleeping for 1 second");
+                _logger.LogDebug("Sleeping for 1 second");
                 await Task.Delay(1000, _cts.Token);
 
-                LogService.Log(LogLevel.Information, nameof(ServiceController), "Starting Service Loop");
+                _logger.LogInformation("Starting Service Loop");
 
                 // Main service loop
                 while (!_model.CancellationRequested &&
@@ -415,9 +409,9 @@ namespace Prosim2GSX
                         // Check if we need to run services
                         if (elapsedMS >= gsxController.Interval)
                         {
-                            LogService.Log(LogLevel.Debug, nameof(ServiceController), "Calling gsxController.RunServices()");
+                            _logger.LogDebug("Calling gsxController.RunServices()");
                             gsxController.RunServices();
-                            LogService.Log(LogLevel.Debug, nameof(ServiceController), "Completed gsxController.RunServices()");
+                            _logger.LogDebug("Completed gsxController.RunServices()");
                             elapsedMS = 0;
                         }
 
@@ -438,14 +432,13 @@ namespace Prosim2GSX
                     }
                     catch (Exception ex)
                     {
-                        LogService.Log(LogLevel.Error, nameof(ServiceController),
-                            $"Exception in service loop iteration: {ex.Message}");
+                        _logger.LogError(ex, "Exception in service loop iteration: {Message}", ex.Message);
 
                         // Continue with next iteration
                     }
                 }
 
-                LogService.Log(LogLevel.Information, nameof(ServiceController), "Service Loop ended");
+                _logger.LogInformation("Service Loop ended");
 
                 // Check and publish connection status changes that might have caused the loop to exit
                 if (_model.IsSimRunning != _connectionService.IsFlightSimulatorConnected)
@@ -463,7 +456,7 @@ namespace Prosim2GSX
                 // Reset audio if needed
                 if (_model.GsxVolumeControl || _model.IsVhf1Controllable())
                 {
-                    LogService.Log(LogLevel.Information, nameof(ServiceController), "Resetting GSX/VHF1 Audio");
+                    _logger.LogInformation("Resetting GSX/VHF1 Audio");
                     _audioService.ResetAudio();
                 }
 
@@ -472,8 +465,7 @@ namespace Prosim2GSX
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Critical, nameof(ServiceController),
-                    $"Critical Exception in service loop: {ex.Message}\n{ex.StackTrace}");
+                _logger.LogCritical(ex, "Critical Exception in service loop: {Message}", ex.Message);
                 throw;
             }
         }
@@ -504,8 +496,7 @@ namespace Prosim2GSX
                 return audioService.PerformVoiceMeeterDiagnostics();
             }
 
-            LogService.Log(LogLevel.Warning, nameof(ServiceController),
-                "Cannot perform VoiceMeeter diagnostics: AudioService is not available");
+            _logger.LogWarning("Cannot perform VoiceMeeter diagnostics: AudioService is not available");
             return false;
         }
 

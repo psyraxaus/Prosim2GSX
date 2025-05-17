@@ -1,5 +1,5 @@
 ﻿using System;
-using Prosim2GSX.Services.Connection.Enum;
+using Prosim2GSX.Services.Connection.Enums;
 
 namespace Prosim2GSX.Services.Connection.Events
 {

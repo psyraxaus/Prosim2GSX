@@ -1,9 +1,8 @@
-﻿using Prosim2GSX.Events;
+﻿using Microsoft.Extensions.Logging;
+using Prosim2GSX.Events;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services.GSX.Events;
 using Prosim2GSX.Services.GSX.Interfaces;
-using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Implementation;
 using Prosim2GSX.Services.Prosim.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -19,6 +18,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
         private readonly IGsxSimConnectService _simConnectService;
         private readonly IDoorControlService _doorControlService;
         private readonly ServiceModel _model;
+        private readonly ILogger<GsxCargoService> _logger;
 
         private bool _frontCargoDoorOpen = false;
         private bool _aftCargoDoorOpen = false;
@@ -61,11 +61,13 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// Constructor
         /// </summary>
         public GsxCargoService(
+            ILogger<GsxCargoService> logger,
             IProsimInterface prosimInterface,
             IGsxSimConnectService simConnectService,
             IDoorControlService doorControlService,
             ServiceModel model)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _prosimInterface = prosimInterface ?? throw new ArgumentNullException(nameof(prosimInterface));
             _simConnectService = simConnectService ?? throw new ArgumentNullException(nameof(simConnectService));
             _doorControlService = doorControlService ?? throw new ArgumentNullException(nameof(doorControlService));
@@ -76,6 +78,8 @@ namespace Prosim2GSX.Services.GSX.Implementation
 
             // Initialize door states
             UpdateDoorStates();
+
+            _logger.LogInformation("GSX Cargo Service initialized");
         }
 
         /// <summary>
@@ -85,6 +89,8 @@ namespace Prosim2GSX.Services.GSX.Implementation
         {
             _serviceToggles.Add("FSDT_GSX_AIRCRAFT_CARGO_1_TOGGLE", ToggleForwardCargoDoor);
             _serviceToggles.Add("FSDT_GSX_AIRCRAFT_CARGO_2_TOGGLE", ToggleAftCargoDoor);
+
+            _logger.LogDebug("Service toggles initialized");
         }
 
         /// <summary>
@@ -102,13 +108,12 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 _frontCargoDoorOpen = forwardDoorState == "open";
                 _aftCargoDoorOpen = aftDoorState == "open";
 
-                LogService.Log(LogLevel.Debug, nameof(GsxCargoService),
-                    $"Door states updated - Forward: {forwardDoorState}, Aft: {aftDoorState}", LogCategory.Cargo);
+                _logger.LogDebug("Door states updated - Forward: {ForwardDoorState}, Aft: {AftDoorState}",
+                    forwardDoorState, aftDoorState);
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxCargoService),
-                    $"Error updating door states: {ex.Message}");
+                _logger.LogError(ex, "Error updating door states");
             }
         }
 
@@ -129,13 +134,11 @@ namespace Prosim2GSX.Services.GSX.Implementation
                     _simConnectService.SubscribeToGsxLvar(toggleLvar, OnServiceToggleChanged);
                 }
 
-                LogService.Log(LogLevel.Information, nameof(GsxCargoService),
-                    "Successfully subscribed to cargo events");
+                _logger.LogInformation("Successfully subscribed to cargo events");
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxCargoService),
-                    $"Error subscribing to cargo events: {ex.Message}");
+                _logger.LogError(ex, "Error subscribing to cargo events");
             }
         }
 
@@ -146,8 +149,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// </summary>
         private void OnCargoLoadingChanged(float newValue, float oldValue, string lvarName)
         {
-            LogService.Log(LogLevel.Debug, nameof(GsxCargoService),
-                $"Cargo loading changed from {oldValue} to {newValue}", LogCategory.Cargo);
+            _logger.LogDebug("Cargo loading changed from {OldValue} to {NewValue}", oldValue, newValue);
 
             bool isActive = newValue == 1;
             _cargoLoadingActive = isActive;
@@ -158,16 +160,14 @@ namespace Prosim2GSX.Services.GSX.Implementation
             // Open cargo doors when loading starts
             if (isActive && _model.SetOpenCargoDoors)
             {
-                LogService.Log(LogLevel.Information, nameof(GsxCargoService),
-                    "Cargo loading started - opening cargo doors");
+                _logger.LogInformation("Cargo loading started - opening cargo doors");
                 OpenCargoDoors();
             }
 
             // Close cargo doors when loading completes
             if (!isActive && oldValue == 1 && _model.SetOpenCargoDoors)
             {
-                LogService.Log(LogLevel.Information, nameof(GsxCargoService),
-                    "Cargo loading completed - closing cargo doors");
+                _logger.LogInformation("Cargo loading completed - closing cargo doors");
                 CloseCargoDoors();
             }
         }
@@ -177,8 +177,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// </summary>
         private void OnCargoUnloadingChanged(float newValue, float oldValue, string lvarName)
         {
-            LogService.Log(LogLevel.Debug, nameof(GsxCargoService),
-                $"Cargo unloading changed from {oldValue} to {newValue}", LogCategory.Cargo);
+            _logger.LogDebug("Cargo unloading changed from {OldValue} to {NewValue}", oldValue, newValue);
 
             bool isActive = newValue == 1;
             _cargoUnloadingActive = isActive;
@@ -189,16 +188,14 @@ namespace Prosim2GSX.Services.GSX.Implementation
             // Open cargo doors when unloading starts
             if (isActive && _model.SetOpenCargoDoors)
             {
-                LogService.Log(LogLevel.Information, nameof(GsxCargoService),
-                    "Cargo unloading started - opening cargo doors");
+                _logger.LogInformation("Cargo unloading started - opening cargo doors");
                 OpenCargoDoors();
             }
 
             // Close cargo doors when unloading completes
             if (!isActive && oldValue == 1 && _model.SetOpenCargoDoors)
             {
-                LogService.Log(LogLevel.Information, nameof(GsxCargoService),
-                    "Cargo unloading completed - closing cargo doors");
+                _logger.LogInformation("Cargo unloading completed - closing cargo doors");
                 CloseCargoDoors();
             }
         }
@@ -211,8 +208,8 @@ namespace Prosim2GSX.Services.GSX.Implementation
             int percentage = (int)newValue;
             _cargoLoadingPercentage = percentage;
 
-            LogService.Log(LogLevel.Debug, nameof(GsxCargoService),
-                $"Cargo loading percentage changed from {oldValue}% to {percentage}%", LogCategory.Cargo);
+            _logger.LogDebug("Cargo loading percentage changed from {OldPercentage}% to {NewPercentage}%",
+                (int)oldValue, percentage);
 
             // Notify subscribers
             CargoPercentageChanged?.Invoke(this, new CargoPercentageEventArgs(true, percentage));
@@ -220,8 +217,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             // Close cargo doors when percentage reaches 100%
             if (percentage >= 100 && oldValue < 100 && _model.SetOpenCargoDoors && _cargoLoadingActive)
             {
-                LogService.Log(LogLevel.Information, nameof(GsxCargoService),
-                    "Cargo loading reached 100% - closing cargo doors");
+                _logger.LogInformation("Cargo loading reached 100% - closing cargo doors");
                 CloseCargoDoors();
             }
         }
@@ -234,8 +230,8 @@ namespace Prosim2GSX.Services.GSX.Implementation
             int percentage = (int)newValue;
             _cargoUnloadingPercentage = percentage;
 
-            LogService.Log(LogLevel.Debug, nameof(GsxCargoService),
-                $"Cargo unloading percentage changed from {oldValue}% to {percentage}%", LogCategory.Cargo);
+            _logger.LogDebug("Cargo unloading percentage changed from {OldPercentage}% to {NewPercentage}%",
+                (int)oldValue, percentage);
 
             // Notify subscribers
             CargoPercentageChanged?.Invoke(this, new CargoPercentageEventArgs(false, percentage));
@@ -243,8 +239,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             // Close cargo doors when percentage reaches 100%
             if (percentage >= 100 && oldValue < 100 && _model.SetOpenCargoDoors && _cargoUnloadingActive)
             {
-                LogService.Log(LogLevel.Information, nameof(GsxCargoService),
-                    "Cargo unloading reached 100% - closing cargo doors");
+                _logger.LogInformation("Cargo unloading reached 100% - closing cargo doors");
                 CloseCargoDoors();
             }
         }
@@ -254,8 +249,8 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// </summary>
         private void OnServiceToggleChanged(float newValue, float oldValue, string lvarName)
         {
-            LogService.Log(LogLevel.Debug, nameof(GsxCargoService),
-                $"Service toggle {lvarName} changed from {oldValue} to {newValue}", LogCategory.Cargo);
+            _logger.LogDebug("Service toggle {LvarName} changed from {OldValue} to {NewValue}",
+                lvarName, oldValue, newValue);
 
             // Check if this is one of our monitored service toggles
             if (_serviceToggles.ContainsKey(lvarName))
@@ -282,8 +277,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 {
                     _doorControlService.SetForwardCargoDoor(true);
                     _frontCargoDoorOpen = true;
-                    LogService.Log(LogLevel.Information, nameof(GsxCargoService),
-                        "Opened forward cargo door");
+                    _logger.LogInformation("Opened forward cargo door");
 
                     // Notify subscribers
                     CargoDoorStateChanged?.Invoke(this, new CargoDoorEventArgs(true, true));
@@ -291,8 +285,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxCargoService),
-                    $"Error opening forward cargo door: {ex.Message}");
+                _logger.LogError(ex, "Error opening forward cargo door");
             }
         }
 
@@ -305,8 +298,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 {
                     _doorControlService.SetForwardCargoDoor(false);
                     _frontCargoDoorOpen = false;
-                    LogService.Log(LogLevel.Information, nameof(GsxCargoService),
-                        "Closed forward cargo door");
+                    _logger.LogInformation("Closed forward cargo door");
 
                     // Notify subscribers
                     CargoDoorStateChanged?.Invoke(this, new CargoDoorEventArgs(true, false));
@@ -314,8 +306,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxCargoService),
-                    $"Error closing forward cargo door: {ex.Message}");
+                _logger.LogError(ex, "Error closing forward cargo door");
             }
         }
 
@@ -328,8 +319,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 {
                     _doorControlService.SetAftCargoDoor(true);
                     _aftCargoDoorOpen = true;
-                    LogService.Log(LogLevel.Information, nameof(GsxCargoService),
-                        "Opened aft cargo door");
+                    _logger.LogInformation("Opened aft cargo door");
 
                     // Notify subscribers
                     CargoDoorStateChanged?.Invoke(this, new CargoDoorEventArgs(false, true));
@@ -337,8 +327,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxCargoService),
-                    $"Error opening aft cargo door: {ex.Message}");
+                _logger.LogError(ex, "Error opening aft cargo door");
             }
         }
 
@@ -351,8 +340,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 {
                     _doorControlService.SetAftCargoDoor(false);
                     _aftCargoDoorOpen = false;
-                    LogService.Log(LogLevel.Information, nameof(GsxCargoService),
-                        "Closed aft cargo door");
+                    _logger.LogInformation("Closed aft cargo door");
 
                     // Notify subscribers
                     CargoDoorStateChanged?.Invoke(this, new CargoDoorEventArgs(false, false));
@@ -360,8 +348,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxCargoService),
-                    $"Error closing aft cargo door: {ex.Message}");
+                _logger.LogError(ex, "Error closing aft cargo door");
             }
         }
 
@@ -387,20 +374,17 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 if (_frontCargoDoorOpen)
                 {
                     CloseForwardCargoDoor();
-                    LogService.Log(LogLevel.Information, nameof(GsxCargoService),
-                        "Toggled forward cargo door: closed");
+                    _logger.LogInformation("Toggled forward cargo door: closed");
                 }
                 else
                 {
                     OpenForwardCargoDoor();
-                    LogService.Log(LogLevel.Information, nameof(GsxCargoService),
-                        "Toggled forward cargo door: opened");
+                    _logger.LogInformation("Toggled forward cargo door: opened");
                 }
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxCargoService),
-                    $"Error toggling forward cargo door: {ex.Message}");
+                _logger.LogError(ex, "Error toggling forward cargo door");
             }
         }
 
@@ -412,20 +396,17 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 if (_aftCargoDoorOpen)
                 {
                     CloseAftCargoDoor();
-                    LogService.Log(LogLevel.Information, nameof(GsxCargoService),
-                        "Toggled aft cargo door: closed");
+                    _logger.LogInformation("Toggled aft cargo door: closed");
                 }
                 else
                 {
                     OpenAftCargoDoor();
-                    LogService.Log(LogLevel.Information, nameof(GsxCargoService),
-                        "Toggled aft cargo door: opened");
+                    _logger.LogInformation("Toggled aft cargo door: opened");
                 }
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxCargoService),
-                    $"Error toggling aft cargo door: {ex.Message}");
+                _logger.LogError(ex, "Error toggling aft cargo door");
             }
         }
 
@@ -445,8 +426,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxCargoService),
-                    $"Error processing cargo operations: {ex.Message}");
+                _logger.LogError(ex, "Error processing cargo operations");
             }
         }
     }

@@ -1,9 +1,8 @@
-﻿using Prosim2GSX.Services.Prosim.Interfaces;
+﻿using Microsoft.Extensions.Logging;
+using Prosim2GSX.Models;
+using Prosim2GSX.Services.Prosim.Interfaces;
 using System;
 using System.Linq;
-using Prosim2GSX.Models;
-using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Implementation;
 
 namespace Prosim2GSX.Services.Prosim.Implementation
 {
@@ -12,6 +11,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         private readonly IProsimInterface _prosimService;
         private readonly ServiceModel _model;
         private readonly ICargoService _cargoService;
+        private readonly ILogger<PassengerService> _logger;
 
         private bool[] _paxPlanned;
         private bool[] _paxCurrent;
@@ -25,10 +25,12 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         public int PassengersZone4 { get; private set; }
 
         public PassengerService(
+            ILogger<PassengerService> logger,
             IProsimInterface prosimService,
             ServiceModel model,
             ICargoService cargoService)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _prosimService = prosimService ?? throw new ArgumentNullException(nameof(prosimService));
             _model = model ?? throw new ArgumentNullException(nameof(model));
             _cargoService = cargoService ?? throw new ArgumentNullException(nameof(cargoService));
@@ -46,8 +48,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                     if (!_randomizePaxSeat)
                     {
                         _paxPlanned = RandomizePassengerSeating(flightPlan.Passenger);
-                        LogService.Log(LogLevel.Debug, nameof(PassengerService),
-                            $"seatOccupation bool: {string.Join(", ", _paxPlanned)}");
+                        _logger.LogDebug("seatOccupation bool: {SeatOccupation}", string.Join(", ", _paxPlanned));
 
                         _prosimService.SetProsimVariable("aircraft.passengers.seatOccupation", _paxPlanned);
                         _prosimService.SetProsimVariable("efb.passengers.booked", _paxPlanned);
@@ -73,8 +74,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(PassengerService),
-                    $"Exception during UpdatePassengerData: {ex.Message}");
+                _logger.LogError(ex, "Exception during UpdatePassengerData");
             }
         }
 
@@ -96,8 +96,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             // Check if trueCount exceeds maximum capacity
             if (trueCount > 132)
             {
-                LogService.Log(LogLevel.Warning, nameof(PassengerService),
-                    $"Requested passenger count {trueCount} exceeds maximum capacity. Reducing to 132.");
+                _logger.LogWarning("Requested passenger count {Count} exceeds maximum capacity. Reducing to 132.", trueCount);
                 actualCount = 132;
             }
             else if (trueCount < 0)
@@ -163,8 +162,8 @@ namespace Prosim2GSX.Services.Prosim.Implementation
 
         public void StartDeboarding()
         {
-            LogService.Log(LogLevel.Debug, nameof(PassengerService),
-                $"(planned {GetPlannedPassengers()}) (current {GetCurrentPassengers()})");
+            _logger.LogDebug("(planned {PlannedPassengers}) (current {CurrentPassengers})",
+                GetPlannedPassengers(), GetCurrentPassengers());
 
             _paxLast = GetPlannedPassengers();
 
@@ -190,7 +189,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             for (int i = 0; i < _paxCurrent.Length; i++)
                 _paxCurrent[i] = false;
 
-            LogService.Log(LogLevel.Debug, nameof(PassengerService), "Sending SeatString");
+            _logger.LogDebug("Sending SeatString");
             SendSeatString(true);
 
             _paxCurrent = new bool[132];
@@ -201,17 +200,17 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         {
             if (num < 0)
             {
-                LogService.Log(LogLevel.Debug, nameof(PassengerService), "Passenger Num was below 0!");
+                _logger.LogDebug("Passenger Num was below 0!");
                 return;
             }
             else if (num > 15)
             {
-                LogService.Log(LogLevel.Debug, nameof(PassengerService), "Passenger Num was above 15!");
+                _logger.LogDebug("Passenger Num was above 15!");
                 return;
             }
             else
-                LogService.Log(LogLevel.Debug, nameof(PassengerService),
-                    $"(num {num}) (current {GetCurrentPassengers()}) (planned ({GetPlannedPassengers()}))");
+                _logger.LogDebug("(num {Num}) (current {Current}) (planned {Planned})",
+                    num, GetCurrentPassengers(), GetPlannedPassengers());
 
             int n = 0;
             for (int i = _paxLast; i < _paxLast + num && i < GetPlannedPassengers(); i++)
@@ -228,17 +227,17 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         {
             if (num < 0)
             {
-                LogService.Log(LogLevel.Debug, nameof(PassengerService), "Passenger Num was below 0!");
+                _logger.LogDebug("Passenger Num was below 0!");
                 return;
             }
             else if (num > 15)
             {
-                LogService.Log(LogLevel.Debug, nameof(PassengerService), "Passenger Num was above 15!");
+                _logger.LogDebug("Passenger Num was above 15!");
                 return;
             }
             else
-                LogService.Log(LogLevel.Debug, nameof(PassengerService),
-                    $"(num {num}) (current {GetCurrentPassengers()}) (planned ({GetPlannedPassengers()}))");
+                _logger.LogDebug("(num {Num}) (current {Current}) (planned {Planned})",
+                    num, GetCurrentPassengers(), GetPlannedPassengers());
 
             int n = 0;
             for (int i = 0; i < _paxCurrent.Length && n < num; i++)
@@ -275,7 +274,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                 }
             }
 
-            LogService.Log(LogLevel.Debug, nameof(PassengerService), seatString);
+            _logger.LogDebug("{SeatString}", seatString);
             _prosimService.SetProsimVariable("aircraft.passengers.seatOccupation.string", seatString);
         }
 
@@ -305,8 +304,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                 // If zones aren't populated, distribute passengers evenly
                 if (totalZones == 0 && totalPlannedPassengers > 0)
                 {
-                    LogService.Log(LogLevel.Warning, nameof(PassengerService),
-                        "Zone amounts not available. Distributing passengers evenly across zones.");
+                    _logger.LogWarning("Zone amounts not available. Distributing passengers evenly across zones.");
 
                     // Simple even distribution algorithm - you can adjust based on your A320 cabin config
                     int remaining = totalPlannedPassengers;
@@ -323,8 +321,8 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                     economy2 = (int)(remaining * 0.7); // 70% of remaining to zone3
                     economy3 = remaining - economy2; // Rest to zone4
 
-                    LogService.Log(LogLevel.Debug, nameof(PassengerService),
-                        $"Distributed {totalPlannedPassengers} passengers: Business: {business}, Economy 1: {economy1}, Economy 2: {economy2}, Economy 3: {economy3}");
+                    _logger.LogDebug("Distributed {TotalPassengers} passengers: Business: {Business}, Economy 1: {Economy1}, Economy 2: {Economy2}, Economy 3: {Economy3}",
+                        totalPlannedPassengers, business, economy1, economy2, economy3);
                 }
 
                 // Calculate totals
@@ -348,15 +346,13 @@ namespace Prosim2GSX.Services.Prosim.Implementation
 
                 // Serialize and set in Prosim
                 string passengerJson = Newtonsoft.Json.JsonConvert.SerializeObject(passengerStatistics);
-                LogService.Log(LogLevel.Debug, nameof(PassengerService),
-                    $"Setting efb.passengerStatistics: {passengerJson}");
+                _logger.LogDebug("Setting efb.passengerStatistics: {Statistics}", passengerJson);
 
                 _prosimService.SetProsimVariable("efb.passengerStatistics", passengerJson);
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(PassengerService),
-                    $"Exception during UpdatePassengerStatistics: {ex.Message}");
+                _logger.LogError(ex, "Exception during UpdatePassengerStatistics");
             }
         }
     }

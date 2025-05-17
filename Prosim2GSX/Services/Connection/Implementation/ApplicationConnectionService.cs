@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services.Connection.Events;
 using Prosim2GSX.Services.Connection.Interfaces;
-using Prosim2GSX.Services.Connection.Enum;
+using Prosim2GSX.Services.Connection.Enums;
 using Prosim2GSX.Services.Prosim.Interfaces;
-using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Implementation;
 
 namespace Prosim2GSX.Services.Connection.Implementation
 {
@@ -18,6 +17,7 @@ namespace Prosim2GSX.Services.Connection.Implementation
     {
         private readonly ServiceModel _model;
         private readonly IProsimConnectionService _prosimConnectionService;
+        private readonly ILogger<ApplicationConnectionService> _logger;
         private CancellationTokenSource _cts = new CancellationTokenSource();
 
         /// <inheritdoc/>
@@ -38,10 +38,15 @@ namespace Prosim2GSX.Services.Connection.Implementation
         /// <summary>
         /// Creates a new instance of ApplicationConnectionService
         /// </summary>
+        /// <param name="logger">Logger for this service</param>
         /// <param name="model">The service model</param>
         /// <param name="prosimConnectionService">The Prosim connection service</param>
-        public ApplicationConnectionService(ServiceModel model, IProsimConnectionService prosimConnectionService)
+        public ApplicationConnectionService(
+            ILogger<ApplicationConnectionService> logger,
+            ServiceModel model,
+            IProsimConnectionService prosimConnectionService)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _model = model ?? throw new ArgumentNullException(nameof(model));
             _prosimConnectionService = prosimConnectionService ?? throw new ArgumentNullException(nameof(prosimConnectionService));
         }
@@ -68,12 +73,12 @@ namespace Prosim2GSX.Services.Connection.Implementation
             // If not in wait mode, return failure
             if (!_model.WaitForConnect)
             {
-                LogService.Log(LogLevel.Error, nameof(ApplicationConnectionService), "Flight simulator not running and wait mode disabled");
+                _logger.LogError("Flight simulator not running and wait mode disabled");
                 return false;
             }
 
             // Wait for simulator to start
-            LogService.Log(LogLevel.Information, nameof(ApplicationConnectionService), "Waiting for flight simulator to start...");
+            _logger.LogInformation("Waiting for flight simulator to start...");
 
             try
             {
@@ -106,7 +111,7 @@ namespace Prosim2GSX.Services.Connection.Implementation
                 }
 
                 // Timeout reached
-                LogService.Log(LogLevel.Error, nameof(ApplicationConnectionService), "Timed out waiting for flight simulator to start");
+                _logger.LogError("Timed out waiting for flight simulator to start");
                 return false;
             }
             catch (OperationCanceledException)
@@ -122,7 +127,7 @@ namespace Prosim2GSX.Services.Connection.Implementation
             // Check if simulator is running
             if (!IsFlightSimulatorConnected)
             {
-                LogService.Log(LogLevel.Error, nameof(ApplicationConnectionService), "Cannot connect to SimConnect: Flight simulator not running");
+                _logger.LogError("Cannot connect to SimConnect: Flight simulator not running");
                 return false;
             }
 
@@ -160,7 +165,7 @@ namespace Prosim2GSX.Services.Connection.Implementation
                 // Wait for connection if initial attempt failed
                 if (connectRequested)
                 {
-                    LogService.Log(LogLevel.Information, nameof(ApplicationConnectionService), "Waiting for SimConnect connection...");
+                    _logger.LogInformation("Waiting for SimConnect connection...");
 
                     int waitDuration = 5000; // 5 seconds
                     int maxAttempts = 12; // 12 attempts = 60 seconds
@@ -188,7 +193,7 @@ namespace Prosim2GSX.Services.Connection.Implementation
                         // Check if simulator is still running
                         if (!IPCManager.IsSimRunning())
                         {
-                            LogService.Log(LogLevel.Error, nameof(ApplicationConnectionService), "Flight simulator closed while waiting for SimConnect");
+                            _logger.LogError("Flight simulator closed while waiting for SimConnect");
                             IsFlightSimulatorConnected = false;
                             OnConnectionStatusChanged(ConnectionType.FlightSimulator, false);
                             return false;
@@ -202,11 +207,11 @@ namespace Prosim2GSX.Services.Connection.Implementation
                     }
 
                     // Timeout reached
-                    LogService.Log(LogLevel.Error, nameof(ApplicationConnectionService), "Timed out waiting for SimConnect connection");
+                    _logger.LogError("Timed out waiting for SimConnect connection");
                 }
                 else
                 {
-                    LogService.Log(LogLevel.Error, nameof(ApplicationConnectionService), "Failed to request SimConnect connection");
+                    _logger.LogError("Failed to request SimConnect connection");
                 }
 
                 // Connection failed
@@ -216,7 +221,7 @@ namespace Prosim2GSX.Services.Connection.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(ApplicationConnectionService), $"Exception connecting to SimConnect: {ex.Message}");
+                _logger.LogError(ex, "Exception connecting to SimConnect");
 
                 // Connection failed
                 IsSimConnectConnected = false;
@@ -237,7 +242,7 @@ namespace Prosim2GSX.Services.Connection.Implementation
                 }
 
                 // Attempt to connect to Prosim
-                LogService.Log(LogLevel.Information, nameof(ApplicationConnectionService), "Connecting to Prosim...");
+                _logger.LogInformation("Connecting to Prosim...");
 
                 bool connected = await Task.Run(() => _prosimConnectionService.WaitForAvailability());
 
@@ -247,18 +252,18 @@ namespace Prosim2GSX.Services.Connection.Implementation
 
                 if (connected)
                 {
-                    LogService.Log(LogLevel.Information, nameof(ApplicationConnectionService), "Connected to Prosim");
+                    _logger.LogInformation("Connected to Prosim");
                 }
                 else
                 {
-                    LogService.Log(LogLevel.Error, nameof(ApplicationConnectionService), "Failed to connect to Prosim");
+                    _logger.LogError("Failed to connect to Prosim");
                 }
 
                 return connected;
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(ApplicationConnectionService), $"Exception connecting to Prosim: {ex.Message}");
+                _logger.LogError(ex, "Exception connecting to Prosim");
 
                 // Connection failed
                 IsProsimConnected = false;
@@ -275,7 +280,7 @@ namespace Prosim2GSX.Services.Connection.Implementation
                 // Check if SimConnect is connected
                 if (!IsSimConnectConnected || IPCManager.SimConnect == null)
                 {
-                    LogService.Log(LogLevel.Error, nameof(ApplicationConnectionService), "Cannot wait for session: SimConnect not connected");
+                    _logger.LogError("Cannot wait for session: SimConnect not connected");
                     return false;
                 }
 
@@ -315,14 +320,15 @@ namespace Prosim2GSX.Services.Connection.Implementation
                     // Check if simulator is still running
                     if (!IPCManager.IsSimRunning())
                     {
-                        LogService.Log(LogLevel.Error, nameof(ApplicationConnectionService), "Flight simulator closed while waiting for session");
+                        _logger.LogError("Flight simulator closed while waiting for session");
                         IsFlightSimulatorConnected = false;
                         OnConnectionStatusChanged(ConnectionType.FlightSimulator, false);
                         return false;
                     }
 
                     // Wait before checking again
-                    LogService.Log(LogLevel.Information, nameof(ApplicationConnectionService), $"Waiting for session to be ready ({attempt + 1}/{maxAttempts})...");
+                    _logger.LogInformation("Waiting for session to be ready ({Attempt}/{MaxAttempts})...",
+                        attempt + 1, maxAttempts);
                     await Task.Delay(waitDuration, _cts.Token);
 
                     // Check if ready
@@ -334,13 +340,13 @@ namespace Prosim2GSX.Services.Connection.Implementation
                         IsSessionReady = true;
                         OnConnectionStatusChanged(ConnectionType.Session, true);
 
-                        LogService.Log(LogLevel.Information, nameof(ApplicationConnectionService), "Session is ready");
+                        _logger.LogInformation("Session is ready");
                         return true;
                     }
                 }
 
                 // Timeout reached
-                LogService.Log(LogLevel.Error, nameof(ApplicationConnectionService), "Timed out waiting for session to be ready");
+                _logger.LogError("Timed out waiting for session to be ready");
 
                 // Session not ready
                 IsSessionReady = false;
@@ -349,7 +355,7 @@ namespace Prosim2GSX.Services.Connection.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(ApplicationConnectionService), $"Exception waiting for session: {ex.Message}");
+                _logger.LogError(ex, "Exception waiting for session");
 
                 // Session not ready
                 IsSessionReady = false;
@@ -391,7 +397,7 @@ namespace Prosim2GSX.Services.Connection.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(ApplicationConnectionService), $"Exception during disconnect: {ex.Message}");
+                _logger.LogError(ex, "Exception during disconnect");
             }
         }
 
@@ -405,16 +411,15 @@ namespace Prosim2GSX.Services.Connection.Implementation
             try
             {
                 // Log connection status change
-                LogService.Log(LogLevel.Information, nameof(ApplicationConnectionService),
-                    $"Connection status changed: {connectionType} = {isConnected}");
+                _logger.LogInformation("Connection status changed: {ConnectionType} = {IsConnected}",
+                    connectionType, isConnected);
 
                 // Raise event
                 ConnectionStatusChanged?.Invoke(this, new ConnectionStatusEventArgs(connectionType, isConnected));
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(ApplicationConnectionService),
-                    $"Exception raising ConnectionStatusChanged event: {ex.Message}");
+                _logger.LogError(ex, "Exception raising ConnectionStatusChanged event");
             }
         }
     }

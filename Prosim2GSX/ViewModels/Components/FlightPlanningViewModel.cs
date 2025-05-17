@@ -1,4 +1,5 @@
-﻿using Prosim2GSX.Models;
+﻿using Microsoft.Extensions.Logging;
+using Prosim2GSX.Models;
 using Prosim2GSX.ViewModels.Base;
 using Prosim2GSX.ViewModels.Commands;
 using System;
@@ -13,6 +14,7 @@ namespace Prosim2GSX.ViewModels.Components
     public class FlightPlanningViewModel : ViewModelBase
     {
         private readonly ServiceModel _serviceModel;
+        private ILoggerFactory _loggerFactory;
         private bool _isLoadingSettings;
 
         // SimBrief settings
@@ -297,7 +299,7 @@ namespace Prosim2GSX.ViewModels.Components
             try
             {
                 // Create a temporary FlightPlan object to test the connection
-                var testPlan = new Prosim2GSX.FlightPlan(_serviceModel);
+                var testPlan = new FlightPlan(_serviceModel, _loggerFactory.CreateLogger<FlightPlan>());
                 var result = await Task.Run(() => testPlan.LoadWithValidation());
 
                 if (result == Prosim2GSX.FlightPlan.LoadResult.Success)

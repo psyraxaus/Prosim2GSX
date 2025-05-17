@@ -1,7 +1,6 @@
-﻿using Prosim2GSX.Models;
+﻿using Microsoft.Extensions.Logging;
+using Prosim2GSX.Models;
 using Prosim2GSX.Services.GSX.Interfaces;
-using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Implementation;
 using System;
 using System.IO;
 using System.Linq;
@@ -18,16 +17,25 @@ namespace Prosim2GSX.Services.GSX.Implementation
         private readonly ServiceModel _model;
         private readonly MobiSimConnect _mobiSimConnect;
         private readonly string _menuFile;
+        private readonly ILogger<GsxMenuService> _logger;
 
         /// <summary>
         /// Constructor
         /// </summary>
-        public GsxMenuService(IGsxSimConnectService simConnectService, string menuFile, ServiceModel model, MobiSimConnect mobiSimConnect)
+        public GsxMenuService(
+            ILogger<GsxMenuService> logger,
+            IGsxSimConnectService simConnectService,
+            string menuFile,
+            ServiceModel model,
+            MobiSimConnect mobiSimConnect)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _simConnectService = simConnectService ?? throw new ArgumentNullException(nameof(simConnectService));
             _menuFile = menuFile ?? throw new ArgumentNullException(nameof(menuFile));
             _model = model ?? throw new ArgumentNullException(nameof(model));
             _mobiSimConnect = mobiSimConnect ?? throw new ArgumentNullException(nameof(mobiSimConnect));
+
+            _logger.LogInformation("GSX Menu Service initialized");
         }
 
         /// <inheritdoc/>
@@ -35,7 +43,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
         {
             _mobiSimConnect.IsGsxMenuReady = false;
             _simConnectService.WriteGsxLvar("FSDT_GSX_MENU_OPEN", 1);
-            LogService.Log(LogLevel.Debug, nameof(GsxMenuService), "Opening GSX Menu", LogCategory.Menu);
+            _logger.LogDebug("Opening GSX Menu");
         }
 
         /// <inheritdoc/>
@@ -44,8 +52,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             if (waitForMenu)
                 WaitForMenuReady();
             _mobiSimConnect.IsGsxMenuReady = false;
-            LogService.Log(LogLevel.Debug, nameof(GsxMenuService),
-                $"Selecting Menu Option {index} (L-Var Value {index - 1})", LogCategory.Menu);
+            _logger.LogDebug("Selecting Menu Option {Index} (L-Var Value {LvarValue})", index, index - 1);
             _simConnectService.WriteGsxLvar("FSDT_GSX_MENU_CHOICE", index - 1);
 
             // Small delay after selection to allow GSX to process
@@ -55,11 +62,9 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// <inheritdoc/>
         public void WaitForMenuReady()
         {
-
             int counter = 0;
             while (!_mobiSimConnect.IsGsxMenuReady && counter < 1000) { Thread.Sleep(100); counter++; }
-            LogService.Log(LogLevel.Debug, nameof(GsxMenuService), 
-                $"Wait ended after {counter * 100}ms", LogCategory.Menu);
+            _logger.LogDebug("Wait ended after {WaitTime}ms", counter * 100);
         }
 
         /// <inheritdoc/>
@@ -76,40 +81,34 @@ namespace Prosim2GSX.Services.GSX.Implementation
                     {
                         if (!string.IsNullOrEmpty(lines[0]) && (lines[0] == "Select handling operator" || lines[0] == "Select catering operator"))
                         {
-                            LogService.Log(LogLevel.Debug, nameof(GsxMenuService),
-                                $"Match found for operator Selection: '{lines[0]}'", LogCategory.Menu);
+                            _logger.LogDebug("Match found for operator Selection: '{Line}'", lines[0]);
                             result = 1;
                         }
                         else if (string.IsNullOrEmpty(lines[0]))
                         {
-                            LogService.Log(LogLevel.Debug, nameof(GsxMenuService),
-                                $"Line is empty! Lines total: {lines.Length}", LogCategory.Menu);
+                            _logger.LogDebug("Line is empty! Lines total: {LinesCount}", lines.Length);
                             result = -1;
                         }
                         else
                         {
-                            LogService.Log(LogLevel.Debug, nameof(GsxMenuService),
-                                $"No Match found for operator Selection: '{lines[0]}'", LogCategory.Menu);
+                            _logger.LogDebug("No Match found for operator Selection: '{Line}'", lines[0]);
                             result = 0;
                         }
                     }
                     else
                     {
-                        LogService.Log(LogLevel.Debug, nameof(GsxMenuService),
-                            $"Menu Lines not above 1 ({lines.Length})", LogCategory.Menu);
+                        _logger.LogDebug("Menu Lines not above 1 ({LinesCount})", lines.Length);
                     }
                 }
                 catch (Exception ex)
                 {
-                    LogService.Log(LogLevel.Error, nameof(GsxMenuService),
-                        $"Error reading menu file: {ex.Message}");
+                    _logger.LogError(ex, "Error reading menu file");
                     result = -1;
                 }
             }
             else
             {
-                LogService.Log(LogLevel.Debug, nameof(GsxMenuService),
-                    $"Menu File was empty or not found", LogCategory.Menu);
+                _logger.LogDebug("Menu File was empty or not found");
             }
 
             return result;
@@ -123,22 +122,18 @@ namespace Prosim2GSX.Services.GSX.Implementation
             int result = IsOperatorSelectionActive();
             if (result == -1)
             {
-                LogService.Log(LogLevel.Information, nameof(GsxMenuService),
-                    $"Waiting {_model.OperatorDelay}ms for Operator Selection");
+                _logger.LogInformation("Waiting {Delay}ms for Operator Selection", _model.OperatorDelay);
                 Thread.Sleep((int)_model.OperatorDelay);
-
             }
 
             if (result == 1)
             {
-                LogService.Log(LogLevel.Information, nameof(GsxMenuService),
-                    $"Operator Selection active, choosing Option 1");
+                _logger.LogInformation("Operator Selection active, choosing Option 1");
                 SelectMenuItem(1);
             }
             else
             {
-                LogService.Log(LogLevel.Information, nameof(GsxMenuService),
-                    $"No Operator Selection needed");
+                _logger.LogInformation("No Operator Selection needed");
             }
         }
     }

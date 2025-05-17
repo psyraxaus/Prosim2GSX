@@ -1,51 +1,134 @@
-﻿using Prosim2GSX.Models;
-using Prosim2GSX.Services.Prosim.Interfaces;
-using Prosim2GSX.Services.GSX.Interfaces;
-using System;
+﻿using Microsoft.Extensions.Logging;
+using Prosim2GSX.Models;
+using Prosim2GSX.Services.Audio;
 using Prosim2GSX.Services.Connection.Interfaces;
-using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Interfaces;
-using Prosim2GSX.Services.Logger.Implementation;
+using Prosim2GSX.Services.GSX.Interfaces;
+using Prosim2GSX.Services.Logging.Interfaces;
+using Prosim2GSX.Services.Prosim.Interfaces;
+using System;
+using System.Collections.Generic;
 
 namespace Prosim2GSX.Services
 {
     /// <summary>
-    /// Provides centralized access to all ProSim services throughout the application
+    /// Provides centralized access to all ProSim services throughout the application.
+    /// Acts as a service locator pattern implementation for singleton services.
     /// </summary>
     public static class ServiceLocator
     {
         private static ProsimServiceProvider _serviceProvider;
         private static ServiceModel _serviceModel;
-        private static ILogService _logService;
+        private static ILoggerFactory _loggerFactory;
+        private static ILogger _logger;
+
+        /// <summary>
+        /// Dictionary of manually registered services to avoid circular dependencies in DI
+        /// </summary>
+        private static readonly Dictionary<Type, object> _manualServices = new Dictionary<Type, object>();
 
         /// <summary>
         /// Initialize the service locator
         /// </summary>
+        /// <param name="loggerFactory">Logger factory for creating loggers</param>
         /// <param name="model">Service model</param>
-        public static void Initialize(ServiceModel model)
+        public static void Initialize(ILoggerFactory loggerFactory, ServiceModel model)
         {
             try
             {
+                if (loggerFactory == null)
+                    throw new ArgumentNullException(nameof(loggerFactory));
+
                 if (model == null)
                     throw new ArgumentNullException(nameof(model));
 
+                _loggerFactory = loggerFactory;
+                _logger = loggerFactory.CreateLogger(nameof(ServiceLocator));
                 _serviceModel = model;
-                _serviceProvider = new ProsimServiceProvider(model);
+
+                // Initialize DllLoader with a logger
+                DllLoader.Initialize(loggerFactory.CreateLogger(nameof(DllLoader)));
+
+                // Pass the logger factory to the service provider
+                _serviceProvider = new ProsimServiceProvider(loggerFactory, model);
 
                 // Verify that critical services are available
                 // This will throw if any of them are null
                 var test = ProsimInterface;
                 var test2 = FlightPlanService;
 
-                LogService.Log(LogLevel.Information, nameof(ServiceLocator), "ServiceLocator initialized successfully");
+                _logger.LogInformation("ServiceLocator initialized successfully");
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Critical, nameof(ServiceLocator),
-                    $"Failed to initialize ServiceLocator: {ex.Message}");
+                // We may not have a logger yet if the initialization fails early,
+                // so check if it's available before using it
+                _logger?.LogCritical(ex, "Failed to initialize ServiceLocator");
                 throw; // Rethrow to let caller handle it
             }
         }
+
+        /// <summary>
+        /// Manually registers a service instance to be returned by GetService.
+        /// This is useful for avoiding circular dependencies in the DI container.
+        /// </summary>
+        /// <typeparam name="T">The service interface type</typeparam>
+        /// <param name="service">The service implementation instance</param>
+        public static void RegisterService<T>(T service) where T : class
+        {
+            if (service == null)
+                throw new ArgumentNullException(nameof(service));
+
+            _manualServices[typeof(T)] = service;
+            _logger?.LogDebug("Manually registered service of type {ServiceType}", typeof(T).Name);
+        }
+
+        /// <summary>
+        /// Gets a service of the specified type.
+        /// Checks manually registered services first, then falls back to known service types.
+        /// </summary>
+        /// <typeparam name="T">The type of service to retrieve</typeparam>
+        /// <returns>The service instance, or null if not found</returns>
+        public static T GetService<T>() where T : class
+        {
+            // First check in manually registered services
+            if (_manualServices.TryGetValue(typeof(T), out var manualService))
+            {
+                return (T)manualService;
+            }
+
+            // Next check for specific service types that we know how to create
+            if (typeof(T) == typeof(ILoggerFactory))
+            {
+                return _loggerFactory as T;
+            }
+
+            // Try to get a logger if requested
+            if (typeof(T).IsGenericType && typeof(T).GetGenericTypeDefinition() == typeof(ILogger<>))
+            {
+                Type loggedType = typeof(T).GetGenericArguments()[0];
+                var loggerMethod = typeof(ServiceLocator).GetMethod(nameof(GetLogger))
+                    .MakeGenericMethod(loggedType);
+                return loggerMethod.Invoke(null, null) as T;
+            }
+
+            // Add other specific interface mappings here
+            if (typeof(T) == typeof(IAudioService))
+            {
+                // This would require a reference to the audio service to be stored
+                _logger?.LogWarning("GetService<IAudioService>() called but no direct accessor is available");
+                return null;
+            }
+
+            if (typeof(T) == typeof(IUiLogListener))
+            {
+                _logger?.LogWarning("GetService<IUiLogListener>() called but not found in manual services");
+                return null;
+            }
+
+            _logger?.LogWarning("GetService<{Type}>() called but no implementation is available", typeof(T).Name);
+            return null;
+        }
+
 
         /// <summary>
         /// Get the ProSim interface
@@ -58,7 +141,7 @@ namespace Prosim2GSX.Services
         /// Get the Prosim connection service
         /// </summary>
         public static IProsimConnectionService ProsimConnectionService =>
-            _serviceProvider?.GetProsimConnectionService() ?? // Changed from GetConnectionService to GetProsimConnectionService
+            _serviceProvider?.GetProsimConnectionService() ??
             throw new InvalidOperationException("ServiceLocator not initialized");
 
         /// <summary>
@@ -160,10 +243,10 @@ namespace Prosim2GSX.Services
         /// <summary>
         /// Get the GSX refueling service
         /// </summary>
-       public static IGsxRefuelingService GsxRefuelingService =>
-            _serviceProvider?.GetGsxRefuelingService() ??
-            throw new InvalidOperationException("ServiceLocator not initialized");
-       
+        public static IGsxRefuelingService GsxRefuelingService =>
+             _serviceProvider?.GetGsxRefuelingService() ??
+             throw new InvalidOperationException("ServiceLocator not initialized");
+
         /// <summary>
         /// Get the GSX SimConnect service
         /// </summary>
@@ -192,7 +275,7 @@ namespace Prosim2GSX.Services
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(ServiceLocator), $"Exception during UpdateAllServices: {ex.Message}");
+                _logger?.LogError(ex, "Exception during UpdateAllServices");
             }
         }
 
@@ -211,13 +294,11 @@ namespace Prosim2GSX.Services
         {
             if (simConnect == null)
             {
-                LogService.Log(LogLevel.Warning, nameof(ServiceLocator),
-                    "Cannot update GSX services: SimConnect is null");
+                _logger?.LogWarning("Cannot update GSX services: SimConnect is null");
                 return;
             }
 
-            LogService.Log(LogLevel.Information, nameof(ServiceLocator),
-                "Updating GSX services with current SimConnect instance");
+            _logger?.LogInformation("Updating GSX services with current SimConnect instance");
 
             try
             {
@@ -225,8 +306,7 @@ namespace Prosim2GSX.Services
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(ServiceLocator),
-                    $"Error updating GSX services: {ex.Message}");
+                _logger?.LogError(ex, "Error updating GSX services");
             }
         }
 
@@ -245,8 +325,21 @@ namespace Prosim2GSX.Services
             throw new InvalidOperationException("ServiceLocator not initialized");
 
         /// <summary>
-        /// Gets the log service for categorized logging
+        /// Get a logger for the specified category
         /// </summary>
-        public static ILogService LogService => _logService ??= new LogServiceWrapper();
+        /// <typeparam name="T">The class to create a logger for</typeparam>
+        /// <returns>An ILogger instance</returns>
+        public static ILogger<T> GetLogger<T>() =>
+            _loggerFactory?.CreateLogger<T>() ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
+
+        /// <summary>
+        /// Get a logger with the specified name
+        /// </summary>
+        /// <param name="categoryName">The category name for the logger</param>
+        /// <returns>An ILogger instance</returns>
+        public static ILogger GetLogger(string categoryName) =>
+            _loggerFactory?.CreateLogger(categoryName) ??
+            throw new InvalidOperationException("ServiceLocator not initialized");
     }
 }

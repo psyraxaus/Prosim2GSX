@@ -1,5 +1,9 @@
-﻿using Prosim2GSX.Models;
+﻿using Microsoft.Extensions.Logging;
+using Prosim2GSX.Models;
+using Prosim2GSX.Services;
+using Prosim2GSX.Services.Logging.Interfaces;
 using Prosim2GSX.ViewModels;
+using System;
 using System.Windows;
 
 namespace Prosim2GSX
@@ -20,6 +24,11 @@ namespace Prosim2GSX
         protected ServiceModel serviceModel;
 
         /// <summary>
+        /// The logger factory for creating loggers
+        /// </summary>
+        private readonly ILoggerFactory _loggerFactory;
+
+        /// <summary>
         /// The main view model that coordinates all component view models
         /// </summary>
         private MainViewModel _viewModel;
@@ -29,15 +38,30 @@ namespace Prosim2GSX
         /// </summary>
         /// <param name="notifyModel">The notify icon view model</param>
         /// <param name="serviceModel">The service model for application state</param>
-        public MainWindow(NotifyIconViewModel notifyModel, ServiceModel serviceModel)
+        /// <param name="loggerFactory">The factory for creating loggers</param>
+        public MainWindow(NotifyIconViewModel notifyModel, ServiceModel serviceModel, ILoggerFactory loggerFactory)
         {
             InitializeComponent();
 
             this.notifyModel = notifyModel;
             this.serviceModel = serviceModel;
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
 
-            // Create the ViewModel and register it with the locator
-            _viewModel = new MainViewModel(serviceModel, notifyModel);
+            // Get the UI log listener from ServiceLocator
+            var logListener = ServiceLocator.GetService<IUiLogListener>();
+            if (logListener == null)
+            {
+                throw new InvalidOperationException("IUiLogListener service is not available. Please ensure it is registered in the ServiceLocator.");
+            }
+
+            // Create the ViewModel with all required parameters
+            _viewModel = new MainViewModel(
+                serviceModel,
+                notifyModel,
+                _loggerFactory.CreateLogger<MainViewModel>(),
+                _loggerFactory,
+                logListener);
+
             ViewModelLocator.Instance.RegisterViewModel(_viewModel);
 
             // Set the DataContext for data binding

@@ -1,4 +1,4 @@
-﻿namespace Prosim2GSX.Services.Connection.Enum
+﻿namespace Prosim2GSX.Services.Connection.Enums
 {
     /// <summary>
     /// Represents the types of connections the application manages

@@ -1,13 +1,17 @@
-﻿using Prosim2GSX.Events;
+﻿using Microsoft.Extensions.Logging;
+using Prosim2GSX.Events;
 using Prosim2GSX.Models;
+using Prosim2GSX.Services;
 using Prosim2GSX.Services.Audio;
 using Prosim2GSX.Services.GSX.Enums;
-using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Implementation;
+using Prosim2GSX.Services.Logging.Implementation;
+using Prosim2GSX.Services.Logging.Interfaces;
+using Prosim2GSX.Services.Logging.Models;
 using Prosim2GSX.ViewModels.Base;
 using Prosim2GSX.ViewModels.Commands;
 using Prosim2GSX.ViewModels.Components;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
@@ -26,8 +30,10 @@ namespace Prosim2GSX.ViewModels
         private readonly ServiceModel _serviceModel;
         private readonly NotifyIconViewModel _notifyModel;
         private readonly DispatcherTimer _timer;
-        private readonly ObservableCollection<LogEntry> _logEntries = new ObservableCollection<LogEntry>();
+        private readonly ObservableCollection<LogMessage> _logEntries = new ObservableCollection<LogMessage>();
         private readonly LogLevel _uiLogLevel = LogLevel.Information;
+        private readonly ILogger<MainViewModel> _logger;
+        private readonly ILoggerFactory _loggerFactory;
 
         // Tab related fields
         private int _selectedTabIndex;
@@ -54,7 +60,7 @@ namespace Prosim2GSX.ViewModels
         private string _flightNumber = "No Flight";
 
         // Subscription tokens for event handling
-        private readonly System.Collections.Generic.List<SubscriptionToken> _subscriptionTokens = new System.Collections.Generic.List<SubscriptionToken>();
+        private readonly List<SubscriptionToken> _subscriptionTokens = new List<SubscriptionToken>();
 
         #endregion
 
@@ -73,7 +79,7 @@ namespace Prosim2GSX.ViewModels
         /// <summary>
         /// Gets the log entries collection for display in the UI
         /// </summary>
-        public ObservableCollection<LogEntry> LogEntries => _logEntries;
+        public ObservableCollection<LogMessage> LogEntries => _logEntries;
 
         /// <summary>
         /// Gets or sets the currently selected tab index
@@ -282,14 +288,26 @@ namespace Prosim2GSX.ViewModels
         /// </summary>
         /// <param name="serviceModel">The service model for application data</param>
         /// <param name="notifyModel">The notification icon view model</param>
-        public MainViewModel(ServiceModel serviceModel, NotifyIconViewModel notifyModel)
+        /// <param name="logger">Logger for this view model</param>
+        /// <param name="loggerFactory">Factory for creating loggers</param>
+        /// <param name="logListener">UI log listener for log display</param>
+        public MainViewModel(
+            ServiceModel serviceModel,
+            NotifyIconViewModel notifyModel,
+            ILogger<MainViewModel> logger,
+            ILoggerFactory loggerFactory,
+            IUiLogListener logListener)
         {
             _serviceModel = serviceModel ?? throw new ArgumentNullException(nameof(serviceModel));
             _notifyModel = notifyModel ?? throw new ArgumentNullException(nameof(notifyModel));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
+
+            _logger.LogInformation("Initializing MainViewModel");
 
             // Create ViewModels for components
             ConnectionStatus = new ConnectionStatusViewModel(serviceModel);
-            LogMessages = new LogMessagesViewModel();
+            LogMessages = new LogMessagesViewModel(logListener, _loggerFactory.CreateLogger<LogMessagesViewModel>());
             FlightPhase = new FlightPhaseViewModel();
             GroundServices = new GroundServicesViewModel(serviceModel);
             HeaderBar = new HeaderBarViewModel(
@@ -298,7 +316,7 @@ namespace Prosim2GSX.ViewModels
                 showHelpAction: ShowHelp
             );
             AudioSettings = new AudioSettingsViewModel(serviceModel);
-            AppSettings = new AppSettingsViewModel(serviceModel);
+            AppSettings = new AppSettingsViewModel(serviceModel, _loggerFactory.CreateLogger<AppSettingsViewModel>());
             GsxSettings = new GsxSettingsViewModel(serviceModel);
             FlightPlanning = new FlightPlanningViewModel(serviceModel);
 
@@ -316,6 +334,8 @@ namespace Prosim2GSX.ViewModels
 
             // Subscribe to events
             SubscribeToEvents();
+
+            _logger.LogDebug("MainViewModel initialized");
         }
 
 #if DEBUG
@@ -329,15 +349,23 @@ namespace Prosim2GSX.ViewModels
             ShowSettingsCommand = new RelayCommand(_ => { });
             ShowAudioSettingsCommand = new RelayCommand(_ => { });
 
+            var logListener = ServiceLocator.GetService<IUiLogListener>()
+                ?? new UiLogListener(
+                    Microsoft.Extensions.Options.Options.Create(new Services.Logging.Options.UiLoggerOptions()),
+                    _loggerFactory.CreateLogger<UiLogListener>());
+
             // Create ViewModels for design-time
             ConnectionStatus = new ConnectionStatusViewModel(new ServiceModel());
-            LogMessages = new LogMessagesViewModel();
+            LogMessages = new LogMessagesViewModel(
+                logListener,
+                _loggerFactory.CreateLogger<LogMessagesViewModel>());
             FlightPhase = new FlightPhaseViewModel();
             GroundServices = new GroundServicesViewModel();
             HeaderBar = new HeaderBarViewModel();
             AudioSettings = new AudioSettingsViewModel(new ServiceModel());
-            AppSettings = new AppSettingsViewModel(new ServiceModel());
-            GsxSettings = new GsxSettingsViewModel(new ServiceModel());
+            AppSettings = new AppSettingsViewModel(
+                _serviceModel,
+                _loggerFactory.CreateLogger<AppSettingsViewModel>()); GsxSettings = new GsxSettingsViewModel(new ServiceModel());
             FlightPlanning = new FlightPlanningViewModel(new ServiceModel());
 
             // Initialize timer
@@ -354,6 +382,8 @@ namespace Prosim2GSX.ViewModels
         /// </summary>
         private void SubscribeToEvents()
         {
+            _logger.LogDebug("Subscribing to events");
+
             // Subscribe to service status events
             _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<ServiceStatusChangedEvent>(OnServiceStatusChanged));
 
@@ -366,6 +396,8 @@ namespace Prosim2GSX.ViewModels
         /// </summary>
         public void Cleanup()
         {
+            _logger.LogDebug("Cleaning up MainViewModel");
+
             _timer.Stop();
 
             // Cleanup component ViewModels
@@ -382,6 +414,8 @@ namespace Prosim2GSX.ViewModels
                 EventAggregator.Instance.Unsubscribe<EventBase>(token);
             }
             _subscriptionTokens.Clear();
+
+            _logger.LogDebug("MainViewModel cleanup complete");
         }
 
         /// <summary>
@@ -389,6 +423,7 @@ namespace Prosim2GSX.ViewModels
         /// </summary>
         public void OnWindowVisible()
         {
+            _logger.LogTrace("Window visible, starting timer");
             ConnectionStatus.UpdateConnectionStatus();
             _timer.Start();
         }
@@ -398,6 +433,7 @@ namespace Prosim2GSX.ViewModels
         /// </summary>
         public void OnWindowHidden()
         {
+            _logger.LogTrace("Window hidden, stopping timer");
             _timer.Stop();
         }
 
@@ -423,6 +459,8 @@ namespace Prosim2GSX.ViewModels
         /// </summary>
         private void OnServiceStatusChanged(ServiceStatusChangedEvent evt)
         {
+            _logger.LogDebug("Service status changed: {ServiceName} to {Status}", evt.ServiceName, evt.Status);
+
             Application.Current.Dispatcher.Invoke(() => {
                 Brush brush;
                 switch (evt.Status)
@@ -487,6 +525,7 @@ namespace Prosim2GSX.ViewModels
         /// </summary>
         private void OnFlightPlanChanged(FlightPlanChangedEvent evt)
         {
+            _logger.LogInformation("Flight plan changed to {FlightNumber}", evt.FlightNumber ?? "No Flight");
             FlightNumber = evt.FlightNumber ?? "No Flight";
         }
 
@@ -495,6 +534,8 @@ namespace Prosim2GSX.ViewModels
         /// </summary>
         private void ShowHelp()
         {
+            _logger.LogInformation("Help dialog displayed");
+
             MessageBox.Show(
                 "Prosim2GSX provides integration between Prosim A320 and GSX Pro.\n\n" +
                 "For more information, please refer to the documentation.",
@@ -508,6 +549,7 @@ namespace Prosim2GSX.ViewModels
         /// </summary>
         private void ShowSettings()
         {
+            _logger.LogDebug("Navigating to Settings tab");
             SelectedTabIndex = 2; // Settings tab
         }
 
@@ -516,6 +558,7 @@ namespace Prosim2GSX.ViewModels
         /// </summary>
         private void ShowAudioSettings()
         {
+            _logger.LogDebug("Navigating to Audio Settings tab");
             SelectedTabIndex = 1; // Audio Settings tab
         }
 

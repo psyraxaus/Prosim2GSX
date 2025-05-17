@@ -1,8 +1,7 @@
-﻿using Prosim2GSX.Events;
+﻿using Microsoft.Extensions.Logging;
+using Prosim2GSX.Events;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services.GSX.Interfaces;
-using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Implementation;
 using Prosim2GSX.Services.Prosim.Interfaces;
 using System;
 using System.Threading;
@@ -19,6 +18,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
         private readonly IGsxMenuService _menuService;
         private readonly IDataRefMonitoringService _dataRefMonitoringService;
         private readonly ServiceModel _model;
+        private readonly ILogger<GsxGroundServicesService> _logger;
 
         /// <inheritdoc/>
         public bool IsGpuConnected => _prosimInterface.GetProsimVariable("groundservice.groundpower") != null && (bool)_prosimInterface.GetProsimVariable("groundservice.groundpower");
@@ -36,12 +36,14 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// Constructor
         /// </summary>
         public GsxGroundServicesService(
+            ILogger<GsxGroundServicesService> logger,
             IProsimInterface prosimInterface,
             IGsxSimConnectService simConnectService,
             IGsxMenuService menuService,
             IDataRefMonitoringService dataRefMonitoringService,
             ServiceModel model)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _prosimInterface = prosimInterface ?? throw new ArgumentNullException(nameof(prosimInterface));
             _simConnectService = simConnectService ?? throw new ArgumentNullException(nameof(simConnectService));
             _menuService = menuService ?? throw new ArgumentNullException(nameof(menuService));
@@ -65,15 +67,15 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 EventAggregator.Instance.Publish(new ServiceStatusChangedEvent(
                     "Chocks", chocksSet ? ServiceStatus.Completed : ServiceStatus.Disconnected));
 
-                LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService),
-                    $"Published initial service status events - GPU: {(gpuConnected ? "Connected" : "Disconnected")}, " +
-                    $"PCA: {(pcaConnected ? "Connected" : "Disconnected")}, " +
-                    $"Chocks: {(chocksSet ? "Set" : "Removed")}");
+                _logger.LogInformation(
+                    "Published initial service status events - GPU: {GpuStatus}, PCA: {PcaStatus}, Chocks: {ChocksStatus}",
+                    gpuConnected ? "Connected" : "Disconnected",
+                    pcaConnected ? "Connected" : "Disconnected",
+                    chocksSet ? "Set" : "Removed");
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxGroundServicesService),
-                    $"Error publishing initial service status: {ex.Message}");
+                _logger.LogError(ex, "Error publishing initial service status");
             }
         }
 
@@ -82,50 +84,43 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// </summary>
         private void SubscribeToStateChanges()
         {
-            LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService),
-                "Subscribing to ground service state changes");
+            _logger.LogInformation("Subscribing to ground service state changes");
 
             // Log dataref monitoring status
-            LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService),
-                $"DataRef monitoring active: {_dataRefMonitoringService.IsMonitoringActive}");
+            _logger.LogInformation("DataRef monitoring active: {IsMonitoringActive}", _dataRefMonitoringService.IsMonitoringActive);
 
             // Force start monitoring if needed
             if (!_dataRefMonitoringService.IsMonitoringActive)
             {
-                LogService.Log(LogLevel.Warning, nameof(GsxGroundServicesService),
-                    "DataRef monitoring not active, starting it manually");
+                _logger.LogWarning("DataRef monitoring not active, starting it manually");
                 _dataRefMonitoringService.StartMonitoring();
             }
 
             // Subscribe to GPU state changes
-            LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService),
-                "Subscribing to GPU state changes");
+            _logger.LogInformation("Subscribing to GPU state changes");
             _dataRefMonitoringService.SubscribeToDataRef("groundservice.groundpower", OnGpuStateChanged);
 
             // Subscribe to PCA state changes
-            LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService),
-                "Subscribing to PCA state changes");
+            _logger.LogInformation("Subscribing to PCA state changes");
             _dataRefMonitoringService.SubscribeToDataRef("groundservice.preconditionedAir", OnPcaStateChanged);
 
             // Subscribe to chocks state changes
-            LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService),
-                "Subscribing to chocks state changes");
+            _logger.LogInformation("Subscribing to chocks state changes");
             _dataRefMonitoringService.SubscribeToDataRef("efb.chocks", OnChocksStateChanged);
 
             // Log current values
             try
             {
-                dynamic gpuState = _prosimInterface.GetProsimVariable("groundservice.groundpower");
-                dynamic pcaState = _prosimInterface.GetProsimVariable("groundservice.preconditionedAir");
-                dynamic chocksState = _prosimInterface.GetProsimVariable("efb.chocks");
+                string gpuState = _prosimInterface.GetProsimVariable("groundservice.groundpower");
+                string pcaState = _prosimInterface.GetProsimVariable("groundservice.preconditionedAir");
+                string chocksState = _prosimInterface.GetProsimVariable("efb.chocks");
 
-                LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService),
-                    $"Initial states - GPU: {gpuState}, PCA: {pcaState}, Chocks: {chocksState}");
+                _logger.LogInformation("Initial states - GPU: {GpuState}, PCA: {PcaState}, Chocks: {ChocksState}",
+                    gpuState, pcaState, chocksState);
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxGroundServicesService),
-                    $"Error getting initial states: {ex.Message}");
+                _logger.LogError(ex, "Error getting initial states");
             }
         }
 
@@ -139,8 +134,8 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 var status = (bool)newValue ? ServiceStatus.Completed : ServiceStatus.Disconnected;
                 EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("GPU", status));
 
-                LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService),
-                    $"GPU state changed to {(status == ServiceStatus.Completed ? "connected" : "disconnected")}");
+                _logger.LogInformation("GPU state changed to {Status}",
+                    status == ServiceStatus.Completed ? "connected" : "disconnected");
             }
         }
 
@@ -154,8 +149,8 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 var status = (bool)newValue ? ServiceStatus.Completed : ServiceStatus.Disconnected;
                 EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("PCA", status));
 
-                LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService),
-                    $"PCA state changed to {(status == ServiceStatus.Completed ? "connected" : "disconnected")}");
+                _logger.LogInformation("PCA state changed to {Status}",
+                    status == ServiceStatus.Completed ? "connected" : "disconnected");
             }
         }
 
@@ -169,8 +164,8 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 var status = (bool)newValue ? ServiceStatus.Completed : ServiceStatus.Disconnected;
                 EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Chocks", status));
 
-                LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService),
-                    $"Chocks state changed to {(status == ServiceStatus.Completed ? "set" : "removed")}");
+                _logger.LogInformation("Chocks state changed to {Status}",
+                    status == ServiceStatus.Completed ? "set" : "removed");
             }
         }
 
@@ -179,13 +174,12 @@ namespace Prosim2GSX.Services.GSX.Implementation
         {
             try
             {
-                LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService), "Connecting GPU");
+                _logger.LogInformation("Connecting GPU");
                 _prosimInterface.SetProsimVariable("groundservice.groundpower", true);
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxGroundServicesService),
-                    $"Error connecting GPU: {ex.Message}");
+                _logger.LogError(ex, "Error connecting GPU");
             }
         }
 
@@ -194,13 +188,12 @@ namespace Prosim2GSX.Services.GSX.Implementation
         {
             try
             {
-                LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService), "Disconnecting GPU");
+                _logger.LogInformation("Disconnecting GPU");
                 _prosimInterface.SetProsimVariable("groundservice.groundpower", false);
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxGroundServicesService),
-                    $"Error disconnecting GPU: {ex.Message}");
+                _logger.LogError(ex, "Error disconnecting GPU");
             }
         }
 
@@ -209,13 +202,12 @@ namespace Prosim2GSX.Services.GSX.Implementation
         {
             try
             {
-                LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService), "Connecting PCA");
+                _logger.LogInformation("Connecting PCA");
                 _prosimInterface.SetProsimVariable("groundservice.preconditionedAir", true);
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxGroundServicesService),
-                    $"Error connecting PCA: {ex.Message}");
+                _logger.LogError(ex, "Error connecting PCA");
             }
         }
 
@@ -224,13 +216,12 @@ namespace Prosim2GSX.Services.GSX.Implementation
         {
             try
             {
-                LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService), "Disconnecting PCA");
+                _logger.LogInformation("Disconnecting PCA");
                 _prosimInterface.SetProsimVariable("groundservice.preconditionedAir", false);
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxGroundServicesService),
-                    $"Error disconnecting PCA: {ex.Message}");
+                _logger.LogError(ex, "Error disconnecting PCA");
             }
         }
 
@@ -239,14 +230,12 @@ namespace Prosim2GSX.Services.GSX.Implementation
         {
             try
             {
-                LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService),
-                    $"{(enable ? "Setting" : "Removing")} chocks");
+                _logger.LogInformation("{Action} chocks", enable ? "Setting" : "Removing");
                 _prosimInterface.SetProsimVariable("efb.chocks", enable);
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxGroundServicesService),
-                    $"Error {(enable ? "setting" : "removing")} chocks: {ex.Message}");
+                _logger.LogError(ex, "Error {Action} chocks", enable ? "setting" : "removing");
             }
         }
 
@@ -262,7 +251,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                     _simConnectService.ReadGsxLvar("FSDT_GSX_JETWAY") != 5 &&
                     _simConnectService.ReadGsxLvar("FSDT_GSX_OPERATEJETWAYS_STATE") < 3)
                 {
-                    LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService), "Calling Jetway");
+                    _logger.LogInformation("Calling Jetway");
                     _menuService.SelectMenuItem(6);
                     _menuService.HandleOperatorSelection();
 
@@ -275,7 +264,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                     _simConnectService.ReadGsxLvar("FSDT_GSX_JETWAY") != 5 &&
                     _simConnectService.ReadGsxLvar("FSDT_GSX_OPERATEJETWAYS_STATE") < 3)
                 {
-                    LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService), "Calling Jetway");
+                    _logger.LogInformation("Calling Jetway");
                     _menuService.SelectMenuItem(6);
                     _menuService.HandleOperatorSelection();
 
@@ -285,8 +274,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxGroundServicesService),
-                    $"Error calling jetway/stairs: {ex.Message}");
+                _logger.LogError(ex, "Error calling jetway/stairs");
             }
         }
 
@@ -301,7 +289,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 if (_simConnectService.ReadGsxLvar("FSDT_GSX_JETWAY") == 5 &&
                     _simConnectService.ReadGsxLvar("FSDT_GSX_OPERATEJETWAYS_STATE") < 3)
                 {
-                    LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService), "Removing Jetway");
+                    _logger.LogInformation("Removing Jetway");
                     _menuService.SelectMenuItem(6);
                     _menuService.HandleOperatorSelection();
 
@@ -314,15 +302,14 @@ namespace Prosim2GSX.Services.GSX.Implementation
                     _simConnectService.ReadGsxLvar("FSDT_GSX_OPERATESTAIRS_STATE") < 3)
                 {
                     _menuService.OpenMenu();
-                    LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService), "Removing Stairs");
+                    _logger.LogInformation("Removing Stairs");
                     _menuService.SelectMenuItem(7);
                     _menuService.HandleOperatorSelection();
                 }
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxGroundServicesService),
-                    $"Error removing jetway/stairs: {ex.Message}");
+                _logger.LogError(ex, "Error removing jetway/stairs");
             }
         }
 
@@ -339,8 +326,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             // Call jetway and/or stairs
             CallJetwayStairs(jetwayOnly);
 
-            LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService),
-                "All ground services connected");
+            _logger.LogInformation("All ground services connected");
         }
 
         /// <inheritdoc/>
@@ -356,8 +342,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             // Remove chocks last
             SetChocks(false);
 
-            LogService.Log(LogLevel.Information, nameof(GsxGroundServicesService),
-                "All ground services disconnected");
+            _logger.LogInformation("All ground services disconnected");
         }
     }
 }

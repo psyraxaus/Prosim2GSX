@@ -1,16 +1,18 @@
-﻿using System.Diagnostics;
+﻿using Microsoft.Extensions.Logging;
+using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Prosim2GSX.Events;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services.GSX;
-using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Implementation;
 
 namespace Prosim2GSX
 {
     public static class IPCManager
     {
+        private static ILogger _logger;
+
         public static readonly int waitDuration = 10000;
 
         public static MobiSimConnect SimConnect { get; set; } = null;
@@ -19,6 +21,15 @@ namespace Prosim2GSX
         /// </summary>
         public static GsxController GsxController { get; set; }
         public static ServiceController ServiceController { get; set; } = null;
+
+        /// <summary>
+        /// Initializes the IPCManager with a logger factory
+        /// </summary>
+        /// <param name="loggerFactory">The logger factory to create loggers</param>
+        public static void Initialize(ILoggerFactory loggerFactory)
+        {
+            _logger = loggerFactory?.CreateLogger("IPCManager") ?? throw new ArgumentNullException(nameof(loggerFactory));
+        }
 
         public static bool WaitForSimulator(ServiceModel model)
         {
@@ -29,14 +40,14 @@ namespace Prosim2GSX
             {
                 model.IsSimRunning = true;
                 EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("MSFS", simRunning));
-                LogService.Log(LogLevel.Information, "IPCManager:WaitForSimulator", $"Simulator started {simRunning}");
+                _logger?.LogInformation("Simulator started {SimRunning}", simRunning);
             }
 
             if (!simRunning && model.WaitForConnect)
             {
                 do
                 {
-                    LogService.Log(LogLevel.Information, "IPCManager:WaitForSimulator", $"Simulator not started - waiting {waitDuration / 1000}s for Sim");
+                    _logger?.LogInformation("Simulator not started - waiting {Seconds}s for Sim", waitDuration / 1000);
                     Thread.Sleep(waitDuration);
                 }
                 while (!IsSimRunning() && !model.CancellationRequested);
@@ -47,12 +58,12 @@ namespace Prosim2GSX
             else if (simRunning)
             {
                 EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("MSFS", simRunning));
-                LogService.Log(LogLevel.Information, "IPCManager:WaitForSimulator", $"Simulator started {simRunning}");
+                _logger?.LogInformation("Simulator started {SimRunning}", simRunning);
                 return true;
             }
             else
             {
-                LogService.Log(LogLevel.Error, "IPCManager:WaitForSimulator", $"Simulator not started - aborting");
+                _logger?.LogError("Simulator not started - aborting");
                 return false;
             }
         }
@@ -65,8 +76,9 @@ namespace Prosim2GSX
                 Process[] processes = Process.GetProcessesByName(processName);
                 return processes.Length > 0;
             }
-            catch
+            catch (Exception ex)
             {
+                _logger?.LogError(ex, "Error checking if process {ProcessName} is running", processName);
                 return false;
             }
         }
@@ -75,7 +87,7 @@ namespace Prosim2GSX
         {
             return IsProcessRunning("FlightSimulator");
         }
-        
+
         public static bool WaitForConnection(ServiceModel model)
         {
             if (!IsSimRunning())
@@ -89,7 +101,7 @@ namespace Prosim2GSX
             {
                 do
                 {
-                    LogService.Log(LogLevel.Information, "IPCManager:WaitForConnection", $"Connection not established - waiting {waitDuration / 1000}s for Retry");
+                    _logger?.LogInformation("Connection not established - waiting {Seconds}s for Retry", waitDuration / 2000);
                     Thread.Sleep(waitDuration / 2);
                     if (!mobiRequested)
                         mobiRequested = SimConnect.Connect();
@@ -101,11 +113,11 @@ namespace Prosim2GSX
             else
             {
                 EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("SimConnect", SimConnect.IsConnected));
-                LogService.Log(LogLevel.Information, "IPCManager:WaitForConnection", $"SimConnect is opened");
+                _logger?.LogInformation("SimConnect is opened");
                 return true;
             }
         }
-        
+
         public static bool WaitForSessionReady(ServiceModel model)
         {
             int waitDuration = 5000;
@@ -114,14 +126,14 @@ namespace Prosim2GSX
             bool isReady = IsCamReady();
             while (IsSimRunning() && !isReady && !model.CancellationRequested)
             {
-                LogService.Log(LogLevel.Information, "IPCManager:WaitForSessionReady", $"Session not ready - waiting {waitDuration / 1000}s for Retry");
+                _logger?.LogInformation("Session not ready - waiting {Seconds}s for Retry", waitDuration / 1000);
                 Thread.Sleep(waitDuration);
                 isReady = IsCamReady();
             }
 
             if (!isReady)
             {
-                LogService.Log(LogLevel.Error, "IPCManager:WaitForSessionReady", $"SimConnect or Simulator not available - aborting");
+                _logger?.LogError("SimConnect or Simulator not available - aborting");
                 return false;
             }
             EventAggregator.Instance.Publish(new ConnectionStatusChangedEvent("Session", isReady));
@@ -141,11 +153,15 @@ namespace Prosim2GSX
             {
                 if (SimConnect != null)
                 {
+                    _logger?.LogDebug("Closing SimConnect connection");
                     SimConnect.Disconnect();
                     SimConnect = null;
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error closing SimConnect connection");
+            }
         }
     }
 }

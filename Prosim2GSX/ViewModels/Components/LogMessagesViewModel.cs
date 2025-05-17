@@ -1,8 +1,10 @@
-﻿using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Implementation;
+﻿using Microsoft.Extensions.Logging;
+using Prosim2GSX.Services.Logging.Events;
+using Prosim2GSX.Services.Logging.Interfaces;
+using Prosim2GSX.Services.Logging.Models;
 using Prosim2GSX.ViewModels.Base;
+using System;
 using System.Collections.ObjectModel;
-using System.Windows;
 
 namespace Prosim2GSX.ViewModels.Components
 {
@@ -13,9 +15,11 @@ namespace Prosim2GSX.ViewModels.Components
     {
         #region Fields
 
-        private readonly ObservableCollection<LogEntry> _logEntries = new ObservableCollection<LogEntry>();
-        private readonly LogLevel _uiLogLevel = LogLevel.Information;
-        private readonly int _maxLogEntries = 5;
+        private readonly ObservableCollection<LogMessage> _logEntries = new ObservableCollection<LogMessage>();
+        private readonly LogLevel _minimumLogLevel;
+        private readonly int _maxDisplayEntries = 5;
+        private readonly IUiLogListener _logListener;
+        private readonly ILogger<LogMessagesViewModel> _logger;
 
         #endregion
 
@@ -24,7 +28,7 @@ namespace Prosim2GSX.ViewModels.Components
         /// <summary>
         /// Gets the collection of log entries to display
         /// </summary>
-        public ObservableCollection<LogEntry> LogEntries => _logEntries;
+        public ObservableCollection<LogMessage> LogEntries => _logEntries;
 
         #endregion
 
@@ -33,9 +37,32 @@ namespace Prosim2GSX.ViewModels.Components
         /// <summary>
         /// Creates a new instance of the LogMessagesViewModel class
         /// </summary>
-        public LogMessagesViewModel()
+        /// <param name="logListener">The log listener that captures logs</param>
+        /// <param name="logger">Logger for this view model</param>
+        public LogMessagesViewModel(IUiLogListener logListener, ILogger<LogMessagesViewModel> logger)
         {
-            // Initial setup if needed
+            _logListener = logListener ?? throw new ArgumentNullException(nameof(logListener));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _minimumLogLevel = LogLevel.Information; // Show Info, Warning, Error, Critical in UI
+
+            // Subscribe to log events
+            _logListener.LogReceived += OnLogReceived;
+
+            // Initialize with existing messages
+            _logger.LogDebug("Initializing LogMessagesViewModel");
+            var existingLogs = _logListener.GetFilteredMessages(_minimumLogLevel);
+            if (existingLogs.Count > 0)
+            {
+                int startIndex = Math.Max(0, existingLogs.Count - _maxDisplayEntries);
+                int count = Math.Min(_maxDisplayEntries, existingLogs.Count - startIndex);
+
+                _logger.LogDebug("Loading {Count} existing log messages", count);
+
+                for (int i = startIndex; i < startIndex + count; i++)
+                {
+                    _logEntries.Add(existingLogs[i]);
+                }
+            }
         }
 
         #endregion
@@ -43,40 +70,47 @@ namespace Prosim2GSX.ViewModels.Components
         #region Methods
 
         /// <summary>
+        /// Handles the log received event
+        /// </summary>
+        private void OnLogReceived(object sender, LogReceivedEventArgs e)
+        {
+            // Only show messages at or above the minimum level
+            if (e.LogMessage.LogLevel < _minimumLogLevel)
+            {
+                return;
+            }
+
+            // Add to the observable collection on the UI thread
+            ExecuteOnUIThread(() =>
+            {
+                // Add the new entry
+                _logEntries.Add(e.LogMessage);
+
+                // Remove oldest entries if we exceed the maximum
+                while (_logEntries.Count > _maxDisplayEntries)
+                {
+                    _logEntries.RemoveAt(0);
+                }
+            });
+        }
+
+        /// <summary>
         /// Updates the log messages area with new log entries
         /// </summary>
         public void UpdateLogArea()
         {
-            // Process all available log entries from the LogEntryQueue
-            while (LogService.LogEntryQueue.TryDequeue(out LogEntry entry))
-            {
-                // Only show Information, Warning, Error, and Critical messages in the UI
-                if (entry.Level <= LogLevel.Debug)  // Debug is 1, Verbose is 0
-                {
-                    // Skip Debug and Verbose messages
-                    continue;
-                }
+            // This method is now a no-op as we're using events
+            // It's kept for backward compatibility with any code that calls it
+            _logger.LogTrace("UpdateLogArea called - no action needed with event-based logging");
+        }
 
-                // Add to the observable collection on the UI thread
-                ExecuteOnUIThread(() =>
-                {
-                    // Add the new entry
-                    _logEntries.Add(entry);
-
-                    // Remove oldest entries if we exceed the maximum
-                    while (_logEntries.Count > _maxLogEntries)
-                    {
-                        _logEntries.RemoveAt(0);
-                    }
-                });
-            }
-
-            // Process the old MessageQueue for backward compatibility
-            while (LogService.MessageQueue.Count > 0)
-            {
-                // Just dequeue the messages to keep the queue from growing
-                LogService.MessageQueue.Dequeue();
-            }
+        /// <summary>
+        /// Clears all log entries from the view
+        /// </summary>
+        public void ClearDisplay()
+        {
+            _logger.LogDebug("Clearing log display");
+            ExecuteOnUIThread(() => _logEntries.Clear());
         }
 
         /// <summary>
@@ -84,7 +118,13 @@ namespace Prosim2GSX.ViewModels.Components
         /// </summary>
         public void Cleanup()
         {
-            // Currently nothing to clean up, but the method is here for consistency
+            _logger.LogDebug("LogMessagesViewModel cleanup");
+
+            // Unsubscribe from log events
+            if (_logListener != null)
+            {
+                _logListener.LogReceived -= OnLogReceived;
+            }
         }
 
         #endregion

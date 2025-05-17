@@ -1,8 +1,7 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.IO;
 using System.Runtime.InteropServices;
-using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Implementation;
 
 namespace Prosim2GSX.Services
 {
@@ -11,6 +10,18 @@ namespace Prosim2GSX.Services
     /// </summary>
     public static class DllLoader
     {
+        // Static logger instance used by the methods
+        private static ILogger _logger;
+
+        /// <summary>
+        /// Initializes the DllLoader with a logger
+        /// </summary>
+        /// <param name="logger">The logger to use</param>
+        public static void Initialize(ILogger logger)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern bool SetDllDirectory(string lpPathName);
 
@@ -39,8 +50,7 @@ namespace Prosim2GSX.Services
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(DllLoader),
-                    $"Error adding DLL directory {directory}: {ex.Message}");
+                _logger?.LogError(ex, "Error adding DLL directory {Directory}", directory);
                 return false;
             }
         }
@@ -69,8 +79,7 @@ namespace Prosim2GSX.Services
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(DllLoader),
-                    $"Error loading DLL {dllPath}: {ex.Message}");
+                _logger?.LogError(ex, "Error loading DLL {DllPath}", dllPath);
                 return IntPtr.Zero;
             }
         }
@@ -92,8 +101,7 @@ namespace Prosim2GSX.Services
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(DllLoader),
-                    $"Error getting function pointer for {functionName}: {ex.Message}");
+                _logger?.LogError(ex, "Error getting function pointer for {FunctionName}", functionName);
                 return IntPtr.Zero;
             }
         }
@@ -114,8 +122,7 @@ namespace Prosim2GSX.Services
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(DllLoader),
-                    $"Error freeing DLL: {ex.Message}");
+                _logger?.LogError(ex, "Error freeing DLL");
                 return false;
             }
         }

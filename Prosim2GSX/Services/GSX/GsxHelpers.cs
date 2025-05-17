@@ -1,6 +1,5 @@
-﻿using Microsoft.Win32;
-using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Implementation;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 using System;
 using System.IO;
 
@@ -14,6 +13,15 @@ namespace Prosim2GSX.Services.GSX
         private static readonly string _pathMenuFile = @"\MSFS\fsdreamteam-gsx-pro\html_ui\InGamePanels\FSDT_GSX_Panel\menu";
         private static readonly string _registryPath = @"HKEY_CURRENT_USER\SOFTWARE\FSDreamTeam";
         private static readonly string _registryValue = @"root";
+        private static ILogger _logger;
+
+        /// <summary>
+        /// Initialize the helpers with a logger
+        /// </summary>
+        public static void Initialize(ILogger logger)
+        {
+            _logger = logger;
+        }
 
         /// <summary>
         /// Get the path to the GSX menu file
@@ -28,8 +36,7 @@ namespace Prosim2GSX.Services.GSX
 
                 if (string.IsNullOrEmpty(rootPath))
                 {
-                    LogService.Log(LogLevel.Warning, nameof(GsxHelpers),
-                        "GSX root path not found in registry");
+                    _logger?.LogWarning("GSX root path not found in registry");
                     return string.Empty;
                 }
 
@@ -43,15 +50,13 @@ namespace Prosim2GSX.Services.GSX
                 }
                 else
                 {
-                    LogService.Log(LogLevel.Warning, nameof(GsxHelpers),
-                        $"GSX menu file not found at {menuPath}");
+                    _logger?.LogWarning("GSX menu file not found at {MenuPath}", menuPath);
                     return string.Empty;
                 }
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxHelpers),
-                    $"Error getting GSX menu file path: {ex.Message}");
+                _logger?.LogError(ex, "Error getting GSX menu file path");
                 return string.Empty;
             }
         }
@@ -74,8 +79,7 @@ namespace Prosim2GSX.Services.GSX
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxHelpers),
-                    $"Error checking GSX availability: {ex.Message}");
+                _logger?.LogError(ex, "Error checking GSX availability");
                 return false;
             }
         }
