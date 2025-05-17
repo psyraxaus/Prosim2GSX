@@ -84,6 +84,12 @@ The comprehensive Prosim dataref subscription system and cockpit door integratio
 - ✅ Added theme refresh functionality
 
 ### Framework and Infrastructure
+- ✅ Refactored logging system to use standard .NET ILogger interfaces
+- ✅ Resolved circular dependency between ILoggerFactory and UiLogListener
+- ✅ Added manual service registration method to ServiceLocator
+- ✅ Fixed ambiguous references between Microsoft.Extensions.Logging and Serilog
+- ✅ Eliminated duplicate log entries by simplifying logging configuration
+- ✅ Modified AudioService to handle null SimConnect references
 - ✅ Implemented comprehensive thread-safe UI update pattern
 - ✅ Added ExecuteOnUIThread helper method to ViewModelBase
 - ✅ Updated EventAggregator to ensure thread-safe event publishing
@@ -234,6 +240,18 @@ Based on the README, there are some known considerations:
 - ⚠️ Balancing event publishing frequency with performance considerations
 
 ## Recently Fixed Issues
+- ✅ Fixed duplicate log entries issue
+  - Root cause: Multiple logging providers writing to the same file
+  - Solution: Simplified logging configuration and removed redundant providers
+
+- ✅ Fixed startup crash due to null SimConnect reference
+  - Root cause: AudioService constructor requiring non-null SimConnect during initialization
+  - Solution: Modified AudioService to accept null SimConnect and added null checks in methods that use it
+  
+- ✅ Resolved circular dependency in logger initialization
+  - Root cause: ILoggerFactory and UiLogListener had circular dependency
+  - Solution: Added manual service registration in ServiceLocator and updated registration order
+
 - ✅ Fixed UI thread safety issues causing crashes
   - Root cause: Background threads updating UI-bound properties without proper thread marshaling
   - Solution: Implemented ExecuteOnUIThread pattern in ViewModelBase and updated all ViewModels that handle events from background threads

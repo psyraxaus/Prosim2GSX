@@ -25,6 +25,15 @@ Before the UI update, the focus was on implementing an event aggregator system t
 Previous work also focused on implementing a new Prosim dataref subscription system and enhancing the cockpit door integration between Prosim and GSX. The dataref subscription system involved creating a callback-based monitoring system for Prosim datarefs and implementing synchronization between the cockpit door state in Prosim and the corresponding LVAR in GSX. The implementation allows the cockpit door to muffle cabin sounds when closed, enhancing the realism of the simulation. Additionally, the previous work on cargo door logic, catering service door operation, and refueling process enhancements has been thoroughly tested and verified.
 
 ## Recent Changes
+- Refactored logging system to use standard .NET ILogger interfaces:
+  - Resolved circular dependency between ILoggerFactory and UiLogListener
+  - Added RegisterService<T>() method to ServiceLocator for manual service registration
+  - Fixed ambiguous references between Microsoft.Extensions.Logging.ILogger and Serilog.ILogger
+  - Eliminated duplicate log entries by simplifying logging configuration
+  - Updated AudioService to handle null SimConnect references for improved startup reliability
+  - Enhanced logging initialization to follow proper initialization sequence
+  - This prepares the groundwork for extracting ProsimService to a standalone library
+
 - Implemented comprehensive thread-safe UI updates:
   - Added `ExecuteOnUIThread` helper method to ViewModelBase for marshaling operations to the UI thread
   - Updated EventAggregator to ensure events are published on the UI thread
@@ -175,6 +184,10 @@ Previous work also focused on implementing a new Prosim dataref subscription sys
   - Previously: Updated the application version from 0.3.0 to 0.4.0
 
 ## Active Decisions
+- Using standard .NET ILogger interfaces throughout the application for better maintainability
+- Allowing AudioService to initialize with null SimConnect to improve application startup reliability
+- Simplifying logging configuration to eliminate duplicate log entries
+- Providing manual service registration in ServiceLocator to resolve circular dependencies
 - Using ExecuteOnUIThread pattern for all ViewModels that receive updates from background threads
 - Ensuring EventAggregator dispatches events to UI thread for thread-safe handling
 - Centralizing thread marshaling logic in the ViewModelBase class for consistency
