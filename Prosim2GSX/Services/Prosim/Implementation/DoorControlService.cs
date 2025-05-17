@@ -1,5 +1,4 @@
-﻿using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Implementation;
+﻿using Microsoft.Extensions.Logging;
 using Prosim2GSX.Services.Prosim.Interfaces;
 using System;
 
@@ -8,49 +7,46 @@ namespace Prosim2GSX.Services.Prosim.Implementation
     public class DoorControlService : IDoorControlService
     {
         private readonly IProsimInterface _prosimService;
+        private readonly ILogger<DoorControlService> _logger;
 
-        public DoorControlService(IProsimInterface prosimService)
+        public DoorControlService(ILogger<DoorControlService> logger, IProsimInterface prosimService)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _prosimService = prosimService ?? throw new ArgumentNullException(nameof(prosimService));
         }
 
         public void SetForwardRightDoor(bool open)
         {
             _prosimService.SetProsimVariable("doors.entry.right.fwd", open);
-            LogService.Log(LogLevel.Information, nameof(DoorControlService),
-                $"Forward right door {(open ? "opened" : "closed")}");
+            _logger.LogInformation("Forward right door {Status}", open ? "opened" : "closed");
         }
 
         public string GetForwardRightDoor()
         {
             bool doorStatus = _prosimService.GetProsimVariable("doors.entry.right.fwd");
             string status = doorStatus ? "open" : "closed";
-            LogService.Log(LogLevel.Debug, nameof(DoorControlService),
-                $"Forward right door {status}", LogCategory.Doors);
+            _logger.LogDebug("Forward right door {Status}", status);
             return status;
         }
 
         public void SetAftRightDoor(bool open)
         {
             _prosimService.SetProsimVariable("doors.entry.right.aft", open);
-            LogService.Log(LogLevel.Information, nameof(DoorControlService),
-                $"Aft right door {(open ? "opened" : "closed")}");
+            _logger.LogInformation("Aft right door {Status}", open ? "opened" : "closed");
         }
 
         public string GetAftRightDoor()
         {
             bool doorStatus = _prosimService.GetProsimVariable("doors.entry.right.aft");
             string status = doorStatus ? "open" : "closed";
-            LogService.Log(LogLevel.Debug, nameof(DoorControlService),
-                $"Aft right door {status}", LogCategory.Doors);
+            _logger.LogDebug("Aft right door {Status}", status);
             return status;
         }
 
         public void SetForwardCargoDoor(bool open)
         {
             _prosimService.SetProsimVariable("doors.cargo.forward", open);
-            LogService.Log(LogLevel.Information, nameof(DoorControlService),
-                $"Forward cargo door {(open ? "opened" : "closed")}");
+            _logger.LogInformation("Forward cargo door {Status}", open ? "opened" : "closed");
         }
 
         public string GetForwardCargoDoor()
@@ -63,8 +59,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         public void SetAftCargoDoor(bool open)
         {
             _prosimService.SetProsimVariable("doors.cargo.aft", open);
-            LogService.Log(LogLevel.Information, nameof(DoorControlService),
-                $"Aft cargo door {(open ? "opened" : "closed")}");
+            _logger.LogInformation("Aft cargo door {Status}", open ? "opened" : "closed");
         }
 
         public string GetAftCargoDoor()

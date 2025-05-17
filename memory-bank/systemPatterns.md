@@ -586,6 +586,34 @@ Some components are implemented as singletons to ensure a single instance:
 - Logger
 - Communication interfaces
 
+### Standard Logging Pattern
+The system implements the standard .NET ILogger pattern to provide consistent logging across the application:
+
+- **Core Components**:
+  - `ILoggerFactory`: Standard .NET interface for creating logger instances
+  - `ILogger<T>`: Generic typed logger interface for category-based logging
+  - `Serilog`: Implementation provider for actual log output
+  - `ServiceLocator`: Centralized logger factory and creation point
+
+- **Implementation**:
+  ```csharp
+  // Creating a logger through ServiceLocator
+  private readonly ILogger<MyClass> _logger = ServiceLocator.GetLogger<MyClass>();
+  
+  // Usage in classes
+  _logger.LogInformation("Starting operation");
+  _logger.LogDebug("Processing item {ItemId}", itemId);
+  _logger.LogError(exception, "Error occurred: {Message}", exception.Message);
+  ```
+
+- **Benefits**:
+  - Clean separation between logging interface and implementation
+  - Consistent logging patterns across the application
+  - Category-based filtering and structured logging support
+  - Ability to change logging implementation without modifying code
+  - Preparation for extracting services to standalone libraries
+  - Elimination of duplicate log entries through simplified configuration
+
 ### Dictionary-Based Action Mapping
 The system uses dictionary-based action mapping for service toggles:
 

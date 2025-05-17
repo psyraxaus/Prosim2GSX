@@ -1,6 +1,5 @@
-﻿using Prosim2GSX.Events;
-using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Implementation;
+﻿using Microsoft.Extensions.Logging;
+using Prosim2GSX.Events;
 using Prosim2GSX.Services.Prosim.Interfaces;
 using Prosim2GSX.Services.Prosim.Models;
 using System;
@@ -14,6 +13,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
     public class DataRefMonitoringService : IDataRefMonitoringService
     {
         private readonly IProsimInterface _prosimService;
+        private readonly ILogger<DataRefMonitoringService> _logger;
 
         // Dictionary to store monitored datarefs and their callbacks
         private readonly Dictionary<string, DataRefMonitor> _monitoredDataRefs = new Dictionary<string, DataRefMonitor>();
@@ -37,8 +37,9 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
         }
 
-        public DataRefMonitoringService(IProsimInterface prosimInterface)
+        public DataRefMonitoringService(ILogger<DataRefMonitoringService> logger, IProsimInterface prosimInterface)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _prosimService = prosimInterface ?? throw new ArgumentNullException(nameof(prosimInterface));
         }
 
@@ -50,8 +51,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             IsMonitoringActive = true;
             _monitorCts = new CancellationTokenSource();
 
-            LogService.Log(LogLevel.Information, nameof(DataRefMonitoringService),
-                "DataRef monitoring system started");
+            _logger.LogInformation("DataRef monitoring system started");
 
             _monitorTask = Task.Run(async () =>
             {
@@ -75,16 +75,14 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Warning, nameof(DataRefMonitoringService),
-                    $"Exception during monitor shutdown: {ex.Message}");
+                _logger.LogWarning(ex, "Exception during monitor shutdown");
             }
 
             IsMonitoringActive = false;
             _monitorCts.Dispose();
             _monitorTask = null;
 
-            LogService.Log(LogLevel.Information, nameof(DataRefMonitoringService),
-                "DataRef monitoring system stopped");
+            _logger.LogInformation("DataRef monitoring system stopped");
         }
 
         public void SetMonitoringInterval(int milliseconds)
@@ -93,8 +91,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                 milliseconds = 10; // Enforce minimum to prevent excessive CPU usage
 
             _monitoringInterval = milliseconds;
-            LogService.Log(LogLevel.Information, nameof(DataRefMonitoringService),
-                $"Monitoring interval set to {milliseconds}ms");
+            _logger.LogInformation("Monitoring interval set to {Interval}ms", milliseconds);
         }
 
         public void SubscribeToDataRef(string dataRef, DataRefChangedHandler handler)
@@ -105,14 +102,12 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             if (handler == null)
                 throw new ArgumentNullException(nameof(handler));
 
-            LogService.Log(LogLevel.Information, nameof(DataRefMonitoringService),
-                $"Attempting to subscribe to dataRef: '{dataRef}'");
+            _logger.LogInformation("Attempting to subscribe to dataRef: '{DataRef}'", dataRef);
 
             // Start the monitoring system if it's not already running
             if (!IsMonitoringActive)
             {
-                LogService.Log(LogLevel.Information, nameof(DataRefMonitoringService),
-                    $"Starting monitoring system for first subscription");
+                _logger.LogInformation("Starting monitoring system for first subscription");
                 StartMonitoring();
             }
 
@@ -121,13 +116,12 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             try
             {
                 currentValue = _prosimService.GetProsimVariable(dataRef);
-                LogService.Log(LogLevel.Debug, nameof(DataRefMonitoringService),
-                    $"Successfully read initial value for '{dataRef}': {currentValue}");
+                string currentValueStr = currentValue.ToString();
+                _logger.LogDebug("Successfully read initial value for '{DataRef}': {Value}", dataRef, currentValueStr);
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(DataRefMonitoringService),
-                    $"Error reading dataref '{dataRef}': {ex.Message}");
+                _logger.LogError(ex, "Error reading dataref '{DataRef}'", dataRef);
                 return;
             }
 
@@ -138,8 +132,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                 {
                     // DataRef already being monitored, add this handler
                     monitor.Handlers.Add(handler);
-                    LogService.Log(LogLevel.Debug, nameof(DataRefMonitoringService),
-                        $"Added handler to existing monitor for '{dataRef}'");
+                    _logger.LogDebug("Added handler to existing monitor for '{DataRef}'", dataRef);
                 }
                 else
                 {
@@ -147,8 +140,8 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                     monitor = new DataRefMonitor(dataRef, currentValue);
                     monitor.Handlers.Add(handler);
                     _monitoredDataRefs.Add(dataRef, monitor);
-                    LogService.Log(LogLevel.Information, nameof(DataRefMonitoringService),
-                        $"Created new monitor for '{dataRef}', initial value: {currentValue}");
+                    string currentValueStr = currentValue.ToString();
+                    _logger.LogInformation("Created new monitor for '{DataRef}', initial value: {Value}", dataRef, currentValueStr);
                 }
             }
         }
@@ -167,8 +160,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                 {
                     // Remove all subscriptions for this dataref
                     _monitoredDataRefs.Remove(dataRef);
-                    LogService.Log(LogLevel.Information, nameof(DataRefMonitoringService),
-                        $"Removed all handlers for '{dataRef}'");
+                    _logger.LogInformation("Removed all handlers for '{DataRef}'", dataRef);
                 }
                 else
                 {
@@ -181,8 +173,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                         _monitoredDataRefs.Remove(dataRef);
                     }
 
-                    LogService.Log(LogLevel.Debug, nameof(DataRefMonitoringService),
-                        $"Removed handler for '{dataRef}'");
+                    _logger.LogDebug("Removed handler for '{DataRef}'", dataRef);
                 }
 
                 // If no more datarefs are being monitored, stop the system
@@ -206,8 +197,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             // Debug output to confirm the monitoring is running
             if (_monitoredDataRefs.Count > 0)
             {
-                LogService.Log(LogLevel.Debug, nameof(DataRefMonitoringService),
-                    $"Checking {_monitoredDataRefs.Count} monitored datarefs");
+                _logger.LogDebug("Checking {Count} monitored datarefs", _monitoredDataRefs.Count);
             }
 
             // Create a local copy of keys to avoid collection modification issues
@@ -254,19 +244,19 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                             }
                             catch (Exception ex)
                             {
-                                LogService.Log(LogLevel.Error, nameof(DataRefMonitoringService),
-                                    $"Error in handler for '{dataRef}': {ex.Message}");
+                                _logger.LogError(ex, "Error in handler for '{DataRef}'", dataRef);
                             }
                         }
 
-                        LogService.Log(LogLevel.Debug, nameof(DataRefMonitoringService),
-                            $"DataRef '{dataRef}' changed from {oldValue} to {currentValue}");
+                        string oldValueStr = oldValue.ToString();
+                        string currentValueStr = currentValue.ToString();
+                        _logger.LogDebug("DataRef '{DataRef}' changed from {OldValue} to {NewValue}",
+                            dataRef, oldValueStr, currentValueStr);
                     }
                 }
                 catch (Exception ex)
                 {
-                    LogService.Log(LogLevel.Error, nameof(DataRefMonitoringService),
-                        $"Error reading dataref '{dataRef}': {ex.Message}");
+                    _logger.LogError(ex, "Error reading dataref '{DataRef}'", dataRef);
                 }
             }
         }

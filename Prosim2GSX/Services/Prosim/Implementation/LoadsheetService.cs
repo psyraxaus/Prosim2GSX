@@ -1,13 +1,11 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using Prosim2GSX.Events;
-using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Implementation;
 using Prosim2GSX.Services.Prosim.Events;
 using Prosim2GSX.Services.Prosim.Interfaces;
 using Prosim2GSX.Services.Prosim.Models;
 using System;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -21,7 +19,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         private readonly IProsimInterface _prosimService;
         private readonly IFlightPlanService _flightPlanService;
         private readonly IDataRefMonitoringService _dataRefMonitoringService;
-
+        private readonly ILogger<LoadsheetService> _logger;
 
         // Track if we've already generated a loadsheet for the current flight
         private bool _preliminaryLoadsheetRequested = false;
@@ -35,8 +33,12 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         /// </summary>
         public event EventHandler<LoadsheetReceivedEventArgs> LoadsheetReceived;
 
-        public LoadsheetService(IProsimInterface prosimService, IFlightPlanService flightPlanService)
+        public LoadsheetService(
+            ILogger<LoadsheetService> logger,
+            IProsimInterface prosimService,
+            IFlightPlanService flightPlanService)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _prosimService = prosimService ?? throw new ArgumentNullException(nameof(prosimService));
             _flightPlanService = flightPlanService ?? throw new ArgumentNullException(nameof(flightPlanService));
         }
@@ -52,8 +54,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         {
             _preliminaryLoadsheetRequested = false;
             _finalLoadsheetRequested = false;
-            LogService.Log(LogLevel.Information, nameof(LoadsheetService),
-                "Loadsheet generation flags reset for new flight");
+            _logger.LogInformation("Loadsheet generation flags reset for new flight");
         }
 
         /// <inheritdoc/>
@@ -84,8 +85,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             // If we shouldn't generate, return early
             if (!shouldGenerate)
             {
-                LogService.Log(LogLevel.Information, nameof(LoadsheetService),
-                    $"{type} loadsheet already generated or being generated for this flight. Skipping generation.");
+                _logger.LogInformation("{Type} loadsheet already generated or being generated for this flight. Skipping generation.", type);
                 return LoadsheetResult.CreateSuccess();
             }
 
@@ -107,15 +107,14 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                             // Validate the backend URL
                             if (string.IsNullOrEmpty(_prosimService.GetBackendUrl()))
                             {
-                                LogService.Log(LogLevel.Error, nameof(LoadsheetService),
-                                    "Backend URL is empty. Prosim EFB server may not be running or properly configured.");
+                                _logger.LogError("Backend URL is empty. Prosim EFB server may not be running or properly configured.");
                                 return LoadsheetResult.CreateFailure(
                                     "Backend URL is empty. Prosim EFB server may not be running or properly configured.");
                             }
 
                             // Log the exact request being sent
-                            LogService.Log(LogLevel.Debug, nameof(LoadsheetService),
-                                $"Sending request to URL: {fullUrl}, Content: {await content.ReadAsStringAsync()}", LogCategory.Loadsheet);
+                            _logger.LogDebug("Sending request to URL: {Url}, Content: {Content}",
+                                fullUrl, await content.ReadAsStringAsync());
 
                             // Set timeout to detect connection issues faster
                             client.Timeout = TimeSpan.FromSeconds(10);
@@ -132,15 +131,15 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                             {
                                 // Handle timeout specifically
                                 TimeSpan elapsed = DateTime.Now - requestStart;
-                                LogService.Log(LogLevel.Error, nameof(LoadsheetService),
-                                    $"Request timed out after {elapsed.TotalSeconds:F1} seconds. Check if Prosim EFB server is running and responsive.");
+                                _logger.LogError("Request timed out after {Elapsed:F1} seconds. Check if Prosim EFB server is running and responsive.",
+                                    elapsed.TotalSeconds);
 
                                 if (retryCount < maxRetries)
                                 {
                                     retryCount++;
                                     int delayMs = 1000 * retryCount;
-                                    LogService.Log(LogLevel.Warning, nameof(LoadsheetService),
-                                        $"Retrying in {delayMs / 1000} seconds (attempt {retryCount}/{maxRetries})...");
+                                    _logger.LogWarning("Retrying in {Delay} seconds (attempt {Attempt}/{MaxRetries})...",
+                                        delayMs / 1000, retryCount, maxRetries);
                                     await Task.Delay(delayMs);
                                     continue;
                                 }
@@ -151,16 +150,14 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                             catch (HttpRequestException ex)
                             {
                                 // Handle connection issues
-                                LogService.Log(LogLevel.Error, nameof(LoadsheetService),
-                                    $"HTTP request error: {ex.Message}. " +
-                                    "Check network connectivity and if Prosim EFB server is running.");
+                                _logger.LogError(ex, "HTTP request error. Check network connectivity and if Prosim EFB server is running.");
 
                                 if (retryCount < maxRetries)
                                 {
                                     retryCount++;
                                     int delayMs = 1000 * retryCount;
-                                    LogService.Log(LogLevel.Warning, nameof(LoadsheetService),
-                                        $"Retrying in {delayMs / 1000} seconds (attempt {retryCount}/{maxRetries})...");
+                                    _logger.LogWarning("Retrying in {Delay} seconds (attempt {Attempt}/{MaxRetries})...",
+                                        delayMs / 1000, retryCount, maxRetries);
                                     await Task.Delay(delayMs);
                                     continue;
                                 }
@@ -171,14 +168,12 @@ namespace Prosim2GSX.Services.Prosim.Implementation
 
                             // Calculate and log request duration
                             TimeSpan requestDuration = DateTime.Now - requestStart;
-                            LogService.Log(LogLevel.Debug, nameof(LoadsheetService),
-                                $"Request completed in {requestDuration.TotalMilliseconds:F0}ms", LogCategory.Loadsheet);
+                            _logger.LogDebug("Request completed in {Duration:F0}ms", requestDuration.TotalMilliseconds);
 
                             string responseContent = await response.Content.ReadAsStringAsync();
 
                             // Always log response for debugging
-                            LogService.Log(LogLevel.Debug, nameof(LoadsheetService),
-                                $"Response Status: {response.StatusCode}, Content: {responseContent}", LogCategory.Loadsheet);
+                            _logger.LogDebug("Response Status: {Status}, Content: {Content}", response.StatusCode, responseContent);
 
                             if (response.IsSuccessStatusCode)
                             {
@@ -191,8 +186,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                                         _finalLoadsheetRequested = true;
                                 }
 
-                                LogService.Log(LogLevel.Information, nameof(LoadsheetService),
-                                    $"{type} loadsheet generated successfully");
+                                _logger.LogInformation("{Type} loadsheet generated successfully", type);
 
                                 return LoadsheetResult.CreateSuccess();
                             }
@@ -204,9 +198,8 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                                     retryCount++;
                                     int delayMs = 1000 * retryCount; // Exponential backoff
 
-                                    LogService.Log(LogLevel.Warning, nameof(LoadsheetService),
-                                        $"Failed to generate {type} loadsheet (attempt {retryCount}/{maxRetries}). " +
-                                        $"Retrying in {delayMs / 1000} seconds...");
+                                    _logger.LogWarning("Failed to generate {Type} loadsheet (attempt {Attempt}/{MaxRetries}). " +
+                                        "Retrying in {Delay} seconds...", type, retryCount, maxRetries, delayMs / 1000);
 
                                     await Task.Delay(delayMs);
                                     continue;
@@ -229,18 +222,16 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                             retryCount++;
                             int delayMs = 1000 * retryCount; // Exponential backoff
 
-                            LogService.Log(LogLevel.Warning, nameof(LoadsheetService),
-                                $"Exception generating {type} loadsheet (attempt {retryCount}/{maxRetries}): {ex.Message}. " +
-                                $"Retrying in {delayMs / 1000} seconds...");
+                            _logger.LogWarning(ex, "Exception generating {Type} loadsheet (attempt {Attempt}/{MaxRetries}). " +
+                                "Retrying in {Delay} seconds...", type, retryCount, maxRetries, delayMs / 1000);
 
                             await Task.Delay(delayMs);
                             continue;
                         }
 
                         // Simplified error handling for debugging
-                        string errorMessage = $"Exception after {maxRetries + 1} attempts: {ex.GetType().Name}, Message: {ex.Message}";
-                        LogService.Log(LogLevel.Error, nameof(LoadsheetService), errorMessage);
-                        return LoadsheetResult.CreateFailure(errorMessage);
+                        _logger.LogError(ex, "Exception after {Attempts} attempts", maxRetries + 1);
+                        return LoadsheetResult.CreateFailure($"Exception after {maxRetries + 1} attempts: {ex.GetType().Name}, Message: {ex.Message}");
                     }
                 }
 
@@ -265,7 +256,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         {
             try
             {
-                LogService.Log(LogLevel.Information, nameof(LoadsheetService), "Resending loadsheet to MCDU");
+                _logger.LogInformation("Resending loadsheet to MCDU");
 
                 // Use the Prosim API to resend the loadsheet
                 // This is equivalent to the JavaScript code: this.backend.resendLoadsheet()
@@ -274,18 +265,18 @@ namespace Prosim2GSX.Services.Prosim.Implementation
 
                 if (success)
                 {
-                    LogService.Log(LogLevel.Information, nameof(LoadsheetService), "Loadsheet resent successfully");
+                    _logger.LogInformation("Loadsheet resent successfully");
                     return true;
                 }
                 else
                 {
-                    LogService.Log(LogLevel.Error, nameof(LoadsheetService), "Failed to resend loadsheet");
+                    _logger.LogError("Failed to resend loadsheet");
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(LoadsheetService), $"Error resending loadsheet: {ex.Message}");
+                _logger.LogError(ex, "Error resending loadsheet");
                 return false;
             }
         }
@@ -295,13 +286,13 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         {
             try
             {
-                LogService.Log(LogLevel.Information, nameof(LoadsheetService), "Checking Prosim EFB server status");
+                _logger.LogInformation("Checking Prosim EFB server status");
 
                 // Validate the backend URL
                 string backendUrl = _prosimService.GetBackendUrl();
                 if (string.IsNullOrEmpty(backendUrl))
                 {
-                    LogService.Log(LogLevel.Error, nameof(LoadsheetService), "Backend URL is empty. Prosim EFB server may not be properly configured.");
+                    _logger.LogError("Backend URL is empty. Prosim EFB server may not be properly configured.");
                     return false;
                 }
 
@@ -324,14 +315,15 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                         TimeSpan requestDuration = DateTime.Now - requestStart;
 
                         // Log the result
-                        LogService.Log(LogLevel.Information, nameof(LoadsheetService), $"Server check completed in {requestDuration.TotalMilliseconds:F0}ms. Status: {response.StatusCode}");
+                        _logger.LogInformation("Server check completed in {Duration:F0}ms. Status: {Status}",
+                            requestDuration.TotalMilliseconds, response.StatusCode);
 
                         return response.IsSuccessStatusCode;
                     }
                     catch (Exception ex)
                     {
                         // Log the error
-                        LogService.Log(LogLevel.Error, nameof(LoadsheetService), $"Error checking server status: {ex.Message}");
+                        _logger.LogError(ex, "Error checking server status");
 
                         return false;
                     }
@@ -339,7 +331,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(LoadsheetService), $"Unexpected error checking server status: {ex.Message}");
+                _logger.LogError(ex, "Unexpected error checking server status");
                 return false;
             }
         }
@@ -349,7 +341,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         {
             try
             {
-                LogService.Log(LogLevel.Information, nameof(LoadsheetService), "Resetting loadsheets");
+                _logger.LogInformation("Resetting loadsheets");
 
                 // Use the Prosim API to reset loadsheets
                 // This is equivalent to the JavaScript code: this.backend.resetLoadsheets()
@@ -358,18 +350,18 @@ namespace Prosim2GSX.Services.Prosim.Implementation
 
                 if (success)
                 {
-                    LogService.Log(LogLevel.Information, nameof(LoadsheetService), "Loadsheets reset successfully");
+                    _logger.LogInformation("Loadsheets reset successfully");
                     return true;
                 }
                 else
                 {
-                    LogService.Log(LogLevel.Error, nameof(LoadsheetService), "Failed to reset loadsheets");
+                    _logger.LogError("Failed to reset loadsheets");
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(LoadsheetService), $"Error resetting loadsheets: {ex.Message}");
+                _logger.LogError(ex, "Error resetting loadsheets");
                 return false;
             }
         }
@@ -381,7 +373,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         {
             if (newValue != null && !string.IsNullOrEmpty(newValue.ToString()))
             {
-                LogService.Log(LogLevel.Information, nameof(LoadsheetService), "Preliminary loadsheet received");
+                _logger.LogInformation("Preliminary loadsheet received");
                 try
                 {
                     // Parse the loadsheet data
@@ -396,7 +388,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                 }
                 catch (Exception ex)
                 {
-                    LogService.Log(LogLevel.Error, nameof(LoadsheetService), $"Error parsing preliminary loadsheet: {ex.Message}");
+                    _logger.LogError(ex, "Error parsing preliminary loadsheet");
                 }
             }
         }
@@ -408,7 +400,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         {
             if (newValue != null && !string.IsNullOrEmpty(newValue.ToString()))
             {
-                LogService.Log(LogLevel.Information, nameof(LoadsheetService), "Final loadsheet received");
+                _logger.LogInformation("Final loadsheet received");
                 try
                 {
                     // Parse the loadsheet data
@@ -423,7 +415,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                 }
                 catch (Exception ex)
                 {
-                    LogService.Log(LogLevel.Error, nameof(LoadsheetService), $"Error parsing final loadsheet: {ex.Message}");
+                    _logger.LogError(ex, "Error parsing final loadsheet");
                 }
             }
         }

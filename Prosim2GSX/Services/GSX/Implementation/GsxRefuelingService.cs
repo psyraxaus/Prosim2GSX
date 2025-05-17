@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Windows.Controls;
+using Microsoft.Extensions.Logging;
 using Prosim2GSX.Events;
 using Prosim2GSX.Services.GSX.Interfaces;
-using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Implementation;
+using Prosim2GSX.Services.Logging;
 using Prosim2GSX.Services.Prosim.Implementation;
 using Prosim2GSX.Services.Prosim.Interfaces;
 
@@ -14,6 +14,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
     /// </summary>
     public class GsxRefuelingService : IGsxRefuelingService
     {
+        private readonly ILogger<GsxRefuelingService> _logger;
         private readonly IRefuelingService _prosimRefuelingService;
         private readonly IProsimInterface _prosimInterface;
         private readonly IGsxMenuService _menuService;
@@ -27,24 +28,25 @@ namespace Prosim2GSX.Services.GSX.Implementation
         private bool _refuelingPaused = false;
         private bool _fuelHoseConnected = false;
 
-
         /// <summary>
         /// Constructor
         /// </summary>
         public GsxRefuelingService(
+            ILogger<GsxRefuelingService> logger,
             IProsimInterface prosimInterface,
             IGsxSimConnectService simConnectService,
             IGsxMenuService menuService,
-            IRefuelingService refuelingService
-            
-            )
+            IRefuelingService refuelingService)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _prosimInterface = prosimInterface ?? throw new ArgumentNullException(nameof(prosimInterface));
             _prosimRefuelingService = refuelingService ?? throw new ArgumentNullException(nameof(refuelingService));
             _menuService = menuService ?? throw new ArgumentNullException(nameof(menuService));
             _simConnectService = simConnectService ?? throw new ArgumentNullException(nameof(simConnectService));
 
             _simConnectService.SubscribeToGsxLvar("FSDT_GSX_FUELHOSE_CONNECTED", OnFuelHoseStateChanged);
+
+            _logger.LogDebug("GsxRefuelingService initialized");
         }
 
         /// <inheritdoc/>
@@ -71,7 +73,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// <inheritdoc/>
         public void SetInitialFuel()
         {
-            LogService.Log(LogLevel.Debug, nameof(GsxRefuelingService), "Setting initial fuel");
+            _logger.LogDebug("Setting initial fuel"); // Replace LogService.Log 
             _prosimRefuelingService.SetInitialFuel();
             _initialFuelSet = true;
         }
@@ -79,7 +81,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// <inheritdoc/>
         public void SetHydraulicFluidLevels()
         {
-            LogService.Log(LogLevel.Information, nameof(GsxRefuelingService), "Setting initial hydraulic fluid levels");
+            _logger.LogInformation("Setting initial hydraulic fluid levels"); // Replace LogService.Log
             _prosimRefuelingService.SetInitialFluids();
             _hydraulicFluidsSet = true;
         }
@@ -87,7 +89,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// <inheritdoc/>
         public void RequestRefueling()
         {
-            LogService.Log(LogLevel.Information, nameof(GsxRefuelingService), "Requesting refueling service");
+            _logger.LogInformation("Requesting refueling service"); // Replace LogService.Log
 
             _menuService.OpenMenu();
             _menuService.SelectMenuItem(3);
@@ -102,7 +104,13 @@ namespace Prosim2GSX.Services.GSX.Implementation
         {
             _refuelingActive = true;
             _refuelingPaused = true; // Start in paused state until hose is connected
-            LogService.Log(LogLevel.Information, nameof(GsxRefuelingService), $"Fuel Service active", LogCategory.Refueling);
+
+            // Replace LogService.Log with category scope pattern
+            using (_logger.BeginScope(new { Category = LogCategories.Refueling }))
+            {
+                _logger.LogInformation("Fuel Service active");
+            }
+
             _prosimRefuelingService.StartRefueling();
         }
 
@@ -115,14 +123,14 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 _refuelingCompleted = true;
                 _refuelingPaused = false;
                 _prosimRefuelingService.StopRefueling();
-                LogService.Log(LogLevel.Information, nameof(GsxRefuelingService), $"Refuel completed");
+                _logger.LogInformation("Refuel completed"); // Replace LogService.Log
             }
         }
 
         /// <inheritdoc/>
         public void StopRefueling()
         {
-            LogService.Log(LogLevel.Information, nameof(GsxRefuelingService), $"GSX reports refueling completed (state 6)");
+            _logger.LogInformation("GSX reports refueling completed (state 6)"); // Replace LogService.Log
             _refuelingActive = false;
             _refuelingCompleted = true;
             _refuelingPaused = false;
@@ -134,8 +142,12 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// </summary>
         private void OnFuelHoseStateChanged(float newValue, float oldValue, string lvarName)
         {
-            LogService.Log(LogLevel.Debug, nameof(GsxController),
-                $"Fuel hose state changed from {oldValue} to {newValue}", LogCategory.Refueling);
+            // Replace LogService.Log with category scope pattern
+            using (_logger.BeginScope(new { Category = LogCategories.Refueling }))
+            {
+                _logger.LogDebug("Fuel hose state changed from {OldValue} to {NewValue}", oldValue, newValue);
+            }
+
             _fuelHoseConnected = newValue == 1;
 
             if (_refuelingActive)
@@ -143,16 +155,22 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 if (_fuelHoseConnected)
                 {
                     // Fuel hose was just connected
-                    LogService.Log(LogLevel.Information, nameof(GsxRefuelingService),
-                        $"Fuel hose connected", LogCategory.Refueling);
+                    using (_logger.BeginScope(new { Category = LogCategories.Refueling }))
+                    {
+                        _logger.LogInformation("Fuel hose connected");
+                    }
+
                     _refuelingPaused = false;
                     _prosimRefuelingService.ResumeRefueling();
                 }
                 else
                 {
                     // Fuel hose was just disconnected
-                    LogService.Log(LogLevel.Information, nameof(GsxRefuelingService),
-                        $"Fuel hose disconnected", LogCategory.Refueling);
+                    using (_logger.BeginScope(new { Category = LogCategories.Refueling }))
+                    {
+                        _logger.LogInformation("Fuel hose disconnected");
+                    }
+
                     _refuelingPaused = true;
                     _prosimRefuelingService.PauseRefueling();
                 }

@@ -1,5 +1,4 @@
-﻿// ViewModels/Commands/AsyncRelayCommand.cs
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using System.Windows.Input;
 

@@ -1,4 +1,5 @@
-﻿using ProSimSDK;
+﻿using Microsoft.Extensions.Logging;
+using ProSimSDK;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services.Prosim.Interfaces;
 using Prosim2GSX.Services.Prosim.Models;
@@ -8,8 +9,6 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Implementation;
 
 namespace Prosim2GSX.Services.Prosim.Implementation
 {
@@ -17,9 +16,14 @@ namespace Prosim2GSX.Services.Prosim.Implementation
     {
         private readonly ServiceModel _model;
         private readonly ProSimConnect _connection;
+        private readonly ILogger<ProsimInterface> _logger;
 
-        public ProsimInterface(ServiceModel model, ProSimConnect connection)
+        public ProsimInterface(
+            ILogger<ProsimInterface> logger,
+            ServiceModel model,
+            ProSimConnect connection)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _model = model ?? throw new ArgumentNullException(nameof(model));
 
             // If custom path is specified, set it for ProSimConnect
@@ -29,12 +33,10 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                 if (!string.IsNullOrEmpty(directory))
                 {
                     DllLoader.AddDllDirectory(directory);
-                    LogService.Log(LogLevel.Information, nameof(ProsimInterface),
-                        $"Using Prosim SDK from: {_model.ProsimSDKPath}");
+                    _logger.LogInformation("Using Prosim SDK from: {Path}", _model.ProsimSDKPath);
                 }
             }
 
-            _model = model ?? throw new ArgumentNullException(nameof(model));
             _connection = connection ?? throw new ArgumentNullException(nameof(connection));
         }
 
@@ -42,12 +44,12 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         {
             try
             {
-                LogService.Log(LogLevel.Debug, nameof(ProsimInterface), $"Attempting to connect to Prosim Server: {_model.ProsimHostname}", LogCategory.Prosim);
+                _logger.LogDebug("Attempting to connect to Prosim Server: {Hostname}", _model.ProsimHostname);
                 _connection.Connect(_model.ProsimHostname);
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(ProsimInterface), $"Error connecting to ProSim System: {ex.Message}");
+                _logger.LogError(ex, "Error connecting to ProSim System");
             }
         }
 
@@ -55,7 +57,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         {
             if (_connection.isConnected)
             {
-                LogService.Log(LogLevel.Debug, nameof(ProsimInterface), "Connection to Prosim server established", LogCategory.Prosim);
+                _logger.LogDebug("Connection to Prosim server established");
                 return true;
             }
             else
@@ -66,14 +68,14 @@ namespace Prosim2GSX.Services.Prosim.Implementation
 
         public dynamic GetProsimVariable(string dataRef)
         {
-            LogService.Log(LogLevel.Debug, nameof(ProsimInterface), $"Attempting to get dataref: {dataRef}", LogCategory.Prosim);
+            _logger.LogDebug("Attempting to get dataref: {DataRef}", dataRef);
             try
             {
                 return _connection.ReadDataRef(dataRef);
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(ProsimInterface), $"Error reading {dataRef}: {ex.Message}");
+                _logger.LogError(ex, "Error reading {DataRef}", dataRef);
                 return null;
             }
         }
@@ -81,14 +83,14 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         public void SetProsimVariable(string dataRef, object value)
         {
             DataRef prosimDataRef = new DataRef(dataRef, 100, _connection);
-            LogService.Log(LogLevel.Debug, nameof(ProsimInterface), $"Attempting to set dataref: {dataRef}", LogCategory.Prosim);
+            _logger.LogDebug("Attempting to set dataref: {DataRef}", dataRef);
             try
             {
                 prosimDataRef.value = value;
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(ProsimInterface), $"Error setting {dataRef} to {value}: {ex.Message}");
+                _logger.LogError(ex, "Error setting {DataRef} to {Value}", dataRef, value);
             }
         }
 
@@ -113,7 +115,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
 
                     StringContent content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-                    LogService.Log(LogLevel.Debug, nameof(ProsimInterface), $"Posting to {url}", LogCategory.Prosim);
+                    _logger.LogDebug("Posting to {Url}", url);
                     HttpResponseMessage response = await client.PostAsync(url, content);
 
                     // Read the response content regardless of status code
@@ -121,18 +123,18 @@ namespace Prosim2GSX.Services.Prosim.Implementation
 
                     if (response.IsSuccessStatusCode)
                     {
-                        LogService.Log(LogLevel.Debug, nameof(ProsimInterface), $"POST to {url} successful", LogCategory.Prosim);
+                        _logger.LogDebug("POST to {Url} successful", url);
                         return HttpOperationResult.CreateSuccess();
                     }
                     else
                     {
                         string errorMessage = $"POST to {url} failed with status code {response.StatusCode}";
-                        LogService.Log(LogLevel.Error, nameof(ProsimInterface), errorMessage);
+                        _logger.LogError(errorMessage);
 
                         // Log response content if available
                         if (!string.IsNullOrEmpty(responseContent))
                         {
-                            LogService.Log(LogLevel.Error, nameof(ProsimInterface), $"Response content: {responseContent}");
+                            _logger.LogError("Response content: {Content}", responseContent);
                         }
 
                         return HttpOperationResult.CreateFailure(response.StatusCode, errorMessage, responseContent);
@@ -141,8 +143,8 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
             catch (HttpRequestException ex)
             {
-                string errorMessage = $"HTTP request exception posting to {url}: {ex.Message}";
-                LogService.Log(LogLevel.Error, nameof(ProsimInterface), errorMessage);
+                string errorMessage = $"HTTP request exception posting to {url}";
+                _logger.LogError(ex, errorMessage);
 
                 // Include status code if available
                 if (ex.StatusCode.HasValue)
@@ -154,14 +156,14 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
             catch (TaskCanceledException ex)
             {
-                string errorMessage = $"Request timeout posting to {url}: {ex.Message}";
-                LogService.Log(LogLevel.Error, nameof(ProsimInterface), errorMessage);
+                string errorMessage = $"Request timeout posting to {url}";
+                _logger.LogError(ex, errorMessage);
                 return HttpOperationResult.CreateFailure(errorMessage);
             }
             catch (Exception ex)
             {
-                string errorMessage = $"Error posting to {url}: {ex.Message}";
-                LogService.Log(LogLevel.Error, nameof(ProsimInterface), errorMessage);
+                string errorMessage = $"Error posting to {url}";
+                _logger.LogError(ex, errorMessage);
                 return HttpOperationResult.CreateFailure(errorMessage);
             }
         }
@@ -180,7 +182,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                 {
                     client.Timeout = TimeSpan.FromSeconds(30);
 
-                    LogService.Log(LogLevel.Debug, nameof(ProsimInterface), $"Deleting from {url}", LogCategory.Prosim);
+                    _logger.LogDebug("Deleting from {Url}", url);
                     HttpResponseMessage response = await client.DeleteAsync(url);
 
                     // Read the response content regardless of status code
@@ -188,18 +190,18 @@ namespace Prosim2GSX.Services.Prosim.Implementation
 
                     if (response.IsSuccessStatusCode)
                     {
-                        LogService.Log(LogLevel.Debug, nameof(ProsimInterface), $"DELETE to {url} successful", LogCategory.Prosim);
+                        _logger.LogDebug("DELETE to {Url} successful", url);
                         return HttpOperationResult.CreateSuccess();
                     }
                     else
                     {
                         string errorMessage = $"DELETE to {url} failed with status code {response.StatusCode}";
-                        LogService.Log(LogLevel.Error, nameof(ProsimInterface), errorMessage);
+                        _logger.LogError(errorMessage);
 
                         // Log response content if available
                         if (!string.IsNullOrEmpty(responseContent))
                         {
-                            LogService.Log(LogLevel.Error, nameof(ProsimInterface), $"Response content: {responseContent}");
+                            _logger.LogError("Response content: {Content}", responseContent);
                         }
 
                         return HttpOperationResult.CreateFailure(response.StatusCode, errorMessage, responseContent);
@@ -208,8 +210,8 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
             catch (HttpRequestException ex)
             {
-                string errorMessage = $"HTTP request exception deleting from {url}: {ex.Message}";
-                LogService.Log(LogLevel.Error, nameof(ProsimInterface), errorMessage);
+                string errorMessage = $"HTTP request exception deleting from {url}";
+                _logger.LogError(ex, errorMessage);
 
                 // Include status code if available
                 if (ex.StatusCode.HasValue)
@@ -221,14 +223,14 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
             catch (TaskCanceledException ex)
             {
-                string errorMessage = $"Request timeout deleting from {url}: {ex.Message}";
-                LogService.Log(LogLevel.Error, nameof(ProsimInterface), errorMessage);
+                string errorMessage = $"Request timeout deleting from {url}";
+                _logger.LogError(ex, errorMessage);
                 return HttpOperationResult.CreateFailure(errorMessage);
             }
             catch (Exception ex)
             {
-                string errorMessage = $"Error deleting from {url}: {ex.Message}";
-                LogService.Log(LogLevel.Error, nameof(ProsimInterface), errorMessage);
+                string errorMessage = $"Error deleting from {url}";
+                _logger.LogError(ex, errorMessage);
                 return HttpOperationResult.CreateFailure(errorMessage);
             }
         }
@@ -257,8 +259,9 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             catch
             {
                 // Log the issue and return 0 as a fallback
-                LogService.Log(LogLevel.Warning, nameof(ProsimInterface),
-                    $"Could not convert value of type {value?.GetType().Name ?? "null"} to int for dataRef {dataRef}");
+                LoggerExtensions.LogWarning(_logger,
+                    "Could not convert value of type {Type} to int for dataRef {DataRef}",
+                    value?.GetType().Name ?? "null", dataRef);
                 return 0;
             }
         }

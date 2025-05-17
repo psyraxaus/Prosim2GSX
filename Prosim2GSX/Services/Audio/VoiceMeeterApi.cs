@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
-using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Implementation;
+using Microsoft.Extensions.Logging;
 
 namespace Prosim2GSX.Services.Audio
 {
     public class VoiceMeeterApi
     {
+        private readonly ILogger<VoiceMeeterApi> _logger;
+
         private const string DefaultDllName = "VoicemeeterRemote64.dll";
         private IntPtr _dllHandle = IntPtr.Zero;
         private bool _initialized = false;
@@ -57,6 +58,24 @@ namespace Prosim2GSX.Services.Audio
         }
 
         /// <summary>
+        /// Initializes a new instance of the VoiceMeeterApi class with logging.
+        /// </summary>
+        /// <param name="logger">The logger to use for logging messages</param>
+        public VoiceMeeterApi(ILogger<VoiceMeeterApi> logger)
+        {
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the VoiceMeeterApi class without logging.
+        /// </summary>
+        /// <remarks>This constructor is provided for backward compatibility</remarks>
+        public VoiceMeeterApi()
+        {
+            _logger = null;
+        }
+
+        /// <summary>
         /// Initialize the VoiceMeeter Remote API
         /// </summary>
         /// <returns>True if successful, false otherwise</returns>
@@ -80,13 +99,12 @@ namespace Prosim2GSX.Services.Audio
                     if (_dllHandle == IntPtr.Zero)
                     {
                         int error = Marshal.GetLastWin32Error();
-                        LogService.Log(LogLevel.Error, "VoiceMeeterApi",
-                            $"Failed to load VoicemeeterRemote64.dll from custom path: {customDllPath}, Error: {error}");
+                        _logger?.LogError("Failed to load VoicemeeterRemote64.dll from custom path: {Path}, Error: {Error}",
+                            customDllPath, error);
                     }
                     else
                     {
-                        LogService.Log(LogLevel.Information, "VoiceMeeterApi",
-                            $"Loaded VoicemeeterRemote64.dll from custom path: {customDllPath}");
+                        _logger?.LogInformation("Loaded VoicemeeterRemote64.dll from custom path: {Path}", customDllPath);
                     }
                 }
 
@@ -98,13 +116,11 @@ namespace Prosim2GSX.Services.Audio
                     if (_dllHandle == IntPtr.Zero)
                     {
                         int error = Marshal.GetLastWin32Error();
-                        LogService.Log(LogLevel.Error, "VoiceMeeterApi",
-                            $"Failed to load VoicemeeterRemote64.dll from default location, Error: {error}");
+                        _logger?.LogError("Failed to load VoicemeeterRemote64.dll from default location, Error: {Error}", error);
                         return false;
                     }
 
-                    LogService.Log(LogLevel.Information, "VoiceMeeterApi",
-                        "Loaded VoicemeeterRemote64.dll from default location");
+                    _logger?.LogInformation("Loaded VoicemeeterRemote64.dll from default location");
                 }
 
                 // Get function pointers
@@ -126,7 +142,7 @@ namespace Prosim2GSX.Services.Audio
                     _setParameterStringFunc == null || _isParametersDirtyFunc == null ||
                     _getLevelFunc == null)
                 {
-                    LogService.Log(LogLevel.Error, "VoiceMeeterApi", "Failed to load one or more VoiceMeeter functions");
+                    _logger?.LogError("Failed to load one or more VoiceMeeter functions");
                     Cleanup();
                     return false;
                 }
@@ -137,37 +153,37 @@ namespace Prosim2GSX.Services.Audio
 
                 if (!_initialized)
                 {
-                    LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Failed to initialize VoiceMeeter API. Error code: {result}");
+                    _logger?.LogError("Failed to initialize VoiceMeeter API. Error code: {ErrorCode}", result);
                     Cleanup();
                 }
                 else
                 {
-                    LogService.Log(LogLevel.Information, "VoiceMeeterApi", "VoiceMeeter API initialized successfully");
+                    _logger?.LogInformation("VoiceMeeter API initialized successfully");
                 }
 
                 return _initialized;
             }
             catch (DllNotFoundException ex)
             {
-                LogService.Log(LogLevel.Critical, "VoiceMeeterApi", $"VoicemeeterRemote64.dll not found: {ex.Message}");
+                _logger?.LogCritical(ex, "VoicemeeterRemote64.dll not found");
                 Cleanup();
                 return false;
             }
             catch (EntryPointNotFoundException ex)
             {
-                LogService.Log(LogLevel.Critical, "VoiceMeeterApi", $"Entry point not found in VoicemeeterRemote64.dll: {ex.Message}");
+                _logger?.LogCritical(ex, "Entry point not found in VoicemeeterRemote64.dll");
                 Cleanup();
                 return false;
             }
             catch (BadImageFormatException ex)
             {
-                LogService.Log(LogLevel.Critical, "VoiceMeeterApi", $"VoicemeeterRemote64.dll is not a valid image (wrong bitness or corrupted): {ex.Message}");
+                _logger?.LogCritical(ex, "VoicemeeterRemote64.dll is not a valid image (wrong bitness or corrupted)");
                 Cleanup();
                 return false;
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Critical, "VoiceMeeterApi", $"Unexpected error initializing VoiceMeeter API: {ex.GetType().Name} - {ex.Message}");
+                _logger?.LogCritical(ex, "Unexpected error initializing VoiceMeeter API");
                 Cleanup();
                 return false;
             }
@@ -185,7 +201,7 @@ namespace Prosim2GSX.Services.Audio
             IntPtr functionPtr = GetProcAddress(module, functionName);
             if (functionPtr == IntPtr.Zero)
             {
-                LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Function {functionName} not found in VoicemeeterRemote64.dll");
+                _logger?.LogError("Function {FunctionName} not found in VoicemeeterRemote64.dll", functionName);
                 return null;
             }
 
@@ -262,16 +278,16 @@ namespace Prosim2GSX.Services.Audio
 
                 if (result != 0)
                 {
-                    LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Failed to run VoiceMeeter type {type}. Error code: {result}");
+                    _logger?.LogError("Failed to run VoiceMeeter type {Type}. Error code: {ErrorCode}", type, result);
                     return false;
                 }
 
-                LogService.Log(LogLevel.Information, "VoiceMeeterApi", $"Successfully started VoiceMeeter type {type}");
+                _logger?.LogInformation("Successfully started VoiceMeeter type {Type}", type);
                 return true;
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Error running VoiceMeeter type {type}: {ex.Message}");
+                _logger?.LogError(ex, "Error running VoiceMeeter type {Type}", type);
                 return false;
             }
         }
@@ -292,16 +308,16 @@ namespace Prosim2GSX.Services.Audio
 
                 if (result < 0)
                 {
-                    LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Failed to get VoiceMeeter type. Error code: {result}");
+                    _logger?.LogError("Failed to get VoiceMeeter type. Error code: {ErrorCode}", result);
                     return VoiceMeeterType.NotInstalled;
                 }
 
-                LogService.Log(LogLevel.Debug, "VoiceMeeterApi", $"Detected VoiceMeeter type: {(VoiceMeeterType)type}");
+                _logger?.LogDebug("Detected VoiceMeeter type: {Type}", (VoiceMeeterType)type);
                 return (VoiceMeeterType)type;
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Error getting VoiceMeeter type: {ex.Message}");
+                _logger?.LogError(ex, "Error getting VoiceMeeter type");
                 return VoiceMeeterType.NotInstalled;
             }
         }
@@ -380,7 +396,8 @@ namespace Prosim2GSX.Services.Audio
 
                 if (result < 0)
                 {
-                    LogService.Log(LogLevel.Warning, "VoiceMeeterApi", $"Failed to get string parameter '{paramName}'. Error code: {result}");
+                    _logger?.LogWarning("Failed to get string parameter '{ParamName}'. Error code: {ErrorCode}",
+                        paramName, result);
                     return null;
                 }
 
@@ -389,7 +406,7 @@ namespace Prosim2GSX.Services.Audio
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Error getting string parameter '{paramName}': {ex.Message}");
+                _logger?.LogError(ex, "Error getting string parameter '{ParamName}'", paramName);
                 return null;
             }
             finally
@@ -415,7 +432,8 @@ namespace Prosim2GSX.Services.Audio
 
                 if (result < 0)
                 {
-                    LogService.Log(LogLevel.Warning, "VoiceMeeterApi", $"Failed to set string parameter '{paramName}' to '{value}'. Error code: {result}");
+                    _logger?.LogWarning("Failed to set string parameter '{ParamName}' to '{Value}'. Error code: {ErrorCode}",
+                        paramName, value, result);
                     return false;
                 }
 
@@ -423,7 +441,8 @@ namespace Prosim2GSX.Services.Audio
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Error setting string parameter '{paramName}' to '{value}': {ex.Message}");
+                _logger?.LogError(ex, "Error setting string parameter '{ParamName}' to '{Value}'",
+                    paramName, value);
                 return false;
             }
         }
@@ -445,7 +464,8 @@ namespace Prosim2GSX.Services.Audio
 
                 if (result < 0)
                 {
-                    LogService.Log(LogLevel.Warning, "VoiceMeeterApi", $"Failed to get parameter '{paramName}'. Error code: {result}");
+                    _logger?.LogWarning("Failed to get parameter '{ParamName}'. Error code: {ErrorCode}",
+                        paramName, result);
                     return 0.0f;
                 }
 
@@ -453,7 +473,7 @@ namespace Prosim2GSX.Services.Audio
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Error getting parameter '{paramName}': {ex.Message}");
+                _logger?.LogError(ex, "Error getting parameter '{ParamName}'", paramName);
                 return 0.0f;
             }
         }
@@ -475,7 +495,8 @@ namespace Prosim2GSX.Services.Audio
 
                 if (result < 0)
                 {
-                    LogService.Log(LogLevel.Warning, "VoiceMeeterApi", $"Failed to set parameter '{paramName}' to {value}. Error code: {result}");
+                    _logger?.LogWarning("Failed to set parameter '{ParamName}' to {Value}. Error code: {ErrorCode}",
+                        paramName, value, result);
                     return false;
                 }
 
@@ -483,7 +504,8 @@ namespace Prosim2GSX.Services.Audio
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Error setting parameter '{paramName}' to {value}: {ex.Message}");
+                _logger?.LogError(ex, "Error setting parameter '{ParamName}' to {Value}",
+                    paramName, value);
                 return false;
             }
         }
@@ -533,12 +555,12 @@ namespace Prosim2GSX.Services.Audio
             try
             {
                 float gain = GetStripParameter(stripName, "Gain");
-                LogService.Log(LogLevel.Debug, "VoiceMeeterApi", $"GetStripGain for {stripName}: {gain} dB");
+                _logger?.LogDebug("GetStripGain for {StripName}: {Gain} dB", stripName, gain);
                 return gain;
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Error getting gain for strip {stripName}: {ex.Message}");
+                _logger?.LogError(ex, "Error getting gain for strip {StripName}", stripName);
                 return -60.0f; // Return minimum gain as a fallback
             }
         }
@@ -556,16 +578,17 @@ namespace Prosim2GSX.Services.Audio
                 bool success = SetStripParameter(stripName, "Gain", gain);
                 if (success)
                 {
-                    LogService.Log(LogLevel.Debug, "VoiceMeeterApi", $"SetStripGain for {stripName}: {gain} dB");
+                    _logger?.LogDebug("SetStripGain for {StripName}: {Gain} dB", stripName, gain);
                 }
                 else
                 {
-                    LogService.Log(LogLevel.Warning, "VoiceMeeterApi", $"Failed to set gain for strip {stripName} to {gain} dB");
+                    _logger?.LogWarning("Failed to set gain for strip {StripName} to {Gain} dB",
+                        stripName, gain);
                 }
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Error setting gain for strip {stripName}: {ex.Message}");
+                _logger?.LogError(ex, "Error setting gain for strip {StripName}", stripName);
             }
         }
 
@@ -579,12 +602,13 @@ namespace Prosim2GSX.Services.Audio
             try
             {
                 bool muted = GetStripParameter(stripName, "Mute") > 0.5f;
-                LogService.Log(LogLevel.Debug, "VoiceMeeterApi", $"GetStripMute for {stripName}: {(muted ? "Muted" : "Unmuted")}");
+                _logger?.LogDebug("GetStripMute for {StripName}: {MuteState}",
+                    stripName, (muted ? "Muted" : "Unmuted"));
                 return muted;
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Error getting mute state for strip {stripName}: {ex.Message}");
+                _logger?.LogError(ex, "Error getting mute state for strip {StripName}", stripName);
                 return false; // Return unmuted as a fallback
             }
         }
@@ -602,16 +626,18 @@ namespace Prosim2GSX.Services.Audio
                 bool success = SetStripParameter(stripName, "Mute", mute ? 1.0f : 0.0f);
                 if (success)
                 {
-                    LogService.Log(LogLevel.Debug, "VoiceMeeterApi", $"SetStripMute for {stripName}: {(mute ? "Muted" : "Unmuted")}");
+                    _logger?.LogDebug("SetStripMute for {StripName}: {MuteState}",
+                        stripName, (mute ? "Muted" : "Unmuted"));
                 }
                 else
                 {
-                    LogService.Log(LogLevel.Warning, "VoiceMeeterApi", $"Failed to set mute state for strip {stripName} to {(mute ? "Muted" : "Unmuted")}");
+                    _logger?.LogWarning("Failed to set mute state for strip {StripName} to {MuteState}",
+                        stripName, (mute ? "Muted" : "Unmuted"));
                 }
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Error setting mute state for strip {stripName}: {ex.Message}");
+                _logger?.LogError(ex, "Error setting mute state for strip {StripName}", stripName);
             }
         }
 
@@ -630,7 +656,7 @@ namespace Prosim2GSX.Services.Audio
 
                 if (result < 0)
                 {
-                    LogService.Log(LogLevel.Warning, "VoiceMeeterApi", $"Failed to check if parameters are dirty. Error code: {result}");
+                    _logger?.LogWarning("Failed to check if parameters are dirty. Error code: {ErrorCode}", result);
                     return false;
                 }
 
@@ -638,7 +664,7 @@ namespace Prosim2GSX.Services.Audio
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Error checking if parameters are dirty: {ex.Message}");
+                _logger?.LogError(ex, "Error checking if parameters are dirty");
                 return false;
             }
         }
@@ -661,7 +687,8 @@ namespace Prosim2GSX.Services.Audio
 
                 if (result < 0)
                 {
-                    LogService.Log(LogLevel.Warning, "VoiceMeeterApi", $"Failed to get level for type {type}, channel {channel}. Error code: {result}");
+                    _logger?.LogWarning("Failed to get level for type {Type}, channel {Channel}. Error code: {ErrorCode}",
+                        type, channel, result);
                     return 0.0f;
                 }
 
@@ -669,7 +696,7 @@ namespace Prosim2GSX.Services.Audio
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Error getting level for type {type}, channel {channel}: {ex.Message}");
+                _logger?.LogError(ex, "Error getting level for type {Type}, channel {Channel}", type, channel);
                 return 0.0f;
             }
         }
@@ -734,7 +761,7 @@ namespace Prosim2GSX.Services.Audio
             catch (Exception ex)
             {
                 // Log the exception
-                LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Error getting VoiceMeeter strips: {ex.Message}");
+                _logger?.LogError(ex, "Error getting VoiceMeeter strips");
             }
 
             return strips;
@@ -791,7 +818,7 @@ namespace Prosim2GSX.Services.Audio
             catch (Exception ex)
             {
                 // Log the exception
-                LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Error getting VoiceMeeter buses: {ex.Message}");
+                _logger?.LogError(ex, "Error getting VoiceMeeter buses");
             }
 
             return buses;
@@ -812,7 +839,7 @@ namespace Prosim2GSX.Services.Audio
         /// <returns>True if all checks pass, false otherwise</returns>
         public bool PerformDiagnostics()
         {
-            LogService.Log(LogLevel.Information, "VoiceMeeterApi", "Starting VoiceMeeter API diagnostics");
+            _logger?.LogInformation("Starting VoiceMeeter API diagnostics");
 
             bool success = true;
 
@@ -824,13 +851,11 @@ namespace Prosim2GSX.Services.Audio
 
                 if (usingCustomDll)
                 {
-                    LogService.Log(LogLevel.Information, "VoiceMeeterApi",
-                        $"Using custom VoicemeeterRemote64.dll path: {customDllPath}");
+                    _logger?.LogInformation("Using custom VoicemeeterRemote64.dll path: {Path}", customDllPath);
                 }
                 else
                 {
-                    LogService.Log(LogLevel.Information, "VoiceMeeterApi",
-                        "Using default VoicemeeterRemote64.dll path");
+                    _logger?.LogInformation("Using default VoicemeeterRemote64.dll path");
                 }
 
                 IntPtr testDllHandle = IntPtr.Zero;
@@ -848,27 +873,23 @@ namespace Prosim2GSX.Services.Audio
                     if (testDllHandle == IntPtr.Zero)
                     {
                         int error = Marshal.GetLastWin32Error();
-                        LogService.Log(LogLevel.Error, "VoiceMeeterApi",
-                            $"Failed to load VoicemeeterRemote64.dll. Error code: {error}");
+                        _logger?.LogError("Failed to load VoicemeeterRemote64.dll. Error code: {ErrorCode}", error);
                         success = false;
                     }
                     else
                     {
-                        LogService.Log(LogLevel.Information, "VoiceMeeterApi",
-                            "VoicemeeterRemote64.dll loaded successfully");
+                        _logger?.LogInformation("VoicemeeterRemote64.dll loaded successfully");
 
                         // Check for a simple function to verify DLL validity
                         IntPtr loginFuncPtr = GetProcAddress(testDllHandle, "VBVMR_Login");
                         if (loginFuncPtr == IntPtr.Zero)
                         {
-                            LogService.Log(LogLevel.Error, "VoiceMeeterApi",
-                                "VBVMR_Login function not found in loaded DLL");
+                            _logger?.LogError("VBVMR_Login function not found in loaded DLL");
                             success = false;
                         }
                         else
                         {
-                            LogService.Log(LogLevel.Information, "VoiceMeeterApi",
-                                "VBVMR_Login function found in loaded DLL");
+                            _logger?.LogInformation("VBVMR_Login function found in loaded DLL");
                         }
 
                         // Free the test handle
@@ -883,37 +904,36 @@ namespace Prosim2GSX.Services.Audio
                         try { FreeLibrary(testDllHandle); } catch { }
                     }
 
-                    LogService.Log(LogLevel.Critical, "VoiceMeeterApi",
-                        $"Exception loading VoicemeeterRemote64.dll: {ex.GetType().Name} - {ex.Message}");
+                    _logger?.LogCritical(ex, "Exception loading VoicemeeterRemote64.dll");
                     success = false;
                 }
 
                 // Check 2: VoiceMeeter Installation
                 try
                 {
-                    LogService.Log(LogLevel.Information, "VoiceMeeterApi", "Checking VoiceMeeter installation...");
+                    _logger?.LogInformation("Checking VoiceMeeter installation...");
                     if (Initialize())
                     {
                         VoiceMeeterType type = GetCurrentType();
-                        LogService.Log(LogLevel.Information, "VoiceMeeterApi", $"VoiceMeeter is installed and running. Type: {type}");
+                        _logger?.LogInformation("VoiceMeeter is installed and running. Type: {Type}", type);
 
                         // Log additional information about the VoiceMeeter installation
                         int inputCount = GetInputStripCount();
                         int virtualInputCount = GetVirtualInputCount();
                         int outputBusCount = GetOutputBusCount();
 
-                        LogService.Log(LogLevel.Information, "VoiceMeeterApi",
-                            $"VoiceMeeter configuration: {inputCount} hardware inputs, {virtualInputCount} virtual inputs, {outputBusCount} output buses");
+                        _logger?.LogInformation("VoiceMeeter configuration: {InputCount} hardware inputs, {VirtualInputCount} virtual inputs, {OutputBusCount} output buses",
+                            inputCount, virtualInputCount, outputBusCount);
                     }
                     else
                     {
-                        LogService.Log(LogLevel.Error, "VoiceMeeterApi", "VoiceMeeter is not installed or not running");
+                        _logger?.LogError("VoiceMeeter is not installed or not running");
                         success = false;
                     }
                 }
                 catch (Exception ex)
                 {
-                    LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Error checking VoiceMeeter installation: {ex.Message}");
+                    _logger?.LogError(ex, "Error checking VoiceMeeter installation");
                     success = false;
                 }
 
@@ -922,68 +942,64 @@ namespace Prosim2GSX.Services.Audio
                 {
                     if (Initialize())
                     {
-                        LogService.Log(LogLevel.Information, "VoiceMeeterApi", "Checking available VoiceMeeter strips...");
+                        _logger?.LogInformation("Checking available VoiceMeeter strips...");
                         var strips = GetAvailableStripsWithLabels();
                         if (strips.Count > 0)
                         {
-                            LogService.Log(LogLevel.Information, "VoiceMeeterApi", $"Found {strips.Count} VoiceMeeter strips:");
+                            _logger?.LogInformation("Found {Count} VoiceMeeter strips:", strips.Count);
                             foreach (var strip in strips)
                             {
-                                LogService.Log(LogLevel.Information, "VoiceMeeterApi", $"  - {strip.Key}: {strip.Value}");
+                                _logger?.LogInformation("  - {StripKey}: {StripValue}", strip.Key, strip.Value);
 
                                 // Try to get and set parameters for this strip
                                 try
                                 {
                                     float gain = GetStripGain(strip.Key);
                                     bool mute = GetStripMute(strip.Key);
-                                    LogService.Log(LogLevel.Information, "VoiceMeeterApi",
-                                        $"    Current state: Gain={gain} dB, Mute={mute}");
+                                    _logger?.LogInformation("    Current state: Gain={Gain} dB, Mute={Mute}", gain, mute);
                                 }
                                 catch (Exception ex)
                                 {
-                                    LogService.Log(LogLevel.Warning, "VoiceMeeterApi",
-                                        $"    Error getting strip parameters: {ex.Message}");
+                                    _logger?.LogWarning(ex, "Error getting strip parameters for {StripKey}", strip.Key);
                                 }
                             }
                         }
                         else
                         {
-                            LogService.Log(LogLevel.Warning, "VoiceMeeterApi", "No VoiceMeeter strips found");
+                            _logger?.LogWarning("No VoiceMeeter strips found");
                         }
 
-                        LogService.Log(LogLevel.Information, "VoiceMeeterApi", "Checking available VoiceMeeter buses...");
+                        _logger?.LogInformation("Checking available VoiceMeeter buses...");
                         var buses = GetAvailableBusesWithLabels();
                         if (buses.Count > 0)
                         {
-                            LogService.Log(LogLevel.Information, "VoiceMeeterApi", $"Found {buses.Count} VoiceMeeter buses:");
+                            _logger?.LogInformation("Found {Count} VoiceMeeter buses:", buses.Count);
                             foreach (var bus in buses)
                             {
-                                LogService.Log(LogLevel.Information, "VoiceMeeterApi", $"  - {bus.Key}: {bus.Value}");
+                                _logger?.LogInformation("  - {BusKey}: {BusValue}", bus.Key, bus.Value);
 
                                 // Try to get and set parameters for this bus
                                 try
                                 {
                                     float gain = GetBusGain(bus.Key);
                                     bool mute = GetBusMute(bus.Key);
-                                    LogService.Log(LogLevel.Information, "VoiceMeeterApi",
-                                        $"    Current state: Gain={gain} dB, Mute={mute}");
+                                    _logger?.LogInformation("    Current state: Gain={Gain} dB, Mute={Mute}", gain, mute);
                                 }
                                 catch (Exception ex)
                                 {
-                                    LogService.Log(LogLevel.Warning, "VoiceMeeterApi",
-                                        $"    Error getting bus parameters: {ex.Message}");
+                                    _logger?.LogWarning(ex, "Error getting bus parameters for {BusKey}", bus.Key);
                                 }
                             }
                         }
                         else
                         {
-                            LogService.Log(LogLevel.Warning, "VoiceMeeterApi", "No VoiceMeeter buses found");
+                            _logger?.LogWarning("No VoiceMeeter buses found");
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Error checking VoiceMeeter strips and buses: {ex.Message}");
+                    _logger?.LogError(ex, "Error checking VoiceMeeter strips and buses");
                     success = false;
                 }
 
@@ -992,24 +1008,24 @@ namespace Prosim2GSX.Services.Audio
                 {
                     if (Initialize())
                     {
-                        LogService.Log(LogLevel.Information, "VoiceMeeterApi", "Checking VoiceMeeter parameter dirty flag...");
+                        _logger?.LogInformation("Checking VoiceMeeter parameter dirty flag...");
                         bool isDirty = AreParametersDirty();
-                        LogService.Log(LogLevel.Information, "VoiceMeeterApi", $"VoiceMeeter parameters dirty flag: {isDirty}");
+                        _logger?.LogInformation("VoiceMeeter parameters dirty flag: {IsDirty}", isDirty);
                     }
                 }
                 catch (Exception ex)
                 {
-                    LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Error checking VoiceMeeter parameter dirty flag: {ex.Message}");
+                    _logger?.LogError(ex, "Error checking VoiceMeeter parameter dirty flag");
                     success = false;
                 }
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Critical, "VoiceMeeterApi", $"Unexpected error during diagnostics: {ex.Message}");
+                _logger?.LogCritical(ex, "Unexpected error during diagnostics");
                 success = false;
             }
 
-            LogService.Log(LogLevel.Information, "VoiceMeeterApi", $"VoiceMeeter API diagnostics completed. Success: {success}");
+            _logger?.LogInformation("VoiceMeeter API diagnostics completed. Success: {Success}", success);
             return success;
         }
 
@@ -1023,45 +1039,45 @@ namespace Prosim2GSX.Services.Audio
             {
                 if (!IsVoiceMeeterRunning())
                 {
-                    LogService.Log(LogLevel.Information, "VoiceMeeterApi", "VoiceMeeter is not running. Attempting to start it...");
+                    _logger?.LogInformation("VoiceMeeter is not running. Attempting to start it...");
 
                     // Try to run VoiceMeeter
                     int type = (int)GetCurrentType();
 
                     if (type <= 0)
                     {
-                        LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Cannot start VoiceMeeter: Invalid type ({type}). VoiceMeeter may not be installed.");
+                        _logger?.LogError("Cannot start VoiceMeeter: Invalid type ({Type}). VoiceMeeter may not be installed.", type);
                         return false;
                     }
 
-                    LogService.Log(LogLevel.Information, "VoiceMeeterApi", $"Starting VoiceMeeter type: {(VoiceMeeterType)type}");
+                    _logger?.LogInformation("Starting VoiceMeeter type: {Type}", (VoiceMeeterType)type);
 
                     bool runResult = RunVoiceMeeter(type);
                     if (!runResult)
                     {
-                        LogService.Log(LogLevel.Error, "VoiceMeeterApi", "Failed to run VoiceMeeter");
+                        _logger?.LogError("Failed to run VoiceMeeter");
                         return false;
                     }
 
-                    LogService.Log(LogLevel.Information, "VoiceMeeterApi", "VoiceMeeter started. Initializing API...");
+                    _logger?.LogInformation("VoiceMeeter started. Initializing API...");
 
                     bool initResult = Initialize();
                     if (!initResult)
                     {
-                        LogService.Log(LogLevel.Error, "VoiceMeeterApi", "Failed to initialize VoiceMeeter API after starting VoiceMeeter");
+                        _logger?.LogError("Failed to initialize VoiceMeeter API after starting VoiceMeeter");
                         return false;
                     }
 
-                    LogService.Log(LogLevel.Information, "VoiceMeeterApi", "VoiceMeeter API initialized successfully after starting VoiceMeeter");
+                    _logger?.LogInformation("VoiceMeeter API initialized successfully after starting VoiceMeeter");
                     return true;
                 }
 
-                LogService.Log(LogLevel.Debug, "VoiceMeeterApi", "VoiceMeeter is already running");
+                _logger?.LogDebug("VoiceMeeter is already running");
                 return true;
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Error ensuring VoiceMeeter is running: {ex.Message}");
+                _logger?.LogError(ex, "Error ensuring VoiceMeeter is running");
                 return false;
             }
         }
@@ -1123,12 +1139,12 @@ namespace Prosim2GSX.Services.Audio
             try
             {
                 float gain = GetBusParameter(busName, "Gain");
-                LogService.Log(LogLevel.Debug, "VoiceMeeterApi", $"GetBusGain for {busName}: {gain} dB");
+                _logger?.LogDebug("GetBusGain for {BusName}: {Gain} dB", busName, gain);
                 return gain;
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Error getting gain for bus {busName}: {ex.Message}");
+                _logger?.LogError(ex, "Error getting gain for bus {BusName}", busName);
                 return -60.0f; // Return minimum gain as a fallback
             }
         }
@@ -1146,16 +1162,16 @@ namespace Prosim2GSX.Services.Audio
                 bool success = SetBusParameter(busName, "Gain", gain);
                 if (success)
                 {
-                    LogService.Log(LogLevel.Debug, "VoiceMeeterApi", $"SetBusGain for {busName}: {gain} dB");
+                    _logger?.LogDebug("SetBusGain for {BusName}: {Gain} dB", busName, gain);
                 }
                 else
                 {
-                    LogService.Log(LogLevel.Warning, "VoiceMeeterApi", $"Failed to set gain for bus {busName} to {gain} dB");
+                    _logger?.LogWarning("Failed to set gain for bus {BusName} to {Gain} dB", busName, gain);
                 }
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Error setting gain for bus {busName}: {ex.Message}");
+                _logger?.LogError(ex, "Error setting gain for bus {BusName}", busName);
             }
         }
 
@@ -1169,12 +1185,13 @@ namespace Prosim2GSX.Services.Audio
             try
             {
                 bool muted = GetBusParameter(busName, "Mute") > 0.5f;
-                LogService.Log(LogLevel.Debug, "VoiceMeeterApi", $"GetBusMute for {busName}: {(muted ? "Muted" : "Unmuted")}");
+                _logger?.LogDebug("GetBusMute for {BusName}: {MuteState}",
+                    busName, (muted ? "Muted" : "Unmuted"));
                 return muted;
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Error getting mute state for bus {busName}: {ex.Message}");
+                _logger?.LogError(ex, "Error getting mute state for bus {BusName}", busName);
                 return false; // Return unmuted as a fallback
             }
         }
@@ -1192,16 +1209,18 @@ namespace Prosim2GSX.Services.Audio
                 bool success = SetBusParameter(busName, "Mute", mute ? 1.0f : 0.0f);
                 if (success)
                 {
-                    LogService.Log(LogLevel.Debug, "VoiceMeeterApi", $"SetBusMute for {busName}: {(mute ? "Muted" : "Unmuted")}");
+                    _logger?.LogDebug("SetBusMute for {BusName}: {MuteState}",
+                        busName, (mute ? "Muted" : "Unmuted"));
                 }
                 else
                 {
-                    LogService.Log(LogLevel.Warning, "VoiceMeeterApi", $"Failed to set mute state for bus {busName} to {(mute ? "Muted" : "Unmuted")}");
+                    _logger?.LogWarning("Failed to set mute state for bus {BusName} to {MuteState}",
+                        busName, (mute ? "Muted" : "Unmuted"));
                 }
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, "VoiceMeeterApi", $"Error setting mute state for bus {busName}: {ex.Message}");
+                _logger?.LogError(ex, "Error setting mute state for bus {BusName}", busName);
             }
         }
     }

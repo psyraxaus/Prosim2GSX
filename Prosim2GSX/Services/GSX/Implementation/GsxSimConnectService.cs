@@ -1,8 +1,7 @@
-﻿using Microsoft.FlightSimulator.SimConnect;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.FlightSimulator.SimConnect;
 using Prosim2GSX.Events;
 using Prosim2GSX.Services.GSX.Interfaces;
-using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Implementation;
 using System;
 using System.Collections.Generic;
 
@@ -14,18 +13,22 @@ namespace Prosim2GSX.Services.GSX.Implementation
     public class GsxSimConnectService : IGsxSimConnectService
     {
         private readonly MobiSimConnect _simConnect;
+        private readonly ILogger<GsxSimConnectService> _logger;
         private readonly Dictionary<string, Action<float, float, string>> _lvarHandlers =
             new Dictionary<string, Action<float, float, string>>();
 
         /// <summary>
         /// Constructor
         /// </summary>
-        public GsxSimConnectService(MobiSimConnect simConnect)
+        public GsxSimConnectService(ILogger<GsxSimConnectService> logger, MobiSimConnect simConnect)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _simConnect = simConnect ?? throw new ArgumentNullException(nameof(simConnect));
 
             // Subscribe to essential GSX LVARs
             SubscribeToEssentialLvars();
+
+            _logger.LogInformation("GSX SimConnect Service initialized");
         }
 
         /// <summary>
@@ -54,6 +57,8 @@ namespace Prosim2GSX.Services.GSX.Implementation
             // Subscribe to SimVars
             _simConnect.SubscribeSimVar("SIM ON GROUND", "Bool");
             _simConnect.SubscribeSimVar("GPS GROUND SPEED", "Meters per second");
+
+            _logger.LogDebug("Essential LVARS and SimVars subscribed");
         }
 
         /// <inheritdoc/>
@@ -65,8 +70,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxSimConnectService),
-                    $"Error reading LVAR {lvarName}: {ex.Message}");
+                _logger.LogError(ex, "Error reading LVAR {LvarName}", lvarName);
                 return 0;
             }
         }
@@ -80,8 +84,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxSimConnectService),
-                    $"Error writing LVAR {lvarName} = {value}: {ex.Message}");
+                _logger.LogError(ex, "Error writing LVAR {LvarName} = {Value}", lvarName, value);
             }
         }
 
@@ -96,13 +99,11 @@ namespace Prosim2GSX.Services.GSX.Implementation
                 // Subscribe to the LVAR with SimConnect
                 _simConnect.SubscribeLvar(lvarName, OnLvarChanged);
 
-                LogService.Log(LogLevel.Debug, nameof(GsxSimConnectService),
-                    $"Subscribed to LVAR {lvarName}", LogCategory.SimConnect);
+                _logger.LogDebug("Subscribed to LVAR {LvarName}", lvarName);
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxSimConnectService),
-                    $"Error subscribing to LVAR {lvarName}: {ex.Message}");
+                _logger.LogError(ex, "Error subscribing to LVAR {LvarName}", lvarName);
             }
         }
 
@@ -122,8 +123,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxSimConnectService),
-                    $"Error in LVAR change handler for {lvarName}: {ex.Message}");
+                _logger.LogError(ex, "Error in LVAR change handler for {LvarName}", lvarName);
             }
         }
 
@@ -136,8 +136,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxSimConnectService),
-                    $"Error checking if sim is on ground: {ex.Message}");
+                _logger.LogError(ex, "Error checking if sim is on ground");
                 return true; // Default to on ground for safety
             }
         }
@@ -151,8 +150,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxSimConnectService),
-                    $"Error checking if Couatl is running: {ex.Message}");
+                _logger.LogError(ex, "Error checking if Couatl is running");
                 return false;
             }
         }
@@ -166,8 +164,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxSimConnectService),
-                    $"Error getting departure state: {ex.Message}");
+                _logger.LogError(ex, "Error getting departure state");
                 return 0;
             }
         }
@@ -181,8 +178,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxSimConnectService),
-                    $"Error getting catering state: {ex.Message}");
+                _logger.LogError(ex, "Error getting catering state");
                 return 0;
             }
         }
@@ -196,8 +192,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxSimConnectService),
-                    $"Error getting boarding state: {ex.Message}");
+                _logger.LogError(ex, "Error getting boarding state");
                 return 0;
             }
         }
@@ -211,8 +206,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxSimConnectService),
-                    $"Error getting deboarding state: {ex.Message}");
+                _logger.LogError(ex, "Error getting deboarding state");
                 return 0;
             }
         }
@@ -226,8 +220,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxSimConnectService),
-                    $"Error checking if fuel hose is connected: {ex.Message}");
+                _logger.LogError(ex, "Error checking if fuel hose is connected");
                 return false;
             }
         }
@@ -241,8 +234,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxSimConnectService),
-                    $"Error getting boarded passenger count: {ex.Message}");
+                _logger.LogError(ex, "Error getting boarded passenger count");
                 return 0;
             }
         }
@@ -256,8 +248,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxSimConnectService),
-                    $"Error getting deboarded passenger count: {ex.Message}");
+                _logger.LogError(ex, "Error getting deboarded passenger count");
                 return 0;
             }
         }
@@ -271,8 +262,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxSimConnectService),
-                    $"Error getting cargo boarding percentage: {ex.Message}");
+                _logger.LogError(ex, "Error getting cargo boarding percentage");
                 return 0;
             }
         }
@@ -286,8 +276,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxSimConnectService),
-                    $"Error getting cargo deboarding percentage: {ex.Message}");
+                _logger.LogError(ex, "Error getting cargo deboarding percentage");
                 return 0;
             }
         }
@@ -301,8 +290,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, nameof(GsxSimConnectService),
-                    $"Error getting refueling state: {ex.Message}");
+                _logger.LogError(ex, "Error getting refueling state");
                 return 0;
             }
         }
@@ -312,7 +300,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// </summary>
         private void OnJetwayStateChanged(float newValue, float oldValue, string lvarName)
         {
-            LogService.Log(LogLevel.Debug, nameof(GsxSimConnectService), $"Jetway state changed to {newValue}", LogCategory.SimConnect);
+            _logger.LogDebug("Jetway state changed to {NewValue}", newValue);
 
             if (newValue != oldValue)
             {
@@ -328,7 +316,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
         /// </summary>
         private void OnStairsStateChanged(float newValue, float oldValue, string lvarName)
         {
-            LogService.Log(LogLevel.Debug, nameof(GsxSimConnectService), $"Stairs state changed to {newValue}", LogCategory.SimConnect);
+            _logger.LogDebug("Stairs state changed to {NewValue}", newValue);
 
             if (newValue != oldValue)
             {
@@ -348,7 +336,7 @@ namespace Prosim2GSX.Services.GSX.Implementation
             {
                 var status = GetStatusFromGsxState((int)newValue);
                 EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Pushback", status));
-                LogService.Log(LogLevel.Information, nameof(GsxSimConnectService), $"Departure state changed to {status}");
+                _logger.LogInformation("Departure state changed to {Status}", status);
             }
         }
 

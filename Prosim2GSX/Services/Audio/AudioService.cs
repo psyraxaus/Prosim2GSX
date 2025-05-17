@@ -1,9 +1,8 @@
 using CoreAudio;
+using Microsoft.Extensions.Logging;
 using Prosim2GSX.Events;
 using Prosim2GSX.Models;
 using Prosim2GSX.Services;
-using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Implementation;
 using Prosim2GSX.Services.Prosim.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -18,6 +17,8 @@ namespace Prosim2GSX.Services.Audio
     /// </summary>
     public class AudioService : IAudioService
     {
+        private readonly ILogger<AudioService> _logger;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly VoiceMeeterApi _voiceMeeterApi;
         private Dictionary<AudioChannel, float> _voiceMeeterVolumes = new Dictionary<AudioChannel, float>();
         private Dictionary<AudioChannel, bool> _voiceMeeterMutes = new Dictionary<AudioChannel, bool>();
@@ -41,16 +42,27 @@ namespace Prosim2GSX.Services.Audio
         /// <summary>
         /// Creates a new AudioService
         /// </summary>
+        /// <param name="logger">Logger for this service</param>
+        /// <param name="loggerFactory">Logger factory for creating loggers for dependencies</param>
+        /// <param name="prosimInterface">Prosim interface for reading cockpit controls</param>
+        /// <param name="dataRefService">DataRef monitoring service</param>
+        /// <param name="simConnect">SimConnect instance</param>
         /// <param name="model">Service model containing settings</param>
-        /// <param name="prosimController">Prosim instance for reading cockpit controls</param>
-
-        public AudioService(IProsimInterface prosimInterface, IDataRefMonitoringService dataRefService, MobiSimConnect simConnect, ServiceModel model)
+        public AudioService(
+            ILogger<AudioService> logger,
+            ILoggerFactory loggerFactory,
+            IProsimInterface prosimInterface,
+            IDataRefMonitoringService dataRefService,
+            MobiSimConnect simConnect, // This can be null now
+            ServiceModel model)
         {
-            _prosimInterface = prosimInterface;
-            _dataRefService = dataRefService;
-            _simConnect = simConnect;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
+            _prosimInterface = prosimInterface ?? throw new ArgumentNullException(nameof(prosimInterface));
+            _dataRefService = dataRefService ?? throw new ArgumentNullException(nameof(dataRefService));
+            _simConnect = simConnect; // Allow null here, removing the null check
             _model = model ?? throw new ArgumentNullException(nameof(model));
-            _voiceMeeterApi = new VoiceMeeterApi();
+            _voiceMeeterApi = new VoiceMeeterApi(_loggerFactory.CreateLogger<VoiceMeeterApi>());
 
             // Initialize FCU mode handlers
             _trackFpaModeHandler = new DataRefChangedHandler(OnTrackFpaModeChanged);
@@ -76,13 +88,13 @@ namespace Prosim2GSX.Services.Audio
                 _voiceMeeterApi.Initialize();
             }
         }
-        
+
         /// <summary>
         /// Initializes the audio service and sets up audio sources
         /// </summary>
         public void Initialize()
         {
-            LogService.Log(LogLevel.Information, "AudioService:Initialize", "Initializing audio service");
+            _logger.LogInformation("Initializing audio service");
 
             // Subscribe to FCU mode datarefs
             _dataRefService.SubscribeToDataRef("system.indicators.I_FCU_TRACK_FPA_MODE", _trackFpaModeHandler);
@@ -96,8 +108,7 @@ namespace Prosim2GSX.Services.Audio
 
                 if (config.Enabled)
                 {
-                    LogService.Log(LogLevel.Information, "AudioService:Initialize",
-                        $"Enabling audio channel: {channel}");
+                    _logger.LogInformation("Enabling audio channel: {Channel}", channel);
 
                     if (_model.AudioApiType == AudioApiType.CoreAudio)
                     {
@@ -126,13 +137,12 @@ namespace Prosim2GSX.Services.Audio
                                     _voiceMeeterMutes[channel] = _voiceMeeterApi.GetBusMute(deviceName);
                                 }
 
-                                LogService.Log(LogLevel.Debug, "AudioService:Initialize",
-                                    $"Initialized VoiceMeeter values for {channel}: Gain={_voiceMeeterVolumes[channel]}, Mute={_voiceMeeterMutes[channel]}");
+                                _logger.LogDebug("Initialized VoiceMeeter values for {Channel}: Gain={Gain}, Mute={Mute}",
+                                    channel, _voiceMeeterVolumes[channel], _voiceMeeterMutes[channel]);
                             }
                             catch (Exception ex)
                             {
-                                LogService.Log(LogLevel.Error, "AudioService:Initialize",
-                                    $"Error initializing VoiceMeeter values for {channel}: {ex.Message}");
+                                _logger.LogError(ex, "Error initializing VoiceMeeter values for {Channel}", channel);
                             }
                         }
                     }
@@ -143,8 +153,7 @@ namespace Prosim2GSX.Services.Audio
                 }
                 else
                 {
-                    LogService.Log(LogLevel.Debug, "AudioService:Initialize",
-                        $"Audio channel {channel} is disabled");
+                    _logger.LogDebug("Audio channel {Channel} is disabled", channel);
                 }
             }
 
@@ -154,13 +163,12 @@ namespace Prosim2GSX.Services.Audio
                 _fcuTrackFpaMode = ServiceLocator.ProsimInterface.GetProsimVariable("system.indicators.I_FCU_TRACK_FPA_MODE");
                 _fcuHeadingVsMode = ServiceLocator.ProsimInterface.GetProsimVariable("system.indicators.I_FCU_HEADING_VS_MODE");
 
-                LogService.Log(LogLevel.Debug, "AudioService:Initialize",
-                    $"Initial FCU mode state: TrackFpaMode={_fcuTrackFpaMode}, HeadingVsMode={_fcuHeadingVsMode}");
+                _logger.LogDebug("Initial FCU mode state: TrackFpaMode={TrackFpaMode}, HeadingVsMode={HeadingVsMode}",
+                    _fcuTrackFpaMode, _fcuHeadingVsMode);
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, "AudioService:Initialize",
-                    $"Error getting initial FCU mode state: {ex.Message}");
+                _logger.LogError(ex, "Error getting initial FCU mode state");
 
                 // Default to false if we can't get the initial state
                 _fcuTrackFpaMode = false;
@@ -173,7 +181,7 @@ namespace Prosim2GSX.Services.Audio
                 SynchronizeDatarefsWithVoiceMeeter();
             }
         }
-        
+
         private void OnTrackFpaModeChanged(string dataRef, dynamic oldValue, dynamic newValue)
         {
             _fcuTrackFpaMode = Convert.ToBoolean(newValue);
@@ -213,10 +221,10 @@ namespace Prosim2GSX.Services.Audio
             if (!_audioSources.ContainsKey(sourceName))
             {
                 _audioSources[sourceName] = new AudioSource(processName, sourceName, knobDataRef, muteDataRef);
-                LogService.Log(LogLevel.Information, "AudioService:AddAudioSource", $"Added audio source: {sourceName} ({processName})");
+                _logger.LogInformation("Added audio source: {SourceName} ({ProcessName})", sourceName, processName);
             }
         }
-        
+
         /// <summary>
         /// Removes an audio source
         /// </summary>
@@ -231,12 +239,12 @@ namespace Prosim2GSX.Services.Audio
                     source.Session.SimpleAudioVolume.MasterVolume = 1.0f;
                     source.Session.SimpleAudioVolume.Mute = false;
                 }
-                
+
                 _audioSources.Remove(sourceName);
-                LogService.Log(LogLevel.Information, "AudioService:RemoveAudioSource", $"Removed audio source: {sourceName}");
+                _logger.LogInformation("Removed audio source: {SourceName}", sourceName);
             }
         }
-        
+
         /// <summary>
         /// Gets audio sessions for all configured audio sources
         /// </summary>
@@ -262,15 +270,14 @@ namespace Prosim2GSX.Services.Audio
                                     if (source.ProcessNames.Contains(p.ProcessName))
                                     {
                                         source.Session = session;
-                                        LogService.Log(LogLevel.Information, "AudioService:GetAudioSessions",
-                                            $"Found Audio Session for {source.SourceName} ({p.ProcessName})");
+                                        _logger.LogInformation("Found Audio Session for {SourceName} ({ProcessName})",
+                                            source.SourceName, p.ProcessName);
                                         break;
                                     }
                                 }
                                 catch (Exception ex)
                                 {
-                                    LogService.Log(LogLevel.Debug, "AudioService:GetAudioSessions",
-                                        $"Error getting process: {ex.Message}");
+                                    _logger.LogDebug(ex, "Error getting process");
                                 }
                             }
 
@@ -282,11 +289,10 @@ namespace Prosim2GSX.Services.Audio
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, "AudioService:GetAudioSessions",
-                    $"Error enumerating audio devices: {ex.Message}");
+                _logger.LogError(ex, "Error enumerating audio devices");
             }
         }
-        
+
         /// <summary>
         /// Resets audio settings to default values
         /// </summary>
@@ -298,14 +304,14 @@ namespace Prosim2GSX.Services.Audio
                 {
                     source.Session.SimpleAudioVolume.MasterVolume = 1.0f;
                     source.Session.SimpleAudioVolume.Mute = false;
-                    LogService.Log(LogLevel.Information, "AudioService:ResetAudio", $"Audio reset for {source.SourceName}");
-                    
+                    _logger.LogInformation("Audio reset for {SourceName}", source.SourceName);
+
                     // Publish event
                     EventAggregator.Instance.Publish(new AudioStateChangedEvent(source.SourceName, false, 1.0f));
                 }
             }
         }
-        
+
         /// <summary>
         /// Controls audio volume and mute state based on cockpit controls
         /// </summary>
@@ -335,7 +341,7 @@ namespace Prosim2GSX.Services.Audio
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Debug, "AudioService:ControlAudio", $"Exception {ex.GetType()} during Audio Control: {ex.Message}");
+                _logger.LogDebug(ex, "Exception during Audio Control");
             }
         }
 
@@ -394,14 +400,13 @@ namespace Prosim2GSX.Services.Audio
                                     if (Math.Abs(currentDataref - datarefValue) > threshold)
                                     {
                                         ServiceLocator.ProsimInterface.SetProsimVariable(config.VolumeDataRef, datarefValue);
-                                        LogService.Log(LogLevel.Debug, "AudioService:UpdateVoiceMeeterParameters",
-                                            $"Updated dataref {config.VolumeDataRef} to match VoiceMeeter gain for {channel}: {datarefValue}");
+                                        _logger.LogDebug("Updated dataref {DataRef} to match VoiceMeeter gain for {Channel}: {Value}",
+                                            config.VolumeDataRef, channel, datarefValue);
                                     }
                                 }
                                 catch (Exception ex)
                                 {
-                                    LogService.Log(LogLevel.Error, "AudioService:UpdateVoiceMeeterParameters",
-                                        $"Error updating dataref for {channel}: {ex.Message}");
+                                    _logger.LogError(ex, "Error updating dataref for {Channel}", channel);
                                 }
                             }
 
@@ -416,13 +421,11 @@ namespace Prosim2GSX.Services.Audio
                                 try
                                 {
                                     bool currentMute = Convert.ToBoolean(ServiceLocator.ProsimInterface.GetProsimVariable(config.MuteDataRef));
-                                    LogService.Log(LogLevel.Debug, "AudioService:UpdateVoiceMeeterParameters",
-                                        $"Current mute state for {channel}: {currentMute}");
+                                    _logger.LogDebug("Current mute state for {Channel}: {State}", channel, currentMute);
                                 }
                                 catch (Exception ex)
                                 {
-                                    LogService.Log(LogLevel.Error, "AudioService:UpdateVoiceMeeterParameters",
-                                        $"Error reading mute dataref for {channel}: {ex.Message}");
+                                    _logger.LogError(ex, "Error reading mute dataref for {Channel}", channel);
                                 }
                             }
 
@@ -442,8 +445,7 @@ namespace Prosim2GSX.Services.Audio
                     }
                     catch (Exception ex)
                     {
-                        LogService.Log(LogLevel.Error, "AudioService:UpdateVoiceMeeterParameters",
-                            $"Error updating VoiceMeeter parameters for {channel}: {ex.Message}");
+                        _logger.LogError(ex, "Error updating VoiceMeeter parameters for {Channel}", channel);
                     }
                 }
             }
@@ -495,20 +497,30 @@ namespace Prosim2GSX.Services.Audio
                 RemoveAudioSource(sourceName);
             }
 
-            // Special handling for GSX Couatl engine
-            if (_audioSources.TryGetValue(AudioChannel.INT.ToString(), out AudioSource gsxSource) &&
-                gsxSource.Session != null &&
-                _simConnect.ReadLvar("FSDT_GSX_COUATL_STARTED") != 1)
+            // Special handling for GSX Couatl engine - add null check for SimConnect
+            if (_simConnect != null &&
+                _audioSources.TryGetValue(AudioChannel.INT.ToString(), out AudioSource gsxSource) &&
+                gsxSource.Session != null)
             {
-                gsxSource.Session.SimpleAudioVolume.MasterVolume = 1.0f;
-                gsxSource.Session.SimpleAudioVolume.Mute = false;
-                gsxSource.Session = null;
-                gsxSource.Volume = -1;
-                gsxSource.MuteState = -1;
-                LogService.Log(LogLevel.Information, "AudioService:HandleAppChanges",
-                    $"Disabled Audio Session for GSX (Couatl Engine not started)");
+                try
+                {
+                    if (_simConnect.ReadLvar("FSDT_GSX_COUATL_STARTED") != 1)
+                    {
+                        gsxSource.Session.SimpleAudioVolume.MasterVolume = 1.0f;
+                        gsxSource.Session.SimpleAudioVolume.Mute = false;
+                        gsxSource.Session = null;
+                        gsxSource.Volume = -1;
+                        gsxSource.MuteState = -1;
+                        _logger.LogInformation("Disabled Audio Session for GSX (Couatl Engine not started)");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error checking GSX Couatl engine status");
+                }
             }
         }
+
 
         /// <summary>
         /// Handles volume changes for any audio channel
@@ -523,8 +535,7 @@ namespace Prosim2GSX.Services.Audio
             {
                 if (!_fcuTrackFpaMode && !_fcuHeadingVsMode)
                 {
-                    LogService.Log(LogLevel.Debug, "AudioService:OnVolumeChanged",
-                        $"Ignoring volume change for {channel}: FCU not in correct mode");
+                    _logger.LogDebug("Ignoring volume change for {Channel}: FCU not in correct mode", channel);
                     return; // Ignore changes when FCU is not in the correct mode
                 }
 
@@ -534,13 +545,13 @@ namespace Prosim2GSX.Services.Audio
                     try
                     {
                         datarefValue = Convert.ToSingle(newValue);
-                        LogService.Log(LogLevel.Debug, "AudioService:OnVolumeChanged",
-                            $"Volume value for {channel} changed from {oldValue} to {datarefValue}");
+                        string oldValueStr = Convert.ToString(oldValue);
+                        _logger.LogDebug("Volume value for {Channel} changed from {OldValue} to {NewValue}",
+                            channel.ToString(), oldValueStr, datarefValue);
                     }
                     catch (Exception ex)
                     {
-                        LogService.Log(LogLevel.Error, "AudioService:OnVolumeChanged",
-                            $"Error converting volume value for {channel}: {ex.Message}");
+                        _logger.LogError(ex, "Error converting volume value for {Channel}", channel);
                         return;
                     }
 
@@ -562,8 +573,7 @@ namespace Prosim2GSX.Services.Audio
                                 // Publish event
                                 EventAggregator.Instance.Publish(new AudioStateChangedEvent(source.SourceName, source.Session.SimpleAudioVolume.Mute, volume));
 
-                                LogService.Log(LogLevel.Debug, "AudioService:OnVolumeChanged",
-                                    $"Volume changed for {channel}: {volume}");
+                                _logger.LogDebug("Volume changed for {Channel}: {Volume}", channel, volume);
                             }
                         }
                         else if (_model.AudioApiType == AudioApiType.VoiceMeeter)
@@ -576,8 +586,8 @@ namespace Prosim2GSX.Services.Audio
                             {
                                 // Convert dataref value to VoiceMeeter gain
                                 float gain = ConvertDatarefToVoiceMeeterGain(datarefValue);
-                                LogService.Log(LogLevel.Debug, "AudioService:OnVolumeChanged",
-                                    $"Converted dataref {datarefValue} to gain {gain} dB for {channel}");
+                                _logger.LogDebug("Converted dataref {Value} to gain {Gain} dB for {Channel}",
+                                    datarefValue, gain, channel);
 
                                 // Check if the gain has actually changed to avoid unnecessary updates
                                 if (!_voiceMeeterVolumes.TryGetValue(channel, out float currentGain) ||
@@ -594,8 +604,8 @@ namespace Prosim2GSX.Services.Audio
                                         float actualGain = _voiceMeeterApi.GetStripGain(deviceName);
                                         success = Math.Abs(actualGain - gain) < 0.1f;
 
-                                        LogService.Log(LogLevel.Debug, "AudioService:OnVolumeChanged",
-                                            $"VoiceMeeter strip gain changed for {channel}: {gain} dB (success: {success})");
+                                        _logger.LogDebug("VoiceMeeter strip gain changed for {Channel}: {Gain} dB (success: {Success})",
+                                            channel, gain, success);
                                     }
                                     else
                                     {
@@ -606,8 +616,8 @@ namespace Prosim2GSX.Services.Audio
                                         float actualGain = _voiceMeeterApi.GetBusGain(deviceName);
                                         success = Math.Abs(actualGain - gain) < 0.1f;
 
-                                        LogService.Log(LogLevel.Debug, "AudioService:OnVolumeChanged",
-                                            $"VoiceMeeter bus gain changed for {channel}: {gain} dB (success: {success})");
+                                        _logger.LogDebug("VoiceMeeter bus gain changed for {Channel}: {Gain} dB (success: {Success})",
+                                            channel, gain, success);
                                     }
 
                                     if (success)
@@ -626,20 +636,17 @@ namespace Prosim2GSX.Services.Audio
                                     }
                                     else
                                     {
-                                        LogService.Log(LogLevel.Warning, "AudioService:OnVolumeChanged",
-                                            $"Failed to change VoiceMeeter gain for {channel}");
+                                        _logger.LogWarning("Failed to change VoiceMeeter gain for {Channel}", channel);
                                     }
                                 }
                                 else
                                 {
-                                    LogService.Log(LogLevel.Debug, "AudioService:OnVolumeChanged",
-                                        $"Skipping VoiceMeeter gain update for {channel} - value unchanged");
+                                    _logger.LogDebug("Skipping VoiceMeeter gain update for {Channel} - value unchanged", channel);
                                 }
                             }
                             else
                             {
-                                LogService.Log(LogLevel.Warning, "AudioService:OnVolumeChanged",
-                                    $"Missing VoiceMeeter configuration for {channel}");
+                                _logger.LogWarning("Missing VoiceMeeter configuration for {Channel}", channel);
                             }
                         }
                     }
@@ -647,8 +654,7 @@ namespace Prosim2GSX.Services.Audio
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, "AudioService:OnVolumeChanged",
-                    $"Exception handling volume change for {channel}: {ex.Message}");
+                _logger.LogError(ex, "Exception handling volume change for {Channel}", channel);
             }
         }
 
@@ -675,13 +681,13 @@ namespace Prosim2GSX.Services.Audio
                     {
                         // Invert the mute state for all channels
                         muteValue = !Convert.ToBoolean(newValue);
-                        LogService.Log(LogLevel.Debug, "AudioService:OnMuteChanged",
-                            $"Inverted mute value for {channel}: dataref={newValue}, used={muteValue}");
+                        string newValueStr = Convert.ToString(newValue);
+                        _logger.LogDebug("Inverted mute value for {Channel}: dataref={OldValue}, used={NewValue}",
+                            channel.ToString(), newValueStr, muteValue);
                     }
                     catch (Exception ex)
                     {
-                        LogService.Log(LogLevel.Error, "AudioService:OnMuteChanged",
-                            $"Error converting mute value for {channel}: {ex.Message}");
+                        _logger.LogError(ex, "Error converting mute value for {Channel}", channel);
                         return;
                     }
 
@@ -697,8 +703,7 @@ namespace Prosim2GSX.Services.Audio
                                 source.Session != null &&
                                 source.Session.SimpleAudioVolume.Mute)
                             {
-                                LogService.Log(LogLevel.Information, "AudioService:OnMuteChanged",
-                                    $"Unmuting {source.SourceName} (App muted and Mute-Option disabled)");
+                                _logger.LogInformation("Unmuting {SourceName} (App muted and Mute-Option disabled)", source.SourceName);
                                 source.Session.SimpleAudioVolume.Mute = false;
                                 source.MuteState = -1;
 
@@ -724,8 +729,7 @@ namespace Prosim2GSX.Services.Audio
                                     // If latch mute is disabled, only unmute if needed
                                     if (isMuted)
                                     {
-                                        LogService.Log(LogLevel.Information, "AudioService:OnMuteChanged",
-                                            $"Unmuting VoiceMeeter strip {deviceName} (Mute-Option disabled)");
+                                        _logger.LogInformation("Unmuting VoiceMeeter strip {DeviceName} (Mute-Option disabled)", deviceName);
                                         _voiceMeeterApi.SetStripMute(deviceName, false);
                                     }
                                 }
@@ -737,8 +741,7 @@ namespace Prosim2GSX.Services.Audio
                                     // If latch mute is disabled, only unmute if needed
                                     if (isMuted)
                                     {
-                                        LogService.Log(LogLevel.Information, "AudioService:OnMuteChanged",
-                                            $"Unmuting VoiceMeeter bus {deviceName} (Mute-Option disabled)");
+                                        _logger.LogInformation("Unmuting VoiceMeeter bus {DeviceName} (Mute-Option disabled)", deviceName);
                                         _voiceMeeterApi.SetBusMute(deviceName, false);
                                     }
                                 }
@@ -763,8 +766,7 @@ namespace Prosim2GSX.Services.Audio
                                 // Publish event
                                 EventAggregator.Instance.Publish(new AudioStateChangedEvent(source.SourceName, muteValue, source.Session.SimpleAudioVolume.MasterVolume));
 
-                                LogService.Log(LogLevel.Debug, "AudioService:OnMuteChanged",
-                                    $"Mute state changed for {channel}: {(muteValue ? "Muted" : "Unmuted")}");
+                                _logger.LogDebug("Mute state changed for {Channel}: {MuteState}", channel, muteValue ? "Muted" : "Unmuted");
                             }
                         }
                         else if (_model.AudioApiType == AudioApiType.VoiceMeeter)
@@ -779,15 +781,15 @@ namespace Prosim2GSX.Services.Audio
                                 {
                                     // VoiceMeeter strip mute control
                                     _voiceMeeterApi.SetStripMute(deviceName, muteValue);
-                                    LogService.Log(LogLevel.Debug, "AudioService:OnMuteChanged",
-                                        $"VoiceMeeter strip mute state changed for {channel}: {(muteValue ? "Muted" : "Unmuted")}");
+                                    _logger.LogDebug("VoiceMeeter strip mute state changed for {Channel}: {MuteState}",
+                                        channel, muteValue ? "Muted" : "Unmuted");
                                 }
                                 else
                                 {
                                     // VoiceMeeter bus mute control
                                     _voiceMeeterApi.SetBusMute(deviceName, muteValue);
-                                    LogService.Log(LogLevel.Debug, "AudioService:OnMuteChanged",
-                                        $"VoiceMeeter bus mute state changed for {channel}: {(muteValue ? "Muted" : "Unmuted")}");
+                                    _logger.LogDebug("VoiceMeeter bus mute state changed for {Channel}: {MuteState}",
+                                        channel, muteValue ? "Muted" : "Unmuted");
                                 }
 
                                 // Update cached value
@@ -802,11 +804,14 @@ namespace Prosim2GSX.Services.Audio
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, "AudioService:OnMuteChanged",
-                    $"Exception handling mute change for {channel}: {ex.Message}");
+                _logger.LogError(ex, "Exception handling mute change for {Channel}", channel);
             }
         }
 
+        /// <summary>
+        /// Gets the available VoiceMeeter strips with their labels
+        /// </summary>
+        /// <returns>A list of key-value pairs with strip IDs and labels</returns>
         public List<KeyValuePair<string, string>> GetAvailableVoiceMeeterStrips()
         {
             if (_voiceMeeterApi.Initialize())
@@ -816,16 +821,28 @@ namespace Prosim2GSX.Services.Audio
             return new List<KeyValuePair<string, string>>();
         }
 
+        /// <summary>
+        /// Ensures that VoiceMeeter is running
+        /// </summary>
+        /// <returns>True if VoiceMeeter is running, false otherwise</returns>
         public bool EnsureVoiceMeeterIsRunning()
         {
             return _voiceMeeterApi.EnsureVoiceMeeterIsRunning();
         }
 
+        /// <summary>
+        /// Checks if VoiceMeeter is running
+        /// </summary>
+        /// <returns>True if VoiceMeeter is running, false otherwise</returns>
         public bool IsVoiceMeeterRunning()
         {
             return _voiceMeeterApi.IsVoiceMeeterRunning();
         }
 
+        /// <summary>
+        /// Gets the available VoiceMeeter buses with their labels
+        /// </summary>
+        /// <returns>A list of key-value pairs with bus IDs and labels</returns>
         public List<KeyValuePair<string, string>> GetAvailableVoiceMeeterBuses()
         {
             if (_voiceMeeterApi.Initialize())
@@ -843,56 +860,54 @@ namespace Prosim2GSX.Services.Audio
         {
             if (_model.AudioApiType != AudioApiType.VoiceMeeter)
             {
-                LogService.Log(LogLevel.Warning, "AudioService", "Cannot perform VoiceMeeter diagnostics: Audio API type is not set to VoiceMeeter");
+                _logger.LogWarning("Cannot perform VoiceMeeter diagnostics: Audio API type is not set to VoiceMeeter");
                 return false;
             }
 
-            LogService.Log(LogLevel.Information, "AudioService", "Starting VoiceMeeter diagnostics");
-            
+            _logger.LogInformation("Starting VoiceMeeter diagnostics");
+
             // First, run the VoiceMeeter API diagnostics
             bool apiDiagnosticsSuccess = _voiceMeeterApi.PerformDiagnostics();
-            
+
             // Then, check the FCU mode
-            LogService.Log(LogLevel.Information, "AudioService", "Checking FCU mode...");
-            LogService.Log(LogLevel.Information, "AudioService", $"FCU Track/FPA Mode: {_fcuTrackFpaMode}");
-            LogService.Log(LogLevel.Information, "AudioService", $"FCU Heading/VS Mode: {_fcuHeadingVsMode}");
-            
+            _logger.LogInformation("Checking FCU mode...");
+            _logger.LogInformation("FCU Track/FPA Mode: {TrackFpaMode}", _fcuTrackFpaMode);
+            _logger.LogInformation("FCU Heading/VS Mode: {HeadingVsMode}", _fcuHeadingVsMode);
+
             if (!_fcuTrackFpaMode && !_fcuHeadingVsMode)
             {
-                LogService.Log(LogLevel.Warning, "AudioService", "FCU is not in the correct mode for audio control");
+                _logger.LogWarning("FCU is not in the correct mode for audio control");
             }
-            
+
             // Check the VoiceMeeter strip configuration
-            LogService.Log(LogLevel.Information, "AudioService", "Checking VoiceMeeter strip configuration...");
-            
+            _logger.LogInformation("Checking VoiceMeeter strip configuration...");
+
             foreach (var channelEntry in _model.AudioChannels)
             {
                 var channel = channelEntry.Key;
                 var config = channelEntry.Value;
-                
+
                 if (config.Enabled)
                 {
-                    LogService.Log(LogLevel.Information, "AudioService", $"Channel {channel} is enabled");
-                    
+                    _logger.LogInformation("Channel {Channel} is enabled", channel);
+
                     // Check if the channel has a VoiceMeeter strip configured
                     if (_model is ServiceModel serviceModel)
                     {
                         bool hasDeviceType = serviceModel.VoiceMeeterDeviceTypes.TryGetValue(channel, out var deviceType);
                         bool hasStrip = serviceModel.VoiceMeeterStrips.TryGetValue(channel, out var stripName);
-                        
-                        LogService.Log(LogLevel.Information, "AudioService", 
-                            $"  Device Type: {(hasDeviceType ? deviceType.ToString() : "Not configured")}");
-                        LogService.Log(LogLevel.Information, "AudioService", 
-                            $"  Strip Name: {(hasStrip ? stripName : "Not configured")}");
-                        
+
+                        _logger.LogInformation("  Device Type: {DeviceType}", hasDeviceType ? deviceType.ToString() : "Not configured");
+                        _logger.LogInformation("  Strip Name: {StripName}", hasStrip ? stripName : "Not configured");
+
                         if (hasStrip && !string.IsNullOrEmpty(stripName))
                         {
                             // Check if the strip exists in VoiceMeeter
                             var strips = _voiceMeeterApi.GetAvailableStripsWithLabels();
                             var buses = _voiceMeeterApi.GetAvailableBusesWithLabels();
-                            
+
                             bool stripExists = false;
-                            
+
                             if (deviceType == VoiceMeeterDeviceType.Strip)
                             {
                                 stripExists = strips.Any(s => s.Key == stripName);
@@ -901,26 +916,23 @@ namespace Prosim2GSX.Services.Audio
                             {
                                 stripExists = buses.Any(b => b.Key == stripName);
                             }
-                            
-                            LogService.Log(LogLevel.Information, "AudioService", 
-                                $"  Strip exists in VoiceMeeter: {stripExists}");
-                            
+
+                            _logger.LogInformation("  Strip exists in VoiceMeeter: {StripExists}", stripExists);
+
                             if (!stripExists)
                             {
-                                LogService.Log(LogLevel.Warning, "AudioService", 
-                                    $"  Strip {stripName} does not exist in VoiceMeeter");
+                                _logger.LogWarning("  Strip {StripName} does not exist in VoiceMeeter", stripName);
                             }
                         }
                         else
                         {
-                            LogService.Log(LogLevel.Warning, "AudioService", 
-                                $"  No VoiceMeeter strip configured for channel {channel}");
+                            _logger.LogWarning("  No VoiceMeeter strip configured for channel {Channel}", channel);
                         }
                     }
-                    
+
                     // Check if the channel is controllable
                     bool isControllable = false;
-                    
+
                     switch (channel)
                     {
                         case AudioChannel.VHF1:
@@ -942,32 +954,33 @@ namespace Prosim2GSX.Services.Audio
                             isControllable = _model.GsxVolumeControl;
                             break;
                     }
-                    
-                    LogService.Log(LogLevel.Information, "AudioService", $"  Is controllable: {isControllable}");
-                    
+
+                    _logger.LogInformation("  Is controllable: {IsControllable}", isControllable);
+
                     if (!isControllable)
                     {
-                        LogService.Log(LogLevel.Warning, "AudioService", $"  Channel {channel} is not controllable");
+                        _logger.LogWarning("  Channel {Channel} is not controllable", channel);
                     }
                 }
                 else
                 {
-                    LogService.Log(LogLevel.Information, "AudioService", $"Channel {channel} is disabled");
+                    _logger.LogInformation("Channel {Channel} is disabled", channel);
                 }
             }
-            
+
             // Check the cached VoiceMeeter volumes and mutes
-            LogService.Log(LogLevel.Information, "AudioService", "Checking cached VoiceMeeter volumes and mutes...");
-            
+            _logger.LogInformation("Checking cached VoiceMeeter volumes and mutes...");
+
             foreach (var channelEntry in _voiceMeeterVolumes)
             {
-                LogService.Log(LogLevel.Information, "AudioService", 
-                    $"  {channelEntry.Key}: Volume={channelEntry.Value} dB, " +
-                    $"Mute={(_voiceMeeterMutes.TryGetValue(channelEntry.Key, out bool muted) ? muted : false)}");
+                _logger.LogInformation("  {Channel}: Volume={Volume} dB, Mute={Mute}",
+                    channelEntry.Key,
+                    channelEntry.Value,
+                    _voiceMeeterMutes.TryGetValue(channelEntry.Key, out bool muted) ? muted : false);
             }
-            
-            LogService.Log(LogLevel.Information, "AudioService", "VoiceMeeter diagnostics completed");
-            
+
+            _logger.LogInformation("VoiceMeeter diagnostics completed");
+
             return apiDiagnosticsSuccess;
         }
 
@@ -1028,14 +1041,14 @@ namespace Prosim2GSX.Services.Audio
                                 if (deviceType == VoiceMeeterDeviceType.Strip)
                                 {
                                     _voiceMeeterApi.SetStripGain(deviceName, gainDataref);
-                                    LogService.Log(LogLevel.Debug, "AudioService:SynchronizeDatarefsWithVoiceMeeter",
-                                        $"Updated VoiceMeeter strip gain for {channel} to match dataref: {gainDataref} dB");
+                                    _logger.LogDebug("Updated VoiceMeeter strip gain for {Channel} to match dataref: {Gain} dB",
+                                        channel, gainDataref);
                                 }
                                 else
                                 {
                                     _voiceMeeterApi.SetBusGain(deviceName, gainDataref);
-                                    LogService.Log(LogLevel.Debug, "AudioService:SynchronizeDatarefsWithVoiceMeeter",
-                                        $"Updated VoiceMeeter bus gain for {channel} to match dataref: {gainDataref} dB");
+                                    _logger.LogDebug("Updated VoiceMeeter bus gain for {Channel} to match dataref: {Gain} dB",
+                                        channel, gainDataref);
                                 }
 
                                 // Update cached value
@@ -1047,14 +1060,14 @@ namespace Prosim2GSX.Services.Audio
                                 if (deviceType == VoiceMeeterDeviceType.Strip)
                                 {
                                     _voiceMeeterApi.SetStripMute(deviceName, muteDataref);
-                                    LogService.Log(LogLevel.Debug, "AudioService:SynchronizeDatarefsWithVoiceMeeter",
-                                        $"Updated VoiceMeeter strip mute for {channel} to match dataref: {muteDataref}");
+                                    _logger.LogDebug("Updated VoiceMeeter strip mute for {Channel} to match dataref: {Mute}",
+                                        channel, muteDataref);
                                 }
                                 else
                                 {
                                     _voiceMeeterApi.SetBusMute(deviceName, muteDataref);
-                                    LogService.Log(LogLevel.Debug, "AudioService:SynchronizeDatarefsWithVoiceMeeter",
-                                        $"Updated VoiceMeeter bus mute for {channel} to match dataref: {muteDataref}");
+                                    _logger.LogDebug("Updated VoiceMeeter bus mute for {Channel} to match dataref: {Mute}",
+                                        channel, muteDataref);
                                 }
 
                                 // Update cached value
@@ -1076,8 +1089,7 @@ namespace Prosim2GSX.Services.Audio
                     }
                     catch (Exception ex)
                     {
-                        LogService.Log(LogLevel.Error, "AudioService:SynchronizeDatarefsWithVoiceMeeter",
-                            $"Error synchronizing dataref with VoiceMeeter for {channel}: {ex.Message}");
+                        _logger.LogError(ex, "Error synchronizing dataref with VoiceMeeter for {Channel}", channel);
                     }
                 }
             }
@@ -1121,6 +1133,9 @@ namespace Prosim2GSX.Services.Audio
             return datarefValue;
         }
 
+        /// <summary>
+        /// Releases resources used by the audio service
+        /// </summary>
         public void Dispose()
         {
             // Unsubscribe from FCU mode datarefs
@@ -1143,6 +1158,8 @@ namespace Prosim2GSX.Services.Audio
             {
                 _voiceMeeterApi.Shutdown();
             }
+
+            _logger.LogInformation("AudioService disposed");
         }
     }
 }

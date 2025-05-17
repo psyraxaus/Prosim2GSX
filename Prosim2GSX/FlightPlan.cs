@@ -1,8 +1,7 @@
-﻿using Prosim2GSX.Behaviours;
+﻿using Microsoft.Extensions.Logging;
+using Prosim2GSX.Behaviours;
 using Prosim2GSX.Events;
 using Prosim2GSX.Models;
-using Prosim2GSX.Services.Logger.Enums;
-using Prosim2GSX.Services.Logger.Implementation;
 using System;
 using System.Globalization;
 using System.Net.Http;
@@ -13,6 +12,8 @@ namespace Prosim2GSX
 {
     public class FlightPlan
     {
+        private readonly ILogger<FlightPlan> _logger;
+
         public int Bags { get; set; }
         public int CargoTotal { get; set; }
         public string Destination { get; set; }
@@ -38,9 +39,10 @@ namespace Prosim2GSX
 
         private ServiceModel Model { get; set; }
 
-        public FlightPlan(ServiceModel model)
+        public FlightPlan(ServiceModel model, ILogger<FlightPlan> logger)
         {
-            Model = model;
+            Model = model ?? throw new ArgumentNullException(nameof(model));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         protected async Task<string> GetHttpContent(HttpResponseMessage response)
@@ -54,19 +56,19 @@ namespace Prosim2GSX
         {
             if (!Model.IsValidSimbriefId())
             {
-                LogService.Log(LogLevel.Error, "FlightPlan:LoadWithValidation", "Invalid Simbrief ID");
+                _logger.LogError("Invalid Simbrief ID");
                 return LoadResult.InvalidId;
             }
-            
+
             try
             {
                 XmlNode sbOFP = LoadOFP();
                 if (sbOFP == null)
                 {
-                    LogService.Log(LogLevel.Error, "FlightPlan:LoadWithValidation", "Failed to load OFP");
+                    _logger.LogError("Failed to load OFP");
                     return LoadResult.NetworkError;
                 }
-                
+
                 // Process the flight plan data
                 string lastID = FlightPlanID;
                 CargoTotal = Convert.ToInt32(sbOFP["weights"]["cargo"].InnerText);
@@ -106,15 +108,15 @@ namespace Prosim2GSX
 
                 if (lastID != FlightPlanID)
                 {
-                    LogService.Log(LogLevel.Information, "FlightPlan:LoadWithValidation", $"New OFP for Flight {Flight} loaded. ({Origin} -> {Destination})");
+                    _logger.LogInformation("New OFP for Flight {Flight} loaded. ({Origin} -> {Destination})", Flight, Origin, Destination);
                     EventAggregator.Instance.Publish(new FlightPlanChangedEvent(Flight));
                 }
-                
+
                 return LoadResult.Success;
             }
             catch (Exception ex)
             {
-                LogService.Log(LogLevel.Error, "FlightPlan:LoadWithValidation", $"Exception: {ex.Message}");
+                _logger.LogError(ex, "Exception while loading flight plan");
                 return LoadResult.ParseError;
             }
         }
@@ -123,11 +125,11 @@ namespace Prosim2GSX
         {
             if (!Model.IsValidSimbriefId())
             {
-                LogService.Log(LogLevel.Error, "FlightPlan:FetchOnline", $"SimBrief ID is not set or invalid!");
+                _logger.LogError("SimBrief ID is not set or invalid!");
                 return null;
             }
 
-            HttpClient httpClient = new();
+            using HttpClient httpClient = new();
             HttpResponseMessage response = httpClient.GetAsync(string.Format(Model.SimBriefURL, Model.SimBriefID)).Result;
 
             if (response.IsSuccessStatusCode)
@@ -135,19 +137,20 @@ namespace Prosim2GSX
                 string responseBody = GetHttpContent(response).Result;
                 if (responseBody != null && responseBody.Length > 0)
                 {
-                    LogService.Log(LogLevel.Debug, "FlightPlan:FetchOnline", $"HTTP Request succeded!");
+                    _logger.LogDebug("HTTP Request succeeded!");
                     XmlDocument xmlDoc = new();
                     xmlDoc.LoadXml(responseBody);
                     return xmlDoc.ChildNodes[1];
                 }
                 else
                 {
-                    LogService.Log(LogLevel.Error, "FlightPlan:FetchOnline", $"SimBrief Response Body is empty!");
+                    _logger.LogError("SimBrief Response Body is empty!");
                 }
             }
             else
             {
-                LogService.Log(LogLevel.Error, "FlightPlan:FetchOnline", $"HTTP Request failed! Response Code: {response.StatusCode} Message: {response.ReasonPhrase}");
+                _logger.LogError("HTTP Request failed! Response Code: {StatusCode} Message: {ReasonPhrase}",
+                    response.StatusCode, response.ReasonPhrase);
             }
 
             return null;
@@ -160,6 +163,8 @@ namespace Prosim2GSX
 
         public bool Load()
         {
+            _logger.LogInformation("Loading flight plan");
+
             XmlNode sbOFP = LoadOFP();
             if (sbOFP != null)
             {
@@ -201,14 +206,21 @@ namespace Prosim2GSX
 
                 if (lastID != FlightPlanID)
                 {
-                    LogService.Log(LogLevel.Information, "FlightPlan:Load", $"New OFP for Flight {Flight} loaded. ({Origin} -> {Destination})");
+                    _logger.LogInformation("New OFP for Flight {Flight} loaded. ({Origin} -> {Destination})", Flight, Origin, Destination);
                     EventAggregator.Instance.Publish(new FlightPlanChangedEvent(Flight));
+                }
+                else
+                {
+                    _logger.LogDebug("Flight plan already loaded, no changes");
                 }
 
                 return lastID != FlightPlanID;
             }
             else
+            {
+                _logger.LogWarning("Failed to load flight plan - OFP is null");
                 return false;
+            }
         }
     }
 }
