@@ -56,6 +56,15 @@
     </Reference>
   </ItemGroup>
 
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+	</ItemGroup>
+	
+	<ItemGroup>
+		<Reference Include="System.Windows.Forms" />
+		<Reference Include="Windows.Gaming.Input" />
+	</ItemGroup>
+
   <ItemGroup>
     <None Update="Microsoft.FlightSimulator.SimConnect.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
