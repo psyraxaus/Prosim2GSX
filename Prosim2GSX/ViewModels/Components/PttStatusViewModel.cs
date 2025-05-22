@@ -1,11 +1,13 @@
 ﻿using Microsoft.Extensions.Logging;
 using Prosim2GSX.Events;
 using Prosim2GSX.Models;
+using Prosim2GSX.Services.PTT.Enums;
 using Prosim2GSX.Services.PTT.Events;
 using Prosim2GSX.Services.PTT.Interface;
 using Prosim2GSX.ViewModels.Base;
 using System;
 using System.Collections.Generic;
+using System.Windows.Media;
 
 namespace Prosim2GSX.ViewModels.Components
 {
@@ -25,6 +27,8 @@ namespace Prosim2GSX.ViewModels.Components
         private string _activeApplication;
         private string _statusMessage;
         private bool _isPttActive;
+        private bool _isChannelDisabled;
+        private Brush _statusMessageColor;
 
         #endregion
 
@@ -63,7 +67,22 @@ namespace Prosim2GSX.ViewModels.Components
         public bool IsPttActive
         {
             get => _isPttActive;
-            set => SetProperty(ref _isPttActive, value);
+            set
+            {
+                if (SetProperty(ref _isPttActive, value))
+                {
+                    UpdateStatusMessageColor();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the color of the status message text based on current state
+        /// </summary>
+        public Brush StatusMessageColor
+        {
+            get => _statusMessageColor;
+            private set => SetProperty(ref _statusMessageColor, value);
         }
 
         #endregion
@@ -108,13 +127,16 @@ namespace Prosim2GSX.ViewModels.Components
         /// </summary>
         private void SubscribeToEvents()
         {
-            _logger.LogDebug("Subscribing to events");
+            _logger.LogDebug("Subscribing to PTT events");
 
-            // Subscribe to PTT state changed events
+            // Subscribe to active channel changed events
             _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<PttStateChangedEvent>(OnPttStateChanged));
 
             // Subscribe to PTT button state changed events
             _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<PttButtonStateChangedEvent>(OnPttButtonStateChanged));
+
+            // Subscribe to channel configuration changes
+            _subscriptionTokens.Add(EventAggregator.Instance.Subscribe<PttChannelConfigChangedEvent>(OnPttChannelConfigChanged));
         }
 
         /// <summary>
@@ -129,15 +151,32 @@ namespace Prosim2GSX.ViewModels.Components
                 // Update the active channel
                 ActiveChannel = evt.ChannelType.ToString();
 
+                // Check if this channel is explicitly disabled
+                IsChannelDisabled = evt.ChannelConfig != null && !evt.ChannelConfig.Enabled;
+
                 // Update the active application
-                ActiveApplication = evt.ChannelConfig?.Enabled == true ?
-                    evt.ChannelConfig.TargetApplication : "Not Configured";
+                if (evt.ChannelType == AcpChannelType.None)
+                {
+                    ActiveApplication = "None";
+                }
+                else if (evt.ChannelConfig == null || !evt.ChannelConfig.Enabled)
+                {
+                    // For disabled channels, still set "Not Configured" for back-compatibility
+                    ActiveApplication = "Not Configured";
+                }
+                else
+                {
+                    ActiveApplication = !string.IsNullOrEmpty(evt.ChannelConfig.TargetApplication)
+                        ? evt.ChannelConfig.TargetApplication
+                        : "Not Configured";
+                }
 
                 // Update PTT active state
                 IsPttActive = evt.IsActive;
 
                 // Update status message
                 UpdateStatusMessage();
+                UpdateStatusMessageColor();
             });
         }
 
@@ -150,6 +189,13 @@ namespace Prosim2GSX.ViewModels.Components
             {
                 _logger.LogDebug("PTT button state changed: Pressed={Pressed}", evt.IsPressed);
 
+                // If channel is disabled, ignore PTT pressed events
+                if (IsChannelDisabled && evt.IsPressed)
+                {
+                    _logger.LogDebug("Ignoring PTT press for disabled channel");
+                    return;
+                }
+
                 // Update PTT active state
                 IsPttActive = evt.IsPressed;
 
@@ -159,14 +205,20 @@ namespace Prosim2GSX.ViewModels.Components
                     ActiveChannel = evt.ChannelName;
                 }
 
-                // Update active application if provided
+                // Update active application if provided, otherwise keep current
                 if (!string.IsNullOrEmpty(evt.ApplicationName))
                 {
                     ActiveApplication = evt.ApplicationName;
                 }
+                // If application name is not provided but we're in "None" channel, set to "Not Configured"
+                else if (ActiveChannel == "None" || string.IsNullOrEmpty(ActiveApplication))
+                {
+                    ActiveApplication = "Not Configured";
+                }
 
-                // Update status message
+                // Update status message and color
                 UpdateStatusMessage();
+                UpdateStatusMessageColor();
             });
         }
 
@@ -178,6 +230,10 @@ namespace Prosim2GSX.ViewModels.Components
             if (!_serviceModel.PttEnabled)
             {
                 StatusMessage = "PTT Disabled";
+            }
+            else if (IsChannelDisabled)
+            {
+                StatusMessage = $"Channel {ActiveChannel} is disabled in PTT Settings";
             }
             else if (IsPttActive)
             {
@@ -205,15 +261,48 @@ namespace Prosim2GSX.ViewModels.Components
             {
                 ActiveChannel = _pttService.CurrentChannel.ToString();
                 var channelConfig = _pttService.GetChannelConfig(_pttService.CurrentChannel);
-                ActiveApplication = channelConfig?.Enabled == true ?
-                    channelConfig.TargetApplication : "Not Configured";
+
+                // Set the disabled state
+                IsChannelDisabled = channelConfig != null && !channelConfig.Enabled;
+
+                // More explicit handling of the application name
+                if (_pttService.CurrentChannel == AcpChannelType.None)
+                {
+                    ActiveApplication = "None";
+                }
+                else if (channelConfig == null || !channelConfig.Enabled)
+                {
+                    ActiveApplication = "Not Configured";
+                }
+                else
+                {
+                    ActiveApplication = !string.IsNullOrEmpty(channelConfig.TargetApplication)
+                        ? channelConfig.TargetApplication
+                        : "Not Configured";
+                }
 
                 IsPttActive = _pttService.IsActive;
                 UpdateStatusMessage();
+                UpdateStatusMessageColor();
             }
 
             // Subscribe to events now that the service is available
             SubscribeToEvents();
+        }
+
+        /// <summary>
+        /// Gets or sets whether the current channel is explicitly disabled in settings
+        /// </summary>
+        public bool IsChannelDisabled
+        {
+            get => _isChannelDisabled;
+            set
+            {
+                if (SetProperty(ref _isChannelDisabled, value))
+                {
+                    UpdateStatusMessageColor();
+                }
+            }
         }
 
         /// <summary>
@@ -229,6 +318,67 @@ namespace Prosim2GSX.ViewModels.Components
                 EventAggregator.Instance.Unsubscribe<EventBase>(token);
             }
             _subscriptionTokens.Clear();
+        }
+
+        /// <summary>
+        /// Handler for PTT channel configuration changed events
+        /// </summary>
+        private void OnPttChannelConfigChanged(PttChannelConfigChangedEvent evt)
+        {
+            ExecuteOnUIThread(() =>
+            {
+                _logger.LogDebug("PTT channel config changed: Channel={Channel}, Enabled={Enabled}",
+                    evt.ChannelType, evt.IsEnabled);
+
+                // Only update if this is the currently active channel
+                if (_pttService != null && _pttService.CurrentChannel == evt.ChannelType)
+                {
+                    // Important: Update the IsChannelDisabled property to reflect new state
+                    IsChannelDisabled = !evt.IsEnabled;
+
+                    // Get the updated channel config
+                    var config = _pttService.GetChannelConfig(evt.ChannelType);
+
+                    // Update application name based on new state
+                    if (!evt.IsEnabled)
+                    {
+                        ActiveApplication = "Not Configured";
+                        // Ensure PTT is not active for disabled channels
+                        IsPttActive = false;
+                    }
+                    else if (config != null && !string.IsNullOrEmpty(config.TargetApplication))
+                    {
+                        ActiveApplication = config.TargetApplication;
+                    }
+                    else
+                    {
+                        ActiveApplication = "Not Configured";
+                    }
+
+                    // Update status message and color
+                    UpdateStatusMessage();
+                    UpdateStatusMessageColor();
+                }
+            });
+        }
+
+        /// <summary>
+        /// Updates the status message color based on current state
+        /// </summary>
+        private void UpdateStatusMessageColor()
+        {
+            if (IsChannelDisabled)
+            {
+                StatusMessageColor = new SolidColorBrush(Colors.OrangeRed);
+            }
+            else if (IsPttActive)
+            {
+                StatusMessageColor = new SolidColorBrush(Colors.LimeGreen);
+            }
+            else
+            {
+                StatusMessageColor = new SolidColorBrush(Colors.Gray);
+            }
         }
 
         #endregion

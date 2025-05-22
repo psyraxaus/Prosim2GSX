@@ -5,8 +5,15 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:Prosim2GSX.Views.Components"
              xmlns:vm="clr-namespace:Prosim2GSX.ViewModels.Components"
+             xmlns:converters="clr-namespace:Prosim2GSX.Converters"
              mc:Ignorable="d" d:DesignWidth="800" Height="97"
              d:DataContext="{d:DesignInstance Type=vm:PttStatusViewModel}">
+
+    <UserControl.Resources>
+        <converters:BoolToWarningBrushConverter x:Key="BoolToWarningBrushConverter"/>
+        <converters:PttStateToBrushConverter x:Key="PttStateToBrushConverter"/>
+    </UserControl.Resources>
+
     <Border Style="{StaticResource SectionBorderStyle}">
         <StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,5">
@@ -14,9 +21,11 @@
                 <TextBlock Text="{Binding ActiveChannel}" Foreground="{DynamicResource PrimaryColor}" FontWeight="Bold"/>
                 <TextBlock Text="→" Margin="10,0"/>
                 <TextBlock Text="{Binding ActiveApplication}" Foreground="Gray"/>
+                <TextBlock Text=" (DISABLED)" Foreground="Red" FontWeight="Bold" Visibility="{Binding IsChannelDisabled, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                <TextBlock Text=" (ACTIVE)" Foreground="LimeGreen" FontWeight="Bold" Visibility="{Binding IsPttActive, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="5,0,0,0"/>
             </StackPanel>
 
-            <TextBlock Text="{Binding StatusMessage}" Foreground="Gray" Margin="0,5,0,0"/>
+            <TextBlock Text="{Binding StatusMessage}" Foreground="{Binding StatusMessageColor}" Margin="0,5,0,0"/>
         </StackPanel>
     </Border>
 </UserControl>

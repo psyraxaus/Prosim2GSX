@@ -204,8 +204,24 @@ namespace Prosim2GSX.Services.PTT.Implementations
             _logger.LogInformation("Setting channel {Channel} enabled: {Enabled}",
                 channelType, enabled);
 
+            bool valueChanged = config.Enabled != enabled;
+
             config.Enabled = enabled;
             _serviceModel.SavePttChannelConfig(channelType);
+
+            // If we're disabling the current channel, make sure to deactivate PTT
+            if (!enabled && _currentChannel == channelType && _isPttActive)
+            {
+                _isPttActive = false;
+            }
+
+            // Raise an event to notify other components about this change
+            if (valueChanged)
+            {
+                // Always update the state when enabled changes
+                RaisePttStateChanged(_isPttActive);
+                EventAggregator.Instance.Publish(new PttChannelConfigChangedEvent(channelType, enabled));
+            }
         }
 
         /// <inheritdoc/>
@@ -513,6 +529,14 @@ namespace Prosim2GSX.Services.PTT.Implementations
         /// </summary>
         private bool CheckPttInput()
         {
+            // If current channel is disabled, always return false
+            if (_currentChannel != AcpChannelType.None &&
+                _channelConfigs.TryGetValue(_currentChannel, out var config) &&
+                !config.Enabled)
+            {
+                return false;
+            }
+
             if (_serviceModel.PttUseJoystick)
             {
                 return CheckJoystickInput();
@@ -585,8 +609,14 @@ namespace Prosim2GSX.Services.PTT.Implementations
         /// </summary>
         private void HandlePttPressed()
         {
-            if (_currentChannel == AcpChannelType.None || !_channelConfigs.TryGetValue(_currentChannel, out var config) || !config.Enabled)
-                return;
+            // Early return if no valid channel or channel not enabled
+            if (_currentChannel == AcpChannelType.None ||
+                !_channelConfigs.TryGetValue(_currentChannel, out var config) ||
+                !config.Enabled)
+            {
+                _logger.LogDebug("PTT pressed ignored - channel {Channel} is disabled or invalid", _currentChannel);
+                return; // Added explicit return to ensure nothing else happens
+            }
 
             _logger.LogDebug("PTT pressed for channel: {Channel}", _currentChannel);
             _isPttActive = true;
@@ -604,8 +634,13 @@ namespace Prosim2GSX.Services.PTT.Implementations
         /// </summary>
         private void HandlePttReleased()
         {
-            if (_currentChannel == AcpChannelType.None || !_channelConfigs.TryGetValue(_currentChannel, out var config) || !config.Enabled)
-                return;
+            // Early return if no valid channel or channel not enabled
+            if (_currentChannel == AcpChannelType.None ||
+                !_channelConfigs.TryGetValue(_currentChannel, out var config) ||
+                !config.Enabled)
+            {
+                return; // Early return for disabled channels
+            }
 
             // Skip deactivation if in toggle mode
             if (config.ToggleMode)
@@ -829,7 +864,15 @@ namespace Prosim2GSX.Services.PTT.Implementations
 
             try
             {
+                // Always continue with the channel config, even if disabled
                 var config = GetChannelConfig(_currentChannel);
+
+                // If the channel is disabled, force isActive to false
+                if (config != null && !config.Enabled)
+                {
+                    isActive = false;
+                }
+
                 var evt = new PttStateChangedEvent(_currentChannel, isActive, config);
                 EventAggregator.Instance.Publish(evt);
             }
@@ -840,12 +883,24 @@ namespace Prosim2GSX.Services.PTT.Implementations
         }
 
         /// <summary>
-        /// Raises a PttButtonStateChangedEvent
+        /// Raises a PttButtonStateChangedEvent only for enabled channels
         /// </summary>
         private void RaisePttButtonStateChanged(bool isPressed, string channelName = null, string applicationName = null)
         {
             try
             {
+                // Only raise the event if the channel is enabled or we're explicitly turning it off
+                if (_currentChannel != AcpChannelType.None &&
+                    _channelConfigs.TryGetValue(_currentChannel, out var config))
+                {
+                    // Don't raise PTT active events for disabled channels
+                    if (!config.Enabled && isPressed)
+                    {
+                        _logger.LogDebug("Suppressing button state event for disabled channel {Channel}", channelName);
+                        return;
+                    }
+                }
+
                 var evt = new PttButtonStateChangedEvent(isPressed, channelName, applicationName);
                 EventAggregator.Instance.Publish(evt);
             }

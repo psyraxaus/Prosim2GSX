@@ -371,7 +371,6 @@ namespace Prosim2GSX.ViewModels.Components
             _subscriptionTokens.Clear();
         }
 
-
         #endregion
     }
 }

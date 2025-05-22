@@ -5,10 +5,52 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:Prosim2GSX.Views.Components"
              xmlns:vm="clr-namespace:Prosim2GSX.ViewModels.Components"
+             xmlns:converters="clr-namespace:Prosim2GSX.Converters"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
 
     <UserControl.Resources>
+        <converters:BoolToWarningBrushConverter x:Key="BoolToWarningBrushConverter"/>
+
+        <!-- Style for the action buttons -->
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource SecondaryColor}"/>
+            <Setter Property="Foreground" Value="{DynamicResource HeaderText}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Margin" Value="10,0,0,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Secondary style for emphasized action buttons (like Detect Input) -->
+        <Style x:Key="PrimaryActionButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+            <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+        </Style>
+
         <Style x:Key="LocalCategoryHeaderStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="16"/>
             <Setter Property="FontWeight" Value="DemiBold"/>
@@ -38,9 +80,12 @@
         <Style x:Key="LocalTextBoxStyle" TargetType="TextBox">
             <Setter Property="Margin" Value="0,0,10,0"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="Padding" Value="5,3"/>
         </Style>
     </UserControl.Resources>
-    
+
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="20">
             <!-- PTT Enable/Configure -->
@@ -57,16 +102,22 @@
 
                         <StackPanel Orientation="Horizontal" Margin="0,5,0,10">
                             <TextBlock Text="Button/Key:" VerticalAlignment="Center" Margin="0,0,10,0" Width="120"/>
-                            <TextBox x:Name="txtPttButton" Width="200" IsReadOnly="True" Text="{Binding CurrentButtonText, Mode=OneWay}"/>
-                            <Button x:Name="btnDetectPttButton" Command="{Binding DetectButtonCommand}">
+                            <TextBox x:Name="txtPttButton" Width="200" IsReadOnly="True" 
+                                    Text="{Binding CurrentButtonText, Mode=OneWay}"
+                                    Style="{StaticResource LocalTextBoxStyle}"/>
+                            <Button x:Name="btnDetectPttButton" 
+                                    Command="{Binding DetectButtonCommand}"
+                                    Style="{StaticResource PrimaryActionButtonStyle}">
                                 <StackPanel Orientation="Horizontal">
-                                    <Path Data="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z" Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" Width="18" Height="18" Margin="0,0,8,0"/>
-                                    <TextBlock Text="Detect Input" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Detect Input" VerticalAlignment="Center" Padding="8"/>
                                 </StackPanel>
                             </Button>
                         </StackPanel>
 
-                        <TextBlock x:Name="txtPttDetectionStatus" Text="{Binding DetectionStatusText}" Foreground="Gray" Margin="0,0,0,10"/>
+                        <TextBlock x:Name="txtPttDetectionStatus" 
+                                  Text="{Binding DetectionStatusText}" 
+                                  Foreground="Gray" 
+                                  Margin="0,0,0,10"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -116,7 +167,8 @@
 
                                         <TextBox Grid.Row="1" Grid.Column="1" 
                                         Text="{Binding ApplicationName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                                            Width="200" 
+                                            Width="200"
+                                            Style="{StaticResource LocalTextBoxStyle}"
                                             HorizontalAlignment="Left"/>
 
                                         <TextBlock Grid.Row="2" Grid.Column="0" 
@@ -130,18 +182,23 @@
                                                 <RowDefinition Height="Auto"/>
                                                 <RowDefinition Height="Auto"/>
                                             </Grid.RowDefinitions>
-                                            
+
                                             <StackPanel Grid.Row="0" Orientation="Horizontal">
                                                 <TextBox Text="{Binding KeyboardShortcut, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                                     Width="200" 
-                                                    IsReadOnly="True"/>
+                                                    IsReadOnly="True"
+                                                    Style="{StaticResource LocalTextBoxStyle}"/>
 
-                                                <Button Content="Set Key" 
+                                                <Button
                                                     Command="{Binding SetKeyCommand}"
-                                                    Margin="10,0,0,0" 
-                                                    Tag="{Binding Channel}"/>
+                                                    Style="{StaticResource PrimaryActionButtonStyle}"  
+                                                    Tag="{Binding Channel}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="Set Key" VerticalAlignment="Center" Padding="8"/>
+                                                    </StackPanel>
+                                                </Button>
                                             </StackPanel>
-                                            
+
                                             <TextBlock Grid.Row="1" 
                                                 Text="{Binding DetectionStatusText}" 
                                                 Foreground="Gray" 

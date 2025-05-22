@@ -8,6 +8,7 @@ using System.Windows.Input;
 using System;
 using Prosim2GSX.ViewModels.Base;
 using Prosim2GSX.ViewModels.Commands;
+using Prosim2GSX.Events;
 
 namespace Prosim2GSX.ViewModels.Components
 {
@@ -58,6 +59,9 @@ namespace Prosim2GSX.ViewModels.Components
                         configExplicit.Enabled = value;
                         _serviceModel.SavePttChannelConfig(_channelType);
                         _logger?.LogDebug("Saved Enabled={Enabled} for channel {Channel}", value, _channelType);
+
+                        // Publish event about this configuration change
+                        EventAggregator.Instance.Publish(new PttChannelConfigChangedEvent(_channelType, value));
                     }
 
                     // Update the IsExpanded property based on enabled state
