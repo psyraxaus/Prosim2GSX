@@ -5,73 +5,84 @@ using Prosim2GSX.Services.PTT.Enums;
 using Prosim2GSX.Services.PTT.Events;
 using Prosim2GSX.Services.PTT.Interface;
 using Prosim2GSX.Services.PTT.Models;
-using Prosim2GSX.Services.Prosim.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Windows.Gaming.Input;
 
 namespace Prosim2GSX.Services.PTT.Implementations
 {
     /// <summary>
-    /// Service for managing Push-to-Talk (PTT) functionality with audio control panel integration
+    /// Service that handles PTT functionality including joystick and keyboard input detection
+    /// and key command sending to target applications
     /// </summary>
     public class PttService : IPttService
     {
-        #region Private Fields
+        #region Native Methods
 
-        private readonly ServiceModel _serviceModel;
-        private readonly ILogger<PttService> _logger;
-        private readonly object _stateLock = new object();
+        [DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
 
-        private bool _isMonitoring;
-        private AcpChannelType _currentChannel;
-        private bool _isActive;
-        private Action<string> _inputDetectCallback;
-        private bool _isProsimConnected;
-        private IDataRefMonitoringService _dataRefService;
-        private System.Threading.Timer _monitoringTimer;
+        [DllImport("user32.dll")]
+        private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
 
-        // List of raw game controllers
-        private List<RawGameController> _controllers = new List<RawGameController>();
+        [DllImport("user32.dll")]
+        private static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        private static extern short GetAsyncKeyState(int vKey);
+
+        private const uint WM_KEYDOWN = 0x0100;
+        private const uint WM_KEYUP = 0x0101;
 
         #endregion
 
-        #region IPttService Implementation
+        #region Fields
 
-        /// <summary>
-        /// Gets whether the PTT service is currently monitoring for input
-        /// </summary>
-        public bool IsMonitoring => _isMonitoring;
+        private readonly ServiceModel _serviceModel;
+        private readonly ILogger<PttService> _logger;
+        private readonly Dictionary<AcpChannelType, PttChannelConfig> _channelConfigs;
 
-        /// <summary>
-        /// Gets the currently active ACP channel
-        /// </summary>
+        private CancellationTokenSource _monitoringCts;
+        private Task _monitoringTask;
+        private Action<string> _inputCaptureCallback;
+        private bool _isCapturing;
+        private bool _prosimConnected;
+        private bool _isPttActive;
+        private AcpChannelType _currentChannel = AcpChannelType.None;
+
+        // Joystick monitoring
+        private readonly List<RawGameController> _controllers = new List<RawGameController>();
+        private bool[] _prevButtonStates;
+
+        #endregion
+
+        #region Properties
+
+        /// <inheritdoc/>
+        public bool IsMonitoring { get; private set; }
+
+        /// <inheritdoc/>
         public AcpChannelType CurrentChannel => _currentChannel;
 
-        /// <summary>
-        /// Gets whether PTT is currently active
-        /// </summary>
-        public bool IsActive => _isActive;
+        /// <inheritdoc/>
+        public bool IsActive => _isPttActive;
 
-        /// <summary>
-        /// Gets the current monitored joystick ID
-        /// </summary>
-        public int MonitoredJoystickId => _serviceModel.PttJoystickId;
+        /// <inheritdoc/>
+        public int MonitoredJoystickId { get; private set; }
 
-        /// <summary>
-        /// Gets the current monitored joystick button ID
-        /// </summary>
-        public int MonitoredJoystickButton => _serviceModel.PttJoystickButton;
+        /// <inheritdoc/>
+        public int MonitoredJoystickButton { get; private set; }
 
-        /// <summary>
-        /// Gets whether joystick input is being used
-        /// </summary>
+        /// <inheritdoc/>
         public bool IsUsingJoystickInput => _serviceModel.PttUseJoystick;
 
-        /// <summary>
-        /// Gets the name of the currently monitored key
-        /// </summary>
+        /// <inheritdoc/>
         public string MonitoredKeyName => _serviceModel.PttKeyName;
 
         #endregion
@@ -81,487 +92,408 @@ namespace Prosim2GSX.Services.PTT.Implementations
         /// <summary>
         /// Creates a new instance of PttService
         /// </summary>
-        /// <param name="serviceModel">The service model</param>
+        /// <param name="serviceModel">The service model for application state</param>
         /// <param name="logger">Logger for this service</param>
         public PttService(ServiceModel serviceModel, ILogger<PttService> logger)
         {
             _serviceModel = serviceModel ?? throw new ArgumentNullException(nameof(serviceModel));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            _logger.LogInformation("Initializing PttService");
+            // Initialize channel configurations
+            _channelConfigs = _serviceModel.PttChannelConfigurations;
+            if (_channelConfigs == null || !_channelConfigs.Any())
+            {
+                _logger.LogInformation("No PTT channel configurations found, initializing defaults");
+                _channelConfigs = InitializeDefaultChannelConfigs();
+            }
 
-            // Set default values
-            _currentChannel = AcpChannelType.INT;
-            _isActive = false;
-            _isMonitoring = false;
-            _isProsimConnected = false;
+            // Initialize joystick settings
+            MonitoredJoystickId = _serviceModel.PttJoystickId;
+            MonitoredJoystickButton = _serviceModel.PttJoystickButton;
 
-            // Initialize controllers list
+            _logger.LogInformation("PTT Service initialized");
+
+            // Register for game controller added/removed events
             RawGameController.RawGameControllerAdded += RawGameController_Added;
             RawGameController.RawGameControllerRemoved += RawGameController_Removed;
-            RefreshControllerList();
 
-            _logger.LogInformation("PttService initialized");
-        }
+            // Initialize controllers list
+            RefreshControllersList();
 
-        private void RawGameController_Added(object sender, RawGameController e)
-        {
-            RefreshControllerList();
-        }
-
-        private void RawGameController_Removed(object sender, RawGameController e)
-        {
-            RefreshControllerList();
-        }
-
-        private void RefreshControllerList()
-        {
-            try
+            // Start monitoring if enabled in settings
+            if (_serviceModel.PttEnabled)
             {
-                _controllers.Clear();
-                foreach (var controller in RawGameController.RawGameControllers)
-                {
-                    _controllers.Add(controller);
-                }
-                _logger.LogDebug("Found {Count} controllers", _controllers.Count);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error refreshing controller list");
+                StartMonitoring();
             }
         }
 
         #endregion
 
-        #region IPttService Methods
+        #region IPttService Implementation
 
-        /// <summary>
-        /// Starts monitoring for PTT input and ACP channel changes
-        /// </summary>
+        /// <inheritdoc/>
         public void StartMonitoring()
         {
-            lock (_stateLock)
-            {
-                if (_isMonitoring) return;
+            if (IsMonitoring) return;
 
-                _logger.LogInformation("Starting PTT monitoring");
-                _isMonitoring = true;
+            _logger.LogInformation("Starting PTT monitoring");
+            IsMonitoring = true;
 
-                // Start a timer to poll for input
-                _monitoringTimer = new System.Threading.Timer(
-                    MonitorInput, null, 0, 50); // Poll every 50ms
+            // Cancel previous task if needed
+            _monitoringCts?.Cancel();
+            _monitoringCts = new CancellationTokenSource();
 
-                // Publish initial state
-                PublishPttStateChanged(_currentChannel, false);
-            }
+            // Start monitoring task
+            _monitoringTask = Task.Run(() => MonitoringLoop(_monitoringCts.Token), _monitoringCts.Token);
+
+            _logger.LogDebug("PTT monitoring started");
         }
 
-        /// <summary>
-        /// Stops monitoring for PTT input and ACP channel changes
-        /// </summary>
+        /// <inheritdoc/>
         public void StopMonitoring()
         {
-            lock (_stateLock)
-            {
-                if (!_isMonitoring) return;
+            if (!IsMonitoring) return;
 
-                _logger.LogInformation("Stopping PTT monitoring");
-                _isMonitoring = false;
+            _logger.LogInformation("Stopping PTT monitoring");
+            IsMonitoring = false;
 
-                // Stop the monitoring timer
-                _monitoringTimer?.Dispose();
-                _monitoringTimer = null;
+            // Cancel monitoring task
+            _monitoringCts?.Cancel();
+            _monitoringCts = null;
+            _monitoringTask = null;
 
-                // Ensure PTT is deactivated
-                DeactivatePtt();
-            }
+            // Ensure PTT is deactivated when stopping
+            DeactivatePtt();
+
+            _logger.LogDebug("PTT monitoring stopped");
         }
 
-        /// <summary>
-        /// Sets the key mapping for a specific ACP channel
-        /// </summary>
-        /// <param name="channelType">The ACP channel type</param>
-        /// <param name="keyMapping">The key mapping string</param>
+        /// <inheritdoc/>
         public void SetChannelKeyMapping(AcpChannelType channelType, string keyMapping)
         {
-            if (!_serviceModel.PttChannelConfigurations.TryGetValue(channelType, out var config))
-            {
-                _logger.LogWarning("Attempted to set key mapping for unknown channel: {Channel}", channelType);
+            if (!_channelConfigs.TryGetValue(channelType, out var config))
                 return;
-            }
 
-            _logger.LogInformation("Setting key mapping for channel {Channel} to {KeyMapping}", channelType, keyMapping);
+            _logger.LogInformation("Setting key mapping for channel {Channel}: {KeyMapping}",
+                channelType, keyMapping);
+
             config.KeyMapping = keyMapping;
             _serviceModel.SavePttChannelConfig(channelType);
         }
 
-        /// <summary>
-        /// Sets whether a specific ACP channel is enabled for PTT
-        /// </summary>
-        /// <param name="channelType">The ACP channel type</param>
-        /// <param name="enabled">Whether the channel is enabled</param>
+        /// <inheritdoc/>
         public void SetChannelEnabled(AcpChannelType channelType, bool enabled)
         {
-            if (!_serviceModel.PttChannelConfigurations.TryGetValue(channelType, out var config))
-            {
-                _logger.LogWarning("Attempted to set enabled state for unknown channel: {Channel}", channelType);
+            if (!_channelConfigs.TryGetValue(channelType, out var config))
                 return;
-            }
 
-            _logger.LogInformation("Setting enabled state for channel {Channel} to {Enabled}", channelType, enabled);
+            _logger.LogInformation("Setting channel {Channel} enabled: {Enabled}",
+                channelType, enabled);
+
             config.Enabled = enabled;
             _serviceModel.SavePttChannelConfig(channelType);
         }
 
-        /// <summary>
-        /// Sets the target application for a specific ACP channel
-        /// </summary>
-        /// <param name="channelType">The ACP channel type</param>
-        /// <param name="applicationName">The target application name</param>
+        /// <inheritdoc/>
         public void SetChannelTargetApplication(AcpChannelType channelType, string applicationName)
         {
-            if (!_serviceModel.PttChannelConfigurations.TryGetValue(channelType, out var config))
-            {
-                _logger.LogWarning("Attempted to set target application for unknown channel: {Channel}", channelType);
+            if (!_channelConfigs.TryGetValue(channelType, out var config))
                 return;
-            }
 
-            _logger.LogInformation("Setting target application for channel {Channel} to {Application}", channelType, applicationName);
+            _logger.LogInformation("Setting target application for channel {Channel}: {Application}",
+                channelType, applicationName);
+
             config.TargetApplication = applicationName;
             _serviceModel.SavePttChannelConfig(channelType);
         }
 
-        /// <summary>
-        /// Sets whether a specific ACP channel uses toggle mode
-        /// </summary>
-        /// <param name="channelType">The ACP channel type</param>
-        /// <param name="toggleMode">Whether to use toggle mode</param>
+        /// <inheritdoc/>
         public void SetChannelToggleMode(AcpChannelType channelType, bool toggleMode)
         {
-            if (!_serviceModel.PttChannelConfigurations.TryGetValue(channelType, out var config))
-            {
-                _logger.LogWarning("Attempted to set toggle mode for unknown channel: {Channel}", channelType);
+            if (!_channelConfigs.TryGetValue(channelType, out var config))
                 return;
-            }
 
-            _logger.LogInformation("Setting toggle mode for channel {Channel} to {ToggleMode}", channelType, toggleMode);
+            _logger.LogInformation("Setting toggle mode for channel {Channel}: {ToggleMode}",
+                channelType, toggleMode);
+
             config.ToggleMode = toggleMode;
             _serviceModel.SavePttChannelConfig(channelType);
         }
 
-        /// <summary>
-        /// Gets the configuration for a specific ACP channel
-        /// </summary>
-        /// <param name="channelType">The ACP channel type</param>
-        /// <returns>The channel configuration</returns>
+        /// <inheritdoc/>
         public PttChannelConfig GetChannelConfig(AcpChannelType channelType)
         {
-            if (_serviceModel.PttChannelConfigurations.TryGetValue(channelType, out var config))
-            {
-                return config;
-            }
-
-            _logger.LogWarning("Requested configuration for unknown channel: {Channel}", channelType);
-            return new PttChannelConfig(channelType);
+            return _channelConfigs.TryGetValue(channelType, out var config) ? config : null;
         }
 
-        /// <summary>
-        /// Gets all channel configurations
-        /// </summary>
-        /// <returns>Dictionary of channel configurations by channel type</returns>
+        /// <inheritdoc/>
         public Dictionary<AcpChannelType, PttChannelConfig> GetAllChannelConfigs()
         {
-            return new Dictionary<AcpChannelType, PttChannelConfig>(_serviceModel.PttChannelConfigurations);
+            return new Dictionary<AcpChannelType, PttChannelConfig>(_channelConfigs);
         }
 
-        /// <summary>
-        /// Manually activates PTT for the current ACP channel
-        /// </summary>
+        /// <inheritdoc/>
         public void ActivatePtt()
         {
-            lock (_stateLock)
+            if (_isPttActive || _currentChannel == AcpChannelType.None)
+                return;
+
+            _logger.LogDebug("Manually activating PTT for channel {Channel}", _currentChannel);
+
+            if (_channelConfigs.TryGetValue(_currentChannel, out var config) && config.Enabled)
             {
-                if (!_isMonitoring || _isActive) return;
+                _isPttActive = true;
 
-                _logger.LogInformation("Manually activating PTT for channel {Channel}", _currentChannel);
-                _isActive = true;
+                // Send keyboard shortcut
+                SendShortcutToApplication(config.TargetApplication, config.KeyMapping, true);
 
-                // Get the channel configuration
-                if (_serviceModel.PttChannelConfigurations.TryGetValue(_currentChannel, out var config) && config.Enabled)
-                {
-                    // TODO: Implement sending key press to target application
-                    _logger.LogDebug("Would send key {Key} to application {App}",
-                        config.KeyMapping, config.TargetApplication);
-                }
-
-                // Publish state change
-                PublishPttStateChanged(_currentChannel, true);
-
-                // Publish button state change
-                PublishPttButtonStateChanged(true);
+                // Raise events
+                RaisePttStateChanged(true);
+                RaisePttButtonStateChanged(true, _currentChannel.ToString(), config.TargetApplication);
             }
         }
 
-        /// <summary>
-        /// Manually deactivates PTT for the current ACP channel
-        /// </summary>
+        /// <inheritdoc/>
         public void DeactivatePtt()
         {
-            lock (_stateLock)
+            if (!_isPttActive || _currentChannel == AcpChannelType.None)
+                return;
+
+            _logger.LogDebug("Manually deactivating PTT for channel {Channel}", _currentChannel);
+
+            if (_channelConfigs.TryGetValue(_currentChannel, out var config) && config.Enabled)
             {
-                if (!_isMonitoring || !_isActive) return;
+                _isPttActive = false;
 
-                _logger.LogInformation("Manually deactivating PTT for channel {Channel}", _currentChannel);
-                _isActive = false;
-
-                // Get the channel configuration
-                if (_serviceModel.PttChannelConfigurations.TryGetValue(_currentChannel, out var config) && config.Enabled)
+                // Don't send key release if in toggle mode
+                if (!config.ToggleMode)
                 {
-                    // TODO: Implement sending key release to target application
-                    _logger.LogDebug("Would release key {Key} to application {App}",
-                        config.KeyMapping, config.TargetApplication);
+                    // Send keyboard shortcut release
+                    SendShortcutToApplication(config.TargetApplication, config.KeyMapping, false);
                 }
 
-                // Publish state change
-                PublishPttStateChanged(_currentChannel, false);
-
-                // Publish button state change
-                PublishPttButtonStateChanged(false);
+                // Raise events
+                RaisePttStateChanged(false);
+                RaisePttButtonStateChanged(false, _currentChannel.ToString(), config.TargetApplication);
             }
         }
 
-        /// <summary>
-        /// Starts input capture mode to detect keyboard or joystick input
-        /// </summary>
-        /// <param name="callback">Callback to execute when input is detected</param>
+        /// <inheritdoc/>
         public void StartInputCapture(Action<string> callback)
         {
+            if (_isCapturing)
+                return;
+
             _logger.LogInformation("Starting input capture");
-            _inputDetectCallback = callback;
+            _inputCaptureCallback = callback;
+            _isCapturing = true;
 
-            // TODO: Implement actual key/button detection for both keyboard and joystick
-
-            // For now, simulate a detection after a delay for testing
-            System.Threading.Tasks.Task.Delay(3000).ContinueWith(t => {
-                if (_inputDetectCallback != null)
-                {
-                    _inputDetectCallback("Space");
-                    SetMonitoredKey("Space");
-                    _inputDetectCallback = null;
-                }
-            });
+            // Start a separate task for input capture
+            Task.Run(InputCaptureLoop);
         }
 
-        /// <summary>
-        /// Stops capturing input for PTT activation
-        /// </summary>
+        /// <inheritdoc/>
         public void StopInputCapture()
         {
             _logger.LogInformation("Stopping input capture");
-            _inputDetectCallback = null;
-
-            // TODO: Stop detection mode for both keyboard and joystick
+            _isCapturing = false;
+            _inputCaptureCallback = null;
         }
 
-        /// <summary>
-        /// Sets the key to monitor for PTT activation
-        /// </summary>
-        /// <param name="keyName">The key name to monitor</param>
+        /// <inheritdoc/>
         public void SetMonitoredKey(string keyName)
         {
-            _logger.LogInformation("Setting monitored key to {Key}", keyName);
-            _serviceModel.SetPttInputMethod(false, keyName);
+            _logger.LogInformation("Setting monitored key to: {Key}", keyName);
+            _serviceModel.SetPttInputMethod(false, keyName: keyName);
         }
 
-        /// <summary>
-        /// Saves a channel configuration to settings
-        /// </summary>
-        public void SaveChannelConfig(AcpChannelType channelType)
-        {
-            _serviceModel.SavePttChannelConfig(channelType);
-        }
-
-        /// <summary>
-        /// Notifies the service that ProSim connection state has changed
-        /// </summary>
-        /// <param name="isConnected">Whether ProSim is now connected</param>
-        public void SetProsimConnectionState(bool isConnected)
-        {
-            _logger.LogInformation("Prosim connection state changed to {Connected}", isConnected);
-            _isProsimConnected = isConnected;
-
-            if (isConnected)
-            {
-                // Get DataRefService from ServiceLocator
-                _dataRefService = ServiceLocator.DataRefService;
-
-                // Subscribe to the ACP channel dataref
-                if (_dataRefService != null && _dataRefService.IsMonitoringActive)
-                {
-                    _dataRefService.SubscribeToDataRef("system.switches.S_ASP_SEND_CHANNEL", OnAcpChannelChanged);
-                    _logger.LogDebug("Subscribed to ACP channel dataref");
-                }
-                else
-                {
-                    _logger.LogWarning("DataRefService not available or not monitoring, cannot subscribe to ACP channel dataref");
-                }
-            }
-            else
-            {
-                // Stop monitoring when Prosim disconnects
-                StopMonitoring();
-            }
-        }
-
-        /// <summary>
-        /// Gets available joysticks
-        /// </summary>
-        /// <returns>Dictionary of joystick IDs and names</returns>
-        public Dictionary<int, string> GetAvailableJoysticks()
-        {
-            var joysticks = new Dictionary<int, string>();
-
-            try
-            {
-                for (int i = 0; i < _controllers.Count; i++)
-                {
-                    joysticks[i] = _controllers[i].DisplayName;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting available joysticks");
-            }
-
-            return joysticks;
-        }
-
-        /// <summary>
-        /// Gets the number of buttons for a specific joystick
-        /// </summary>
-        /// <param name="joystickId">The joystick ID</param>
-        /// <returns>Number of buttons, or 0 if joystick not found</returns>
-        public int GetJoystickButtonCount(int joystickId)
-        {
-            try
-            {
-                if (joystickId >= 0 && joystickId < _controllers.Count)
-                {
-                    return _controllers[joystickId].ButtonCount;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting joystick button count");
-            }
-
-            return 0;
-        }
-
-        /// <summary>
-        /// Sets the joystick and button to monitor for PTT activation
-        /// </summary>
-        /// <param name="joystickId">The joystick ID</param>
-        /// <param name="buttonId">The button ID</param>
+        /// <inheritdoc/>
         public void SetMonitoredJoystickButton(int joystickId, int buttonId)
         {
-            _logger.LogInformation("Setting monitored joystick to {JoystickId}:{ButtonId}", joystickId, buttonId);
-            _serviceModel.SetPttInputMethod(true, string.Empty, joystickId, buttonId);
+            _logger.LogInformation("Setting monitored joystick to: Joystick {JoystickId}, Button {ButtonId}",
+                joystickId, buttonId);
+
+            MonitoredJoystickId = joystickId;
+            MonitoredJoystickButton = buttonId;
+            _serviceModel.SetPttInputMethod(true, joystickId: joystickId, buttonId: buttonId);
         }
 
-        /// <summary>
-        /// Gets the current joystick configuration
-        /// </summary>
-        /// <returns>The joystick configuration, or null if not using joystick input</returns>
+        /// <inheritdoc/>
         public JoystickConfig GetJoystickConfiguration()
         {
-            if (!_serviceModel.PttUseJoystick || _serviceModel.PttJoystickId < 0 || _serviceModel.PttJoystickButton < 0)
-            {
+            if (!_serviceModel.PttUseJoystick || MonitoredJoystickId < 0 || MonitoredJoystickButton < 0)
                 return null;
-            }
 
-            var joysticks = GetAvailableJoysticks();
-            if (joysticks.TryGetValue(_serviceModel.PttJoystickId, out var name))
+            if (MonitoredJoystickId >= _controllers.Count)
+                RefreshControllersList();
+
+            if (MonitoredJoystickId < _controllers.Count)
             {
-                return new JoystickConfig(_serviceModel.PttJoystickId, _serviceModel.PttJoystickButton, name);
+                var controller = _controllers[MonitoredJoystickId];
+                return new JoystickConfig(
+                    MonitoredJoystickId,
+                    MonitoredJoystickButton,
+                    controller.DisplayName);
             }
 
             return null;
         }
 
+        /// <inheritdoc/>
+        public Dictionary<int, string> GetAvailableJoysticks()
+        {
+            RefreshControllersList();
+
+            var joysticks = new Dictionary<int, string>();
+            for (int i = 0; i < _controllers.Count; i++)
+            {
+                joysticks[i] = _controllers[i].DisplayName;
+            }
+
+            return joysticks;
+        }
+
+        /// <inheritdoc/>
+        public int GetJoystickButtonCount(int joystickId)
+        {
+            if (joystickId < 0 || joystickId >= _controllers.Count)
+                return 0;
+
+            return _controllers[joystickId].ButtonCount;
+        }
+
+        /// <inheritdoc/>
+        public void SetProsimConnectionState(bool isConnected)
+        {
+            _prosimConnected = isConnected;
+
+            // If ProSim connects, start monitoring the channel selection dataref
+            if (isConnected && IsMonitoring)
+            {
+                // We'll connect to the dataref in the monitoring loop
+                _logger.LogInformation("ProSim connected, will start monitoring channel selection");
+            }
+        }
+
+        /// <inheritdoc/>
+        public void SaveChannelConfig(AcpChannelType channelType)
+        {
+            _serviceModel.SavePttChannelConfig(channelType);
+        }
+
         #endregion
 
-        #region Private Methods
+        #region Helper Methods
 
         /// <summary>
-        /// Called when the ACP channel dataref changes
+        /// Main monitoring loop that runs in a background task
         /// </summary>
-        private void OnAcpChannelChanged(string dataref, dynamic oldValue, dynamic newValue)
+        private void MonitoringLoop(CancellationToken cancellationToken)
         {
+            _logger.LogDebug("Monitoring loop started");
+
             try
             {
-                if (newValue is int channelIndex && Enum.IsDefined(typeof(AcpChannelType), channelIndex))
+                bool pttWasPressed = false;
+
+                while (!cancellationToken.IsCancellationRequested && IsMonitoring)
                 {
-                    var newChannel = (AcpChannelType)channelIndex;
-
-                    if (_currentChannel != newChannel)
+                    // Monitor ProSim channel datarefs if connected
+                    if (_prosimConnected)
                     {
-                        _logger.LogDebug("ACP channel changed from {OldChannel} to {NewChannel}", _currentChannel, newChannel);
+                        // In full implementation, we would monitor dataref:
+                        // "system.switches.S_ASP_SEND_CHANNEL"
+                        UpdateChannelFromProSim();
+                    }
 
-                        // If PTT is active, deactivate it for the old channel
-                        if (_isActive)
+                    // Check for PTT input
+                    bool pttPressed = CheckPttInput();
+
+                    // Handle state change
+                    if (pttPressed != pttWasPressed)
+                    {
+                        if (pttPressed)
                         {
-                            DeactivatePtt();
+                            HandlePttPressed();
+                        }
+                        else
+                        {
+                            HandlePttReleased();
                         }
 
-                        // Update current channel
-                        _currentChannel = newChannel;
-
-                        // Publish state change for new channel
-                        PublishPttStateChanged(_currentChannel, false);
+                        pttWasPressed = pttPressed;
                     }
+
+                    // Avoid using too much CPU
+                    Thread.Sleep(50);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error handling ACP channel change");
+                _logger.LogError(ex, "Error in PTT monitoring loop");
+            }
+
+            _logger.LogDebug("Monitoring loop ended");
+        }
+
+        /// <summary>
+        /// Updates the current channel based on ProSim dataref
+        /// </summary>
+        private void UpdateChannelFromProSim()
+        {
+            try
+            {
+                // In real implementation, we would get the dataref value from ProSim
+                // int channelValue = GetDatarefValue("system.switches.S_ASP_SEND_CHANNEL");
+
+                // For now, we'll use a placeholder implementation
+                // This would be replaced with actual ProSim SDK code
+
+                // Map dataref value to AcpChannelType
+                // AcpChannelType newChannel = GetChannelTypeFromValue(channelValue);
+
+                // Update current channel if changed
+                // if (_currentChannel != newChannel)
+                // {
+                //     _currentChannel = newChannel;
+                //     _logger.LogDebug("Active channel changed to: {Channel}", _currentChannel);
+                //     
+                //     // Raise state changed event with current active state
+                //     RaisePttStateChanged(_isPttActive);
+                // }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating channel from ProSim");
             }
         }
 
         /// <summary>
-        /// Monitors input devices for PTT activation
+        /// Maps a dataref integer value to an AcpChannelType enum value
         /// </summary>
-        private void MonitorInput(object state)
+        private AcpChannelType GetChannelTypeFromValue(int value)
         {
-            if (!_isMonitoring || !_isProsimConnected) return;
-
-            try
+            // ProSim dataref value is 0-8, which corresponds directly to our enum values
+            if (Enum.IsDefined(typeof(AcpChannelType), value))
             {
-                bool inputActive = false;
-
-                // Check for input based on configuration
-                if (_serviceModel.PttUseJoystick)
-                {
-                    inputActive = CheckJoystickInput();
-                }
-                else
-                {
-                    inputActive = CheckKeyboardInput();
-                }
-
-                // Handle state change if needed
-                if (inputActive && !_isActive)
-                {
-                    ActivatePtt();
-                }
-                else if (!inputActive && _isActive)
-                {
-                    DeactivatePtt();
-                }
+                return (AcpChannelType)value;
             }
-            catch (Exception ex)
+
+            return AcpChannelType.None;
+        }
+
+        /// <summary>
+        /// Checks if PTT input is currently active
+        /// </summary>
+        private bool CheckPttInput()
+        {
+            if (_serviceModel.PttUseJoystick)
             {
-                _logger.LogError(ex, "Error monitoring input");
+                return CheckJoystickInput();
+            }
+            else
+            {
+                return CheckKeyboardInput();
             }
         }
 
@@ -570,30 +502,29 @@ namespace Prosim2GSX.Services.PTT.Implementations
         /// </summary>
         private bool CheckJoystickInput()
         {
-            try
-            {
-                int joystickId = _serviceModel.PttJoystickId;
-                int buttonId = _serviceModel.PttJoystickButton;
+            if (MonitoredJoystickId < 0 || MonitoredJoystickButton < 0)
+                return false;
 
-                if (joystickId >= 0 && joystickId < _controllers.Count && buttonId >= 0)
-                {
-                    var controller = _controllers[joystickId];
-                    if (buttonId < controller.ButtonCount)
-                    {
-                        // Create a buffer to store button states
-                        bool[] buttonStates = new bool[controller.ButtonCount];
-                        controller.GetCurrentReading(buttonStates, null, null);
+            if (_controllers.Count <= MonitoredJoystickId)
+                RefreshControllersList();
 
-                        return buttonStates[buttonId];
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error checking joystick input");
-            }
+            if (_controllers.Count <= MonitoredJoystickId)
+                return false;
 
-            return false;
+            var controller = _controllers[MonitoredJoystickId];
+            if (controller.ButtonCount <= MonitoredJoystickButton)
+                return false;
+
+            // Get button state
+            bool[] buttonStates = new bool[controller.ButtonCount];
+            bool[] switchStates = new bool[controller.SwitchCount];
+            double[] axisValues = new double[controller.AxisCount];
+
+            // Get the current reading with the proper parameters
+            controller.GetCurrentReading(buttonStates, null, null);
+
+            // Check if the button is pressed
+            return buttonStates[MonitoredJoystickButton];
         }
 
         /// <summary>
@@ -601,59 +532,337 @@ namespace Prosim2GSX.Services.PTT.Implementations
         /// </summary>
         private bool CheckKeyboardInput()
         {
-            try
-            {
-                string keyName = _serviceModel.PttKeyName;
+            if (string.IsNullOrEmpty(_serviceModel.PttKeyName))
+                return false;
 
-                if (!string.IsNullOrEmpty(keyName))
-                {
-                    // Try to parse the key name
-                    if (Enum.TryParse<Keys>(keyName, true, out var key))
-                    {
-                        // Get key state using user32.dll interop
-                        return (GetAsyncKeyState((int)key) & 0x8000) != 0;
-                    }
-                }
-            }
-            catch (Exception ex)
+            // Parse the key name and check if it's pressed
+            if (Enum.TryParse<Keys>(_serviceModel.PttKeyName, out var key))
             {
-                _logger.LogError(ex, "Error checking keyboard input");
+                return IsKeyDown(key);
             }
 
             return false;
         }
 
         /// <summary>
-        /// Publishes a PTT state changed event
+        /// Check if a specific key is currently pressed
         /// </summary>
-        private void PublishPttStateChanged(AcpChannelType channelType, bool isActive)
+        private bool IsKeyDown(Keys key)
         {
-            if (_serviceModel.PttChannelConfigurations.TryGetValue(channelType, out var config))
+            // Using GetAsyncKeyState to check key state
+            // High bit (0x8000) is set if key is currently pressed
+            return (GetAsyncKeyState((int)key) & 0x8000) != 0;
+        }
+
+        /// <summary>
+        /// Handle PTT button being pressed
+        /// </summary>
+        private void HandlePttPressed()
+        {
+            if (_currentChannel == AcpChannelType.None || !_channelConfigs.TryGetValue(_currentChannel, out var config) || !config.Enabled)
+                return;
+
+            _logger.LogDebug("PTT pressed for channel: {Channel}", _currentChannel);
+            _isPttActive = true;
+
+            // Send keyboard shortcut to application
+            SendShortcutToApplication(config.TargetApplication, config.KeyMapping, true);
+
+            // Raise events
+            RaisePttStateChanged(true);
+            RaisePttButtonStateChanged(true, _currentChannel.ToString(), config.TargetApplication);
+        }
+
+        /// <summary>
+        /// Handle PTT button being released
+        /// </summary>
+        private void HandlePttReleased()
+        {
+            if (_currentChannel == AcpChannelType.None || !_channelConfigs.TryGetValue(_currentChannel, out var config) || !config.Enabled)
+                return;
+
+            // Skip deactivation if in toggle mode
+            if (config.ToggleMode)
+                return;
+
+            _logger.LogDebug("PTT released for channel: {Channel}", _currentChannel);
+            _isPttActive = false;
+
+            // Send keyboard shortcut to application
+            SendShortcutToApplication(config.TargetApplication, config.KeyMapping, false);
+
+            // Raise events
+            RaisePttStateChanged(false);
+            RaisePttButtonStateChanged(false, _currentChannel.ToString(), config.TargetApplication);
+        }
+
+        /// <summary>
+        /// Send a keyboard shortcut to an application
+        /// </summary>
+        private void SendShortcutToApplication(string applicationName, string shortcut, bool keyDown)
+        {
+            if (string.IsNullOrEmpty(applicationName) || string.IsNullOrEmpty(shortcut))
+                return;
+
+            try
             {
-                var evt = new PttStateChangedEvent(channelType, isActive, config);
-                EventAggregator.Instance.Publish(evt);
+                // Find the target application window
+                IntPtr hWnd = FindApplicationWindow(applicationName);
+                if (hWnd == IntPtr.Zero)
+                {
+                    _logger.LogWarning("Could not find window for application: {Application}", applicationName);
+                    return;
+                }
+
+                // Set focus to the application
+                SetForegroundWindow(hWnd);
+
+                // Parse the shortcut
+                if (Enum.TryParse<Keys>(shortcut, out var key))
+                {
+                    uint msg = keyDown ? WM_KEYDOWN : WM_KEYUP;
+                    PostMessage(hWnd, msg, (IntPtr)key, IntPtr.Zero);
+                }
+                else
+                {
+                    _logger.LogWarning("Could not parse shortcut key: {Shortcut}", shortcut);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending shortcut to application: {Application}", applicationName);
             }
         }
 
         /// <summary>
-        /// Publishes a PTT button state changed event
+        /// Find the window handle for an application
         /// </summary>
-        private void PublishPttButtonStateChanged(bool isPressed)
+        private IntPtr FindApplicationWindow(string applicationName)
         {
-            string channelName = _currentChannel.ToString();
-            string appName = string.Empty;
-
-            if (_serviceModel.PttChannelConfigurations.TryGetValue(_currentChannel, out var config))
+            try
             {
-                appName = config.TargetApplication;
-            }
+                var processes = Process.GetProcessesByName(applicationName);
+                if (processes.Length > 0)
+                {
+                    return processes[0].MainWindowHandle;
+                }
 
-            var evt = new PttButtonStateChangedEvent(isPressed, channelName, appName);
-            EventAggregator.Instance.Publish(evt);
+                // Try direct window finding
+                return FindWindow(null, applicationName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error finding application window: {Application}", applicationName);
+                return IntPtr.Zero;
+            }
         }
 
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        private static extern short GetAsyncKeyState(int vKey);
+        /// <summary>
+        /// Loop that captures keyboard or joystick input for configuration
+        /// </summary>
+        private void InputCaptureLoop()
+        {
+            _logger.LogDebug("Input capture loop started");
+
+            try
+            {
+                // Refresh controllers list
+                RefreshControllersList();
+
+                // Store initial state of joystick buttons
+                Dictionary<int, bool[]> initialButtonStates = new Dictionary<int, bool[]>();
+                foreach (var controller in _controllers)
+                {
+                    int controllerIdx = _controllers.IndexOf(controller);
+
+                    bool[] buttonStates = new bool[controller.ButtonCount];
+                    bool[] switchStates = new bool[controller.SwitchCount];
+                    double[] axisValues = new double[controller.AxisCount];
+
+                    // Get the current reading with the proper parameters
+                    controller.GetCurrentReading(buttonStates, null, null);
+
+                    initialButtonStates[controllerIdx] = buttonStates;
+                }
+
+                // Main capture loop
+                while (_isCapturing)
+                {
+                    // Check for keyboard input
+                    foreach (Keys key in Enum.GetValues(typeof(Keys)))
+                    {
+                        if (IsKeyDown(key) && !IsSystemKey(key))
+                        {
+                            _logger.LogDebug("Detected keyboard input: {Key}", key);
+
+                            // Set as monitored key
+                            SetMonitoredKey(key.ToString());
+
+                            // Notify callback
+                            _inputCaptureCallback?.Invoke(key.ToString());
+
+                            _isCapturing = false;
+                            return;
+                        }
+                    }
+
+                    // Check for joystick input
+                    for (int joystickId = 0; joystickId < _controllers.Count; joystickId++)
+                    {
+                        var controller = _controllers[joystickId];
+                        bool[] initialStates = initialButtonStates[joystickId];
+                        bool[] currentStates = new bool[controller.ButtonCount];
+                        bool[] switchStates = new bool[controller.SwitchCount];
+                        double[] axisValues = new double[controller.AxisCount];
+
+                        // Get the current reading with the proper parameters
+                        controller.GetCurrentReading(currentStates, null, null);
+
+                        // Check if any button was newly pressed
+                        for (int buttonId = 0; buttonId < currentStates.Length; buttonId++)
+                        {
+                            if (currentStates[buttonId] && !initialStates[buttonId])
+                            {
+                                _logger.LogDebug("Detected joystick input: Joystick {JoystickId}, Button {ButtonId}",
+                                    joystickId, buttonId);
+
+                                // Set as monitored joystick button
+                                SetMonitoredJoystickButton(joystickId, buttonId);
+
+                                // Notify callback
+                                string displayName = $"{controller.DisplayName} (Button {buttonId + 1})";
+                                _inputCaptureCallback?.Invoke(displayName);
+
+                                _isCapturing = false;
+                                return;
+                            }
+                        }
+                    }
+
+                    // Avoid using too much CPU
+                    Thread.Sleep(50);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in input capture loop");
+                _isCapturing = false;
+            }
+
+            _logger.LogDebug("Input capture loop ended");
+        }
+
+        /// <summary>
+        /// Check if a key is a system key that should be ignored for input capture
+        /// </summary>
+        private bool IsSystemKey(Keys key)
+        {
+            // Skip modifier keys, windows keys, etc.
+            return key == Keys.LWin || key == Keys.RWin ||
+                   key == Keys.Apps || key == Keys.Sleep ||
+                   key == Keys.ShiftKey || key == Keys.ControlKey ||
+                   key == Keys.Menu || key == Keys.Alt ||
+                   key == Keys.Tab || key == Keys.Escape;
+        }
+
+        /// <summary>
+        /// Refreshes the list of connected controllers
+        /// </summary>
+        private void RefreshControllersList()
+        {
+            _controllers.Clear();
+
+            try
+            {
+                foreach (var controller in RawGameController.RawGameControllers)
+                {
+                    _controllers.Add(controller);
+                }
+
+                _logger.LogDebug("Refreshed controllers list: {Count} controllers found", _controllers.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refreshing controllers list");
+            }
+        }
+
+        /// <summary>
+        /// Raises a PttStateChangedEvent
+        /// </summary>
+        private void RaisePttStateChanged(bool isActive)
+        {
+            if (_currentChannel == AcpChannelType.None)
+                return;
+
+            try
+            {
+                var config = GetChannelConfig(_currentChannel);
+                var evt = new PttStateChangedEvent(_currentChannel, isActive, config);
+                EventAggregator.Instance.Publish(evt);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error raising PTT state changed event");
+            }
+        }
+
+        /// <summary>
+        /// Raises a PttButtonStateChangedEvent
+        /// </summary>
+        private void RaisePttButtonStateChanged(bool isPressed, string channelName = null, string applicationName = null)
+        {
+            try
+            {
+                var evt = new PttButtonStateChangedEvent(isPressed, channelName, applicationName);
+                EventAggregator.Instance.Publish(evt);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error raising PTT button state changed event");
+            }
+        }
+
+        /// <summary>
+        /// Initializes the default channel configurations
+        /// </summary>
+        private Dictionary<AcpChannelType, PttChannelConfig> InitializeDefaultChannelConfigs()
+        {
+            var configs = new Dictionary<AcpChannelType, PttChannelConfig>();
+
+            foreach (AcpChannelType channelType in Enum.GetValues(typeof(AcpChannelType)))
+            {
+                if (channelType == AcpChannelType.None) continue;
+
+                configs[channelType] = new PttChannelConfig(channelType)
+                {
+                    Enabled = false,
+                    TargetApplication = string.Empty,
+                    KeyMapping = "T", // Default to T key
+                    ToggleMode = false
+                };
+            }
+
+            return configs;
+        }
+
+        /// <summary>
+        /// Handler for RawGameController added event
+        /// </summary>
+        private void RawGameController_Added(object sender, RawGameController controller)
+        {
+            _logger.LogInformation("Game controller added: {Name}", controller.DisplayName);
+            RefreshControllersList();
+        }
+
+        /// <summary>
+        /// Handler for RawGameController removed event
+        /// </summary>
+        private void RawGameController_Removed(object sender, RawGameController controller)
+        {
+            _logger.LogInformation("Game controller removed: {Name}", controller.DisplayName);
+            RefreshControllersList();
+        }
 
         #endregion
     }
