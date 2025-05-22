@@ -42,6 +42,11 @@ namespace Prosim2GSX.Services.PTT.Implementations
         private const uint WM_KEYDOWN = 0x0100;
         private const uint WM_KEYUP = 0x0101;
 
+        [DllImport("user32.dll")]
+        private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, int dwExtraInfo);
+
+        private const uint KEYEVENTF_KEYUP = 0x0002;
+
         #endregion
 
         #region Fields
@@ -614,31 +619,30 @@ namespace Prosim2GSX.Services.PTT.Implementations
         }
 
         /// <summary>
+        /// Send a keyboard shortcut without requiring a specific application window
+        /// </summary>
+        /// <summary>
         /// Send a keyboard shortcut to an application
         /// </summary>
         private void SendShortcutToApplication(string applicationName, string shortcut, bool keyDown)
         {
-            if (string.IsNullOrEmpty(applicationName) || string.IsNullOrEmpty(shortcut))
+            if (string.IsNullOrEmpty(shortcut))
                 return;
 
             try
             {
-                // Find the target application window
-                IntPtr hWnd = FindApplicationWindow(applicationName);
-                if (hWnd == IntPtr.Zero)
-                {
-                    _logger.LogWarning("Could not find window for application: {Application}", applicationName);
-                    return;
-                }
-
-                // Set focus to the application
-                SetForegroundWindow(hWnd);
-
                 // Parse the shortcut
                 if (Enum.TryParse<Keys>(shortcut, out var key))
                 {
-                    uint msg = keyDown ? WM_KEYDOWN : WM_KEYUP;
-                    PostMessage(hWnd, msg, (IntPtr)key, IntPtr.Zero);
+                    // Send key using keybd_event which is more reliable for global keypresses
+                    if (keyDown)
+                    {
+                        keybd_event((byte)key, 0, 0, 0);
+                    }
+                    else
+                    {
+                        keybd_event((byte)key, 0, KEYEVENTF_KEYUP, 0);
+                    }
                 }
                 else
                 {
@@ -647,9 +651,10 @@ namespace Prosim2GSX.Services.PTT.Implementations
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error sending shortcut to application: {Application}", applicationName);
+                _logger.LogError(ex, "Error sending shortcut key: {Shortcut}", shortcut);
             }
         }
+
 
         /// <summary>
         /// Find the window handle for an application
