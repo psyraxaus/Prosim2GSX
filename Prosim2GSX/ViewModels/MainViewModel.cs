@@ -362,6 +362,7 @@ namespace Prosim2GSX.ViewModels
                 _logger.LogWarning(ex, "Could not get PTT service: {Message}", ex.Message);
             }
 
+
             // Initialize commands
             ShowHelpCommand = new RelayCommand(_ => ShowHelp());
             ShowSettingsCommand = new RelayCommand(_ => ShowSettings());

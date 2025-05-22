@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using Prosim2GSX.Events;
 using Prosim2GSX.Models;
+using Prosim2GSX.Services.Prosim.Implementation;
+using Prosim2GSX.Services.Prosim.Interfaces;
 using Prosim2GSX.Services.PTT.Enums;
 using Prosim2GSX.Services.PTT.Events;
 using Prosim2GSX.Services.PTT.Interface;
@@ -60,6 +62,9 @@ namespace Prosim2GSX.Services.PTT.Implementations
         private readonly List<RawGameController> _controllers = new List<RawGameController>();
         private bool[] _prevButtonStates;
 
+        private readonly IDataRefMonitoringService _dataRefMonitoringService;
+        private readonly IProsimInterface _prosimInterface;
+
         #endregion
 
         #region Properties
@@ -94,10 +99,12 @@ namespace Prosim2GSX.Services.PTT.Implementations
         /// </summary>
         /// <param name="serviceModel">The service model for application state</param>
         /// <param name="logger">Logger for this service</param>
-        public PttService(ServiceModel serviceModel, ILogger<PttService> logger)
+        public PttService(ServiceModel serviceModel, ILogger<PttService> logger, IDataRefMonitoringService dataRefMonitoringService, IProsimInterface prosimInterface)
         {
             _serviceModel = serviceModel ?? throw new ArgumentNullException(nameof(serviceModel));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _dataRefMonitoringService = dataRefMonitoringService ?? throw new ArgumentNullException(nameof(dataRefMonitoringService));
+            _prosimInterface = prosimInterface ?? throw new ArgumentNullException(nameof(prosimInterface));
 
             // Initialize channel configurations
             _channelConfigs = _serviceModel.PttChannelConfigurations;
@@ -367,11 +374,17 @@ namespace Prosim2GSX.Services.PTT.Implementations
         {
             _prosimConnected = isConnected;
 
-            // If ProSim connects, start monitoring the channel selection dataref
             if (isConnected && IsMonitoring)
             {
-                // We'll connect to the dataref in the monitoring loop
-                _logger.LogInformation("ProSim connected, will start monitoring channel selection");
+                _logger.LogInformation("ProSim connected, starting monitoring of ACP channel selection");
+
+                // Subscribe to the ACP channel dataref
+                _dataRefMonitoringService.SubscribeToDataRef("system.switches.S_ASP_SEND_CHANNEL", OnAcpChannelChanged);
+            }
+            else if (!isConnected)
+            {
+                // Unsubscribe when disconnected
+                _dataRefMonitoringService.UnsubscribeFromDataRef("system.switches.S_ASP_SEND_CHANNEL", OnAcpChannelChanged);
             }
         }
 
@@ -441,26 +454,30 @@ namespace Prosim2GSX.Services.PTT.Implementations
         /// </summary>
         private void UpdateChannelFromProSim()
         {
+            // Since we're now using the dataref subscription to update the channel,
+            // this method is less important, but we'll keep it for manual polling if needed
+
             try
             {
-                // In real implementation, we would get the dataref value from ProSim
-                // int channelValue = GetDatarefValue("system.switches.S_ASP_SEND_CHANNEL");
+                if (_dataRefMonitoringService != null && _prosimConnected)
+                {
+                    // Try to get the current value directly
+                    var channelValue = _prosimInterface.GetProsimVariable("system.switches.S_ASP_SEND_CHANNEL");
+                    if (channelValue != null)
+                    {
+                        int intValue = Convert.ToInt32(channelValue);
+                        AcpChannelType newChannel = GetChannelTypeFromValue(intValue);
 
-                // For now, we'll use a placeholder implementation
-                // This would be replaced with actual ProSim SDK code
+                        if (_currentChannel != newChannel)
+                        {
+                            _currentChannel = newChannel;
+                            _logger.LogDebug("Active channel changed to: {Channel}", _currentChannel);
 
-                // Map dataref value to AcpChannelType
-                // AcpChannelType newChannel = GetChannelTypeFromValue(channelValue);
-
-                // Update current channel if changed
-                // if (_currentChannel != newChannel)
-                // {
-                //     _currentChannel = newChannel;
-                //     _logger.LogDebug("Active channel changed to: {Channel}", _currentChannel);
-                //     
-                //     // Raise state changed event with current active state
-                //     RaisePttStateChanged(_isPttActive);
-                // }
+                            // Raise state changed event with current active state
+                            RaisePttStateChanged(_isPttActive);
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -862,6 +879,30 @@ namespace Prosim2GSX.Services.PTT.Implementations
         {
             _logger.LogInformation("Game controller removed: {Name}", controller.DisplayName);
             RefreshControllersList();
+        }
+
+        private void OnAcpChannelChanged(string dataRef, dynamic oldValue, dynamic newValue)
+        {
+            try
+            {
+                int channelValue = Convert.ToInt32(newValue);
+                AcpChannelType newChannel = GetChannelTypeFromValue(channelValue);
+
+                if (_currentChannel != newChannel)
+                {
+                    _logger.LogInformation("ACP Channel changed from {OldChannel} to {NewChannel}",
+                                           _currentChannel, newChannel);
+
+                    _currentChannel = newChannel;
+
+                    // Raise state changed event with current active state
+                    RaisePttStateChanged(_isPttActive);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing ACP channel dataref change");
+            }
         }
 
         #endregion

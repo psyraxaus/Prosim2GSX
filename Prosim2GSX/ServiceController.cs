@@ -59,7 +59,9 @@ namespace Prosim2GSX
                 _model);
             _pttService = new PttService(
                 _model,
-                ServiceLocator.GetLogger<PttService>());
+                ServiceLocator.GetLogger<PttService>(),
+                _dataRefService,
+                _prosimInterface);
 
             // Add this line to set the AudioService in the ServiceModel
             if (_model is ServiceModel serviceModel)

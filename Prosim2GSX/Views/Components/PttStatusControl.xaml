@@ -5,17 +5,18 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:Prosim2GSX.Views.Components"
              xmlns:vm="clr-namespace:Prosim2GSX.ViewModels.Components"
-             mc:Ignorable="d" d:DesignWidth="800" Height="97">
+             mc:Ignorable="d" d:DesignWidth="800" Height="97"
+             d:DataContext="{d:DesignInstance Type=vm:PttStatusViewModel}">
     <Border Style="{StaticResource SectionBorderStyle}">
         <StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,5">
                 <TextBlock Text="Active Channel:" FontWeight="SemiBold" Margin="0,0,10,0"/>
-                <TextBlock x:Name="txtActiveChannelStatus" Text="INT" Foreground="{DynamicResource PrimaryColor}" FontWeight="Bold"/>
+                <TextBlock Text="{Binding ActiveChannel}" Foreground="{DynamicResource PrimaryColor}" FontWeight="Bold"/>
                 <TextBlock Text="→" Margin="10,0"/>
-                <TextBlock x:Name="txtActiveAppStatus" Text="Not Configured" Foreground="Gray"/>
+                <TextBlock Text="{Binding ActiveApplication}" Foreground="Gray"/>
             </StackPanel>
 
-            <TextBlock x:Name="txtPttStatusMessage" Text="PTT Inactive" Foreground="Gray" Margin="0,5,0,0"/>
+            <TextBlock Text="{Binding StatusMessage}" Foreground="Gray" Margin="0,5,0,0"/>
         </StackPanel>
     </Border>
 </UserControl>
