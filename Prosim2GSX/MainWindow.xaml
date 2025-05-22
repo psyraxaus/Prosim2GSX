@@ -9,7 +9,7 @@
         xmlns:components="clr-namespace:Prosim2GSX.Views.Components"
         xmlns:converters="clr-namespace:Prosim2GSX.Converters"
         mc:Ignorable="d"
-        Title="Prosim2GSX EFB" Height="810" Width="800" 
+        Title="Prosim2GSX EFB" Height="950" Width="800" 
         ResizeMode="NoResize" 
         IsVisibleChanged="Window_IsVisibleChanged" 
         Closing="Window_Closing"
@@ -115,6 +115,10 @@
     </Window.Resources>
 
     <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="9*"/>
+            <ColumnDefinition Width="7*"/>
+        </Grid.ColumnDefinitions>
         <!-- Header Section -->
         <Grid.RowDefinitions>
             <RowDefinition Height="60"/>
@@ -122,21 +126,20 @@
         </Grid.RowDefinitions>
 
         <!-- Top Bar with App Name and Navigation -->
-        <components:HeaderBarControl Grid.Row="0" DataContext="{Binding HeaderBar}"/>
-        
+        <components:HeaderBarControl Grid.Row="0" DataContext="{Binding HeaderBar}" Grid.ColumnSpan="2"/>
+
         <!-- Main Content Area with TabControl -->
         <TabControl Grid.Row="1" 
             BorderThickness="0"
             Background="Transparent"
             x:Name="MainTabControl" 
-            SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}"
-            Margin="0,0,0,-15">
+            SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}" Margin="0,0,0,26" Grid.ColumnSpan="2">
 
 
             <!-- Flight Status Tab -->
             <TabItem Header="FLIGHT STATUS" x:Name="StatusTab">
-                <StackPanel Margin="20,0,20,0" Height="707">
-                        <!-- Connection Status -->
+                <StackPanel Margin="20,0,20,0" Height="870">
+                    <!-- Connection Status -->
                     <TextBlock Text="CONNECTION STATUS" Style="{StaticResource CategoryHeaderStyle}"/>
                     <components:ConnectionStatusControl DataContext="{Binding ConnectionStatus}"/>
 
@@ -148,10 +151,19 @@
                     <TextBlock Text="GROUND SERVICES" Style="{StaticResource CategoryHeaderStyle}"/>
                     <components:GroundServicesControl DataContext="{Binding GroundServices}"/>
 
+                    <!-- PTT Status -->
+                    <TextBlock Text="PUSH-TO-TALK SERVICE" Style="{StaticResource CategoryHeaderStyle}"/>
+                    <components:PttStatusControl DataContext="{Binding PttStatus}"/>
+
                     <!-- Log Messages -->
                     <TextBlock Text="LOG MESSAGES" Style="{StaticResource CategoryHeaderStyle}"/>
-                    <components:LogMessagesControl DataContext="{Binding LogMessages}"/>
+                    <components:LogMessagesControl DataContext="{Binding LogMessages}" Height="161"/>
                 </StackPanel>
+            </TabItem>
+
+            <!-- PTT Settings Tab -->
+            <TabItem Header="PTT SETTINGS" x:Name="PttSettingsTab">
+                <components:PttSettingsControl DataContext="{Binding PttSettings}"/>
             </TabItem>
 
             <!-- Audio Settings Tab -->

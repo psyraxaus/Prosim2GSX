@@ -5,6 +5,7 @@ using Prosim2GSX.Services.Connection.Interfaces;
 using Prosim2GSX.Services.GSX.Interfaces;
 using Prosim2GSX.Services.Logging.Interfaces;
 using Prosim2GSX.Services.Prosim.Interfaces;
+using Prosim2GSX.Services.PTT.Interface;
 using System;
 using System.Collections.Generic;
 
@@ -341,5 +342,13 @@ namespace Prosim2GSX.Services
         public static ILogger GetLogger(string categoryName) =>
             _loggerFactory?.CreateLogger(categoryName) ??
             throw new InvalidOperationException("ServiceLocator not initialized");
+
+        /// <summary>
+        /// Get the PTT service
+        /// </summary>
+        public static IPttService PttService =>
+            GetService<IPttService>() ??
+            throw new InvalidOperationException("PTT service not registered or ServiceLocator not initialized");
+
     }
 }

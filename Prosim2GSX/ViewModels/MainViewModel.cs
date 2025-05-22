@@ -7,6 +7,7 @@ using Prosim2GSX.Services.GSX.Enums;
 using Prosim2GSX.Services.Logging.Implementation;
 using Prosim2GSX.Services.Logging.Interfaces;
 using Prosim2GSX.Services.Logging.Models;
+using Prosim2GSX.Services.PTT.Interface;
 using Prosim2GSX.ViewModels.Base;
 using Prosim2GSX.ViewModels.Commands;
 using Prosim2GSX.ViewModels.Components;
@@ -62,6 +63,8 @@ namespace Prosim2GSX.ViewModels
         // Subscription tokens for event handling
         private readonly List<SubscriptionToken> _subscriptionTokens = new List<SubscriptionToken>();
 
+        private bool _isPttServiceAvailable = false;
+
         #endregion
 
         #region Properties
@@ -75,6 +78,17 @@ namespace Prosim2GSX.ViewModels
         /// Gets the view model for log messages
         /// </summary>
         public LogMessagesViewModel LogMessages { get; }
+
+        /// <summary>
+        /// Gets the view model for PTT settings configuration
+        /// </summary>
+        public PttSettingsViewModel PttSettings { get; }
+
+        /// <summary>
+        /// Gets the view model for displaying PTT status
+        /// </summary>
+        public PttStatusViewModel PttStatus { get; }
+
 
         /// <summary>
         /// Gets the log entries collection for display in the UI
@@ -320,6 +334,35 @@ namespace Prosim2GSX.ViewModels
             GsxSettings = new GsxSettingsViewModel(serviceModel);
             FlightPlanning = new FlightPlanningViewModel(serviceModel);
 
+            // Initialize PTT viewmodels with null service initially
+            PttSettings = new PttSettingsViewModel(
+                serviceModel,
+                null, // Will be set later when available
+                _loggerFactory.CreateLogger<PttSettingsViewModel>());
+
+            PttStatus = new PttStatusViewModel(
+                serviceModel,
+                null, // Will be set later when available
+                _loggerFactory.CreateLogger<PttStatusViewModel>());
+                
+            // Try to get the PTT service from ServiceLocator
+            try
+            {
+                var pttService = ServiceLocator.PttService;
+                if (pttService != null)
+                {
+                    _logger.LogInformation("PTT service found, connecting to ViewModels");
+                    PttSettings.SetPttService(pttService);
+                    PttStatus.SetPttService(pttService);
+                    _isPttServiceAvailable = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not get PTT service: {Message}", ex.Message);
+            }
+
+
             // Initialize commands
             ShowHelpCommand = new RelayCommand(_ => ShowHelp());
             ShowSettingsCommand = new RelayCommand(_ => ShowSettings());
@@ -334,6 +377,36 @@ namespace Prosim2GSX.ViewModels
 
             // Subscribe to events
             SubscribeToEvents();
+
+            // Start a timer to check for PTT service if it's not available yet
+            if (!_isPttServiceAvailable)
+            {
+                _logger.LogInformation("PTT service not available yet, will check periodically");
+                var pttCheckTimer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromSeconds(2)
+                };
+                pttCheckTimer.Tick += (s, e) =>
+                {
+                    try
+                    {
+                        var pttService = ServiceLocator.PttService;
+                        if (pttService != null)
+                        {
+                            _logger.LogInformation("PTT service found, connecting to ViewModels");
+                            PttSettings.SetPttService(pttService);
+                            PttStatus.SetPttService(pttService);
+                            _isPttServiceAvailable = true;
+                            pttCheckTimer.Stop();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Could not get PTT service: {Message}", ex.Message);
+                    }
+                };
+                pttCheckTimer.Start();
+            }
 
             _logger.LogDebug("MainViewModel initialized");
         }
@@ -407,6 +480,9 @@ namespace Prosim2GSX.ViewModels
             GroundServices.Cleanup();
             HeaderBar.Cleanup();
             // Audio settings doesn't have any cleanup to do
+            PttSettings.Cleanup();
+            PttStatus.Cleanup();
+
 
             // Unsubscribe from all events
             foreach (var token in _subscriptionTokens)

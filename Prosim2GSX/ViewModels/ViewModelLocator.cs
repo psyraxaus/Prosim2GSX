@@ -18,6 +18,16 @@ namespace Prosim2GSX.ViewModels
         public static ViewModelLocator Instance => _instance ?? (_instance = new ViewModelLocator());
 
         /// <summary>
+        /// Gets the PttSettings view model
+        /// </summary>
+        public PttSettingsViewModel PttSettings => GetViewModel<PttSettingsViewModel>();
+
+        /// <summary>
+        /// Gets the PttStatus view model
+        /// </summary>
+        public PttStatusViewModel PttStatus => GetViewModel<PttStatusViewModel>();
+
+        /// <summary>
         /// Gets or creates a view model of the specified type
         /// </summary>
         /// <typeparam name="T">The type of view model to get</typeparam>

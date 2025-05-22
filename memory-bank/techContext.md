@@ -20,6 +20,8 @@
 - **Prosim SDK**: API for interfacing with Prosim A320 (via ProSimSDK.dll)
 - **MobiFlight WASM Module**: Provides additional MSFS variable access
 - **VoiceMeeter API**: Integration with VoiceMeeter for advanced audio control (via VoicemeeterRemote64.dll)
+- **Windows.Gaming.Input**: Used for joystick detection in PTT functionality
+- **System.Windows.Forms**: Used for keyboard input detection in PTT functionality
 - **Newtonsoft.Json**: Used for JSON serialization/deserialization
 - **System.Net.Http**: Used for HTTP communication with Prosim's EFB server
 - **System.Threading.Tasks**: Used for asynchronous operations
@@ -104,6 +106,8 @@
     - **GsxServiceState.cs**: Model for GSX service state
     - **LoadsheetResult.cs**: Model for loadsheet generation results
     - **LoadsheetState.cs**: Enum for loadsheet generation states
+    - **JoystickConfig.cs**: Model for joystick button configuration
+    - **PttChannelConfig.cs**: Model for PTT channel configuration
   - **Services/**: Business logic services
     - **Audio/**: Audio control services
       - **AudioService.cs**: Service for audio control
@@ -119,6 +123,16 @@
       - **ProsimServiceProvider.cs**: Provider for Prosim services
       - **Implementation/**: Implementation of Prosim services
       - **Interfaces/**: Interfaces for Prosim services
+    - **PTT/**: Push-to-Talk services
+      - **Implementations/**: Implementation of PTT services
+        - **PttService.cs**: Main service for PTT functionality
+      - **Interfaces/**: Interfaces for PTT services
+        - **IPttService.cs**: Interface for PTT service
+      - **Models/**: Models for PTT configuration
+        - **JoystickConfig.cs**: Configuration for joystick buttons
+        - **PttChannelConfig.cs**: Configuration for PTT channels
+      - **Enums/**: Enumerations for PTT functionality
+        - **AcpChannelType.cs**: Enum for ACP channel types
     - **WeightAndBalance/**: Weight and balance calculation services
       - **ProsimLoadsheetService.cs**: Service for interacting with Prosim's native loadsheet functionality
   - **Events/**: Event system components
@@ -222,6 +236,23 @@
 - Manages error handling and diagnostics
 - Provides methods for getting available strips and buses
 
+### Push-to-Talk System
+- Interfaces with Prosim's ACP channel system
+- Uses Windows.Gaming.Input for joystick support
+- Integrates with System.Windows.Forms for keyboard detection
+- Implements a sophisticated input detection system
+- Provides channel-specific key mapping
+- Supports application targeting for keypresses
+- Implements thread-safe state management
+- Offers real-time status display with visual feedback
+- Integrates with the application's theming system
+- Monitors "system.switches.S_ASP_SEND_CHANNEL" dataref for ACP channel integration
+- Provides expandable channel sections in the UI for better organization
+- Implements safeguards to prevent PTT activation on disabled channels
+- Uses the EventAggregator for state change notifications
+- Provides visual feedback for active/disabled channel states
+- Implements modern button styles matching application theme
+
 ## Technical Debt and Challenges
 
 ### Known Limitations
@@ -239,6 +270,10 @@
 - Thread safety considerations for event handling and callback execution
 - Proper cleanup of resources when components are disposed
 - Balancing event publishing frequency with performance considerations
+- Joystick button detection may vary across different hardware
+- Keyboard input detection may be affected by other applications capturing keystrokes
+- PTT functionality requires careful state management to prevent stuck PTT states
+- ACP channel integration depends on Prosim's dataref implementation
 
 ### Future Technical Considerations
 - Adaptation to MSFS and GSX Pro updates
@@ -255,6 +290,12 @@
 - Implementing a more sophisticated logging system with filtering and rotation
 - Enhancing the theme system to support more customization options
 - Improving the first-time setup experience with more guidance
+- Extending PTT functionality to support more complex key combinations
+- Improving joystick button detection for a wider range of hardware
+- Enhancing keyboard input detection to handle more edge cases
+- Adding more detailed logging for PTT state transitions
+- Implementing more sophisticated error handling for PTT functionality
+- Optimizing PTT performance for minimal latency
 
 ## Development Practices
 
@@ -286,6 +327,10 @@
 - Testing with different GSX Pro settings
 - Testing with different Prosim A320 versions
 - Testing with different MSFS versions
+- Testing PTT functionality with various joystick hardware
+- Testing keyboard input detection with different key combinations
+- Testing PTT integration with Prosim's ACP channel system
+- Testing PTT UI with different theme configurations
 
 ### Documentation
 - Code documentation via XML comments
@@ -301,3 +346,7 @@
 - Event documentation for publisher-subscriber relationships
 - Error code documentation for troubleshooting
 - Configuration documentation for setup and customization
+- PTT functionality documentation in README
+- Joystick button mapping documentation
+- Keyboard shortcut documentation
+- ACP channel integration documentation

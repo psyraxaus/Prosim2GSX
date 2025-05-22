@@ -2,6 +2,8 @@
 using Prosim2GSX.Behaviours;
 using Prosim2GSX.Services;
 using Prosim2GSX.Services.Audio;
+using Prosim2GSX.Services.PTT.Enums;
+using Prosim2GSX.Services.PTT.Models;
 using Prosim2GSX.ViewModels.Components;
 using System;
 using System.Collections.Generic;
@@ -94,6 +96,13 @@ namespace Prosim2GSX.Models
         public Dictionary<AudioChannel, VoiceMeeterDeviceType> VoiceMeeterDeviceTypes { get; private set; } = new Dictionary<AudioChannel, VoiceMeeterDeviceType>();
 
         public Dictionary<AudioChannel, string> VoiceMeeterStripLabels { get; private set; } = new Dictionary<AudioChannel, string>();
+
+        public bool PttEnabled { get; set; }
+        public bool PttUseJoystick { get; set; }
+        public string PttKeyName { get; set; }
+        public int PttJoystickId { get; set; }
+        public int PttJoystickButton { get; set; }
+        public Dictionary<AcpChannelType, PttChannelConfig> PttChannelConfigurations { get; private set; }
 
         /// <summary>
         /// Path to the ProsimSDK.dll file
@@ -351,6 +360,26 @@ namespace Prosim2GSX.Models
             }
 
             InitializeAudioChannels();
+
+            // Load PTT settings
+            PttEnabled = GetSettingBool("pttEnabled", false);
+            PttUseJoystick = GetSettingBool("pttUseJoystick", false);
+            PttKeyName = GetSetting("pttKey", string.Empty);
+
+            if (int.TryParse(GetSetting("pttJoystickId", "-1"), out int joystickId))
+                PttJoystickId = joystickId;
+            else
+                PttJoystickId = -1;
+
+            if (int.TryParse(GetSetting("pttJoystickButton", "-1"), out int buttonId))
+                PttJoystickButton = buttonId;
+            else
+                PttJoystickButton = -1;
+
+            // Initialize PTT channel configurations
+            PttChannelConfigurations = new Dictionary<AcpChannelType, PttChannelConfig>();
+            InitializePttChannelConfigurations();
+
             _logger?.LogInformation("Configuration loaded successfully");
         }
 
@@ -456,6 +485,9 @@ namespace Prosim2GSX.Models
         {
             ConfigurationFile[key] = value;
             _logger?.LogDebug("Updated setting {Key} = {Value}", key, value);
+
+            // Save configuration to disk immediately
+            ConfigurationFile.SaveConfiguration();
 
             if (!noLoad)
                 LoadConfiguration();
@@ -565,6 +597,73 @@ namespace Prosim2GSX.Models
             _logger?.LogDebug("Could not parse setting {Key}='{Value}' as boolean, using default: {Default}",
                 key, stringValue, defaultValue);
             return defaultValue;
+        }
+
+        // Method to initialize PTT channel configurations
+        private void InitializePttChannelConfigurations()
+        {
+            foreach (AcpChannelType channelType in Enum.GetValues(typeof(AcpChannelType)))
+            {
+                if (channelType == AcpChannelType.None) continue;
+
+                string channelKey = channelType.ToString().ToLower();
+                bool enabled = GetSettingBool($"ptt{channelKey}Enabled", false);
+                string keyMapping = GetSetting($"ptt{channelKey}KeyMapping", string.Empty);
+                string application = GetSetting($"ptt{channelKey}Application", string.Empty);
+                bool toggleMode = GetSettingBool($"ptt{channelKey}ToggleMode", false);
+
+                var config = new PttChannelConfig(channelType)
+                {
+                    Enabled = enabled,
+                    KeyMapping = keyMapping,
+                    TargetApplication = application,
+                    ToggleMode = toggleMode
+                };
+
+                PttChannelConfigurations[channelType] = config;
+            }
+        }
+
+        // Method to save PTT channel configuration
+        public void SavePttChannelConfig(AcpChannelType channelType)
+        {
+            if (!PttChannelConfigurations.TryGetValue(channelType, out var config))
+                return;
+
+            string channelKey = channelType.ToString().ToLower();
+            _logger?.LogInformation("Saving PTT config for channel: {Channel}, Key: {Key}, App: {App}",
+                channelType, config.KeyMapping, config.TargetApplication);
+
+            SetSetting($"ptt{channelKey}Enabled", config.Enabled.ToString());
+            SetSetting($"ptt{channelKey}KeyMapping", config.KeyMapping);
+            SetSetting($"ptt{channelKey}Application", config.TargetApplication);
+            SetSetting($"ptt{channelKey}ToggleMode", config.ToggleMode.ToString());
+        }
+
+        // PTT utility methods
+        public void SetPttEnabled(bool enabled)
+        {
+            PttEnabled = enabled;
+            SetSetting("pttEnabled", enabled.ToString());
+        }
+
+        public void SetPttInputMethod(bool useJoystick, string keyName = "", int joystickId = -1, int buttonId = -1)
+        {
+            PttUseJoystick = useJoystick;
+            SetSetting("pttUseJoystick", useJoystick.ToString());
+
+            if (useJoystick)
+            {
+                PttJoystickId = joystickId;
+                PttJoystickButton = buttonId;
+                SetSetting("pttJoystickId", joystickId.ToString());
+                SetSetting("pttJoystickButton", buttonId.ToString());
+            }
+            else
+            {
+                PttKeyName = keyName;
+                SetSetting("pttKey", keyName);
+            }
         }
     }
 }

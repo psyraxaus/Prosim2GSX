@@ -1,0 +1,218 @@
+﻿<UserControl x:Class="Prosim2GSX.Views.Components.PttSettingsControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Prosim2GSX.Views.Components"
+             xmlns:vm="clr-namespace:Prosim2GSX.ViewModels.Components"
+             xmlns:converters="clr-namespace:Prosim2GSX.Converters"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+
+    <UserControl.Resources>
+        <converters:BoolToWarningBrushConverter x:Key="BoolToWarningBrushConverter"/>
+
+        <!-- Style for the action buttons -->
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource SecondaryColor}"/>
+            <Setter Property="Foreground" Value="{DynamicResource HeaderText}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Margin" Value="10,0,0,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Secondary style for emphasized action buttons (like Detect Input) -->
+        <Style x:Key="PrimaryActionButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+            <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+        </Style>
+
+        <Style x:Key="LocalCategoryHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="DemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource CategoryText}"/>
+            <Setter Property="Margin" Value="0,10,0,5"/>
+        </Style>
+
+        <Style x:Key="LocalSectionBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource SectionBackground}"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="Margin" Value="0,8,0,10"/>
+        </Style>
+
+        <Style x:Key="LocalCheckBoxStyle" TargetType="CheckBox">
+            <Setter Property="Margin" Value="0,6,0,6"/>
+            <Setter Property="Foreground" Value="{DynamicResource ContentText}"/>
+        </Style>
+
+        <Style x:Key="LocalRadioButtonStyle" TargetType="RadioButton">
+            <Setter Property="Margin" Value="0,6,15,6"/>
+            <Setter Property="Foreground" Value="{DynamicResource ContentText}"/>
+        </Style>
+
+        <Style x:Key="LocalTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="Padding" Value="5,3"/>
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="20">
+            <!-- PTT Enable/Configure -->
+            <TextBlock Text="PUSH TO TALK SETTINGS" Style="{StaticResource LocalCategoryHeaderStyle}"/>
+            <Border Style="{StaticResource SectionBorderStyle}">
+                <StackPanel>
+                    <CheckBox x:Name="chkEnablePtt" 
+                        Content="Enable Push-to-Talk functionality" 
+                        Style="{StaticResource LocalCheckBoxStyle}"
+                        IsChecked="{Binding IsPttEnabled, Mode=TwoWay}"/>
+
+                    <StackPanel x:Name="pnlPttConfiguration" Margin="0,10,0,0">
+                        <TextBlock Text="Input Configuration" FontWeight="SemiBold" Margin="0,0,0,10"/>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,5,0,10">
+                            <TextBlock Text="Button/Key:" VerticalAlignment="Center" Margin="0,0,10,0" Width="120"/>
+                            <TextBox x:Name="txtPttButton" Width="200" IsReadOnly="True" 
+                                    Text="{Binding CurrentButtonText, Mode=OneWay}"
+                                    Style="{StaticResource LocalTextBoxStyle}"/>
+                            <Button x:Name="btnDetectPttButton" 
+                                    Command="{Binding DetectButtonCommand}"
+                                    Style="{StaticResource PrimaryActionButtonStyle}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Detect Input" VerticalAlignment="Center" Padding="8"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+
+                        <TextBlock x:Name="txtPttDetectionStatus" 
+                                  Text="{Binding DetectionStatusText}" 
+                                  Foreground="Gray" 
+                                  Margin="0,0,0,10"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Channel Mappings -->
+            <TextBlock Text="CHANNEL MAPPINGS" Style="{StaticResource LocalCategoryHeaderStyle}"/>
+            <Border Style="{StaticResource SectionBorderStyle}">
+                <StackPanel>
+                    <TextBlock Text="Configure which application should receive keyboard shortcuts when PTT is pressed for each ACP channel:" 
+               TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                    <!-- Active Channel Indicator -->
+                    <Border Background="{DynamicResource PrimaryColor}" Padding="10" Margin="0,0,0,15">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <TextBlock Text="Active Channel: " Foreground="{DynamicResource HeaderText}" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="txtActiveChannel" Text="{Binding ActiveChannel}" Foreground="{DynamicResource HeaderText}" FontWeight="Bold"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Channel configurations -->
+                    <ItemsControl x:Name="channelMappingsControl" ItemsSource="{Binding ChannelMappings}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Expander Header="{Binding Channel}" IsExpanded="{Binding IsExpanded}" Margin="0,5">
+                                    <Grid Margin="20,10,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <CheckBox Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+                                            Content="Enable this channel mapping" 
+                                            IsChecked="{Binding Enabled, Mode=TwoWay}"
+                                            Style="{StaticResource LocalCheckBoxStyle}"
+                                            Margin="0,0,0,10"/>
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0" 
+                                            Text="Application:" 
+                                            VerticalAlignment="Center" 
+                                            Margin="0,0,10,0" 
+                                            Width="120"/>
+
+                                        <TextBox Grid.Row="1" Grid.Column="1" 
+                                        Text="{Binding ApplicationName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                            Width="200"
+                                            Style="{StaticResource LocalTextBoxStyle}"
+                                            HorizontalAlignment="Left"/>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0" 
+                                            Text="Shortcut Key:" 
+                                            VerticalAlignment="Center" 
+                                            Margin="0,10,10,0" 
+                                            Width="120"/>
+
+                                        <Grid Grid.Row="2" Grid.Column="1" Margin="0,10,0,0">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+
+                                            <StackPanel Grid.Row="0" Orientation="Horizontal">
+                                                <TextBox Text="{Binding KeyboardShortcut, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                                    Width="200" 
+                                                    IsReadOnly="True"
+                                                    Style="{StaticResource LocalTextBoxStyle}"/>
+
+                                                <Button
+                                                    Command="{Binding SetKeyCommand}"
+                                                    Style="{StaticResource PrimaryActionButtonStyle}"  
+                                                    Tag="{Binding Channel}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="Set Key" VerticalAlignment="Center" Padding="8"/>
+                                                    </StackPanel>
+                                                </Button>
+                                            </StackPanel>
+
+                                            <TextBlock Grid.Row="1" 
+                                                Text="{Binding DetectionStatusText}" 
+                                                Foreground="Gray" 
+                                                Margin="0,5,0,0"
+                                                FontSize="11"/>
+                                        </Grid>
+                                    </Grid>
+                                </Expander>
+                            </DataTemplate>
+
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

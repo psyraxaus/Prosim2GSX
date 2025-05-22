@@ -14,6 +14,7 @@ graph TD
     P2G --- LOG[Logger]
     P2G --- IPC[IPC Manager]
     P2G --- MSC[MobiSimConnect]
+    P2G --- PTT[PTT Service]
     
     SC --- MSFS[Microsoft Flight Simulator]
     PI --- PROSIM[Prosim A320]
@@ -22,6 +23,7 @@ graph TD
     CFG --- SETTINGS[Settings File]
     IPC --- APPS[External Applications]
     MSC --- WASM[MobiFlight WASM Module]
+    PTT --- PROSIM_ACP[Prosim ACP Channels]
 ```
 
 ## Key Components
@@ -45,6 +47,13 @@ graph TD
    - Implements the business logic for when services should be called
    - Manages the state machine for ground operations
    - Handles timing and sequencing of operations
+
+4. **PttService**
+   - Manages Push-to-Talk functionality for ACP channels
+   - Monitors joystick and keyboard inputs
+   - Interfaces with Prosim's ACP channel system
+   - Handles channel-specific key mapping
+   - Provides real-time status updates
 
 ### Communication Interfaces
 
@@ -82,6 +91,65 @@ graph TD
 
 ## Design Patterns
 
+### Push-to-Talk Service Pattern
+The system implements a comprehensive Push-to-Talk (PTT) service that integrates with Prosim's ACP channels:
+
+- **Core Components**:
+  - `PttService`: Main service responsible for PTT functionality
+  - `IPttService`: Interface defining the PTT service contract
+  - `PttChannelConfig`: Configuration model for channel-specific settings
+  - `JoystickConfig`: Configuration model for joystick input
+  - `AcpChannelType`: Enum representing different ACP channels
+  - `PttSettingsViewModel`: ViewModel for the PTT settings UI
+  - `PttStatusViewModel`: ViewModel for the PTT status UI
+  - `ChannelMappingViewModel`: ViewModel for individual channel mapping UI
+
+- **Key Features**:
+  - Input capture system for detecting keyboard and joystick inputs
+  - Channel-specific key mapping with individual application targeting
+  - Real-time status display with visual feedback
+  - Thread-safe state management
+  - Integration with Prosim ACP channels
+  - Theme-aware UI components
+
+- **Implementation**:
+  ```csharp
+  // PTT service monitors Prosim's ACP channel dataref
+  _prosimController.SubscribeToDataRef("system.switches.S_ASP_SEND_CHANNEL", OnAcpChannelChanged);
+  
+  // Handler for ACP channel changes
+  private void OnAcpChannelChanged(string dataref, dynamic oldValue, dynamic newValue)
+  {
+      int channelIndex = (int)newValue;
+      if (channelIndex >= 0 && channelIndex < Enum.GetValues(typeof(AcpChannelType)).Length)
+      {
+          _currentChannel = (AcpChannelType)channelIndex;
+          // Update UI and raise events as needed
+      }
+  }
+  
+  // Input detection for configuration
+  private void InputCaptureLoop()
+  {
+      // Monitor for keyboard or joystick input
+      // When detected, call back with the input information
+      _inputCaptureCallback?.Invoke(displayName);
+  }
+  ```
+
+- **State Management**:
+  - Boolean flags track PTT active state, current channel, and input capture state
+  - Public properties provide thread-safe access to state information
+  - Events notify subscribers of state changes
+  - Thread synchronization ensures consistent state
+
+- **Benefits**:
+  - Provides essential cockpit communication functionality
+  - Integrates with existing Prosim systems
+  - Offers flexibility in configuring different keys for different channels
+  - Real-time feedback enhances user experience
+  - Thread-safe implementation ensures reliable operation
+
 ### State Tracking Pattern
 The system implements a comprehensive state tracking pattern across multiple services:
 
@@ -96,6 +164,7 @@ The system implements a comprehensive state tracking pattern across multiple ser
   - **LoadsheetService**: Tracks generation state for preliminary and final loadsheets
   - **GsxRefuelingService**: Tracks refueling process state (requested, active, paused, completed)
   - **GsxMenuService**: Tracks menu readiness and operator selection
+  - **PttService**: Tracks PTT active state, current channel, and input capture state
 
 - **Benefits**:
   - Better coordination between components
@@ -211,6 +280,9 @@ The system implements an event aggregator pattern to decouple components and imp
   - `FlightPlanChangedEvent`: For flight plan updates
   - `RetryFlightPlanLoadEvent`: For triggering flight plan reload attempts
   - `AudioStateChangedEvent`: For audio system state changes
+  - `PttStateChangedEvent`: For PTT state changes
+  - `PttButtonStateChangedEvent`: For PTT button state changes
+  - `PttChannelConfigChangedEvent`: For PTT channel configuration changes
 
 - **Implementation**:
   - Publishers call `EventAggregator.Instance.Publish<TEvent>(event)` to broadcast events
@@ -670,116 +742,4 @@ The system uses dictionary-based action mapping for service toggles:
    - GsxController detects a change in jetway status
    - GsxController publishes a ServiceStatusChangedEvent
    - MainWindow's OnServiceStatusChanged handler is invoked
-   - The handler updates the JetwayStatusIndicator with the appropriate color
-
-### Cockpit Door State Flow
-1. ProsimController monitors the cockpit door switch state via dataref subscription
-2. When the cockpit door switch changes, the OnCockpitDoorStateChanged handler is invoked
-3. The handler determines the door state based on the switch position (0=Normal/Closed, 1=Unlock/Open, 2=Lock/Closed)
-4. The GSX LVAR (FSDT_GSX_COCKPIT_DOOR_OPEN) is updated to match the door state (0=closed, 1=open)
-5. GSX uses this LVAR to control cabin sound muffling when the cockpit door is closed
-6. The cockpit door indicator in Prosim is also updated to reflect the current state
-7. Additionally, a DataRefChangedEvent is published through the EventAggregator
-8. The event is received by any components that have subscribed to DataRefChangedEvent
-9. This allows for real-time UI updates and other components to react to door state changes
-
-### Initialization Flow
-1. Application starts and initializes core components
-2. Connections are established with MSFS, Prosim, and GSX
-3. Configuration is loaded
-4. UI is initialized
-5. Event handlers are registered
-6. System begins monitoring for state changes
-
-### Service Orchestration
-1. ServiceController monitors aircraft state through ProsimController and MobiSimConnect
-2. When conditions are met for a service (e.g., flight plan loaded), ServiceController triggers the appropriate action
-3. GsxController executes the service call to GSX
-4. System monitors for service completion
-5. When service completes, state is synchronized between systems
-
-### Refueling Process Flow
-1. **Initialization and State Setup:**
-   - `GsxRefuelingService` initializes with connections to required services
-   - `SetInitialFuel()` prepares the initial fuel state in Prosim
-   - `SetHydraulicFluidLevels()` sets initial hydraulic fluid values
-   - State tracking ensures these initialization steps happen only once
-
-2. **Refueling Request:**
-   - GSX controller checks for refueling conditions
-   - `RequestRefueling()` opens the GSX menu and selects the refueling option
-   - `_refuelingRequested` flag is set to track that refueling has been requested
-   - A `ServiceStatusChangedEvent` is published to notify the system
-
-3. **Activation and Monitoring:**
-   - `SetRefuelingActive()` changes state to active and starts in paused state
-   - `_refuelingActive` and `_refuelingPaused` flags track the current state
-   - `StartRefueling()` is called on the Prosim refueling service to prepare fuel systems
-   - LVAR callback monitors for fuel hose connection/disconnection
-
-4. **Fuel Hose Management:**
-   - `OnFuelHoseStateChanged()` callback handles fuel hose state changes
-   - When hose connects: `_fuelHoseConnected = true`, `_refuelingPaused = false`, `ResumeRefueling()`
-   - When hose disconnects: `_fuelHoseConnected = false`, `_refuelingPaused = true`, `PauseRefueling()`
-   - All state changes are logged with appropriate level and category
-
-5. **Processing and Completion:**
-   - `ProcessRefueling()` is called regularly to check progress and update fuel levels
-   - Prosim refueling service handles the actual fuel addition
-   - When refueling completes: `_refuelingActive = false`, `_refuelingCompleted = true`, `StopRefueling()`
-   - `StopRefueling()` explicitly terminates the refueling process and publishes completion events
-
-### Loadsheet Generation Flow
-1. **Thread-Safe Generation Process:**
-   - The loadsheet generation process is protected by a dedicated lock object (`_loadsheetLock`)
-   - State tracking flags prevent multiple simultaneous attempts to generate the same loadsheet type
-   - A clear distinction between "requested" state and "generating" process is maintained
-   - The `finally` block ensures state flags are always reset, even on exceptions
-   - Loadsheet generation is tracked for both preliminary and final loadsheets independently
-
-2. **Server Status Checking:**
-   - Before attempting to generate a loadsheet, the system checks if the Prosim EFB server is running and accessible
-   - A simple GET request is sent to the server's health endpoint
-   - If the server is not available, the operation is aborted with a clear error message
-   - This prevents unnecessary attempts to generate loadsheets when the server is not available
-   - The server status check is implemented in both GsxLoadsheetService and ProsimLoadsheetService
-   - The check uses a short timeout (5 seconds) to avoid hanging the application
-   - The result is returned as a Task<bool> that can be awaited by the caller
-
-3. **Loadsheet Generation:**
-   - The system uses Prosim's native loadsheet functionality to generate loadsheets
-   - A POST request is sent to the Prosim EFB server's loadsheet generation endpoint
-   - The request includes the type of loadsheet to generate (Preliminary or Final)
-   - The system tracks whether a loadsheet has already been requested for the current flight
-   - Flags are reset when a new flight plan is loaded
-   - Comprehensive logging with loadsheet-specific categories aids in troubleshooting
-
-4. **Error Handling:**
-   - Detailed HTTP status code interpretation with specific troubleshooting steps for different error types
-   - Retry logic with exponential backoff for transient failures
-   - Comprehensive logging of request/response details for troubleshooting
-   - Timeout handling to detect connection issues quickly
-   - Exception handling for TaskCanceledException (timeout), HttpRequestException (network issues), and general exceptions
-
-### Menu Service Flow
-1. **Menu Opening:**
-   - `OpenMenu()` resets the menu ready flag and activates the GSX menu
-   - Writing to LVAR `FSDT_GSX_MENU_OPEN` triggers the menu display
-   - Menu opening is logged with `LogCategory.Menu` for better filtering
-
-2. **Menu Item Selection:**
-   - `SelectMenuItem()` includes optional waiting for menu readiness
-   - Menu ready flag is reset before selection to track new selection
-   - LVAR `FSDT_GSX_MENU_CHOICE` is set with adjusted index value
-   - Small delay (100ms) follows selection to allow GSX to process
-   - Selection is logged with detailed information about the choice
-
-3. **Menu Readiness Management:**
-   - `WaitForMenuReady()` polls the `IsGsxMenuReady` flag with a counter
-   - Reasonable timeout (1000 iterations * 100ms = 100 seconds) prevents infinite waiting
-   - Completion time is logged for performance analysis
-
-4. **Operator Selection Handling:**
-   - `IsOperatorSelectionActive()` checks menu file content
-   - Detects specific text patterns indicating operator selection is required
-   - Returns -1 (
+   - The handler updates the Je
