@@ -1,7 +1,17 @@
 # Active Context: Prosim2GSX
 
 ## Current Focus
-The current focus has been on enhancing service architecture with improved state management across multiple services. We've implemented a comprehensive state tracking pattern, added thread synchronization with dedicated lock objects, created service-specific log categories for better filtering, and improved error handling and recovery mechanisms. These changes have significantly improved the reliability and maintainability of the application.
+The current focus has been on implementing a full-featured Push-to-Talk (PTT) system with ACP channel integration. This new feature enables users to configure and use keyboard shortcuts or joystick buttons to activate push-to-talk functionality for different ACP channels in ProSim. The implementation includes a comprehensive UI for configuring PTT settings, real-time status display, and integration with the ACP channel system in Prosim.
+
+Key aspects of the PTT implementation:
+- User-configurable keyboard or joystick input detection
+- Individual key mapping for each ACP channel
+- Visual feedback for active/disabled channel states
+- Integration with "system.switches.S_ASP_SEND_CHANNEL" dataref for channel monitoring
+- Thread-safe state management
+- Theme-aware UI components that match the application's visual style
+
+Prior to the PTT feature implementation, the focus was on enhancing service architecture with improved state management across multiple services. We've implemented a comprehensive state tracking pattern, added thread synchronization with dedicated lock objects, created service-specific log categories for better filtering, and improved error handling and recovery mechanisms. These changes have significantly improved the reliability and maintainability of the application.
 
 Prior to these architectural improvements, the focus was on simplifying the loadsheet generation process by removing redundant custom weight and balance calculations and fully relying on Prosim's native loadsheet functionality. This change removed unnecessary complexity and potential points of failure in the code. The redundant variables and methods related to custom weight and balance calculations were removed from GsxController.cs and ProsimController.cs, while keeping the enhanced error handling, server status checking, and retry logic in ProsimLoadsheetService.cs.
 
@@ -25,6 +35,18 @@ Before the UI update, the focus was on implementing an event aggregator system t
 Previous work also focused on implementing a new Prosim dataref subscription system and enhancing the cockpit door integration between Prosim and GSX. The dataref subscription system involved creating a callback-based monitoring system for Prosim datarefs and implementing synchronization between the cockpit door state in Prosim and the corresponding LVAR in GSX. The implementation allows the cockpit door to muffle cabin sounds when closed, enhancing the realism of the simulation. Additionally, the previous work on cargo door logic, catering service door operation, and refueling process enhancements has been thoroughly tested and verified.
 
 ## Recent Changes
+- Implemented comprehensive Push-to-Talk (PTT) functionality:
+  - Created PttService with Windows.Gaming.Input support for joystick detection
+  - Implemented ACP channel monitoring via dataref "system.switches.S_ASP_SEND_CHANNEL"
+  - Developed UI components for PTT configuration and status monitoring
+  - Added channel-specific key mapping with expandable/collapsed UI sections
+  - Implemented key capture system for detecting keyboard/joystick inputs
+  - Added thread-safe state management for PTT activation
+  - Created visual feedback for active/disabled channel states
+  - Implemented theme-aware UI components with proper styling
+  - Added safeguards to prevent PTT activation on disabled channels
+  - Enhanced UI with modern button styles matching application theme
+
 - Refactored logging system to use standard .NET ILogger interfaces:
   - Resolved circular dependency between ILoggerFactory and UiLogListener
   - Added RegisterService<T>() method to ServiceLocator for manual service registration
@@ -184,6 +206,12 @@ Previous work also focused on implementing a new Prosim dataref subscription sys
   - Previously: Updated the application version from 0.3.0 to 0.4.0
 
 ## Active Decisions
+- Implementing Push-to-Talk functionality with Windows.Gaming.Input for joystick support
+- Using System.Windows.Forms for keyboard detection to avoid creating custom key capture classes
+- Monitoring "system.switches.S_ASP_SEND_CHANNEL" dataref for ACP channel integration
+- Implementing expandable channel sections in the UI for better organization
+- Using theme-aware styling for PTT UI components to maintain visual consistency
+- Adding safeguards to prevent PTT activation on disabled channels
 - Using standard .NET ILogger interfaces throughout the application for better maintainability
 - Allowing AudioService to initialize with null SimConnect to improve application startup reliability
 - Simplifying logging configuration to eliminate duplicate log entries
@@ -232,6 +260,12 @@ Previous work also focused on implementing a new Prosim dataref subscription sys
 - Previously: Choosing to update to .NET 8 for improved performance and extended support
 
 ## Current Challenges
+- Ensuring proper integration of PTT functionality with Prosim's ACP channel system
+- Handling edge cases in joystick button detection and keyboard input
+- Managing the lifecycle of input detection to prevent resource leaks
+- Ensuring thread safety in PTT state management
+- Coordinating UI updates with PTT state changes
+- Ensuring proper cleanup of resources when components are disposed
 - Ensuring proper integration with Prosim's native loadsheet functionality
 - Handling potential errors or edge cases in the loadsheet generation process
 - Maintaining compatibility with future updates to Prosim's loadsheet system
@@ -264,32 +298,42 @@ Previous work also focused on implementing a new Prosim dataref subscription sys
 - Testing the automatic door operations with various service scenarios
 
 ## Next Steps
-1. Test the enhanced service architecture with various flight scenarios
-2. Monitor for any issues with the improved state management system
-3. Consider adding more detailed logging for service state transitions
-4. Explore potential improvements to error handling for edge cases
-5. Update documentation to reflect the improved service architecture
-6. Consider implementing automated testing for core components
-7. Explore extending automation to cover push-back, de-ice, and gate selection services
-8. Implement performance metrics to monitor service response times
-9. Enhance the event filtering system to reduce unnecessary UI updates
-10. Optimize the monitoring interval for different types of datarefs based on criticality
-6. Extend the event aggregator system to cover more aspects of the application
-7. Implement additional event types for other state changes in the system
-8. Optimize event publishing frequency for different types of events
-9. Consider implementing event filtering to reduce unnecessary UI updates
-10. Evaluate the performance impact of the event aggregator system under heavy load
-11. Identify additional Prosim datarefs that could benefit from the subscription system
-12. Explore extending the dataref subscription pattern to other simulation variables
-13. Optimize the monitoring interval for different types of datarefs
-14. Consider implementing priority levels for different dataref monitors
-15. Optimize performance of the callback system
-16. Document the new CG calculation system and weight and balance calculator for future development
-17. Explore potential improvements to error handling for edge cases
-18. Consider adding more configuration options for door operation behavior
-19. Evaluate performance impact of the dataref monitoring system under heavy load
+1. Test the PTT functionality with various joystick and keyboard inputs
+2. Monitor for any issues with the PTT state management system
+3. Consider adding more detailed logging for PTT state transitions
+4. Explore potential improvements to input detection for edge cases
+5. Update documentation to reflect the new PTT functionality
+6. Test the enhanced service architecture with various flight scenarios
+7. Monitor for any issues with the improved state management system
+8. Consider adding more detailed logging for service state transitions
+9. Explore potential improvements to error handling for edge cases
+10. Update documentation to reflect the improved service architecture
+11. Consider implementing automated testing for core components
+12. Explore extending automation to cover push-back, de-ice, and gate selection services
+13. Implement performance metrics to monitor service response times
+14. Enhance the event filtering system to reduce unnecessary UI updates
+15. Optimize the monitoring interval for different types of datarefs based on criticality
+16. Extend the event aggregator system to cover more aspects of the application
+17. Implement additional event types for other state changes in the system
+18. Optimize event publishing frequency for different types of events
+19. Consider implementing event filtering to reduce unnecessary UI updates
+20. Evaluate the performance impact of the event aggregator system under heavy load
+21. Identify additional Prosim datarefs that could benefit from the subscription system
+22. Explore extending the dataref subscription pattern to other simulation variables
+23. Optimize the monitoring interval for different types of datarefs
+24. Consider implementing priority levels for different dataref monitors
+25. Optimize performance of the callback system
+26. Document the new CG calculation system and weight and balance calculator for future development
+27. Explore potential improvements to error handling for edge cases
+28. Consider adding more configuration options for door operation behavior
+29. Evaluate performance impact of the dataref monitoring system under heavy load
 
 ## Open Questions
+- What are the most common issues users encounter with the PTT functionality?
+- Are there specific ACP channels that need special handling?
+- What are the current development priorities for the PTT system?
+- Are there planned features for the PTT system not yet implemented?
+- How well does the PTT system handle edge cases and error conditions?
 - What are the most common issues users encounter?
 - Are there specific areas of the integration that need improvement?
 - What are the current development priorities?
@@ -297,7 +341,7 @@ Previous work also focused on implementing a new Prosim dataref subscription sys
 - How well does the system handle edge cases and error conditions?
 
 ## Current State Assessment
-The project appears to be a functional integration tool that successfully bridges Prosim A320 and GSX Pro. The architecture seems well-structured with clear separation of concerns and appropriate use of design patterns. The documentation provides a good overview of the system's purpose and functionality.
+The project appears to be a functional integration tool that successfully bridges Prosim A320 and GSX Pro, with the recent addition of a comprehensive Push-to-Talk system for ACP channel integration. The architecture seems well-structured with clear separation of concerns and appropriate use of design patterns. The documentation provides a good overview of the system's purpose and functionality.
 
 ## Development Environment
 The development environment now requires .NET 8 SDK for building the application. The project structure follows standard .NET conventions with appropriate organization of components.
@@ -306,7 +350,7 @@ The development environment now requires .NET 8 SDK for building the application
 No specific user feedback has been documented yet. This section will be updated as feedback is received and analyzed.
 
 ## Integration Status
-The integration between Prosim A320 and GSX Pro appears to be working as described in the README. The system handles various ground service operations and synchronizes state between the two systems.
+The integration between Prosim A320 and GSX Pro appears to be working as described in the README. The system handles various ground service operations and synchronizes state between the two systems. The new PTT functionality provides additional integration with Prosim's ACP channel system.
 
 ## Documentation Status
 Initial documentation has been created in the memory bank. This will need to be refined and expanded as more information becomes available and as the project evolves.
