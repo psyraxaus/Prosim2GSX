@@ -30,6 +30,9 @@ namespace Prosim2GSX.ViewModels.Components
         private string _detectionStatusText;
         private bool _isDetecting;
 
+        private System.Timers.Timer _applicationNameDebounceTimer;
+        private const int DebounceDelay = 500; // milliseconds
+
         #endregion
 
         #region Properties
@@ -73,16 +76,25 @@ namespace Prosim2GSX.ViewModels.Components
             {
                 if (SetProperty(ref _applicationName, value))
                 {
-                    // Direct update to the ServiceModel, skipping the PttService
-                    if (_serviceModel.PttChannelConfigurations.TryGetValue(_channelType, out var configExplicit))
+                    // Stop any existing timer and restart it
+                    _applicationNameDebounceTimer.Stop();
+                    _applicationNameDebounceTimer.Start();
+
+                    // Update the model in memory (but don't save yet)
+                    if (_serviceModel.PttChannelConfigurations.TryGetValue(_channelType, out var config))
                     {
-                        configExplicit.TargetApplication = value;
-                        _serviceModel.SavePttChannelConfig(_channelType);
-                        _logger?.LogDebug("Saved ApplicationName={App} for channel {Channel}", value, _channelType);
+                        config.TargetApplication = value;
+                    }
+
+                    // If using the PttService, update it as well (it will handle saving)
+                    if (_pttService != null)
+                    {
+                        _pttService.SetChannelTargetApplication(_channelType, value);
                     }
                 }
             }
         }
+
 
         /// <summary>
         /// Gets or sets the keyboard shortcut
@@ -178,6 +190,11 @@ namespace Prosim2GSX.ViewModels.Components
 
             // Initialize commands
             SetKeyCommand = new RelayCommand(_ => SetKey(), _ => _pttService != null && !IsDetecting);
+
+            // Initialize the debounce timer
+            _applicationNameDebounceTimer = new System.Timers.Timer(DebounceDelay);
+            _applicationNameDebounceTimer.AutoReset = false;
+            _applicationNameDebounceTimer.Elapsed += OnApplicationNameDebounceTimerElapsed;
         }
 
         #endregion
@@ -239,6 +256,34 @@ namespace Prosim2GSX.ViewModels.Components
                 // Ensure the command can execute state is updated
                 (SetKeyCommand as RelayCommand)?.RaiseCanExecuteChanged();
             });
+        }
+
+        /// <summary>
+        /// Handles the timer elapsed event for application name debouncing.
+        /// Saves the application name to the configuration after user stops typing.
+        /// </summary>
+        /// <param name="sender">The source of the event</param>
+        /// <param name="e">Event arguments</param>
+        private void OnApplicationNameDebounceTimerElapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            ExecuteOnUIThread(() =>
+            {
+                if (_serviceModel.PttChannelConfigurations.TryGetValue(_channelType, out var config))
+                {
+                    config.TargetApplication = _applicationName;
+                    _serviceModel.SavePttChannelConfig(_channelType);
+                    _logger?.LogDebug("Debounced save of ApplicationName={App} for channel {Channel}", _applicationName, _channelType);
+                }
+            });
+        }
+
+        /// <summary>
+        /// Cleans up resources used by the view model, including timers and event handlers.
+        /// Should be called when the view model is no longer needed to prevent memory leaks.
+        /// </summary>
+        public void Cleanup()
+        {
+            _applicationNameDebounceTimer?.Dispose();
         }
 
         #endregion

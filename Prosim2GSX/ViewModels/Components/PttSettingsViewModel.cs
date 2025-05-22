@@ -354,6 +354,15 @@ namespace Prosim2GSX.ViewModels.Components
         {
             _logger?.LogDebug("Cleaning up PttSettingsViewModel");
 
+            // Clean up channel mappings
+            foreach (var mapping in ChannelMappings)
+            {
+                if (mapping is ChannelMappingViewModel channelMapping)
+                {
+                    channelMapping.Cleanup();
+                }
+            }
+
             // Unsubscribe from events
             foreach (var token in _subscriptionTokens)
             {
@@ -361,6 +370,7 @@ namespace Prosim2GSX.ViewModels.Components
             }
             _subscriptionTokens.Clear();
         }
+
 
         #endregion
     }
