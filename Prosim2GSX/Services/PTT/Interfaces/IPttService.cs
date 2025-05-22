@@ -107,10 +107,11 @@ namespace Prosim2GSX.Services.PTT.Interface
         void DeactivatePtt();
 
         /// <summary>
-        /// Starts input capture mode to detect keyboard or joystick input
+        /// Starts capturing input for configuration purposes
         /// </summary>
-        /// <param name="callback">Callback to execute when input is detected</param>
-        void StartInputCapture(Action<string> callback);
+        /// <param name="callback">Callback to be called when input is detected</param>
+        /// <param name="isForChannelKey">Whether this input capture is for a channel-specific key</param>
+        void StartInputCapture(Action<string> callback, bool isForChannelKey = false);
 
         /// <summary>
         /// Stops capturing input for PTT activation

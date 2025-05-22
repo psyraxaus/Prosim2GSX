@@ -70,6 +70,8 @@ namespace Prosim2GSX.Services.PTT.Implementations
         private readonly IDataRefMonitoringService _dataRefMonitoringService;
         private readonly IProsimInterface _prosimInterface;
 
+        private bool _isCapturingForChannelKey;
+
         #endregion
 
         #region Properties
@@ -291,7 +293,7 @@ namespace Prosim2GSX.Services.PTT.Implementations
         }
 
         /// <inheritdoc/>
-        public void StartInputCapture(Action<string> callback)
+        public void StartInputCapture(Action<string> callback, bool isForChannelKey = false)
         {
             if (_isCapturing)
                 return;
@@ -299,10 +301,12 @@ namespace Prosim2GSX.Services.PTT.Implementations
             _logger.LogInformation("Starting input capture");
             _inputCaptureCallback = callback;
             _isCapturing = true;
+            _isCapturingForChannelKey = isForChannelKey; // Add this field
 
             // Start a separate task for input capture
             Task.Run(InputCaptureLoop);
         }
+
 
         /// <inheritdoc/>
         public void StopInputCapture()
@@ -717,10 +721,13 @@ namespace Prosim2GSX.Services.PTT.Implementations
                         {
                             _logger.LogDebug("Detected keyboard input: {Key}", key);
 
-                            // Set as monitored key
-                            SetMonitoredKey(key.ToString());
+                            // Only set as monitored key if we're not capturing for a channel key
+                            if (!_isCapturingForChannelKey)
+                            {
+                                SetMonitoredKey(key.ToString());
+                            }
 
-                            // Notify callback
+                            // Always notify the callback
                             _inputCaptureCallback?.Invoke(key.ToString());
 
                             _isCapturing = false;
@@ -728,7 +735,7 @@ namespace Prosim2GSX.Services.PTT.Implementations
                         }
                     }
 
-                    // Check for joystick input
+                    // Check for joystick input (similar changes needed here)
                     for (int joystickId = 0; joystickId < _controllers.Count; joystickId++)
                     {
                         var controller = _controllers[joystickId];
@@ -748,8 +755,11 @@ namespace Prosim2GSX.Services.PTT.Implementations
                                 _logger.LogDebug("Detected joystick input: Joystick {JoystickId}, Button {ButtonId}",
                                     joystickId, buttonId);
 
-                                // Set as monitored joystick button
-                                SetMonitoredJoystickButton(joystickId, buttonId);
+                                // Only set as monitored joystick button if we're not capturing for a channel key
+                                if (!_isCapturingForChannelKey)
+                                {
+                                    SetMonitoredJoystickButton(joystickId, buttonId);
+                                }
 
                                 // Notify callback
                                 string displayName = $"{controller.DisplayName} (Button {buttonId + 1})";

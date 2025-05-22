@@ -224,9 +224,10 @@ namespace Prosim2GSX.ViewModels.Components
             IsDetecting = true;
             DetectionStatusText = "Press a key...";
 
-            // Start input capture with callback for when input is detected
-            _pttService.StartInputCapture(OnInputDetected);
+            // Start input capture with callback for when input is detected, and specify this is for a channel key
+            _pttService.StartInputCapture(OnInputDetected, isForChannelKey: true);
         }
+
 
         /// <summary>
         /// Called when input is detected during detection mode
