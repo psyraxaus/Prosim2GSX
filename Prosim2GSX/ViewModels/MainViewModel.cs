@@ -344,6 +344,23 @@ namespace Prosim2GSX.ViewModels
                 serviceModel,
                 null, // Will be set later when available
                 _loggerFactory.CreateLogger<PttStatusViewModel>());
+                
+            // Try to get the PTT service from ServiceLocator
+            try
+            {
+                var pttService = ServiceLocator.PttService;
+                if (pttService != null)
+                {
+                    _logger.LogInformation("PTT service found, connecting to ViewModels");
+                    PttSettings.SetPttService(pttService);
+                    PttStatus.SetPttService(pttService);
+                    _isPttServiceAvailable = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not get PTT service: {Message}", ex.Message);
+            }
 
             // Initialize commands
             ShowHelpCommand = new RelayCommand(_ => ShowHelp());
@@ -359,6 +376,36 @@ namespace Prosim2GSX.ViewModels
 
             // Subscribe to events
             SubscribeToEvents();
+
+            // Start a timer to check for PTT service if it's not available yet
+            if (!_isPttServiceAvailable)
+            {
+                _logger.LogInformation("PTT service not available yet, will check periodically");
+                var pttCheckTimer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromSeconds(2)
+                };
+                pttCheckTimer.Tick += (s, e) =>
+                {
+                    try
+                    {
+                        var pttService = ServiceLocator.PttService;
+                        if (pttService != null)
+                        {
+                            _logger.LogInformation("PTT service found, connecting to ViewModels");
+                            PttSettings.SetPttService(pttService);
+                            PttStatus.SetPttService(pttService);
+                            _isPttServiceAvailable = true;
+                            pttCheckTimer.Stop();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Could not get PTT service: {Message}", ex.Message);
+                    }
+                };
+                pttCheckTimer.Start();
+            }
 
             _logger.LogDebug("MainViewModel initialized");
         }

@@ -517,11 +517,11 @@ namespace Prosim2GSX.Services.PTT.Implementations
 
             // Get button state
             bool[] buttonStates = new bool[controller.ButtonCount];
-            bool[] switchStates = new bool[controller.SwitchCount];
+            GameControllerSwitchPosition[] switchStates = new GameControllerSwitchPosition[controller.SwitchCount];
             double[] axisValues = new double[controller.AxisCount];
 
             // Get the current reading with the proper parameters
-            controller.GetCurrentReading(buttonStates, null, null);
+            controller.GetCurrentReading(buttonStates, switchStates, axisValues);
 
             // Check if the button is pressed
             return buttonStates[MonitoredJoystickButton];
@@ -676,11 +676,11 @@ namespace Prosim2GSX.Services.PTT.Implementations
                     int controllerIdx = _controllers.IndexOf(controller);
 
                     bool[] buttonStates = new bool[controller.ButtonCount];
-                    bool[] switchStates = new bool[controller.SwitchCount];
+                    GameControllerSwitchPosition[] switchStates = new GameControllerSwitchPosition[controller.SwitchCount];
                     double[] axisValues = new double[controller.AxisCount];
 
                     // Get the current reading with the proper parameters
-                    controller.GetCurrentReading(buttonStates, null, null);
+                    controller.GetCurrentReading(buttonStates, switchStates, axisValues);
 
                     initialButtonStates[controllerIdx] = buttonStates;
                 }
@@ -712,11 +712,11 @@ namespace Prosim2GSX.Services.PTT.Implementations
                         var controller = _controllers[joystickId];
                         bool[] initialStates = initialButtonStates[joystickId];
                         bool[] currentStates = new bool[controller.ButtonCount];
-                        bool[] switchStates = new bool[controller.SwitchCount];
+                        GameControllerSwitchPosition[] switchStates = new GameControllerSwitchPosition[controller.SwitchCount];
                         double[] axisValues = new double[controller.AxisCount];
 
                         // Get the current reading with the proper parameters
-                        controller.GetCurrentReading(currentStates, null, null);
+                        controller.GetCurrentReading(currentStates, switchStates, axisValues);
 
                         // Check if any button was newly pressed
                         for (int buttonId = 0; buttonId < currentStates.Length; buttonId++)

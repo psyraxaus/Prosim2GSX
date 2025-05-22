@@ -486,6 +486,9 @@ namespace Prosim2GSX.Models
             ConfigurationFile[key] = value;
             _logger?.LogDebug("Updated setting {Key} = {Value}", key, value);
 
+            // Save configuration to disk immediately
+            ConfigurationFile.SaveConfiguration();
+
             if (!noLoad)
                 LoadConfiguration();
         }
@@ -628,6 +631,9 @@ namespace Prosim2GSX.Models
                 return;
 
             string channelKey = channelType.ToString().ToLower();
+            _logger?.LogInformation("Saving PTT config for channel: {Channel}, Key: {Key}, App: {App}",
+                channelType, config.KeyMapping, config.TargetApplication);
+
             SetSetting($"ptt{channelKey}Enabled", config.Enabled.ToString());
             SetSetting($"ptt{channelKey}KeyMapping", config.KeyMapping);
             SetSetting($"ptt{channelKey}Application", config.TargetApplication);
