@@ -40,7 +40,7 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
     </UserControl.Resources>
-
+    
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="20">
             <!-- PTT Enable/Configure -->
@@ -49,15 +49,16 @@
                 <StackPanel>
                     <CheckBox x:Name="chkEnablePtt" 
                         Content="Enable Push-to-Talk functionality" 
-                        Style="{StaticResource LocalCheckBoxStyle}"/>
+                        Style="{StaticResource LocalCheckBoxStyle}"
+                        IsChecked="{Binding IsPttEnabled, Mode=TwoWay}"/>
 
                     <StackPanel x:Name="pnlPttConfiguration" Margin="0,10,0,0">
                         <TextBlock Text="Input Configuration" FontWeight="SemiBold" Margin="0,0,0,10"/>
 
                         <StackPanel Orientation="Horizontal" Margin="0,5,0,10">
                             <TextBlock Text="Button/Key:" VerticalAlignment="Center" Margin="0,0,10,0" Width="120"/>
-                            <TextBox x:Name="txtPttButton" Width="200" IsReadOnly="True"/>
-                            <Button x:Name="btnDetectPttButton">
+                            <TextBox x:Name="txtPttButton" Width="200" IsReadOnly="True" Text="{Binding CurrentButtonText, Mode=OneWay}"/>
+                            <Button x:Name="btnDetectPttButton" Command="{Binding DetectButtonCommand}">
                                 <StackPanel Orientation="Horizontal">
                                     <Path Data="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z" Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" Width="18" Height="18" Margin="0,0,8,0"/>
                                     <TextBlock Text="Detect Input" VerticalAlignment="Center"/>
@@ -65,7 +66,7 @@
                             </Button>
                         </StackPanel>
 
-                        <TextBlock x:Name="txtPttDetectionStatus" Foreground="Gray" Margin="0,0,0,10"/>
+                        <TextBlock x:Name="txtPttDetectionStatus" Text="{Binding DetectionStatusText}" Foreground="Gray" Margin="0,0,0,10"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -81,15 +82,15 @@
                     <Border Background="{DynamicResource PrimaryColor}" Padding="10" Margin="0,0,0,15">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <TextBlock Text="Active Channel: " Foreground="{DynamicResource HeaderText}" FontWeight="SemiBold"/>
-                            <TextBlock x:Name="txtActiveChannel" Text="INT" Foreground="{DynamicResource HeaderText}" FontWeight="Bold"/>
+                            <TextBlock x:Name="txtActiveChannel" Text="{Binding ActiveChannel}" Foreground="{DynamicResource HeaderText}" FontWeight="Bold"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Channel configurations -->
-                    <ItemsControl x:Name="channelMappingsControl">
+                    <ItemsControl x:Name="channelMappingsControl" ItemsSource="{Binding ChannelMappings}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Expander Header="{Binding Channel}" IsExpanded="False" Margin="0,5">
+                                <Expander Header="{Binding Channel}" IsExpanded="{Binding IsExpanded}" Margin="0,5">
                                     <Grid Margin="20,10,0,10">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
@@ -130,6 +131,7 @@
                                                 IsReadOnly="True"/>
 
                                             <Button Content="Set Key" 
+                                                Command="{Binding SetKeyCommand}"
                                                 Margin="10,0,0,0" 
                                                 Tag="{Binding Channel}"/>
                                         </StackPanel>

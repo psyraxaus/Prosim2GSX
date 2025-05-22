@@ -153,7 +153,7 @@
 
                     <!-- PTT Status -->
                     <TextBlock Text="PUSH-TO-TALK SERVICE" Style="{StaticResource CategoryHeaderStyle}"/>
-                    <components:PttStatusControl DataContext="{Binding PttServices}"/>
+                    <components:PttStatusControl DataContext="{Binding PttStatus}"/>
 
                     <!-- Log Messages -->
                     <TextBlock Text="LOG MESSAGES" Style="{StaticResource CategoryHeaderStyle}"/>

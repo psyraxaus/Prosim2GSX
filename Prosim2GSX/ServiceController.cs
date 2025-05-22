@@ -13,6 +13,8 @@ using Prosim2GSX.Services.Connection.Events;
 using Prosim2GSX.Services.Connection.Interfaces;
 using Prosim2GSX.Services.GSX;
 using Prosim2GSX.Services.Prosim.Interfaces;
+using Prosim2GSX.Services.PTT.Implementations;
+using Prosim2GSX.Services.PTT.Interface;
 
 namespace Prosim2GSX
 {
@@ -31,6 +33,7 @@ namespace Prosim2GSX
         private FlightPlan _flightPlan;
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
         private readonly SemaphoreSlim _connectionLock = new SemaphoreSlim(1, 1);
+        private readonly IPttService _pttService;
 
         private SubscriptionToken _retryToken;
 
@@ -54,12 +57,18 @@ namespace Prosim2GSX
                 _dataRefService,
                 IPCManager.SimConnect,
                 _model);
+            _pttService = new PttService(
+                _model,
+                ServiceLocator.GetLogger<PttService>());
 
             // Add this line to set the AudioService in the ServiceModel
             if (_model is ServiceModel serviceModel)
             {
                 serviceModel.SetAudioService((AudioService)_audioService);
             }
+
+            // Register the service with ServiceLocator
+            ServiceLocator.RegisterService<IPttService>(_pttService);
 
             // Subscribe to the retry event
             _retryToken = EventAggregator.Instance.Subscribe<RetryFlightPlanLoadEvent>(OnRetryFlightPlanLoad);
@@ -393,6 +402,15 @@ namespace Prosim2GSX
                 int elapsedMS = gsxController.Interval;
                 int delay = 100;
 
+                _logger.LogDebug("Initializing PTT service");
+                _pttService.SetProsimConnectionState(true);
+
+                if (_model.PttEnabled)
+                {
+                    _pttService.StartMonitoring();
+                    _logger.LogInformation("PTT monitoring started");
+                }
+
                 _logger.LogDebug("Sleeping for 1 second");
                 await Task.Delay(1000, _cts.Token);
 
@@ -460,6 +478,9 @@ namespace Prosim2GSX
                     _audioService.ResetAudio();
                 }
 
+                _pttService.SetProsimConnectionState(false);
+                _pttService.StopMonitoring();
+
                 // Clear the GsxController reference
                 IPCManager.GsxController = null;
             }
@@ -484,6 +505,12 @@ namespace Prosim2GSX
         /// </summary>
         /// <returns>The audio service</returns>
         public IAudioService GetAudioService() => _audioService;
+
+        /// <summary>
+        /// Gets the PTT service
+        /// </summary>
+        /// <returns>The PTT service</returns>
+        public IPttService GetPttService() => _pttService;
 
         /// <summary>
         /// Performs a diagnostic check of the VoiceMeeter API and logs detailed information
