@@ -5,6 +5,7 @@ using Prosim2GSX.Services.Prosim.Implementation;
 using Prosim2GSX.Services.Prosim.Interfaces;
 using Prosim2GSX.Services.PTT.Enums;
 using Prosim2GSX.Services.PTT.Events;
+using Prosim2GSX.Services.PTT.Helpers;
 using Prosim2GSX.Services.PTT.Interface;
 using Prosim2GSX.Services.PTT.Models;
 using System;
@@ -362,10 +363,14 @@ namespace Prosim2GSX.Services.PTT.Implementations
             if (MonitoredJoystickId < _controllers.Count)
             {
                 var controller = _controllers[MonitoredJoystickId];
+                string originalName = controller.DisplayName;
+                string resolvedName = JoystickNameResolver.ResolveJoystickName(controller, MonitoredJoystickId);
+
                 return new JoystickConfig(
                     MonitoredJoystickId,
                     MonitoredJoystickButton,
-                    controller.DisplayName);
+                    originalName,
+                    resolvedName);
             }
 
             return null;
@@ -379,7 +384,8 @@ namespace Prosim2GSX.Services.PTT.Implementations
             var joysticks = new Dictionary<int, string>();
             for (int i = 0; i < _controllers.Count; i++)
             {
-                joysticks[i] = _controllers[i].DisplayName;
+                string resolvedName = JoystickNameResolver.ResolveJoystickName(_controllers[i], i);
+                joysticks[i] = resolvedName;
             }
 
             return joysticks;
@@ -797,7 +803,8 @@ namespace Prosim2GSX.Services.PTT.Implementations
                                 }
 
                                 // Notify callback
-                                string displayName = $"{controller.DisplayName} (Button {buttonId + 1})";
+                                string resolvedName = JoystickNameResolver.ResolveJoystickName(controller, joystickId);
+                                string displayName = $"{resolvedName} (Button {buttonId + 1})";
                                 _inputCaptureCallback?.Invoke(displayName);
 
                                 _isCapturing = false;
@@ -938,8 +945,13 @@ namespace Prosim2GSX.Services.PTT.Implementations
         /// </summary>
         private void RawGameController_Added(object sender, RawGameController controller)
         {
-            _logger.LogInformation("Game controller added: {Name}", controller.DisplayName);
             RefreshControllersList();
+            int controllerIndex = _controllers.IndexOf(controller);
+            if (controllerIndex >= 0)
+            {
+                string resolvedName = JoystickNameResolver.ResolveJoystickName(controller, controllerIndex);
+                _logger.LogInformation("Game controller added: {ResolvedName}", resolvedName);
+            }
         }
 
         /// <summary>
@@ -947,7 +959,8 @@ namespace Prosim2GSX.Services.PTT.Implementations
         /// </summary>
         private void RawGameController_Removed(object sender, RawGameController controller)
         {
-            _logger.LogInformation("Game controller removed: {Name}", controller.DisplayName);
+            string originalName = controller.DisplayName ?? "Unknown";
+            _logger.LogInformation("Game controller removed: {Name}", originalName);
             RefreshControllersList();
         }
 
