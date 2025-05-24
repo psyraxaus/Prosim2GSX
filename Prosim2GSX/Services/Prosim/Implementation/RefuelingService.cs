@@ -25,6 +25,11 @@ namespace Prosim2GSX.Services.Prosim.Implementation
 
         private static readonly float _weightConversion = 2.205f;
 
+        private double _temporaryFuelBackup = -1;
+        private bool _isFuelTemporarilyModified = false;
+
+        public bool IsFuelTemporarilyModified => _isFuelTemporarilyModified;
+
         /// <inheritdoc/>
         public double CurrentFuel => _currentFuel;
 
@@ -321,6 +326,13 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         /// <inheritdoc/>
         public bool ProcessRefueling()
         {
+            // Don't pump fuel if temporarily modified
+            if (_isFuelTemporarilyModified)
+            {
+                _logger.LogDebug("Skipping fuel pumping - fuel temporarily modified for loadsheet");
+                return false;
+            }
+
             // Log entry state for debugging
             _logger.LogDebug("ProcessRefueling called - State: {State}, Current: {CurrentFuel:F1}kg, Target: {TargetFuel:F1}kg",
                 _refuelingState, _currentFuel, _targetFuel);
@@ -351,6 +363,35 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             {
                 _logger.LogError(ex, "Error processing refueling");
                 return false;
+            }
+        }
+
+        /// <inheritdoc/>
+        public void SetTemporaryFuelAmount(double fuelAmount)
+        {
+            // Backup current fuel if not already backed up
+            if (!_isFuelTemporarilyModified)
+            {
+                _temporaryFuelBackup = GetFuelAmount();
+                _isFuelTemporarilyModified = true;
+                _logger.LogInformation("Backed up current fuel: {BackupFuel} kg", _temporaryFuelBackup);
+            }
+
+            // Set temporary fuel amount
+            _prosimInterface.SetProsimVariable("aircraft.fuel.total.amount", fuelAmount);
+            _logger.LogInformation("Set temporary fuel for CG calculation: {TempFuel} kg", fuelAmount);
+        }
+
+        /// <inheritdoc/>
+        public void RestorePreviousFuelAmount()
+        {
+            if (_isFuelTemporarilyModified && _temporaryFuelBackup >= 0)
+            {
+                _prosimInterface.SetProsimVariable("aircraft.fuel.total.amount", _temporaryFuelBackup);
+                _logger.LogInformation("Restored previous fuel amount: {RestoredFuel} kg", _temporaryFuelBackup);
+
+                _temporaryFuelBackup = -1;
+                _isFuelTemporarilyModified = false;
             }
         }
     }

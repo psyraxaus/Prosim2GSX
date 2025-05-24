@@ -96,5 +96,22 @@ namespace Prosim2GSX.Services.Prosim.Interfaces
         /// </summary>
         /// <returns>True if refueling is complete, false otherwise</returns>
         bool ProcessRefueling();
+
+        /// <summary>
+        /// Temporarily set fuel amount for accurate CG calculations
+        /// </summary>
+        /// <param name="fuelAmount">Fuel amount in kg</param>
+        void SetTemporaryFuelAmount(double fuelAmount);
+
+        /// <summary>
+        /// Restore fuel to previous amount after temporary change
+        /// </summary>
+        void RestorePreviousFuelAmount();
+
+        /// <summary>
+        /// Whether fuel is temporarily modified and should not be pumped
+        /// </summary>
+        bool IsFuelTemporarilyModified { get; }
+
     }
 }

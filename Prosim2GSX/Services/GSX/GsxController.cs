@@ -55,6 +55,8 @@ namespace Prosim2GSX.Services.GSX
         private int _loadsheetDelay = 0;
         private bool _opsCallsignSet = false;
         private string _opsCallsign = "";
+        private bool _loadsheetGenerationInProgress = false;
+        private DateTime _loadsheetRequestTime = DateTime.MinValue;
 
         /// <summary>
         /// The interval between service loop iterations in milliseconds
@@ -439,55 +441,46 @@ namespace Prosim2GSX.Services.GSX
             bool cateringComplete = _cateringService.IsCateringComplete;
             bool cateringRequested = _cateringService.IsCateringRequested;
             bool fuelTargetSet = _prosimInterface.GetStatusFunction("aircraft.refuel.fuelTarget") >= 1 && _prosimInterface.GetStatusFunction("efb.plannedfuel") >= 1;
-            bool cargoTargeteSet = _prosimInterface.GetStatusFunction("efb.plannedCargoKg") >= 1;
-            bool passengerTargetSet = _prosimInterface.GetProsimVariable("efb.passengers.booked") == _prosimInterface.GetProsimVariable("aircraft.passengers.seatOccupation");
+            bool cargoTargetSet = _prosimInterface.GetStatusFunction("efb.plannedCargoKg") >= 1;
             bool preliminaryLoadsheetRequested = _loadsheetService.PreliminaryLoadsheetRequested;
             bool finalLoadsheetRequested = _loadsheetService.FinalLoadsheetRequested;
 
-            // First, check if preliminary loadsheet needs to be generated
-            if (!preliminaryLoadsheetRequested && fuelHoseConnected)
+            if (!initialFuelSet)
+                _refuelingService.SetInitialFuel();
+
+            // Check for preliminary loadsheet generation FIRST
+            if (!preliminaryLoadsheetRequested && fuelTargetSet && cargoTargetSet)
             {
-                // Log current conditions for debugging
-                _logger.LogDebug(
-                    "Loadsheet conditions: Fuel Target Set={FuelTargetSet}, Cargo Target Set: {CargoTargetSet}, " +
-                    "Hose Connected: {HoseConnected}, Refueling Active: {RefuelingActive}, Refueling Complete: {RefuelingComplete}",
-                    fuelTargetSet, cargoTargeteSet, fuelHoseConnected, refuelingActive, refuelingComplete);
+                _logger.LogInformation("Generating preliminary loadsheet - targets set, before calling services");
 
-                // Only generate loadsheet when all conditions are met
-                if (fuelTargetSet && cargoTargeteSet && refuelingActive && !refuelingComplete)
+                // Add trip fuel for accurate CG
+                double tripFuel = _flightPlan?.Fuel ?? 0;
+                if (tripFuel > 0)
                 {
-                    _logger.LogInformation("Generating preliminary loadsheet - all conditions met");
-
-                    // Update passenger statistics before generating loadsheet
-                    _passengerService.UpdatePassengerStatistics();
-
-                    // Now generate the loadsheet
-                    await _loadsheetService.GenerateLoadsheet("Preliminary");
-
-                    // Reset aircraft to empty state after preliminary loadsheet generation
-                    // Uses a 3-second delay to allow loadsheet processing to complete
-                    _ = Task.Run(async () =>
-                    {
-                        await Task.Delay(3000); // 3 second delay
-                        _passengerService.ResetSeatsToEmpty();
-                        ServiceLocator.CargoService.ResetCargoToEmpty();
-                        _logger.LogInformation("Aircraft reset to empty state after preliminary loadsheet generation");
-                    });
-
-                    // Update local state:
-                    preliminaryLoadsheetRequested = true;
-                    return;
+                    _prosimRefuelingService.SetTemporaryFuelAmount(tripFuel);
+                    _logger.LogInformation("Added trip fuel {TripFuel} kg for preliminary loadsheet", tripFuel);
                 }
+
+                // Update passenger statistics before generating loadsheet
+                _passengerService.UpdatePassengerStatistics();
+
+                // Generate preliminary loadsheet
+                await _loadsheetService.GenerateLoadsheet("Preliminary");
+
+                // Reset aircraft to completely empty state
+                _prosimRefuelingService.RestorePreviousFuelAmount();
+                _passengerService.ResetSeatsToEmpty();
+                ServiceLocator.CargoService.ResetCargoToEmpty();
+
+                _logger.LogInformation("Aircraft reset to empty - ready for GSX services");
+                return; // Exit early, let next cycle handle GSX services
             }
 
-            if (!refuelingComplete || !boardingComplete || !cateringComplete)
+            if (preliminaryLoadsheetRequested && (!refuelingComplete || !boardingComplete || !cateringComplete))
             {
                 // Handle refueling service
                 if (_model.AutoRefuel)
                 {
-                    if (!initialFuelSet)
-                        _refuelingService.SetInitialFuel();
-
                     if (_model.SetSaveHydraulicFluids && !initialFluidsSet)
                         _refuelingService.SetHydraulicFluidLevels();
 
