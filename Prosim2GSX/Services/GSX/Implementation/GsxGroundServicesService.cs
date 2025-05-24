@@ -111,9 +111,9 @@ namespace Prosim2GSX.Services.GSX.Implementation
             // Log current values
             try
             {
-                string gpuState = _prosimInterface.GetProsimVariable("groundservice.groundpower");
-                string pcaState = _prosimInterface.GetProsimVariable("groundservice.preconditionedAir");
-                string chocksState = _prosimInterface.GetProsimVariable("efb.chocks");
+                string gpuState = _prosimInterface.GetProsimVariable("groundservice.groundpower") ? "true" : "false";
+                string pcaState = _prosimInterface.GetProsimVariable("groundservice.preconditionedAir") ? "true" : "false";
+                string chocksState = _prosimInterface.GetProsimVariable("efb.chocks") ? "true" : "false";
 
                 _logger.LogInformation("Initial states - GPU: {GpuState}, PCA: {PcaState}, Chocks: {ChocksState}",
                     gpuState, pcaState, chocksState);
