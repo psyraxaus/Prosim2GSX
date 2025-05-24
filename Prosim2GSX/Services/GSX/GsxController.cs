@@ -571,11 +571,22 @@ namespace Prosim2GSX.Services.GSX
                 // Process boarding if active
                 if (_boardingService.IsBoardingActive)
                 {
+                    // Ensure PassengerService boarding is started for progressive loading
+                    // This should only be called once when boarding becomes active
                     int paxCurrent = _boardingService.GetCurrentPassengers();
+
+                    // If no passengers loaded yet, start progressive boarding
+                    if (paxCurrent == 0)
+                    {
+                        _passengerService.StartBoarding();
+                        _logger.LogDebug("Started progressive passenger boarding: {PaxCurrent}", paxCurrent);
+                    }
+
                     int cargoPercent = _simConnectService.GetCargoBoardingPercentage();
 
                     if (_boardingService.ProcessBoarding(paxCurrent, cargoPercent))
                     {
+                        _passengerService.StopBoarding();
                         _boardingService.StopBoarding();
                     }
                 }

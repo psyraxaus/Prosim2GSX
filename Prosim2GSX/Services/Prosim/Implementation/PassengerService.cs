@@ -39,6 +39,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             _paxSeats = null;
         }
 
+        /// <inheritdoc/>
         public void UpdatePassengerData(FlightPlan flightPlan, bool forceCurrent)
         {
             try
@@ -78,16 +79,19 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
         }
 
+        /// <inheritdoc/>
         public int GetPlannedPassengers()
         {
             return _paxPlanned != null ? _paxPlanned.Count(i => i) : 0;
         }
 
+        /// <inheritdoc/>
         public int GetCurrentPassengers()
         {
             return _paxCurrent.Count(i => i);
         }
 
+        /// <inheritdoc/>
         public bool[] RandomizePassengerSeating(int trueCount)
         {
             bool[] result = new bool[132];
@@ -126,6 +130,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             return result;
         }
 
+        /// <inheritdoc/>
         public void StartBoarding()
         {
             _paxLast = 0;
@@ -141,6 +146,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
         }
 
+        /// <inheritdoc/>
         public bool ProcessBoarding(int paxCurrent, int cargoCurrent)
         {
             BoardPassengers(paxCurrent - _paxLast);
@@ -151,6 +157,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             return paxCurrent == GetPlannedPassengers() && cargoCurrent == 100;
         }
 
+        /// <inheritdoc/>
         public void StopBoarding()
         {
             _paxSeats = null;
@@ -160,6 +167,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
         }
 
+        /// <inheritdoc/>
         public void StartDeboarding()
         {
             _logger.LogDebug("(planned {PlannedPassengers}) (current {CurrentPassengers})",
@@ -171,6 +179,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                 _paxCurrent = _paxPlanned;
         }
 
+        /// <inheritdoc/>
         public bool ProcessDeboarding(int paxCurrent, int cargoCurrent)
         {
             DeboardPassengers(_paxLast - paxCurrent);
@@ -182,6 +191,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             return paxCurrent == 0 && cargoCurrentValue == 0;
         }
 
+        /// <inheritdoc/>
         public void StopDeboarding()
         {
             _cargoService.UpdateCargoLoading(0);
@@ -361,22 +371,14 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         {
             try
             {
-                _logger.LogInformation("Resetting all seats to empty after preliminary loadsheet generation");
+                // Don't reset _randomizePaxSeat flag - this might prevent re-boarding
+                _paxCurrent = new bool[132]; // Only clear current
 
-                // Only clear current passengers - keep planned passengers for boarding logic
-                _paxCurrent = new bool[132]; // All false
-
-                // Update Prosim with empty seat configuration (use _paxCurrent, not _paxPlanned)
+                // Update Prosim with empty current state
                 _prosimService.SetProsimVariable("aircraft.passengers.seatOccupation", _paxCurrent);
-
-                // Don't update efb.passengers.booked - keep the planned configuration
-
-                // Send empty seat string to Prosim (force = true to send even when 0 passengers)
                 SendSeatString(true);
 
-                // Don't update passenger statistics yet - let boarding process handle it
-
-                _logger.LogInformation("Current seats reset to empty successfully (planned seats preserved for boarding)");
+                _logger.LogInformation("Current seats reset, planned seats preserved for boarding");
             }
             catch (Exception ex)
             {

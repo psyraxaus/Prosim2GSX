@@ -192,11 +192,18 @@ namespace Prosim2GSX.Services.GSX.Implementation
             if (!_isBoarding)
                 return false;
 
+            // Call PassengerService to handle progressive loading
+            var passengerService = ServiceLocator.PassengerService;
+            bool passengerBoardingComplete = false;
+            if (passengerService != null)
+            {
+                passengerBoardingComplete = passengerService.ProcessBoarding(paxCurrent, cargoPercent);
+            }
+
             // Check if GSX considers boarding complete
             if (_simConnectService.GetBoardingState() == (int)GsxServiceState.Completed)
             {
                 _logger.LogInformation("GSX reports boarding completed");
-
                 return true;
             }
 
@@ -213,8 +220,10 @@ namespace Prosim2GSX.Services.GSX.Implementation
             _logger.LogDebug("Boarding progress: Cargo {CargoPercent}%, Passengers {CurrentPax}/{PlannedPax}",
                 cargoPercent, paxCurrent, GetPlannedPassengers());
 
-            return false;
+            // Return passenger boarding status if available
+            return passengerBoardingComplete;
         }
+
 
         /// <inheritdoc/>
         public bool ProcessDeboarding(int paxCurrent, int cargoPercent)

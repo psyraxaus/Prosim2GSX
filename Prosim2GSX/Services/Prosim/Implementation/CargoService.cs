@@ -2,6 +2,7 @@
 using Prosim2GSX.Models;
 using Prosim2GSX.Services.Prosim.Interfaces;
 using System;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 
 namespace Prosim2GSX.Services.Prosim.Implementation
 {
@@ -14,6 +15,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         private const float _cargoDistMain = 4000.0f / 9440.0f;
         private const float _cargoDistBulk = 1440.0f / 9440.0f;
         private int _cargoLast;
+        private bool _isManuallyReset = false;
 
         public int PlannedCargo { get; private set; }
 
@@ -34,6 +36,12 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         {
             try
             {
+                if (_isManuallyReset)
+                {
+                    _logger.LogDebug("Skipping cargo update - manually reset to empty");
+                    return; // Skip update if manually reset
+                }
+
                 if (_model.FlightPlanType == "MCDU")
                 {
                     if (flightPlan != null)
@@ -84,22 +92,9 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         /// <inheritdoc/>
         public void ResetCargoToEmpty()
         {
-            try
-            {
-                _logger.LogInformation("Resetting cargo to empty after preliminary loadsheet generation");
-
-                // Force reset by clearing the last value first
-                _cargoLast = -1; // Force update on next call
-
-                // Reset cargo to 0% (empty) - this will set both forward and aft cargo to 0
-                UpdateCargoLoading(0);
-
-                _logger.LogInformation("Cargo reset to empty successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error resetting cargo to empty");
-            }
+            _isManuallyReset = true; // Set flag
+            _prosimService.SetProsimVariable("aircraft.cargo.forward.amount", 0.0);
+            _prosimService.SetProsimVariable("aircraft.cargo.aft.amount", 0.0);
         }
     }
 }
