@@ -96,5 +96,10 @@
         /// implementing a fallback distribution algorithm.
         /// </summary>
         void UpdatePassengerStatistics();
+
+        /// <summary>
+        /// Reset all seats to empty state
+        /// </summary>
+        void ResetSeatsToEmpty();
     }
 }

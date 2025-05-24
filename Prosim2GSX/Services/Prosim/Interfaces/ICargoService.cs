@@ -21,5 +21,11 @@
         /// </summary>
         /// <param name="flightPlan">The flight plan</param>
         void UpdateCargoData(FlightPlan flightPlan);
+
+        /// <summary>
+        /// Reset cargo to empty state (0% loaded)
+        /// </summary>
+        void ResetCargoToEmpty();
+
     }
 }

@@ -29,6 +29,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             _logger.LogDebug("CargoService initialized");
         }
 
+        /// <inheritdoc/>
         public void UpdateCargoData(FlightPlan flightPlan)
         {
             try
@@ -65,6 +66,7 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             }
         }
 
+        /// <inheritdoc/>
         public void UpdateCargoLoading(int cargoPercentage)
         {
             if (cargoPercentage == _cargoLast)
@@ -77,6 +79,27 @@ namespace Prosim2GSX.Services.Prosim.Implementation
             _prosimService.SetProsimVariable("aircraft.cargo.aft.amount", (float)cargo * _cargoDistMain);
 
             _logger.LogDebug("Cargo updated: {Percentage}% of {PlannedCargo}kg", cargoPercentage, PlannedCargo);
+        }
+
+        /// <inheritdoc/>
+        public void ResetCargoToEmpty()
+        {
+            try
+            {
+                _logger.LogInformation("Resetting cargo to empty after preliminary loadsheet generation");
+
+                // Force reset by clearing the last value first
+                _cargoLast = -1; // Force update on next call
+
+                // Reset cargo to 0% (empty) - this will set both forward and aft cargo to 0
+                UpdateCargoLoading(0);
+
+                _logger.LogInformation("Cargo reset to empty successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error resetting cargo to empty");
+            }
         }
     }
 }

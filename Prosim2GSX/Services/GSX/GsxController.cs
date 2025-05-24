@@ -11,6 +11,7 @@ using Prosim2GSX.Services.Prosim.Interfaces;
 using System;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Prosim2GSX.Services.GSX
 {
@@ -462,6 +463,17 @@ namespace Prosim2GSX.Services.GSX
 
                     // Now generate the loadsheet
                     await _loadsheetService.GenerateLoadsheet("Preliminary");
+
+                    // Reset aircraft to empty state after preliminary loadsheet generation
+                    // Uses a 3-second delay to allow loadsheet processing to complete
+                    _ = Task.Run(async () =>
+                    {
+                        await Task.Delay(3000); // 3 second delay
+                        _passengerService.ResetSeatsToEmpty();
+                        ServiceLocator.CargoService.ResetCargoToEmpty();
+                        _logger.LogInformation("Aircraft reset to empty state after preliminary loadsheet generation");
+                    });
+
                     // Update local state:
                     preliminaryLoadsheetRequested = true;
                     return;

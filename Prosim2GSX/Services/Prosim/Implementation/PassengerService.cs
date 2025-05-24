@@ -355,5 +355,35 @@ namespace Prosim2GSX.Services.Prosim.Implementation
                 _logger.LogError(ex, "Exception during UpdatePassengerStatistics");
             }
         }
+
+        /// <inheritdoc/>
+        public void ResetSeatsToEmpty()
+        {
+            try
+            {
+                _logger.LogInformation("Resetting all seats to empty after preliminary loadsheet generation");
+
+                // Clear both planned and current passenger arrays (all seats empty)
+                _paxPlanned = new bool[132]; // All false
+                _paxCurrent = new bool[132]; // All false
+
+                // Update Prosim with empty seat configuration
+                _prosimService.SetProsimVariable("aircraft.passengers.seatOccupation", _paxPlanned);
+                _prosimService.SetProsimVariable("efb.passengers.booked", _paxPlanned);
+
+                // Send empty seat string to Prosim (force = true to send even when 0 passengers)
+                SendSeatString(true);
+
+                // Update passenger statistics to reflect empty aircraft
+                UpdatePassengerStatistics();
+
+                _logger.LogInformation("All seats reset to empty successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error resetting seats to empty");
+            }
+        }
+
     }
 }
