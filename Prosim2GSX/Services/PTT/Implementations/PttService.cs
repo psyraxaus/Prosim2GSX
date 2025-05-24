@@ -451,7 +451,11 @@ namespace Prosim2GSX.Services.PTT.Implementations
                     }
 
                     // Check for PTT input
-                    bool pttPressed = CheckPttInput();
+                    bool pttPressed = false;
+                    if (!_isCapturing)  // Only check PTT input when not capturing for configuration
+                    {
+                        pttPressed = CheckPttInput();
+                    }
 
                     // Handle state change
                     if (pttPressed != pttWasPressed)
