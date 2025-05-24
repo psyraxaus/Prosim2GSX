@@ -53,19 +53,21 @@ namespace Prosim2GSX.ViewModels.Components
             {
                 if (SetProperty(ref _enabled, value))
                 {
-                    // Direct update to the ServiceModel, skipping the PttService
-                    if (_serviceModel.PttChannelConfigurations.TryGetValue(_channelType, out var configExplicit))
+                    // Always update via PttService first if available, then fallback to ServiceModel
+                    if (_pttService != null)
                     {
-                        configExplicit.Enabled = value;
-                        _serviceModel.SavePttChannelConfig(_channelType);
-                        _logger?.LogDebug("Saved Enabled={Enabled} for channel {Channel}", value, _channelType);
-
-                        // Publish event about this configuration change
-                        EventAggregator.Instance.Publish(new PttChannelConfigChangedEvent(_channelType, value));
+                        _pttService.SetChannelEnabled(_channelType, value);
                     }
-
-                    // Update the IsExpanded property based on enabled state
-                    if (value) IsExpanded = true;
+                    else
+                    {
+                        // Fallback: Direct update to ServiceModel
+                        if (_serviceModel.PttChannelConfigurations.TryGetValue(_channelType, out var config))
+                        {
+                            config.Enabled = value;
+                            _serviceModel.SavePttChannelConfig(_channelType);
+                            EventAggregator.Instance.Publish(new PttChannelConfigChangedEvent(_channelType, value));
+                        }
+                    }
                 }
             }
         }
