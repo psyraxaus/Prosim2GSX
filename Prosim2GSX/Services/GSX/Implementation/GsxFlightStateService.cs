@@ -68,15 +68,15 @@ namespace Prosim2GSX.Services.GSX.Implementation
             switch (_currentState)
             {
                 case FlightState.PREFLIGHT:
-                    return newState == FlightState.DEPARTURE || newState == FlightState.FLIGHT;
+                    return newState == FlightState.DEPARTURE || newState == FlightState.CRUISE;
 
                 case FlightState.DEPARTURE:
                     return newState == FlightState.TAXIOUT;
 
                 case FlightState.TAXIOUT:
-                    return newState == FlightState.FLIGHT;
+                    return newState == FlightState.CRUISE;
 
-                case FlightState.FLIGHT:
+                case FlightState.CRUISE:
                     return newState == FlightState.TAXIIN;
 
                 case FlightState.TAXIIN:

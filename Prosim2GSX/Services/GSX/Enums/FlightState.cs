@@ -16,14 +16,34 @@
         DEPARTURE,
 
         /// <summary>
+        /// Aircraft is pushing back
+        /// </summary>
+        PUSHBACK,
+
+        /// <summary>
         /// Aircraft is taxiing to the runway
         /// </summary>
         TAXIOUT,
 
         /// <summary>
-        /// Aircraft is in flight
+        /// Aircraft is in climb phase
         /// </summary>
-        FLIGHT,
+        CLIMB,
+
+        /// <summary>
+        /// Aircraft is at cruise
+        /// </summary>
+        CRUISE,
+
+        /// <summary>
+        /// Aircraft is descending to destination/alternate airport
+        /// </summary>
+        DESCENT,
+
+        /// <summary>
+        /// Aircraft is on approach
+        /// </summary>
+        APPROACH,
 
         /// <summary>
         /// Aircraft is taxiing to the gate after landing

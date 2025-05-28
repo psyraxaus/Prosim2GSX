@@ -39,6 +39,7 @@ namespace Prosim2GSX.Services.GSX
         private readonly ServiceModel _model;
         private readonly FlightPlan _flightPlan;
         private DataRefChangedHandler _cockpitDoorHandler;
+        private DataRefChangedHandler _gearPinHandler;
         private AcarsClient _acarsClient;
 
         // State tracking variables
@@ -145,6 +146,9 @@ namespace Prosim2GSX.Services.GSX
                 // Create and register cockpit door handler
                 _cockpitDoorHandler = new DataRefChangedHandler(OnCockpitDoorStateChanged);
 
+                // Create and register gear pin handler
+                _gearPinHandler = new DataRefChangedHandler(OnGearPinStateChanged);
+
                 // Get the data ref monitoring service
                 var dataRefService = ServiceLocator.DataRefService;
 
@@ -218,9 +222,9 @@ namespace Prosim2GSX.Services.GSX
                 }
 
                 // Handle state transitions for flight
-                if (_flightStateService.CurrentFlightState <= FlightState.FLIGHT)
+                if (_flightStateService.CurrentFlightState <= FlightState.CRUISE)
                 {
-                    // TAXIOUT -> FLIGHT
+                    // TAXIOUT -> CRUISE
                     if (_flightStateService.CurrentFlightState <= FlightState.TAXIOUT && !simOnGround)
                     {
                         // In-flight restart
@@ -231,14 +235,14 @@ namespace Prosim2GSX.Services.GSX
                             _flightPlanID = _flightPlanService.FlightPlanID;
                         }
 
-                        _flightStateService.TransitionToState(FlightState.FLIGHT);
+                        _flightStateService.TransitionToState(FlightState.CRUISE);
                         _logger.LogInformation("State Change: Taxi-Out -> Flight");
                         Interval = 180000; // Longer interval during flight
                         return;
                     }
 
                     // FLIGHT -> TAXIIN
-                    else if (_flightStateService.CurrentFlightState == FlightState.FLIGHT && simOnGround)
+                    else if (_flightStateService.CurrentFlightState == FlightState.CRUISE && simOnGround)
                     {
                         _flightStateService.TransitionToState(FlightState.TAXIIN);
                         _logger.LogInformation("State Change: Flight -> Taxi-In (Waiting for Engines stopped and Beacon off)");
@@ -268,11 +272,27 @@ namespace Prosim2GSX.Services.GSX
                         HandleDepartureState();
                         break;
 
+                    case FlightState.PUSHBACK:
+                        // Handled by transitions above
+                        break;
+
                     case FlightState.TAXIOUT:
                         // Handled by transitions above
                         break;
 
-                    case FlightState.FLIGHT:
+                    case FlightState.CLIMB:
+                        // Handled by transitions above
+                        break;
+
+                    case FlightState.CRUISE:
+                        // Handled by transitions above
+                        break;
+
+                    case FlightState.DESCENT:
+                        // Handled by transitions above
+                        break;
+
+                    case FlightState.APPROACH:
                         // Handled by transitions above
                         break;
 
@@ -303,7 +323,7 @@ namespace Prosim2GSX.Services.GSX
             ServiceLocator.UpdateAllServices(true, _flightPlan);
             _flightPlanID = _flightPlanService.FlightPlanID;
 
-            _flightStateService.TransitionToState(FlightState.FLIGHT);
+            _flightStateService.TransitionToState(FlightState.CRUISE);
             Interval = 180000;
             _logger.LogInformation("Current State is Flight.");
 
@@ -345,7 +365,7 @@ namespace Prosim2GSX.Services.GSX
             // Handle test arrival mode
             if (_model.TestArrival)
             {
-                _flightStateService.TransitionToState(FlightState.FLIGHT);
+                _flightStateService.TransitionToState(FlightState.CRUISE);
                 ServiceLocator.UpdateAllServices(true, _flightPlan);
                 _logger.LogInformation("Test Arrival - Plane is in 'Flight'");
                 return;
@@ -640,16 +660,16 @@ namespace Prosim2GSX.Services.GSX
                     }
                 }
 
-                // Transition to TAXIOUT when equipment is removed
+                // Transition to PUSHBACK when equipment is removed
                 if (_equipmentRemoved)
                 {
-                    _flightStateService.TransitionToState(FlightState.TAXIOUT);
+                    _flightStateService.TransitionToState(FlightState.PUSHBACK);
                     EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("GPU", ServiceStatus.Inactive));
                     EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("PCA", ServiceStatus.Inactive));
                     EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Chocks", ServiceStatus.Inactive));
                     EventAggregator.Instance.Publish(new ServiceStatusChangedEvent("Refuel", ServiceStatus.Inactive));
 
-                    _logger.LogInformation("State Change: DEPARTURE -> Taxi-Out");
+                    _logger.LogInformation("State Change: DEPARTURE -> PUSHBACK");
 
                     // Reset counters
                     _loadsheetDelay = 0;
@@ -667,9 +687,7 @@ namespace Prosim2GSX.Services.GSX
         private void HandleTaxiinState()
         {
             // Check arrival conditions
-            double engine1 = _prosimInterface.GetProsimVariable("aircraft.engine1.raw");
-            double engine2 = _prosimInterface.GetProsimVariable("aircraft.engine2.raw");
-            bool enginesAreOff = engine1 < 18.0D && engine2 < 18.0D;
+            bool enginesAreOff = _flightPlanService.EnginesRunning;
             bool parkingBrakeSet = _prosimInterface.GetStatusFunction("system.switches.S_MIP_PARKING_BRAKE") == 1;
             bool beaconIsOff = _prosimInterface.GetStatusFunction("system.switches.S_OH_EXT_LT_BEACON") == 0;
             bool groundSpeedNearZero = _simConnectService.ReadGsxLvar("GPS GROUND SPEED") < 0.5;
@@ -934,6 +952,32 @@ namespace Prosim2GSX.Services.GSX
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error handling cockpit door state change");
+            }
+        }
+
+        /// <summary>
+        /// Handler for gear pin state changes
+        /// </summary>
+        /// <param name="dataRef">The dataref name</param>
+        /// <param name="oldValue">The old value</param>
+        /// <param name="newValue">The new value</param>
+        private void OnGearPinStateChanged(string dataRef, dynamic oldValue, dynamic newValue)
+        {
+            try
+            {
+                // Only process if value actually changed
+                if (newValue != oldValue)
+                {
+                    if (_flightStateService.CurrentFlightState == FlightState.PUSHBACK && newValue == false)
+                    {
+                        _flightStateService.TransitionToState(FlightState.TAXIOUT);
+                        _logger.LogInformation("Gear pin state changed to {State}", (newValue ? "inserted" : "removed"));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling gear pin state change");
             }
         }
     }

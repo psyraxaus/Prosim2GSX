@@ -150,9 +150,9 @@ namespace Prosim2GSX.Services.Prosim.Implementation
         {
             get
             {
-                double engine1 = _prosimInterface.GetProsimVariable("aircraft.engine1.raw");
-                double engine2 = _prosimInterface.GetProsimVariable("aircraft.engine2.raw");
-                return engine1 > 18.0D || engine2 > 18.0D;
+                bool engine1 = _prosimInterface.GetProsimVariable("aircraft.engines.1.running");
+                bool engine2 = _prosimInterface.GetProsimVariable("aircraft.engines.2.running");
+                return engine1 == true || engine2 == true;
             }
         }
     }

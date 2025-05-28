@@ -99,12 +99,28 @@ namespace Prosim2GSX.ViewModels.Components
                     SetPhaseDisplay("DEPARTURE", Colors.RoyalBlue, 1);
                     break;
 
+                case FlightState.PUSHBACK:
+                    SetPhaseDisplay("PUSH BACK", Colors.Gold, 3);
+                    break;
+
                 case FlightState.TAXIOUT:
                     SetPhaseDisplay("TAXI OUT", Colors.Gold, 3);
                     break;
 
-                case FlightState.FLIGHT:
+                case FlightState.CLIMB:
+                    SetPhaseDisplay("CLIMB", Colors.Green, 5);
+                    break;
+
+                case FlightState.CRUISE:
                     SetPhaseDisplay("CRUISE", Colors.Green, 5);
+                    break;
+
+                case FlightState.DESCENT:
+                    SetPhaseDisplay("DESCENT", Colors.Green, 5);
+                    break;
+
+                case FlightState.APPROACH:
+                    SetPhaseDisplay("APPROACH", Colors.Purple, 8);
                     break;
 
                 case FlightState.TAXIIN:

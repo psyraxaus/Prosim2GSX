@@ -231,11 +231,18 @@ namespace Prosim2GSX.Services.GSX.Implementation
             if (!_isDeboarding)
                 return false;
 
+            // Call PassengerService to handle progressive deboarding
+            var passengerService = ServiceLocator.PassengerService;
+            bool passengerDeboardingComplete = false;
+            if (passengerService != null)
+            {
+                passengerDeboardingComplete = passengerService.ProcessDeboarding(paxCurrent, cargoPercent);
+            }
+
             // Check if GSX considers deboarding complete
             if (_simConnectService.GetDeboardingState() == (int)GsxServiceState.Completed)
             {
                 _logger.LogInformation("GSX reports deboarding completed");
-
                 return true;
             }
 
@@ -244,16 +251,17 @@ namespace Prosim2GSX.Services.GSX.Implementation
             {
                 _logger.LogInformation("Deboarding is complete: Cargo {CargoPercent}%, Passengers {CurrentPax}/{PlannedPax}",
                     cargoPercent, paxCurrent, GetPlannedPassengers());
-
-                // Deboarding is complete but doors should already be closed at this point
                 return true;
             }
 
+            // Debug logging
             _logger.LogDebug("Deboarding progress: Cargo {CargoPercent}%, Passengers {CurrentPax}/{PlannedPax}",
                 cargoPercent, paxCurrent, GetPlannedPassengers());
 
-            return false;
+            // Return passenger deboarding status
+            return passengerDeboardingComplete;
         }
+
 
         /// <inheritdoc/>
         public void SetPassengers(int numPax)
