@@ -5,11 +5,11 @@ using System.Windows;
 // Allgemeine Informationen über eine Assembly werden über die folgenden
 // Attribute gesteuert. Ändern Sie diese Attributwerte, um die Informationen zu ändern,
 // die einer Assembly zugeordnet sind.
-[assembly: AssemblyTitle("Fenix2GSX Installer v0.5.3.0 (2025.10.04.1642)")]
-[assembly: AssemblyDescription("Installer Application for Fenix2GSX")]
+[assembly: AssemblyTitle("Prosim2GSX Installer v0.5.3.0 (2025.10.04.1642)")]
+[assembly: AssemblyDescription("Installer Application for Prosim2GSX")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Fragtality")]
-[assembly: AssemblyProduct("Fenix2GSX Installer")]
+[assembly: AssemblyProduct("Prosim2GSX Installer")]
 [assembly: AssemblyCopyright("Copyright © 2025")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

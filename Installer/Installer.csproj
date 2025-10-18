@@ -75,11 +75,11 @@
 
   <!-- Build Events -->
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Command="powershell -ExecutionPolicy Unrestricted -file &quot;$(ProjectDir)..\NuPreBuild.ps1&quot; $(SolutionDir) $(ProjectDir) &quot;Installer&quot; &quot;CFIT.Installer&quot; &quot;CFIT.AppTools&quot; &quot;CFIT.AppLogger&quot;&#xD;&#xA;powershell -ExecutionPolicy Unrestricted -file &quot;$(ProjectDir)PackageApp.ps1&quot; $(SolutionDir) &quot;Installer&quot; &quot;Payload&quot; &quot;Fenix2GSX&quot; &quot;Fenix2GSX&quot; &quot;bin\publish&quot;" />
+    <Exec Command="powershell -ExecutionPolicy Unrestricted -file &quot;$(ProjectDir)..\NuPreBuild.ps1&quot; $(SolutionDir) $(ProjectDir) &quot;Installer&quot; &quot;CFIT.Installer&quot; &quot;CFIT.AppTools&quot; &quot;CFIT.AppLogger&quot;&#xD;&#xA;powershell -ExecutionPolicy Unrestricted -file &quot;$(ProjectDir)PackageApp.ps1&quot; $(SolutionDir) &quot;Installer&quot; &quot;Payload&quot; &quot;Prosim2GSX&quot; &quot;Prosim2GSX&quot; &quot;bin\publish&quot;" />
   </Target>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="powershell -ExecutionPolicy Unrestricted -file &quot;$(ProjectDir)ExportInstaller.ps1&quot; $(SolutionDir) $(TargetDir) $(TargetFileName) &quot;Fenix2GSX&quot;" />
+    <Exec Command="powershell -ExecutionPolicy Unrestricted -file &quot;$(ProjectDir)ExportInstaller.ps1&quot; $(SolutionDir) $(TargetDir) $(TargetFileName) &quot;Prosim2GSX&quot;" />
   </Target>
 
 </Project>

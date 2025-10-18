@@ -8,7 +8,7 @@ namespace Installer
 {
     public class Config : ConfigBase
     {
-        public override string ProductName { get { return "Fenix2GSX"; } }
+        public override string ProductName { get { return "Prosim2GSX"; } }
         public override string ProductExePath { get { return Path.Combine(ProductPath, "bin", ProductExe); } }
         public virtual string InstallerExtractDir { get { return Path.Combine(ProductPath, "bin"); } }
 
