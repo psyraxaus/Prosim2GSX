@@ -118,6 +118,11 @@ namespace Prosim2GSX.AppConfig
         public virtual int SpeedTresholdTaxiOut { get; set; } = 2;
         public virtual int SpeedTresholdTaxiIn { get; set; } = 30;
 
+        //ProsimSDK
+        public virtual string ProSimSdkPath { get; set; } = "";
+        public virtual string ProSimSdkHostname { get; set; } = "localhost";
+        public virtual int ProSimSdkReconnectInterval { get; set; } = 5000; // milliseconds
+
         [JsonIgnore]
         public virtual AircraftProfile CurrentProfile => AppService.Instance?.GsxService?.AircraftProfile;
         public virtual List<AircraftProfile> AircraftProfiles { get; set; } = new()
