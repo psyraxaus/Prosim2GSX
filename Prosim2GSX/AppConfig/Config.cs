@@ -29,7 +29,7 @@ namespace Prosim2GSX.AppConfig
         public virtual string SimbriefUrlPathName { get; set; } = "/api/xml.fetcher.php?username={0}&json=v2";
         public virtual string SimbriefUrlPathId { get; set; } = "/api/xml.fetcher.php?userid={0}&json=v2";
         public virtual int UiRefreshInterval { get; set; } = 500;
-        public virtual double FenixWeightBag { get; set; } = 15;
+        public virtual double ProsimWeightBag { get; set; } = 15;
         public virtual double FuelCompareVariance { get; set; } = 25;
         public virtual int TimerGsxCheck { get; set; } = 1000;
         public virtual int TimerGsxProcessCheck { get; set; } = 5000;

@@ -68,7 +68,9 @@ namespace Prosim2GSX.GSX
 
         public virtual ISimResourceSubscription SubDoorToggleCargo1 { get; protected set; }
         public virtual ISimResourceSubscription SubDoorToggleCargo2 { get; protected set; }
-        
+        public virtual ISimResourceSubscription SubDoorToggleService1 { get; protected set; }
+        public virtual ISimResourceSubscription SubDoorToggleService2 { get; protected set; }
+
         public GsxController(Config config) : base(config)
         {
             PathInstallation = Sys.GetRegistryValue<string>(GsxConstants.RegPath, GsxConstants.RegValue, null) ?? GsxConstants.PathDefault;
@@ -129,6 +131,9 @@ namespace Prosim2GSX.GSX
 
             SubDoorToggleCargo1 = SimStore.AddVariable(GsxConstants.VarDoorToggleCargo1);
             SubDoorToggleCargo2 = SimStore.AddVariable(GsxConstants.VarDoorToggleCargo2);
+
+            SubDoorToggleService1 = SimStore.AddVariable(GsxConstants.VarDoorToggleService1);
+            SubDoorToggleService2 = SimStore.AddVariable(GsxConstants.VarDoorToggleService2);
 
             SimStore.AddVariable(GsxConstants.VarReadProgFuel).OnReceived += OnConfigChange;
             SimStore.AddVariable(GsxConstants.VarReadCustFuel).OnReceived += OnConfigChange;
@@ -496,6 +501,8 @@ namespace Prosim2GSX.GSX
             SimStore.Remove(GsxConstants.VarSetAutoMode);
             SimStore.Remove(GsxConstants.VarDoorToggleCargo1);
             SimStore.Remove(GsxConstants.VarDoorToggleCargo2);
+            SimStore.Remove(GsxConstants.VarDoorToggleService1);
+            SimStore.Remove(GsxConstants.VarDoorToggleService2);
 
             SimStore[GsxConstants.VarCouatlStarted].OnReceived -= OnCouatlVariable;
             SimStore[GsxConstants.VarCouatlStartProg5].OnReceived -= OnCouatlVariable;
