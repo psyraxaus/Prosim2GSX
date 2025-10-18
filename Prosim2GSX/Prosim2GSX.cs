@@ -45,17 +45,15 @@ namespace Prosim2GSX
                 {
                     Logger.Information($"ProSimSdkPath configured by user: {Config.ProSimSdkPath}");
 
-                    if (!LoadProSimSdkAssembly(Config.ProSimSdkPath))
-                    {
-                        Logger.Error("Failed to load ProSimSDK assembly. Application cannot continue.");
-                        MessageBox.Show(
-                            "Failed to load ProSim SDK. Please verify the SDK installation and try again.",
-                            "SDK Load Error",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Error);
-                        RequestShutdown(1);
-                        return;
-                    }
+                    // SDK path has been configured - app needs to restart to properly load the assembly
+                    Logger.Information("ProSim SDK path configured. Application restart required.");
+                    MessageBox.Show(
+                        "ProSim SDK path has been configured successfully.\n\nPlease restart the application to load the SDK.",
+                        "Restart Required",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                    RequestShutdown(0);
+                    return;
                 }
                 else
                 {
