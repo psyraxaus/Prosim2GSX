@@ -67,7 +67,7 @@ try {
 	## Stop App
 	if ($cfgDeploy) {
 		Write-Host "Stopping $appName ..."
-		Get-Process -Name $appName -ErrorAction SilentlyContinue | Stop-Process –force -ErrorAction SilentlyContinue
+		Get-Process -Name $appName -ErrorAction SilentlyContinue | Stop-Process -force -ErrorAction SilentlyContinue
 		Sleep(2)
 	}
 
