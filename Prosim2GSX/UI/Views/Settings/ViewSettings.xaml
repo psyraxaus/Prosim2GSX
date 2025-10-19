@@ -48,6 +48,7 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Which Source is used to get the Unit used in the UI.">
@@ -181,11 +182,19 @@
                     Run Audio Controller:
                 </TextBlock>
                 <CheckBox Grid.Column="1" Grid.Row="15" IsChecked="{Binding RunAudioService}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Enable / Disable the Audio Controller for App Volume Control.&#x0a;Disable if you want to use Prosim' native Implementation."/>
-
-                <TextBlock Grid.Column="0" Grid.Row="16" Margin="6" Style="{StaticResource TextBlockDefault}" VerticalAlignment="Top" ToolTip="The Fuel-on-Board Values currently stored by Any2GSX for the various Aircrafts.">
+                <TextBlock Grid.Column="0" Grid.Row="16" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Path to the ProSim SDK DLL file required for ProSim integration.">
+    ProSim SDK Path:
+                </TextBlock>
+                <StackPanel Grid.Column="1" Grid.Row="16" Style="{StaticResource SettingItemPanel}" Orientation="Horizontal" ToolTip="Path to the ProSim SDK DLL file required for ProSim integration.">
+                    <TextBox Name="InputProSimSdkPath" Style="{StaticResource TextBoxLeft}" MinWidth="200" MaxWidth="350" Text="{Binding ProSimSdkPath}" IsReadOnly="True"/>
+                    <Button Name="ButtonBrowseProSimSdk" Margin="6,0,0,0" Style="{StaticResource BtnSquareSmall}" ToolTip="Browse for ProSim SDK file">
+                        <Image Source="../../Icons/cursor.png" Style="{StaticResource ImgSquareSmall}"/>
+                    </Button>
+                </StackPanel>
+                <TextBlock Grid.Column="0" Grid.Row="17" Margin="6" Style="{StaticResource TextBlockDefault}" VerticalAlignment="Top" ToolTip="The Fuel-on-Board Values currently stored by Any2GSX for the various Aircrafts.">
                     Saved Fuel Values:
                 </TextBlock>
-                <StackPanel Grid.Column="1" Grid.Row="16" Margin="6" Orientation="Horizontal">
+                <StackPanel Grid.Column="1" Grid.Row="17" Margin="6" Orientation="Horizontal">
                     <ListView MinWidth="228" MaxWidth="384" Height="96" MaxHeight="142" ScrollViewer.CanContentScroll="True" ScrollViewer.VerticalScrollBarVisibility="Auto"
                               HorizontalAlignment="Left" HorizontalContentAlignment="Left" VerticalAlignment="Top" VerticalContentAlignment="Center"
                               Name="ListSavedFuel">
