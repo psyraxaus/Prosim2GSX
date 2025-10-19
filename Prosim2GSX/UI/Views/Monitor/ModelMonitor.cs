@@ -249,6 +249,8 @@ namespace Prosim2GSX.UI.Views.Monitor
             UpdateBoolState(nameof(AppGsxController), nameof(AppGsxControllerColor), GsxController.IsActive);
             UpdateBoolState(nameof(AppAircraftBinary), nameof(AppAircraftBinaryColor), GsxController.AircraftBinary);
             UpdateBoolState(nameof(AppAircraftInterface), nameof(AppAircraftInterfaceColor), AircraftInterface.IsLoaded);
+            // ProSim SDK status
+            UpdateBoolState(nameof(AppProsimSdkConnected), nameof(AppProsimSdkConnectedColor), AircraftInterface?.ProsimInterface?.SdkInterface?.IsConnected ?? false);
             UpdateBoolState(nameof(AppAutomationController), nameof(AppAutomationControllerColor), AutomationController.IsStarted);
             UpdateBoolState(nameof(AppAudioController), nameof(AppAudioControllerColor), AudioController.IsActive);
 
@@ -289,6 +291,13 @@ namespace Prosim2GSX.UI.Views.Monitor
 
         [ObservableProperty]
         protected bool _AppAudioController = false;
+
+        [ObservableProperty]
+        protected bool _AppProsimSdkConnected = false;
+
+        [ObservableProperty]
+        protected SolidColorBrush _AppProsimSdkConnectedColor = ColorInvalid;
+
         [ObservableProperty]
         protected SolidColorBrush _AppAudioControllerColor = ColorInvalid;
 

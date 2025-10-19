@@ -185,6 +185,7 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <StackPanel Grid.Column="0" Grid.Row="0" Style="{StaticResource LabelMonitorPanel}" ToolTip="Core GSX Controller of Prosim2GSX running?">
@@ -195,45 +196,49 @@
                     <Label>Prosim Binary</Label>
                     <Label Content="{Binding AppAircraftBinary}" Foreground="{Binding AppAircraftBinaryColor}"/>
                 </StackPanel>
-                <StackPanel Grid.Column="2" Grid.Row="0" Style="{StaticResource LabelMonitorPanel}" ToolTip="Interface connected to Prosim EFB?">
+                <StackPanel Grid.Column="2" Grid.Row="0" Style="{StaticResource LabelMonitorPanel}" ToolTip="Prosim SDK Available?">
+                    <Label>Prosim SDK</Label>
+                    <Label Content="{Binding AppProsimSdkConnected}" Foreground="{Binding AppProsimSdkConnectedColor}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="3" Grid.Row="0" Style="{StaticResource LabelMonitorPanel}" ToolTip="Interface connected to Prosim EFB?">
                     <Label>Aircraft Interface</Label>
                     <Label Content="{Binding AppAircraftInterface}" Foreground="{Binding AppAircraftInterfaceColor}"/>
                 </StackPanel>
-                <StackPanel Grid.Column="3" Grid.Row="0" Style="{StaticResource LabelMonitorPanel}" ToolTip="Automation Engine of Prosim2GSX is running?">
+                <StackPanel Grid.Column="4" Grid.Row="0" Style="{StaticResource LabelMonitorPanel}" ToolTip="Automation Engine of Prosim2GSX is running?">
                     <Label>Automation Controller</Label>
                     <Label Content="{Binding AppAutomationController}" Foreground="{Binding AppAutomationControllerColor}"/>
                 </StackPanel>
-                <StackPanel Grid.Column="4" Grid.Row="0" Style="{StaticResource LabelMonitorPanel}" ToolTip="Audio Controller of Prosim2GSX active? (starts only after Aircraft is powered)">
+                <StackPanel Grid.Column="0" Grid.Row="1" Style="{StaticResource LabelMonitorPanel}" ToolTip="Audio Controller of Prosim2GSX active? (starts only after Aircraft is powered)">
                     <Label>Audio Controller</Label>
                     <Label Content="{Binding AppAudioController}" Foreground="{Binding AppAudioControllerColor}"/>
                 </StackPanel>
 
-                <StackPanel Grid.Column="0" Grid.Row="1" Style="{StaticResource LabelMonitorPanel}" ToolTip="Operational Flight Phase the Automation is in">
+                <StackPanel Grid.Column="0" Grid.Row="2" Style="{StaticResource LabelMonitorPanel}" ToolTip="Operational Flight Phase the Automation is in">
                     <Label>Automation Phase</Label>
                     <Label Content="{Binding AppAutomationState}"/>
                 </StackPanel>
-                <StackPanel Grid.Column="1" Grid.Row="1" Style="{StaticResource LabelMonitorPanel}" ToolTip="Count of completed &amp; skipped / requested &amp; active / total Departure Services">
+                <StackPanel Grid.Column="1" Grid.Row="2" Style="{StaticResource LabelMonitorPanel}" ToolTip="Count of completed &amp; skipped / requested &amp; active / total Departure Services">
                     <Label>Departure Services</Label>
                     <Label Content="{Binding AppAutomationDepartureServices}"/>
                 </StackPanel>
-                <StackPanel Grid.Column="2" Grid.Row="1" Style="{StaticResource LabelMonitorPanel}" ToolTip="Aircraft is on Ground?">
+                <StackPanel Grid.Column="2" Grid.Row="2" Style="{StaticResource LabelMonitorPanel}" ToolTip="Aircraft is on Ground?">
                     <Label>On Ground</Label>
                     <Label Content="{Binding AppOnGround}"/>
                 </StackPanel>
-                <StackPanel Grid.Column="3" Grid.Row="1" Style="{StaticResource LabelMonitorPanel}" ToolTip="Any Engine combusting?">
+                <StackPanel Grid.Column="3" Grid.Row="2" Style="{StaticResource LabelMonitorPanel}" ToolTip="Any Engine combusting?">
                     <Label>Engines Running</Label>
                     <Label Content="{Binding AppEnginesRunning}"/>
                 </StackPanel>
-                <StackPanel Grid.Column="4" Grid.Row="1" Style="{StaticResource LabelMonitorPanel}" ToolTip="GPS Ground Speed over Taxi-Out Treshold?">
+                <StackPanel Grid.Column="4" Grid.Row="2" Style="{StaticResource LabelMonitorPanel}" ToolTip="GPS Ground Speed over Taxi-Out Treshold?">
                     <Label>In Motion</Label>
                     <Label Content="{Binding AppInMotion}"/>
                 </StackPanel>
 
-                <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="2" Style="{StaticResource LabelMonitorPanel}" ToolTip="Active Aircraft Profile used by Prosim2GSX">
+                <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="3" Style="{StaticResource LabelMonitorPanel}" ToolTip="Active Aircraft Profile used by Prosim2GSX">
                     <Label>Aircraft Profile</Label>
                     <Label Content="{Binding AppProfile}"/>
                 </StackPanel>
-                <StackPanel Grid.Column="2" Grid.ColumnSpan="2" Grid.Row="2" Style="{StaticResource LabelMonitorPanel}" ToolTip="Information on the Aircraft received by Sim / EFB">
+                <StackPanel Grid.Column="2" Grid.ColumnSpan="2" Grid.Row="3" Style="{StaticResource LabelMonitorPanel}" ToolTip="Information on the Aircraft received by Sim / EFB">
                     <Label>Aircraft Data</Label>
                     <Label Content="{Binding AppAircraft}"/>
                 </StackPanel>

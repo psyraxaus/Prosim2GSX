@@ -32,7 +32,7 @@
         <TextBlock Grid.Row="1" 
                    TextWrapping="Wrap"
                    Margin="0,0,0,15">
-            <Run Text="The ProSim SDK file (ProSimSDK.dll) is required for the Fenix interface to work properly."/>
+            <Run Text="The ProSim SDK file (ProSimSDK.dll) is required for the Prosim interface to work properly."/>
             <LineBreak/>
             <Run Text="Please browse and select the ProSimSDK.dll file location."/>
         </TextBlock>
