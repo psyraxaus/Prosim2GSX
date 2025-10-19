@@ -50,7 +50,13 @@
     <PackageReference Include="CFIT.AppTools" Version="2025.290.14.779" />
     <PackageReference Include="CFIT.SimConnectLib" Version="2025.290.14.797" />
     <PackageReference Include="CoreAudio" Version="1.40.0" />
-    <PackageReference Include="System.Private.Uri" Version="4.3.2" />
+	<PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+	<PackageReference Include="System.Private.Uri" Version="4.3.2" />
+	<PackageReference Include="System.ServiceModel.Duplex" Version="6.0.0" />
+	<PackageReference Include="System.ServiceModel.Http" Version="8.1.2" />
+	<PackageReference Include="System.ServiceModel.NetFramingBase" Version="8.1.2" />
+	<PackageReference Include="System.ServiceModel.NetTcp" Version="8.1.2" />
+	<PackageReference Include="System.ServiceModel.Primitives" Version="8.1.2" />
   </ItemGroup>
 
   <ItemGroup>
