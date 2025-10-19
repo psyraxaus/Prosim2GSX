@@ -145,6 +145,7 @@
             "DoorStairHandling": true,
             "DoorStairIncludeL2": false,
             "DoorCargoHandling": true,
+            "DoorCateringHandling": true,
             "DoorOpenBoardActive": true,
             "FinalDelayMin": 90,
             "FinalDelayMax": 150,
