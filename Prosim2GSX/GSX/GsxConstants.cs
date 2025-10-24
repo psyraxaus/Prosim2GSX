@@ -52,7 +52,7 @@
         public static string VarDoorToggleCargo1 { get; } = "L:FSDT_GSX_AIRCRAFT_CARGO_1_TOGGLE";
         public static string VarDoorToggleCargo2 { get; } = "L:FSDT_GSX_AIRCRAFT_CARGO_2_TOGGLE";
         public static string VarDoorToggleService1 { get; } = "L:FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE";
-        public static string VarDoorToggleService2 { get; } = "L:FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE";
+        public static string VarDoorToggleService2 { get; } = "L:FSDT_GSX_AIRCRAFT_SERVICE_2_TOGGLE";
 
         //Menu
         public static string GsxChoice { get; } = "[GSX choice]";
