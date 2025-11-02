@@ -22,8 +22,9 @@ namespace Prosim2GSX.UI.Views.Settings
             ViewModel.BindStringInteger(nameof(ViewModel.CargoPercentChangePerSec), InputCargoRate, "5", new ValidationRuleRange<int>(1, 25));
             ViewModel.BindStringInteger(nameof(ViewModel.DoorCargoDelay), InputDoorCargoCloseDelay, "16", new ValidationRuleRange<int>(1, 180));
             ViewModel.BindStringInteger(nameof(ViewModel.DoorCargoOpenDelay), InputDoorCargoOpenDelay, "2", new ValidationRuleRange<int>(1, 90));
-            ViewModel.BindStringInteger(nameof(ViewModel.RefuelPanelOpenDelay), InputRefuelOpenDelay, "10", new ValidationRuleRange<int>(1, 90));
-            ViewModel.BindStringInteger(nameof(ViewModel.RefuelPanelCloseDelay), InputRefuelCloseDelay, "42", new ValidationRuleRange<int>(1, 180));
+            // Not used in Prosim
+            //ViewModel.BindStringInteger(nameof(ViewModel.RefuelPanelOpenDelay), InputRefuelOpenDelay, "10", new ValidationRuleRange<int>(1, 90));
+            //ViewModel.BindStringInteger(nameof(ViewModel.RefuelPanelCloseDelay), InputRefuelCloseDelay, "42", new ValidationRuleRange<int>(1, 180));
             ViewModel.BindStringInteger(nameof(ViewModel.GsxMenuStartupMaxFail), InputGsxMaxFail, "4", new ValidationRuleRange<int>(1,16));
 
             ViewModelSelector = new(ListSavedFuel, ViewModel.ModelSavedFuel);

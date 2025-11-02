@@ -119,8 +119,6 @@
     "DisplayUnitSource": 0,
     "FuelResetDefaultKg": 3000,
     "FuelRoundUp100": true,
-    "RefuelPanelCloseDelay": 42,
-    "RefuelPanelOpenDelay": 10,
     "FuelFobSaved": {},
     "CargoPercentChangePerSec": 5,
     "DoorCargoDelay": 16,

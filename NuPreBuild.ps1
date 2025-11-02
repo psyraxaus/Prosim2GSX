@@ -10,7 +10,7 @@ if ($args[0] -eq "*Undefined*" -or -not $args[0]) {
 }
 
 $packageName = $args[2]
-$pathRepo = "..\CFIT\PackageRepo"
+$pathRepo = "..\CFIT\Packages"
 $nugetCli = Join-Path $basePath "nuget.exe"
 
 $packCfg = "packages.config"

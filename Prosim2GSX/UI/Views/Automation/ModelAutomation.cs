@@ -82,7 +82,8 @@ namespace Prosim2GSX.UI.Views.Automation
         {
             NotifyPropertyChanged(nameof(RefuelFixedVisible));
             NotifyPropertyChanged(nameof(RefuelDynamicVisible));
-            NotifyPropertyChanged(nameof(RefuelPanelVisible));
+            // Not use in Prosim
+            //NotifyPropertyChanged(nameof(RefuelPanelVisible));
         }
 
         public virtual string ProfileName => Config?.CurrentProfile?.Name ?? "";
@@ -141,12 +142,14 @@ namespace Prosim2GSX.UI.Views.Automation
         {
             { RefuelMethod.FixedRate, "Fixed Rate" },
             { RefuelMethod.DynamicRate, "Dynamic Rate" },
-            { RefuelMethod.RefuelPanel, "Refuel Panel" },
+            // Not used with Prosim
+            //{ RefuelMethod.RefuelPanel, "Refuel Panel" },
         };
         public virtual double RefuelRateKgSec { get => Config.ConvertKgToDisplayUnit(Source.RefuelRateKgSec); set => SetModelValue<double>(Config.ConvertFromDisplayUnitKg(value)); }
         public virtual bool RefuelFixedVisible => RefuelMethod == RefuelMethod.FixedRate;
         public virtual bool RefuelDynamicVisible => RefuelMethod == RefuelMethod.DynamicRate;
-        public virtual bool RefuelPanelVisible => RefuelMethod == RefuelMethod.RefuelPanel;
+        // Not used with Prosim
+        //public virtual bool RefuelPanelVisible => RefuelMethod == RefuelMethod.RefuelPanel;
         public virtual int RefuelTimeTargetSeconds { get => Source.RefuelTimeTargetSeconds; set => SetModelValue<int>(value); }
         public virtual bool SkipFuelOnTankering { get => Source.SkipFuelOnTankering; set => SetModelValue<bool>(value); }
         public virtual bool RefuelFinishOnHose { get => Source.RefuelFinishOnHose; set => SetModelValue<bool>(value); }

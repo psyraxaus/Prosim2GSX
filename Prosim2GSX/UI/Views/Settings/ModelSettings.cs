@@ -77,8 +77,9 @@ namespace Prosim2GSX.UI.Views.Settings
         public virtual int CargoPercentChangePerSec { get => Source.CargoPercentChangePerSec; set => SetModelValue<int>(value); }
         public virtual int DoorCargoDelay { get => Source.DoorCargoDelay; set => SetModelValue<int>(value); }
         public virtual int DoorCargoOpenDelay { get => Source.DoorCargoOpenDelay; set => SetModelValue<int>(value); }
-        public virtual int RefuelPanelOpenDelay { get => Source.RefuelPanelOpenDelay; set => SetModelValue<int>(value); }
-        public virtual int RefuelPanelCloseDelay { get => Source.RefuelPanelCloseDelay; set => SetModelValue<int>(value); }
+        // Not used in Prosim
+        //public virtual int RefuelPanelOpenDelay { get => Source.RefuelPanelOpenDelay; set => SetModelValue<int>(value); }
+        //public virtual int RefuelPanelCloseDelay { get => Source.RefuelPanelCloseDelay; set => SetModelValue<int>(value); }
         public virtual bool SkipWalkAround { get => Source.SkipWalkAround; set => SetModelValue<bool>(value); }
         public virtual bool RestartGsxOnTaxiIn { get => Source.RestartGsxOnTaxiIn; set => SetModelValue<bool>(value); }
         public virtual bool RestartGsxStartupFail { get => Source.RestartGsxStartupFail; set => SetModelValue<bool>(value); }

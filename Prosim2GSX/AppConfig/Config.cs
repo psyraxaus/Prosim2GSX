@@ -101,8 +101,9 @@ namespace Prosim2GSX.AppConfig
         public virtual DisplayUnitSource DisplayUnitSource { get; set; }
         public virtual double FuelResetDefaultKg { get; set; } = 3000;
         public virtual bool FuelRoundUp100 { get; set; } = true;
-        public virtual int RefuelPanelCloseDelay { get; set; } = 42;
-        public virtual int RefuelPanelOpenDelay { get; set; } = 10;
+        // Not used in Prosim
+        //public virtual int RefuelPanelCloseDelay { get; set; } = 42;
+        //public virtual int RefuelPanelOpenDelay { get; set; } = 10;
         public virtual Dictionary<string, double> FuelFobSaved { get; set; } = [];
         public virtual int CargoPercentChangePerSec { get; set; } = 5;
         public int DoorCargoDelay { get; set; } = 16;

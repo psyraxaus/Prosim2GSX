@@ -209,6 +209,7 @@ namespace Prosim2GSX.Aircraft
             if (hoseConnected && !ProsimInterface.IsRefueling)
             {
                 Logger.Information($"Fuel Hose connected - start Refuel Process");
+                await ProsimInterface.SetRefuelPower(set: true);
                 await ProsimInterface.RefuelStart();
             }
             

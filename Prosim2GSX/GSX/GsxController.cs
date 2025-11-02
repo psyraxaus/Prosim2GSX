@@ -416,13 +416,13 @@ namespace Prosim2GSX.GSX
             if (sub.Name == GsxConstants.VarReadProgFuel && sub.GetNumber() > 0)
             {
                 Logger.Debug($"Resetting GSX Setting {sub.Name}");
-                SimStore[GsxConstants.VarSetProgFuel].WriteValue(-1);
+                //SimStore[GsxConstants.VarSetProgFuel].WriteValue(-1);
             }
 
             if (sub.Name == GsxConstants.VarReadCustFuel && sub.GetNumber() > 0)
             {
                 Logger.Debug($"Resetting GSX Setting {sub.Name}");
-                SimStore[GsxConstants.VarSetCustFuel].WriteValue(-1);
+                //SimStore[GsxConstants.VarSetCustFuel].WriteValue(-1);
             }
 
             if (sub.Name == GsxConstants.VarReadAutoMode && sub.GetNumber() > 0)
@@ -435,8 +435,8 @@ namespace Prosim2GSX.GSX
         protected virtual void SetCouatlConf()
         {
             Logger.Debug($"Set GSX Settings");
-            SimStore[GsxConstants.VarSetProgFuel].WriteValue(-1);
-            SimStore[GsxConstants.VarSetCustFuel].WriteValue(-1);
+            //SimStore[GsxConstants.VarSetProgFuel].WriteValue(-1);
+            //SimStore[GsxConstants.VarSetCustFuel].WriteValue(-1);
             SimStore[GsxConstants.VarSetAutoMode].WriteValue(-1);
         }
 
