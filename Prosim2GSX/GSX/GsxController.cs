@@ -268,7 +268,7 @@ namespace Prosim2GSX.GSX
 
                     if (!SkippedWalkAround && !WalkAroundSkipActive)
                     {
-                        if (AutomationController.IsOnGround && AutomationController.State == AutomationState.SessionStart && !AircraftProfile.SkipWalkAround && AircraftProfile.PlaceFenixStairsWalkaround && !AircraftInterface.FenixInterface.StairsFwd)
+                        if (AutomationController.IsOnGround && !AircraftInterface.EnginesRunning && AutomationController.State == AutomationState.SessionStart && !AircraftProfile.SkipWalkAround && AircraftProfile.PlaceFenixStairsWalkaround && !AircraftInterface.FenixInterface.StairsFwd)
                             await AircraftInterface.FenixInterface.SetStairsFwd(true);
                         else if (AutomationController.IsOnGround)
                             _ = SkipWalkaround();
