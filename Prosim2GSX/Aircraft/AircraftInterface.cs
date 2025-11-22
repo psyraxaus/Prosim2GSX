@@ -75,6 +75,9 @@ namespace Prosim2GSX.Aircraft
                 
                 SimStore.AddVariable(ProsimConstants.VarAcpIntCallCpt, SimUnitType.Number);
                 SimStore.AddVariable(ProsimConstants.VarAcpIntCallFo, SimUnitType.Number);
+                SimStore.AddVariable(ProsimConstants.VarSigns, SimUnitType.Number);
+                SimStore.AddVariable(ProsimConstants.VarPneumaticPack1, SimUnitType.Number);
+                SimStore.AddVariable(ProsimConstants.VarPneumaticPack2, SimUnitType.Number);
 
                 Controller.WalkaroundWasSkipped += OnWalkaroundWasSkipped;
                 Controller.AutomationController.OnStateChange += OnAutomationState;
@@ -120,6 +123,9 @@ namespace Prosim2GSX.Aircraft
 
             SimStore.Remove(ProsimConstants.VarAcpIntCallCpt);
             SimStore.Remove(ProsimConstants.VarAcpIntCallFo);
+            SimStore.Remove(ProsimConstants.VarSigns);
+            SimStore.Remove(ProsimConstants.VarPneumaticPack1);
+            SimStore.Remove(ProsimConstants.VarPneumaticPack2);
 
             SimStore.Remove("ATC AIRLINE");
             SimStore.Remove("TITLE");
