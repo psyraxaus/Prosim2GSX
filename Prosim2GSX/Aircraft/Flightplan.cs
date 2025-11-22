@@ -20,7 +20,8 @@ namespace Prosim2GSX.Aircraft
         {
             HttpClient = new()
             {
-                BaseAddress = new(Config.SimbriefUrlBase)
+                BaseAddress = new(Config.SimbriefUrlBase),
+                Timeout = TimeSpan.FromMilliseconds(Config.HttpRequestTimeoutMs)
             };
             HttpClient.DefaultRequestHeaders.Accept.Clear();
             HttpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
