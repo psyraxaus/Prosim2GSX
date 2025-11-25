@@ -26,6 +26,7 @@ namespace Prosim2GSX.AppConfig
             { GsxServiceConstraint.FirstLeg, "Only Departure" },
             { GsxServiceConstraint.TurnAround, "Only Turn" },
             { GsxServiceConstraint.CompanyHub, "Only on Hub" },
+            { GsxServiceConstraint.NonCompanyHub, "Only on Non-Hub" },
         };
 
         public virtual GsxServiceType ServiceType { get; set; } = GsxServiceType.Unknown;
