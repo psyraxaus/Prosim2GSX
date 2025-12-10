@@ -5,7 +5,7 @@ using System.Windows;
 // Allgemeine Informationen über eine Assembly werden über die folgenden
 // Attribute gesteuert. Ändern Sie diese Attributwerte, um die Informationen zu ändern,
 // die einer Assembly zugeordnet sind.
-[assembly: AssemblyTitle("Prosim2GSX Installer v0.5.3.0 (2025.12.08.1900)")]
+[assembly: AssemblyTitle("Prosim2GSX Installer v0.5.3.0 (2025.12.10.2213)")]
 [assembly: AssemblyDescription("Installer Application for Prosim2GSX")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Fragtality")]
