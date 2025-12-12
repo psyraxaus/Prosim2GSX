@@ -106,7 +106,7 @@ namespace Prosim2GSX.UI.Views.Automation
         public virtual bool RemoveJetwayStairsOnFinal { get => Source.RemoveJetwayStairsOnFinal; set => SetModelValue<bool>(value); }
 
         //Ground Equipment
-        public virtual bool PlaceFenixStairsWalkaround { get => Source.PlaceFenixStairsWalkaround; set => SetModelValue<bool>(value); }
+        public virtual bool PlaceProsimStairsWalkaround { get => Source.PlaceProsimStairsWalkaround; set => SetModelValue<bool>(value); }
         public virtual bool ClearGroundEquipOnBeacon { get => Source.ClearGroundEquipOnBeacon; set => SetModelValue<bool>(value); }
         public virtual bool GradualGroundEquipRemoval { get => Source.GradualGroundEquipRemoval; set => SetModelValue<bool>(value); }
         public virtual bool ConnectGpuWithApuRunning { get => Source.ConnectGpuWithApuRunning; set => SetModelValue<bool>(value); }

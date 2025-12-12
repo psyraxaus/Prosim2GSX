@@ -1,7 +1,7 @@
 ﻿using CFIT.SimConnectLib.SimResources;
-using Fenix2GSX.GSX.Menu;
+using Prosim2GSX.GSX.Menu;
 
-namespace Fenix2GSX.GSX.Services
+namespace Prosim2GSX.GSX.Services
 {
     public class GsxServiceCleaning(GsxController controller) : GsxService(controller)
     {

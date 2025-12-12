@@ -65,12 +65,12 @@
                     <TextBlock>Automatically reopen <Underline>Pushback Direction</Underline> Menu</TextBlock>
                 </CheckBox>
                 
-                <CheckBox Grid.Column="0" Grid.Row="4" IsChecked="{Binding AnswerCabinCallGround}" Style="{StaticResource CheckBoxSettingItem}"
+                <CheckBox Grid.Column="0" Grid.Row="5" IsChecked="{Binding AnswerCabinCallGround}" Style="{StaticResource CheckBoxSettingItem}"
                           ToolTip="Answer the Prosim Cabin Ready Call received by the Crew during Taxi-Out (always on the left ACP).&#x0a;The CAB Send Button will be pushed, then VHF1 will be reselected and RESET is pushed.">
                     <TextBlock>Answer <Underline>Cabin Call</Underline> during Taxi-Out</TextBlock>
                 </CheckBox>
 
-                <CheckBox Grid.Column="0" Grid.Row="5" IsChecked="{Binding AnswerCabinCallAir}" Style="{StaticResource CheckBoxSettingItem}"
+                <CheckBox Grid.Column="0" Grid.Row="6" IsChecked="{Binding AnswerCabinCallAir}" Style="{StaticResource CheckBoxSettingItem}"
                           ToolTip="Answer the Prosim Cabin Ready Call received by the Crew during Approach (always on the left ACP).&#x0a;The CAB Send Button will be pushed, then VHF1 will be reselected and RESET is pushed.">
                     <TextBlock>Answer <Underline>Cabin Call</Underline> during Approach</TextBlock>
                 </CheckBox>

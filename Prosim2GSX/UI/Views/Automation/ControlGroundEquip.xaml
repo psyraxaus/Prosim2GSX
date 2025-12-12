@@ -44,9 +44,9 @@
                     <Italic>Includes GPU, Chocks &amp; Cones, PCA as well as Jetway &amp; Stairs</Italic>
                 </Label>
 
-                <CheckBox Grid.Column="0" Grid.Row="1" IsChecked="{Binding PlaceFenixStairsWalkaround}" Margin="6,6,6,6" Style="{StaticResource CheckBoxSettingItem}"
+                <CheckBox Grid.Column="0" Grid.Row="1" IsChecked="{Binding PlaceProsimStairsWalkaround}" Margin="6,6,6,6" Style="{StaticResource CheckBoxSettingItem}"
                           ToolTip="Remove all Ground Equipment (including Jetway/Stairs) as soon as the Beacon is on, Brake is set and Power is disconnected.">
-                    <TextBlock>Place Fenix forward <Underline>Stairs</Underline> when Walkaround is <Underline>not skipped</Underline></TextBlock>
+                    <TextBlock>Place Prosim forward <Underline>Stairs</Underline> when Walkaround is <Underline>not skipped</Underline></TextBlock>
                 </CheckBox>
 
                 <CheckBox Grid.Column="0" Grid.Row="2" IsChecked="{Binding ClearGroundEquipOnBeacon}" Margin="6,6,6,6" Style="{StaticResource CheckBoxSettingItem}"
