@@ -36,6 +36,8 @@ namespace Prosim2GSX.AppConfig
         }
 
         //Settings
+        public virtual bool PlaceProsimStairsWalkaround { get; set; } = true;
+        public virtual bool ConnectGpuWithApuRunning { get; set; } = true;
         public virtual int ConnectPca { get; set; } = 2; // 0 => false | 1 => true | 2 => only on jetway stand
         public virtual bool PcaOverride { get; set; } = true;
         public virtual bool DoorStairHandling { get; set; } = true;
@@ -53,7 +55,6 @@ namespace Prosim2GSX.AppConfig
         public virtual RefuelMethod RefuelMethod { get; set; } = RefuelMethod.FixedRate;
         public virtual double RefuelRateKgSec { get; set; } = 28;
         public virtual bool RefuelFinishOnHose { get; set; } = false;
-        public virtual bool UseRefuelTimeTarget { get; set; } = false; //LEGACY
         public virtual int RefuelTimeTargetSeconds { get; set; } = 300;
         public virtual bool DoorsCargoKeepOpenOnLoaded { get; set; } = false;
         public virtual bool DoorsCargoKeepOpenOnUnloaded { get; set; } = false;
@@ -68,6 +69,7 @@ namespace Prosim2GSX.AppConfig
         public virtual int RemoveStairsAfterDepature { get; set; } = 2; // 0 => false | 1 => true | 2 => only on jetway stand
         public virtual int AttachTugDuringBoarding { get; set; } = 1; // 0 => not answer | 1 => no | 2 => yes
         public virtual int CallPushbackWhenTugAttached { get; set; } = 2; // 0 => false | 1 => after Departure Services | 2 => after Final LS
+        public virtual bool SkipWalkAround { get; set; } = true;
         public virtual bool SkipCrewQuestion { get; set; } = true;
         public virtual bool SkipFollowMe { get; set; } = true;
         public virtual bool KeepDirectionMenuOpen { get; set; } = true;
@@ -84,11 +86,12 @@ namespace Prosim2GSX.AppConfig
         public virtual int DelayCabinCallAir { get; set; } = 2500;
         public virtual SortedDictionary<int, ServiceConfig> DepartureServices { get; set; } = new()
         {
-            { 0, new ServiceConfig(GsxServiceType.Refuel, GsxServiceActivation.AfterCalled) },
-            { 1, new ServiceConfig(GsxServiceType.Catering, GsxServiceActivation.AfterCalled) },
-            { 2, new ServiceConfig(GsxServiceType.Lavatory, GsxServiceActivation.Skip) },
-            { 3, new ServiceConfig(GsxServiceType.Water, GsxServiceActivation.AfterRequested) },
-            { 4, new ServiceConfig(GsxServiceType.Boarding, GsxServiceActivation.AfterAllCompleted) },
+            { 0, new ServiceConfig(GsxServiceType.Cleaning, GsxServiceActivation.AfterCalled, TimeSpan.Zero, GsxServiceConstraint.TurnAround) },
+            { 1, new ServiceConfig(GsxServiceType.Lavatory, GsxServiceActivation.AfterCalled, TimeSpan.Zero, GsxServiceConstraint.TurnAround) },
+            { 2, new ServiceConfig(GsxServiceType.Refuel, GsxServiceActivation.AfterCalled) },
+            { 3, new ServiceConfig(GsxServiceType.Catering, GsxServiceActivation.AfterCalled) },
+            { 4, new ServiceConfig(GsxServiceType.Water, GsxServiceActivation.AfterRequested) },            
+            { 5, new ServiceConfig(GsxServiceType.Boarding, GsxServiceActivation.AfterAllCompleted) },
         };
 
         public virtual bool IsCompanyHub(string icao)

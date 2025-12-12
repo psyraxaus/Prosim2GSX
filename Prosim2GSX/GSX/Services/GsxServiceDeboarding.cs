@@ -11,6 +11,7 @@ namespace Prosim2GSX.GSX.Services
     {
         public override GsxServiceType Type => GsxServiceType.Deboarding;
         public virtual ISimResourceSubscription SubDeboardService { get; protected set; }
+        protected override ISimResourceSubscription SubStateVar => SubDeboardService;
         public virtual int PaxTarget => (int)SubPaxTarget.GetNumber();
         public virtual ISimResourceSubscription SubPaxTarget { get; protected set; }
         public virtual int PaxTotal => (int)SubPaxTotal.GetNumber();
@@ -65,19 +66,16 @@ namespace Prosim2GSX.GSX.Services
             SimStore.Remove(GsxConstants.VarNoPilotsDeboard);
         }
 
-        protected override GsxServiceState GetState()
-        {
-            return ReadState(SubDeboardService);
-        }
-
         public virtual async Task<bool> SetPaxTarget(int num)
         {
             if (Profile.SkipCrewQuestion)
             {
+                Logger.Debug("Setting GSX Crew/Pilot Variables to not deboarding");
                 await SimStore[GsxConstants.VarNoCrewDeboard].WriteValue(1);
                 await SimStore[GsxConstants.VarNoPilotsDeboard].WriteValue(1);
             }
 
+            Logger.Debug($"Setting GSX Pax Number/Target to {num}");
             return await SubPaxTarget.WriteValue(num);
         }
 

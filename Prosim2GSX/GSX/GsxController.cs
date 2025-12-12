@@ -109,6 +109,7 @@ namespace Prosim2GSX.GSX
             _ = new GsxServiceDeice(this);
             _ = new GsxServiceLavatory(this);
             _ = new GsxServiceWater(this);
+            _ = new GsxServiceCleaning(this);
         }
 
         protected override Task InitReceivers()
@@ -268,7 +269,9 @@ namespace Prosim2GSX.GSX
 
                     if (!SkippedWalkAround && !WalkAroundSkipActive)
                     {
-                        if (AutomationController.IsOnGround)
+                        if (AutomationController.IsOnGround && !AircraftInterface.EnginesRunning && AutomationController.State == AutomationState.SessionStart && !AircraftProfile.SkipWalkAround && AircraftProfile.PlaceProsimStairsWalkaround && !AircraftInterface.ProsimInterface.StairsFwd)
+                            await AircraftInterface.ProsimInterface.SetStairsFwd(true);
+                        else if (AutomationController.IsOnGround)
                             _ = SkipWalkaround();
                         else
                             SkippedWalkAround = true;
@@ -383,7 +386,7 @@ namespace Prosim2GSX.GSX
         {
             WalkAroundSkipActive = true;
             Logger.Verbose($"ac: {SimStore["IS AIRCRAFT"]?.GetNumber()} | av: {SimStore["IS AVATAR"]?.GetNumber()}");
-            while (IsWalkaround && !SkippedWalkAround && Config.SkipWalkAround && IsExecutionAllowed && !RequestToken.IsCancellationRequested)
+            while (IsWalkaround && !SkippedWalkAround && AircraftProfile.SkipWalkAround && IsExecutionAllowed && !RequestToken.IsCancellationRequested)
             {
                 Logger.Information("Automation: Skip Walkaround");
                 string title = Tools.GetMsfsWindowTitle();

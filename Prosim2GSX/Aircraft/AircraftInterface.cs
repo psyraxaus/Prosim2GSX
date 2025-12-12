@@ -51,6 +51,7 @@ namespace Prosim2GSX.Aircraft
         public virtual bool EnginesRunning => ProsimInterface.GetEnginesRunning();
         public virtual bool IsFinalReceived => ProsimInterface.GetFinalReceived();
         public virtual bool IsExternalPowerConnected => ProsimInterface.GetExternalPowerConnected();
+        public virtual bool IsApuRunning => ProsimInterface.IsApuRunning;
         public virtual bool IsApuBleedOn => ProsimInterface.IsApuBleedOn;
         public virtual bool HasOpenDoors => ProsimInterface.GetOpenDoors();
         public virtual bool IsBrakeSet => ProsimInterface.GetBrake();

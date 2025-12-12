@@ -11,6 +11,7 @@ namespace Prosim2GSX.GSX.Services
     {
         public override GsxServiceType Type => GsxServiceType.Boarding;
         public virtual ISimResourceSubscription SubBoardService { get; protected set; }
+        protected override ISimResourceSubscription SubStateVar => SubBoardService;
         public virtual int PaxTarget => (int)SubPaxTarget.GetNumber();
         public virtual ISimResourceSubscription SubPaxTarget { get; protected set; }
         public virtual int PaxTotal => (int)SubPaxTotal.GetNumber();
@@ -51,11 +52,6 @@ namespace Prosim2GSX.GSX.Services
 
         }
 
-        public override async Task Call()
-        {
-            await base.Call();
-        }
-
         public override void FreeResources()
         {
             SubBoardService.OnReceived -= OnStateChange;
@@ -70,19 +66,16 @@ namespace Prosim2GSX.GSX.Services
             SimStore.Remove(GsxConstants.VarNoPilotsBoard);
         }
 
-        protected override GsxServiceState GetState()
-        {
-            return ReadState(SubBoardService);
-        }
-
         public virtual async Task<bool> SetPaxTarget(int num)
         {
             if (Profile.SkipCrewQuestion)
             {
+                Logger.Debug("Setting GSX Crew/Pilot Variables to not boarding");
                 await SimStore[GsxConstants.VarNoCrewBoard].WriteValue(1);
                 await SimStore[GsxConstants.VarNoPilotsBoard].WriteValue(1);
             }
-            
+
+            Logger.Debug($"Setting GSX Pax Number/Target to {num}");
             return await SubPaxTarget.WriteValue(num);
         }
 

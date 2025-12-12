@@ -141,7 +141,7 @@ namespace Prosim2GSX.GSX
         {
             Controller.Menu.ResetFlight();
             foreach (var service in GsxServices)
-                service.Value.ResetState();
+                service.Value.ResetState(Config.ResetGsxStateVarsFlight);
 
             Aircraft.ResetFlight();
             GroundEquipmentPlaced = false;
@@ -471,10 +471,14 @@ namespace Prosim2GSX.GSX
                 if (!Profile.CallReposition)
                     await Task.Delay(3000);
                 Logger.Information("Automation: Placing Ground Equipment");
+
                 await Aircraft.SetChocks(false, true);
                 await Task.Delay(1000);
+
                 await Aircraft.SetChocks(true);
-                await Aircraft.SetGroundPower(true);
+                if (!Aircraft.EquipmentGpu && (Profile.ConnectGpuWithApuRunning || (!Profile.ConnectGpuWithApuRunning && !Aircraft.IsApuRunning)))
+                    await Aircraft.SetGroundPower(true);
+
                 if (Profile.ConnectPca == 1 || (Profile.ConnectPca == 2 && ServiceJetway.State != GsxServiceState.NotAvailable))
                 {
                     Logger.Information($"Automation: Connecting PCA");
@@ -485,6 +489,7 @@ namespace Prosim2GSX.GSX
                     Logger.Information($"Automation: Disconnecting PCA (not configured)");
                     await Aircraft.SetPca(false);
                 }
+
                 GroundEquipmentPlaced = true;
             }
 
@@ -542,7 +547,7 @@ namespace Prosim2GSX.GSX
                 }
             }
 
-            if (!DepartureServicesCompleted && !IsGateConnected && Profile.CallJetwayStairsDuringDeparture)
+            if (!DepartureServicesCompleted && !IsGateConnected && !JetwayStairRemoved && Profile.CallJetwayStairsDuringDeparture)
             {
                 if (ServiceJetway.IsAvailable && !ServiceJetway.IsConnected && !ServiceJetway.IsCalled)
                 {
@@ -588,6 +593,16 @@ namespace Prosim2GSX.GSX
                         Logger.Information($"Automation: Departure Service {DepartureServicesCurrent.ServiceType} skipped due to Constraint '{DepartureServicesCurrent.ServiceConstraintName}'");
                         MoveDepartureQueue(current, true);
                     }
+                    else if (DepartureServicesCurrent.ServiceConstraint == GsxServiceConstraint.NonCompanyHub && Profile.IsCompanyHub(DepartureIcao))
+                    {
+                        Logger.Information($"Automation: Departure Service {DepartureServicesCurrent.ServiceType} skipped due to Constraint '{DepartureServicesCurrent.ServiceConstraintName}'");
+                        MoveDepartureQueue(current, true);
+                    }
+                    else if (current.State == GsxServiceState.NotAvailable || current.State == GsxServiceState.Bypassed)
+                    {
+                        Logger.Information($"Automation: Departure Service {DepartureServicesCurrent.ServiceType} skipped due to State '{current.State}'");
+                        MoveDepartureQueue(current, true);
+                    }
                     else if (SmartButtonRequest
                             || activation == GsxServiceActivation.AfterCalled
                             || (activation == GsxServiceActivation.AfterRequested && (DepartureServicesCalled?.Count == 0 || DepartureServicesCalled?.SafeLast()?.State >= GsxServiceState.Requested || DepartureServicesCalled?.SafeLast()?.IsSkipped == true))
@@ -622,6 +637,9 @@ namespace Prosim2GSX.GSX
                     MoveDepartureQueue(current, skipped);
                 }
             }
+
+            if (State == AutomationState.Departure || State == AutomationState.PushBack)
+                await RunLoadsheet();
         }
 
         protected virtual void MoveDepartureQueue(GsxService service, bool asSkipped = false)
@@ -633,19 +651,37 @@ namespace Prosim2GSX.GSX
             DepartureServicesEnumerator.MoveNext();
         }
 
-        protected virtual async Task RunPushback()
+        protected virtual async Task RunLoadsheet()
         {
-            if (Aircraft.IsApuBleedOn && Aircraft.EquipmentPca)
-            {
-                Logger.Information($"Disconnecting PCA");
-                await Aircraft.SetPca(false);
-            }
+            bool boardCompleted = State == AutomationState.PushBack || DepartureServicesCalled.Any(s => s.Type == GsxServiceType.Boarding && (s.IsCompleted || s.IsSkipped)) || Profile.DepartureServices.Any(kv => kv.Value.ServiceType == GsxServiceType.Boarding && kv.Value.ServiceActivation == GsxServiceActivation.Skip);
+            bool cateringCompleted = State == AutomationState.PushBack || DepartureServicesCalled.Any(s => s.Type == GsxServiceType.Catering && (s.IsCompleted || s.IsSkipped)) || Profile.DepartureServices.Any(kv => kv.Value.ServiceType == GsxServiceType.Catering && kv.Value.ServiceActivation == GsxServiceActivation.Skip);
+            bool cleanCompleted = State == AutomationState.PushBack || DepartureServicesCalled.Any(s => s.Type == GsxServiceType.Cleaning && (s.IsCompleted || s.IsSkipped)) || Profile.DepartureServices.Any(kv => kv.Value.ServiceType == GsxServiceType.Cleaning && kv.Value.ServiceActivation == GsxServiceActivation.Skip);
 
-            if (Aircraft.HasOpenDoors && !Aircraft.ProsimInterface.CargoDoorsMoving() && Aircraft.IsFinalReceived && Profile.CloseDoorsOnFinal)
+            if (boardCompleted && cateringCompleted && cleanCompleted && Aircraft.HasOpenDoors && !Aircraft.ProsimInterface.CargoDoorsMoving() && Aircraft.IsFinalReceived && Profile.CloseDoorsOnFinal)
             {
                 Logger.Information($"Automation: Close Doors on Final Loadsheet");
                 await Aircraft.CloseAllDoors();
                 await Task.Delay(Config.StateMachineInterval * 2, RequestToken);
+            }
+
+            if (boardCompleted && cleanCompleted && !JetwayStairRemoved && IsGateConnected && Aircraft.IsFinalReceived && Profile.RemoveJetwayStairsOnFinal)
+            {
+                Logger.Information($"Automation: Remove Jetway/Stairs on Final Loadsheet");
+                await ServiceJetway.Remove();
+                await ServiceStairs.Remove();
+                JetwayStairRemoved = true;
+                await Task.Delay(Config.StateMachineInterval * 2, RequestToken);
+            }
+        }
+
+        protected virtual async Task RunPushback()
+        {
+            await RunLoadsheet();
+
+            if (Aircraft.IsApuBleedOn && Aircraft.EquipmentPca)
+            {
+                Logger.Information($"Disconnecting PCA");
+                await Aircraft.SetPca(false);
             }
 
             if (Profile.GradualGroundEquipRemoval)
@@ -663,25 +699,17 @@ namespace Prosim2GSX.GSX
                 }
             }
 
-            if (!JetwayStairRemoved && IsGateConnected && Aircraft.IsFinalReceived && Profile.RemoveJetwayStairsOnFinal)
+            if (!Aircraft.IsExternalPowerConnected && Aircraft.IsBrakeSet && Aircraft.LightBeacon && !Aircraft.EnginesRunning)
             {
-                Logger.Information($"Automation: Remove Jetway/Stairs on Final Loadsheet");
-                await ServiceJetway.Remove();
-                await ServiceStairs.Remove();
-                JetwayStairRemoved = true;
-                await Task.Delay(Config.StateMachineInterval * 2, RequestToken);
-            }
-
-            if (GroundEquipmentPlaced && !Aircraft.IsExternalPowerConnected && Aircraft.IsBrakeSet && Aircraft.LightBeacon)
-            {
-                if (Profile.ClearGroundEquipOnBeacon)
+                if (Profile.ClearGroundEquipOnBeacon && GroundEquipmentPlaced)
                 {
                     Logger.Information($"Automation: Remove Ground Equipment on Beacon");
                     await SetGroundEquip(false);
                     GroundEquipmentPlaced = false;
+                    await Task.Delay(Config.StateMachineInterval * 2, RequestToken);
                 }
                 
-                if (Profile.CallPushbackOnBeacon && !ServicePushBack.IsCalled && ServicePushBack.State < GsxServiceState.Requested)
+                if (Profile.CallPushbackOnBeacon && !ServicePushBack.IsCalled && ServicePushBack.State < GsxServiceState.Requested && !ServicePushBack.WasActive)
                 {
                     Logger.Information($"Automation: Call Pushback (Beacon / Prepared for Push)");
                     await ServicePushBack.Call();
@@ -696,7 +724,8 @@ namespace Prosim2GSX.GSX
                     await Task.Delay(Config.StateMachineInterval * 2, RequestToken);
                 }
             }
-            else if (GroundEquipmentClear)
+            
+            if (GroundEquipmentClear && GroundEquipmentPlaced)
                 GroundEquipmentPlaced = false;
 
             if (ServicePushBack.TugAttachedOnBoarding && Profile.CallPushbackWhenTugAttached > 0 && !ServicePushBack.IsCalled && ServicePushBack.State < GsxServiceState.Requested)
