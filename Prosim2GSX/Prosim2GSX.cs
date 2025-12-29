@@ -1,10 +1,12 @@
 ﻿using System;
 using System.IO;
 using System.Reflection;
+using System.Threading.Tasks;
 using System.Windows;
 using CFIT.AppFramework;
 using CFIT.AppLogger;
 using Prosim2GSX.AppConfig;
+using Prosim2GSX.Prosim;
 using Prosim2GSX.UI;
 using Prosim2GSX.UI.Dialogs;
 using Prosim2GSX.UI.NotifyIcon;
@@ -72,62 +74,92 @@ namespace Prosim2GSX
                 // SDK path is valid, ensure assembly resolution is set up
                 Logger.Information($"ProSimSdkPath is configured: {Config.ProSimSdkPath}");
                 SetupProSimSdkAssemblyResolver(Config.ProSimSdkPath);
+                
+                // Attempt to load the SDK assembly (non-blocking, will be verified during service init)
+                LoadProSimSdkAssembly(Config.ProSimSdkPath);
+
+                // Initialize the ProSim SDK Service early
+                if (!InitializeProSimSdkService())
+                {
+                    Logger.Warning("ProSim SDK service initialization had issues, but continuing with startup");
+                    // We continue anyway as the SDK might connect later when ProSim starts
+                }
             }
 
             // Continue with normal startup sequence
             base.OnStartup(e);
         }
 
-        private bool LoadProSimSdkAssembly(string sdkPath)
+        /// <summary>
+        /// Initialize the ProSim SDK Service before other services
+        /// </summary>
+        private bool InitializeProSimSdkService()
         {
             try
             {
-                Logger.Information("Loading ProSimSDK assembly...");
-
-                // Register assembly resolver first
-                SetupProSimSdkAssemblyResolver(sdkPath);
-
-                // Add SDK directory to PATH environment variable for native dependencies
-                string sdkDirectory = Path.GetDirectoryName(sdkPath);
-                string currentPath = Environment.GetEnvironmentVariable("PATH") ?? "";
-                if (!currentPath.Contains(sdkDirectory))
+                Logger.Information("Initializing ProSim SDK Service...");
+                
+                // Create the service (it's created in AppService.CreateServiceControllers but we need it earlier)
+                // We'll create a temporary instance for early initialization
+                var sdkService = new ProsimSdkService(Config);
+                
+                // Initialize the service (this verifies SDK types are accessible)
+                var initTask = sdkService.Initialize();
+                initTask.Wait(); // Blocking wait is acceptable during startup
+                
+                if (!initTask.Result)
                 {
-                    Environment.SetEnvironmentVariable("PATH", currentPath + ";" + sdkDirectory);
-                    Logger.Debug($"Added SDK directory to PATH: {sdkDirectory}");
-                }
-
-                // Load the assembly
-                var loadedAssembly = Assembly.LoadFrom(sdkPath);
-                Logger.Information($"ProSimSDK assembly loaded: {loadedAssembly.FullName}");
-
-                // Verify the assembly contains expected types
-                var prosimInterfaceType = loadedAssembly.GetType("ProsimInterface.ProsimAircraftInterface");
-                if (prosimInterfaceType == null)
-                {
-                    Logger.Error("ProSimSDK assembly loaded but ProsimAircraftInterface type not found");
+                    Logger.Error("ProSim SDK Service initialization failed");
                     return false;
                 }
 
-                Logger.Information("ProSimSDK assembly verified successfully");
+                Logger.Information("ProSim SDK Service initialized successfully");
                 return true;
-            }
-            catch (FileNotFoundException ex)
-            {
-                Logger.Error($"ProSimSDK file not found: {ex.FileName}");
-                Logger.LogException(ex);
-                return false;
-            }
-            catch (BadImageFormatException ex)
-            {
-                Logger.Error("ProSimSDK assembly has incorrect format (possibly wrong architecture)");
-                Logger.LogException(ex);
-                return false;
             }
             catch (Exception ex)
             {
-                Logger.Error("Unexpected error loading ProSimSDK assembly");
+                Logger.Error("Exception during ProSim SDK Service initialization");
                 Logger.LogException(ex);
                 return false;
+            }
+        }
+
+        private void LoadProSimSdkAssembly(string sdkPath)
+        {
+            try
+            {
+                Logger.Information("Preloading ProSim SDK assembly...");
+
+                // Add SDK directory to PATH environment variable for native dependencies
+                string sdkDirectory = Path.GetDirectoryName(sdkPath);
+                if (!string.IsNullOrEmpty(sdkDirectory))
+                {
+                    string currentPath = Environment.GetEnvironmentVariable("PATH") ?? "";
+                    if (!currentPath.Contains(sdkDirectory))
+                    {
+                        Environment.SetEnvironmentVariable("PATH", currentPath + ";" + sdkDirectory);
+                        Logger.Debug($"Added SDK directory to PATH: {sdkDirectory}");
+                    }
+                }
+
+                // Try to preload the assembly - this helps ensure it's available
+                // The actual verification will happen in ProsimSdkService.Initialize()
+                try
+                {
+                    var loadedAssembly = Assembly.LoadFrom(sdkPath);
+                    Logger.Information($"ProSim SDK assembly preloaded: {loadedAssembly.FullName}");
+                }
+                catch (FileLoadException)
+                {
+                    // Assembly might already be loaded, this is fine
+                    Logger.Debug("SDK assembly may already be loaded");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning("Error preloading ProSim SDK assembly - will attempt to load on demand");
+                Logger.LogException(ex);
+                // Don't fail here - the assembly resolver will handle it when needed
             }
         }
 

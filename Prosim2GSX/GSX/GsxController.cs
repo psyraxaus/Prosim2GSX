@@ -10,6 +10,7 @@ using Prosim2GSX.Aircraft;
 using Prosim2GSX.AppConfig;
 using Prosim2GSX.GSX.Menu;
 using Prosim2GSX.GSX.Services;
+using Prosim2GSX.Prosim;
 using ProsimInterface;
 using System;
 using System.Collections.Concurrent;
@@ -25,6 +26,7 @@ namespace Prosim2GSX.GSX
         public virtual CancellationToken RequestToken => AppService.Instance.RequestToken;
         public virtual SimConnectManager SimConnect => Prosim2GSX.Instance.AppService.SimConnect;
         public virtual SimConnectController SimController => Prosim2GSX.Instance.AppService.SimService.Controller;
+        public virtual ProsimSdkService ProsimService => AppService.Instance.ProsimService;
         public virtual bool IsMsfs2024 => SimConnect.GetSimVersion() == SimVersion.MSFS2024;
         public virtual string PathInstallation { get; }
         public virtual GsxMenu Menu { get; }
@@ -251,6 +253,13 @@ namespace Prosim2GSX.GSX
                     await Task.Delay(Config.TimerGsxCheck, Token);
                 if (!IsExecutionAllowed || RequestToken.IsCancellationRequested)
                     return;
+
+                // Register the AircraftInterface with the SDK service
+                if (ProsimService != null && AircraftInterface?.ProsimInterface != null)
+                {
+                    Logger.Debug("Registering AircraftInterface with ProsimSdkService");
+                    ProsimService.SetAircraftInterface(AircraftInterface.ProsimInterface);
+                }
 
                 Logger.Debug($"AircraftInterface loaded. Searching Profile ...");
                 LoadAircraftProfile();
