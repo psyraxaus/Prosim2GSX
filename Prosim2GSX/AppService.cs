@@ -6,6 +6,7 @@ using CFIT.SimConnectLib.Definitions;
 using Prosim2GSX.AppConfig;
 using Prosim2GSX.Audio;
 using Prosim2GSX.GSX;
+using Prosim2GSX.Prosim;
 using System;
 using System.IO;
 using System.Threading;
@@ -24,6 +25,7 @@ namespace Prosim2GSX
     {
         public virtual CancellationTokenSource RequestTokenSource { get; protected set; }
         public virtual CancellationToken RequestToken { get; protected set; }
+        public virtual ProsimSdkService ProsimService { get; protected set; }
         public virtual GsxController GsxService { get; protected set; }
         public virtual AudioController AudioService { get; protected set; }
         public virtual AppResetRequest ResetRequested {  get; set; } = AppResetRequest.None;
@@ -45,6 +47,7 @@ namespace Prosim2GSX
 
         protected override void CreateServiceControllers()
         {
+            ProsimService = new ProsimSdkService(Config);
             GsxService = new GsxController(Config);
             AudioService = new AudioController(Config);
         }

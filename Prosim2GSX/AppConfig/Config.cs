@@ -126,6 +126,9 @@ namespace Prosim2GSX.AppConfig
         public virtual string ProSimSdkPath { get; set; } = "";
         public virtual string ProSimSdkHostname { get; set; } = "localhost";
         public virtual int ProSimSdkReconnectInterval { get; set; } = 5000; // milliseconds
+        public virtual bool ProSimSdkAutoReconnect { get; set; } = true;
+        public virtual int ProSimSdkConnectionTimeout { get; set; } = 10000; // milliseconds
+        public virtual int ProSimSdkMaxReconnectAttempts { get; set; } = 10;
 
         [JsonIgnore]
         public virtual AircraftProfile CurrentProfile => AppService.Instance?.GsxService?.AircraftProfile;

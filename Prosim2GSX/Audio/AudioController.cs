@@ -4,6 +4,7 @@ using CFIT.AppTools;
 using CFIT.SimConnectLib;
 using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.AppConfig;
+using Prosim2GSX.Prosim;
 using ProsimInterface;
 using System;
 using System.Collections.Concurrent;
@@ -35,6 +36,7 @@ namespace Prosim2GSX.Audio
     {
         public virtual CancellationToken RequestToken => AppService.Instance.RequestToken;
         public virtual SimConnectManager SimConnect => Prosim2GSX.Instance.AppService.SimConnect;
+        public virtual ProsimSdkService ProsimService => AppService.Instance.ProsimService;
         protected virtual ISimResourceSubscription SubPlanePowered { get; set; }
         public virtual bool IsActive { get; protected set; } = false;
         public virtual bool IsPlanePowered => SubPlanePowered.GetNumber() > 0;
