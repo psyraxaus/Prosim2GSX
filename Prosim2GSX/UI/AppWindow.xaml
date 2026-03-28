@@ -10,7 +10,8 @@
         MinWidth="820"
         SizeToContent="Height"
         ResizeMode="CanMinimize"
-        Background="{DynamicResource ContentBackgroundBrush}">
+        Background="{DynamicResource ContentBackgroundBrush}"
+        Foreground="{DynamicResource ContentText}">
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

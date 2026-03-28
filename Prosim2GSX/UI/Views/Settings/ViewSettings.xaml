@@ -15,21 +15,45 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <Grid HorizontalAlignment="Stretch">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="12,8,12,8">
 
-        <GroupBox Grid.Column="0" Grid.Row="0" Style="{StaticResource GroupBoxDefault}">
-            <GroupBox.Header>App Settings</GroupBox.Header>
-            <StackPanel>
+            <!-- THEME SETTINGS -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="THEME SETTINGS"/>
+            <Border Style="{StaticResource SectionCardBorder}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <ComboBox ItemsSource="{Binding Themes}"
+                                  SelectedIndex="{Binding SelectedThemeIndex}"
+                                  Width="180" VerticalAlignment="Center"/>
+                        <Button Content="Refresh Themes"
+                                Command="{Binding RefreshThemesCommand}"
+                                Background="{DynamicResource SecondaryColor}"
+                                Foreground="{DynamicResource HeaderText}"
+                                BorderThickness="0"
+                                Margin="8,0,0,0" Padding="10,5"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding ThemesPath}"
+                                   VerticalAlignment="Center"
+                                   FontSize="10" Opacity="0.6"
+                                   Margin="0,0,8,0"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxWidth="340"/>
+                        <Button Content="Open Folder"
+                                Command="{Binding OpenThemeFolderCommand}"
+                                Background="{DynamicResource PrimaryColor}"
+                                Foreground="{DynamicResource HeaderText}"
+                                BorderThickness="0"
+                                Padding="10,5"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
 
-                <!-- SECTION 1: GENERAL SETTINGS -->
-                <TextBlock Style="{StaticResource CategoryHeader}" Text="GENERAL SETTINGS" Margin="6,4,6,0"/>
-                <Grid Margin="6,4,6,4">
+            <!-- GENERAL SETTINGS -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="GENERAL SETTINGS"/>
+            <Border Style="{StaticResource SectionCardBorder}">
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
@@ -45,71 +69,49 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Which Source is used to get the Unit used in the UI.">
-                        UI Unit Source:
-                    </TextBlock>
-                    <ComboBox Grid.Column="1" Grid.Row="0" SelectedValue="{Binding DisplayUnitSource}" MinWidth="64" MaxWidth="96" ItemsSource="{Binding DisplayUnitSourceItems}" SelectedValuePath="Key" DisplayMemberPath="Value"
-                              Margin="6" Style="{StaticResource ComboBoxDefault}" HorizontalAlignment="Left" ToolTip="Which Source is used to get the Unit used in the UI."/>
+                    <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Which Source is used to get the Unit used in the UI.">UI Unit Source:</TextBlock>
+                    <ComboBox Grid.Column="1" Grid.Row="0" SelectedValue="{Binding DisplayUnitSource}" MinWidth="64" MaxWidth="96" ItemsSource="{Binding DisplayUnitSourceItems}" SelectedValuePath="Key" DisplayMemberPath="Value" Margin="6" Style="{StaticResource ComboBoxDefault}" HorizontalAlignment="Left" ToolTip="Which Source is used to get the Unit used in the UI."/>
 
-                    <TextBlock Grid.Column="0" Grid.Row="1" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="The Unit to used in the UI when no other Unit Source is available.">
-                        UI Default Unit:
-                    </TextBlock>
-                    <ComboBox Grid.Column="1" Grid.Row="1" SelectedValue="{Binding DisplayUnitDefault}" MinWidth="64" MaxWidth="96" ItemsSource="{Binding DisplayUnitDefaultItems}" SelectedValuePath="Key" DisplayMemberPath="Value"
-                              Margin="6" Style="{StaticResource ComboBoxDefault}" HorizontalAlignment="Left" ToolTip="The Unit to used in the UI when no other Unit Source is available."/>
+                    <TextBlock Grid.Column="0" Grid.Row="1" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="The Unit to used in the UI when no other Unit Source is available.">UI Default Unit:</TextBlock>
+                    <ComboBox Grid.Column="1" Grid.Row="1" SelectedValue="{Binding DisplayUnitDefault}" MinWidth="64" MaxWidth="96" ItemsSource="{Binding DisplayUnitDefaultItems}" SelectedValuePath="Key" DisplayMemberPath="Value" Margin="6" Style="{StaticResource ComboBoxDefault}" HorizontalAlignment="Left" ToolTip="The Unit to used in the UI when no other Unit Source is available."/>
 
-                    <TextBlock Grid.Column="0" Grid.Row="2" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Open the UI when the App is started.">
-                        Open UI on Start:
-                    </TextBlock>
+                    <TextBlock Grid.Column="0" Grid.Row="2" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Open the UI when the App is started.">Open UI on Start:</TextBlock>
                     <CheckBox Grid.Column="1" Grid.Row="2" IsChecked="{Binding OpenAppWindowOnStart}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Open the UI when the App is started."/>
 
-                    <TextBlock Grid.Column="0" Grid.Row="3" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="The Weight per Passenger Bag used in Simbrief to calculate Cargo Weight.">
-                        Prosim Bag Weight:
-                    </TextBlock>
+                    <TextBlock Grid.Column="0" Grid.Row="3" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="The Weight per Passenger Bag used in Simbrief to calculate Cargo Weight.">Prosim Bag Weight:</TextBlock>
                     <StackPanel Grid.Column="1" Grid.Row="3" Style="{StaticResource SettingItemPanel}" ToolTip="The Weight per Passenger Bag used in Simbrief to calculate Cargo Weight.">
                         <TextBox Name="InputBagWeight" Style="{StaticResource TextBoxCentered}"/>
                         <TextBlock Text="{Binding DisplayUnitCurrentString}" Margin="2,0,0,0" Style="{StaticResource TextBlockDefault}"/>
                     </StackPanel>
 
-                    <TextBlock Grid.Column="0" Grid.Row="4" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Default Value to set the Fuel on Board to (when the EFB is resetted or saved Fuel is applied).">
-                        FOB Reset Default:
-                    </TextBlock>
+                    <TextBlock Grid.Column="0" Grid.Row="4" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Default Value to set the Fuel on Board to (when the EFB is resetted or saved Fuel is applied).">FOB Reset Default:</TextBlock>
                     <StackPanel Grid.Column="1" Grid.Row="4" Style="{StaticResource SettingItemPanel}" ToolTip="Default Value to set the Fuel on Board to (when the EFB is resetted or saved Fuel is applied).">
                         <TextBox Name="InputFuelDefault" Style="{StaticResource TextBoxCentered}"/>
                         <TextBlock Text="{Binding DisplayUnitCurrentString}" Margin="2,0,0,0" Style="{StaticResource TextBlockDefault}"/>
                     </StackPanel>
 
-                    <TextBlock Grid.Column="0" Grid.Row="5" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="The maximum allowed Difference when the Fuel on Board is compared to be equal to a specific Target.">
-                        Fuel Compare Variance:
-                    </TextBlock>
+                    <TextBlock Grid.Column="0" Grid.Row="5" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="The maximum allowed Difference when the Fuel on Board is compared to be equal to a specific Target.">Fuel Compare Variance:</TextBlock>
                     <StackPanel Grid.Column="1" Grid.Row="5" Style="{StaticResource SettingItemPanel}" ToolTip="The maximum allowed Difference when the Fuel on Board is compared to be equal to a specific Target.">
                         <TextBox Name="InputFuelVariance" Style="{StaticResource TextBoxCentered}"/>
                         <TextBlock Text="{Binding DisplayUnitCurrentString}" Margin="2,0,0,0" Style="{StaticResource TextBlockDefault}"/>
                     </StackPanel>
 
-                    <TextBlock Grid.Column="0" Grid.Row="6" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Round the planned Fuel Value to the next higher 100' Fraction.">
-                        Round Fuel to 100's:
-                    </TextBlock>
+                    <TextBlock Grid.Column="0" Grid.Row="6" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Round the planned Fuel Value to the next higher 100' Fraction.">Round Fuel to 100's:</TextBlock>
                     <CheckBox Grid.Column="1" Grid.Row="6" IsChecked="{Binding FuelRoundUp100}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Round the planned Fuel Value to the next higher 100' Fraction."/>
 
-                    <TextBlock Grid.Column="0" Grid.Row="7" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="If and when the Cabin Ding Sound should be played to announce certain Situations.">
-                        Play Cabin Ding Sound:
-                    </TextBlock>
+                    <TextBlock Grid.Column="0" Grid.Row="7" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="If and when the Cabin Ding Sound should be played to announce certain Situations.">Play Cabin Ding Sound:</TextBlock>
                     <StackPanel Grid.Column="1" Grid.Row="7" Style="{StaticResource SettingItemPanel}" Margin="0,6,6,6" ToolTip="If and when the Cabin Ding Sound should be played to announce certain Situations.">
-                        <CheckBox IsChecked="{Binding DingOnStartup}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Play the Sound when Reposition was executed and Jetway/Stairs are connected or connecting - indicating if it is safe to import the OFP.">
-                            Ding on Startup
-                        </CheckBox>
-                        <CheckBox IsChecked="{Binding DingOnFinal}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Play the Sound when the Final Loadsheet was transmitted.">
-                            Ding on Final LS
-                        </CheckBox>
-                        <CheckBox IsChecked="{Binding DingOnTurnaround}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Play the Sound when the Automation Phase switched to Turnaround - indicating if it is safe to import an OFP again.">
-                            Ding on Turnaround
-                        </CheckBox>
+                        <CheckBox IsChecked="{Binding DingOnStartup}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Play the Sound when Reposition was executed and Jetway/Stairs are connected or connecting.">Ding on Startup</CheckBox>
+                        <CheckBox IsChecked="{Binding DingOnFinal}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Play the Sound when the Final Loadsheet was transmitted.">Ding on Final LS</CheckBox>
+                        <CheckBox IsChecked="{Binding DingOnTurnaround}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Play the Sound when the Automation Phase switched to Turnaround.">Ding on Turnaround</CheckBox>
                     </StackPanel>
                 </Grid>
+            </Border>
 
-                <!-- SECTION 2: TIMING AND DELAYS -->
-                <TextBlock Style="{StaticResource CategoryHeader}" Text="TIMING &amp; DELAYS" Margin="6,8,6,0"/>
-                <Grid Margin="6,4,6,4">
+            <!-- TIMING & DELAYS -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="TIMING &amp; DELAYS"/>
+            <Border Style="{StaticResource SectionCardBorder}">
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
@@ -120,35 +122,29 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Percent of Cargo Weight per Second applied to the Aircraft after a GSX Value Change.">
-                        Cargo Change Rate:
-                    </TextBlock>
+                    <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Percent of Cargo Weight per Second applied to the Aircraft after a GSX Value Change.">Cargo Change Rate:</TextBlock>
                     <StackPanel Grid.Column="1" Grid.Row="0" Style="{StaticResource SettingItemPanel}" ToolTip="Percent of Cargo Weight per Second applied to the Aircraft after a GSX Value Change.">
                         <TextBox Name="InputCargoRate" Style="{StaticResource TextBoxCentered}"/>
                         <TextBlock Margin="2,0,0,0" Style="{StaticResource TextBlockDefault}">% / s</TextBlock>
                     </StackPanel>
 
-                    <TextBlock Grid.Column="0" Grid.Row="1" Margin="6" Style="{StaticResource TextBlockDefault}">
-                        Cargo Door Delay:
-                    </TextBlock>
+                    <TextBlock Grid.Column="0" Grid.Row="1" Margin="6" Style="{StaticResource TextBlockDefault}">Cargo Door Delay:</TextBlock>
                     <StackPanel Grid.Column="1" Grid.Row="1" Orientation="Horizontal" Margin="6,0,0,0">
-                        <StackPanel Orientation="Horizontal" ToolTip="Delay in Seconds to open both Cargo Doors after GSX Boarding became active (5) - If the corresponding Option is used.">
+                        <StackPanel Orientation="Horizontal" ToolTip="Delay in Seconds to open both Cargo Doors after GSX Boarding became active.">
                             <TextBlock Margin="0,0,6,0" Style="{StaticResource TextBlockDefault}">Open:</TextBlock>
                             <TextBox Name="InputDoorCargoOpenDelay" Style="{StaticResource TextBoxCentered}"/>
                             <TextBlock Margin="2,0,0,0" Style="{StaticResource TextBlockDefault}">s</TextBlock>
                         </StackPanel>
-                        <StackPanel Style="{StaticResource SettingItemPanel}" ToolTip="Delay in Seconds to close a Cargo Door when the Loader is finished (ignored when Keep Doors Open is configured).">
+                        <StackPanel Style="{StaticResource SettingItemPanel}" ToolTip="Delay in Seconds to close a Cargo Door when the Loader is finished.">
                             <TextBlock Margin="12,0,6,0" Style="{StaticResource TextBlockDefault}">Close:</TextBlock>
                             <TextBox Name="InputDoorCargoCloseDelay" Style="{StaticResource TextBoxCentered}"/>
                             <TextBlock Margin="2,0,0,0" Style="{StaticResource TextBlockDefault}">s</TextBlock>
                         </StackPanel>
                     </StackPanel>
 
-                    <TextBlock Grid.Column="0" Grid.Row="2" Margin="6" Style="{StaticResource TextBlockDefault}">
-                        Refuel Door Delay:
-                    </TextBlock>
+                    <TextBlock Grid.Column="0" Grid.Row="2" Margin="6" Style="{StaticResource TextBlockDefault}">Refuel Door Delay:</TextBlock>
                     <StackPanel Grid.Column="1" Grid.Row="2" Orientation="Horizontal" Margin="6,0,0,0">
-                        <StackPanel Orientation="Horizontal" ToolTip="Delay in Seconds to open &amp; Power on the Refuel Panel after GSX Refuel became active (5).">
+                        <StackPanel Orientation="Horizontal" ToolTip="Delay in Seconds to open &amp; Power on the Refuel Panel after GSX Refuel became active.">
                             <TextBlock Margin="0,0,6,0" Style="{StaticResource TextBlockDefault}">Open:</TextBlock>
                             <TextBox Name="InputRefuelOpenDelay" Style="{StaticResource TextBoxCentered}"/>
                             <TextBlock Margin="2,0,0,0" Style="{StaticResource TextBlockDefault}">s</TextBlock>
@@ -160,10 +156,12 @@
                         </StackPanel>
                     </StackPanel>
                 </Grid>
+            </Border>
 
-                <!-- SECTION 3: GSX BEHAVIOUR -->
-                <TextBlock Style="{StaticResource CategoryHeader}" Text="GSX BEHAVIOUR" Margin="6,8,6,0"/>
-                <Grid Margin="6,4,6,4">
+            <!-- GSX BEHAVIOUR -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="GSX BEHAVIOUR"/>
+            <Border Style="{StaticResource SectionCardBorder}">
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
@@ -176,39 +174,31 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Reset (write) the GSX Service State Variables to 1 (callable) when switching to the Flight Phase.&#x0a;This can prevent Situations where a Service is already considered Completed when GSX never reset its State Variables.">
-                        Reset GSX Vars in Flight:
-                    </TextBlock>
-                    <CheckBox Grid.Column="1" Grid.Row="0" IsChecked="{Binding ResetGsxStateVarsFlight}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Reset (write) the GSX Service State Variables to 1 (callable) when switching to the Flight Phase.&#x0a;This can prevent Situations where a Service is already considered Completed when GSX never reset its State Variables."/>
+                    <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Reset the GSX Service State Variables to 1 (callable) when switching to the Flight Phase.">Reset GSX Vars in Flight:</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="0" IsChecked="{Binding ResetGsxStateVarsFlight}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Reset the GSX Service State Variables to 1 (callable) when switching to the Flight Phase."/>
 
-                    <TextBlock Grid.Column="0" Grid.Row="1" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Restart the GSX Binary on Taxi-In (~after Touchdown) to ensure a 'clean' State.&#x0a;The Binary will be killed and started (if GSX' Watchdog has not restarted it already).">
-                        Restart GSX on Taxi-In:
-                    </TextBlock>
-                    <CheckBox Grid.Column="1" Grid.Row="1" IsChecked="{Binding RestartGsxOnTaxiIn}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Restart the GSX Binary on Taxi-In (~after Touchdown) to ensure a 'clean' State.&#x0a;The Binary will be killed and started (if GSX' Watchdog has not restarted it already)."/>
+                    <TextBlock Grid.Column="0" Grid.Row="1" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Restart the GSX Binary on Taxi-In (~after Touchdown) to ensure a 'clean' State.">Restart GSX on Taxi-In:</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="1" IsChecked="{Binding RestartGsxOnTaxiIn}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Restart the GSX Binary on Taxi-In (~after Touchdown) to ensure a 'clean' State."/>
 
-                    <TextBlock Grid.Column="0" Grid.Row="2" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Restart the GSX Binary on Startup when the Menu doesn't open / become ready.">
-                        Restart GSX on Startup:
-                    </TextBlock>
+                    <TextBlock Grid.Column="0" Grid.Row="2" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Restart the GSX Binary on Startup when the Menu doesn't open / become ready.">Restart GSX on Startup:</TextBlock>
                     <StackPanel Grid.Column="1" Grid.Row="2" Orientation="Horizontal" Margin="6,0,0,0">
-                        <CheckBox IsChecked="{Binding RestartGsxStartupFail}" Style="{StaticResource CheckBoxDefault}" ToolTip="Restart the GSX Binary on Startup when the Menu doesn't open / become ready after a certain Amount of failed Attempts to open the Menu."/>
+                        <CheckBox IsChecked="{Binding RestartGsxStartupFail}" Style="{StaticResource CheckBoxDefault}" ToolTip="Restart the GSX Binary on Startup when the Menu doesn't open / become ready after a certain Amount of failed Attempts."/>
                         <TextBlock Margin="12,-1,6,0" Style="{StaticResource TextBlockDefault}">Max Failures:</TextBlock>
                         <TextBox Name="InputGsxMaxFail" Style="{StaticResource TextBoxCentered}"/>
                     </StackPanel>
 
-                    <TextBlock Grid.Column="0" Grid.Row="3" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Enable / Disable the core GSX Controller of the App.&#x0a;NOTE: Only disable the Controller if you only want to use Volume Control.">
-                        Run GSX Controller:
-                    </TextBlock>
-                    <CheckBox Grid.Column="1" Grid.Row="3" IsChecked="{Binding RunGsxService}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Enable / Disable the core GSX Controller of the App.&#x0a;NOTE: Only disable the Controller if you only want to use Volume Control."/>
+                    <TextBlock Grid.Column="0" Grid.Row="3" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Enable / Disable the core GSX Controller of the App.">Run GSX Controller:</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="3" IsChecked="{Binding RunGsxService}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Enable / Disable the core GSX Controller of the App."/>
 
-                    <TextBlock Grid.Column="0" Grid.Row="4" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Enable / Disable the Audio Controller for App Volume Control.&#x0a;Disable if you want to use Prosim' native Implementation.">
-                        Run Audio Controller:
-                    </TextBlock>
-                    <CheckBox Grid.Column="1" Grid.Row="4" IsChecked="{Binding RunAudioService}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Enable / Disable the Audio Controller for App Volume Control.&#x0a;Disable if you want to use Prosim' native Implementation."/>
+                    <TextBlock Grid.Column="0" Grid.Row="4" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Enable / Disable the Audio Controller for App Volume Control.">Run Audio Controller:</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="4" IsChecked="{Binding RunAudioService}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Enable / Disable the Audio Controller for App Volume Control."/>
                 </Grid>
+            </Border>
 
-                <!-- SECTION 4: PROSIM SDK AND DATA -->
-                <TextBlock Style="{StaticResource CategoryHeader}" Text="PROSIM SDK &amp; DATA" Margin="6,8,6,0"/>
-                <Grid Margin="6,4,6,4">
+            <!-- PROSIM SDK & DATA -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="PROSIM SDK &amp; DATA"/>
+            <Border Style="{StaticResource SectionCardBorder}">
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
@@ -218,9 +208,7 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Path to the ProSim SDK DLL file required for ProSim integration.">
-                        ProSim SDK Path:
-                    </TextBlock>
+                    <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Path to the ProSim SDK DLL file required for ProSim integration.">ProSim SDK Path:</TextBlock>
                     <StackPanel Grid.Column="1" Grid.Row="0" Style="{StaticResource SettingItemPanel}" Orientation="Horizontal" ToolTip="Path to the ProSim SDK DLL file required for ProSim integration.">
                         <TextBox Name="InputProSimSdkPath" Style="{StaticResource TextBoxLeft}" MinWidth="200" MaxWidth="350" Text="{Binding ProSimSdkPath}" IsReadOnly="True"/>
                         <Button Name="ButtonBrowseProSimSdk" Margin="6,0,0,0" Style="{StaticResource BtnSquareSmall}" ToolTip="Browse for ProSim SDK file">
@@ -228,21 +216,20 @@
                         </Button>
                     </StackPanel>
 
-                    <TextBlock Grid.Column="0" Grid.Row="1" Margin="6" Style="{StaticResource TextBlockDefault}" VerticalAlignment="Top" ToolTip="The Fuel-on-Board Values currently stored by Any2GSX for the various Aircrafts.">
-                        Saved Fuel Values:
-                    </TextBlock>
+                    <TextBlock Grid.Column="0" Grid.Row="1" Margin="6" Style="{StaticResource TextBlockDefault}" VerticalAlignment="Top" ToolTip="The Fuel-on-Board Values currently stored by Prosim2GSX for the various Aircrafts.">Saved Fuel Values:</TextBlock>
                     <StackPanel Grid.Column="1" Grid.Row="1" Margin="6" Orientation="Horizontal">
-                        <ListView MinWidth="228" MaxWidth="384" Height="96" MaxHeight="142" ScrollViewer.CanContentScroll="True" ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                  HorizontalAlignment="Left" HorizontalContentAlignment="Left" VerticalAlignment="Top" VerticalContentAlignment="Center"
-                                  Name="ListSavedFuel">
-                        </ListView>
+                        <ListView MinWidth="228" MaxWidth="384" Height="96" MaxHeight="142"
+                                  ScrollViewer.CanContentScroll="True" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                  HorizontalAlignment="Left" HorizontalContentAlignment="Left"
+                                  VerticalAlignment="Top" VerticalContentAlignment="Center"
+                                  Name="ListSavedFuel"/>
                         <Button Name="ButtonRemove" Margin="6,0,6,0" Style="{StaticResource BtnSquareSmall}" VerticalAlignment="Top" ToolTip="Remove selected Entry">
                             <Image Source="../../Icons/remove.png" Style="{StaticResource ImgSquareSmall}"/>
                         </Button>
                     </StackPanel>
                 </Grid>
+            </Border>
 
-            </StackPanel>
-        </GroupBox>
-    </Grid>
+        </StackPanel>
+    </ScrollViewer>
 </UserControl>

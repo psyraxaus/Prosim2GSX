@@ -122,6 +122,9 @@ namespace Prosim2GSX.AppConfig
         public virtual int SpeedTresholdTaxiOut { get; set; } = 2;
         public virtual int SpeedTresholdTaxiIn { get; set; } = 30;
 
+        // Theme
+        public virtual string CurrentTheme { get; set; } = "Light";
+
         //ProsimSDK
         public virtual string ProSimSdkPath { get; set; } = "";
         public virtual string ProSimSdkHostname { get; set; } = "localhost";

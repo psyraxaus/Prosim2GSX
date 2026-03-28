@@ -95,6 +95,167 @@
         <Setter Property="Margin" Value="4,4,4,4" />
     </Style>
 
+    <!-- Implicit control styles: apply theme colors to every Button, TextBox,
+         ComboBox, ListBox, and ListView. Named styles that BasedOn these types
+         automatically inherit these setters; explicit local attributes override them. -->
+    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Background"  Value="{DynamicResource ButtonBackground}"/>
+        <Setter Property="Foreground"  Value="{DynamicResource ContentText}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}"/>
+    </Style>
+    <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+        <Setter Property="Background"   Value="{DynamicResource InputBackground}"/>
+        <Setter Property="Foreground"   Value="{DynamicResource ContentText}"/>
+        <Setter Property="BorderBrush"  Value="{DynamicResource InputBorderBrush}"/>
+        <Setter Property="CaretBrush"   Value="{DynamicResource ContentText}"/>
+    </Style>
+    <Style TargetType="ComboBox">
+        <Setter Property="Background"         Value="{DynamicResource InputBackground}"/>
+        <Setter Property="Foreground"         Value="{DynamicResource ContentText}"/>
+        <Setter Property="BorderBrush"        Value="{DynamicResource InputBorderBrush}"/>
+        <Setter Property="BorderThickness"    Value="1"/>
+        <Setter Property="Padding"            Value="4,2"/>
+        <Setter Property="MinHeight"          Value="22"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="20"/>
+                        </Grid.ColumnDefinitions>
+                        <!-- Outer border / background -->
+                        <Border Grid.ColumnSpan="2"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                SnapsToDevicePixels="True"/>
+                        <!-- Selected-value display -->
+                        <ContentPresenter x:Name="ContentSite"
+                                          Grid.Column="0"
+                                          Content="{TemplateBinding SelectionBoxItem}"
+                                          ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                          ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                          TextElement.Foreground="{TemplateBinding Foreground}"
+                                          Margin="{TemplateBinding Padding}"
+                                          VerticalAlignment="Center"
+                                          HorizontalAlignment="Left"
+                                          IsHitTestVisible="False"/>
+                        <!-- Editable text box (IsEditable=True path) -->
+                        <TextBox x:Name="PART_EditableTextBox"
+                                 Grid.Column="0"
+                                 Background="Transparent"
+                                 Foreground="{TemplateBinding Foreground}"
+                                 BorderThickness="0"
+                                 Margin="{TemplateBinding Padding}"
+                                 Visibility="Hidden"
+                                 IsReadOnly="{TemplateBinding IsReadOnly}"
+                                 HorizontalAlignment="Stretch"
+                                 VerticalAlignment="Center"/>
+                        <!-- Drop-down toggle button -->
+                        <ToggleButton x:Name="ToggleButton"
+                                      Grid.Column="1"
+                                      IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                      Background="Transparent"
+                                      BorderThickness="0"
+                                      Focusable="False"
+                                      ClickMode="Press">
+                            <Path x:Name="Arrow"
+                                  Data="M 0 0 L 4 4 L 8 0 Z"
+                                  Fill="{TemplateBinding Foreground}"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"/>
+                        </ToggleButton>
+                        <!-- Dropdown popup -->
+                        <Popup x:Name="PART_Popup"
+                               Grid.ColumnSpan="2"
+                               IsOpen="{TemplateBinding IsDropDownOpen}"
+                               Placement="Bottom"
+                               AllowsTransparency="True"
+                               Focusable="False"
+                               PopupAnimation="Slide">
+                            <Border x:Name="DropDownBorder"
+                                    Background="{DynamicResource InputBackground}"
+                                    BorderBrush="{DynamicResource InputBorderBrush}"
+                                    BorderThickness="1"
+                                    MinWidth="{TemplateBinding ActualWidth}"
+                                    MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                    SnapsToDevicePixels="True">
+                                <ScrollViewer>
+                                    <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEditable" Value="True">
+                            <Setter TargetName="ContentSite"        Property="Visibility" Value="Hidden"/>
+                            <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.55"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
+        <Setter Property="Background"  Value="{DynamicResource InputBackground}"/>
+        <Setter Property="Foreground"  Value="{DynamicResource ContentText}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}"/>
+    </Style>
+    <Style TargetType="ListView" BasedOn="{StaticResource {x:Type ListView}}">
+        <Setter Property="Background"  Value="{DynamicResource InputBackground}"/>
+        <Setter Property="Foreground"  Value="{DynamicResource ContentText}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}"/>
+    </Style>
+    <!-- DataGridRow: row stripe behind each data row -->
+    <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+        <Setter Property="Background" Value="{DynamicResource InputBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ContentText}"/>
+    </Style>
+    <!-- DataGridColumnHeader: custom template overrides Aero2's hardcoded gradient -->
+    <Style TargetType="DataGridColumnHeader">
+        <Setter Property="Background"                Value="{DynamicResource ButtonBackground}"/>
+        <Setter Property="Foreground"                Value="{DynamicResource ContentText}"/>
+        <Setter Property="BorderBrush"               Value="{DynamicResource InputBorderBrush}"/>
+        <Setter Property="BorderThickness"           Value="0,0,1,1"/>
+        <Setter Property="Padding"                   Value="6,4"/>
+        <Setter Property="FontWeight"                Value="SemiBold"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DataGridColumnHeader">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ContentPresenter Grid.Column="0"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="Center"
+                                              RecognizesAccessKey="False"/>
+                            <Thumb Grid.Column="1" x:Name="PART_RightHeaderGripper"
+                                   HorizontalAlignment="Right" Width="8" Cursor="SizeWE">
+                                <Thumb.Template>
+                                    <ControlTemplate TargetType="Thumb">
+                                        <Border Background="Transparent" Width="8"/>
+                                    </ControlTemplate>
+                                </Thumb.Template>
+                            </Thumb>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style TargetType="Button" x:Key="BtnSquareSmall" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Width" Value="24" />
         <Setter Property="Height" Value="24" />
@@ -161,6 +322,16 @@
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
     </Style>
+    <!-- Implicit styles: give all TextBlocks and Labels the theme foreground color.
+         Elements with an explicit Foreground attribute (e.g. tab header, sidebar) are
+         unaffected because local values take precedence over style setters. -->
+    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+        <Setter Property="Foreground" Value="{DynamicResource ContentText}"/>
+    </Style>
+    <Style TargetType="Label" BasedOn="{StaticResource {x:Type Label}}">
+        <Setter Property="Foreground" Value="{DynamicResource ContentText}"/>
+    </Style>
+
     <Style x:Key="TextBlockDefault" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -185,8 +356,10 @@
     <Style TargetType="DataGridCell">
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-        <Setter Property="MinHeight" Value="24" />
-        <Setter Property="Padding" Value="2" />
+        <Setter Property="MinHeight"        Value="24"/>
+        <Setter Property="Padding"          Value="2"/>
+        <Setter Property="Background"       Value="Transparent"/>
+        <Setter Property="Foreground"       Value="{DynamicResource ContentText}"/>
     </Style>
     <Style TargetType="DataGrid">
         <Setter Property="Margin" Value="6,0,6,6" />
@@ -198,29 +371,20 @@
         <Setter Property="IsReadOnly" Value="True" />
         <Setter Property="HorizontalAlignment" Value="Left" />
         <Setter Property="GridLinesVisibility" Value="None" />
+        <Setter Property="Background" Value="{DynamicResource InputBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ContentText}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}"/>
+        <Setter Property="RowBackground" Value="{DynamicResource InputBackground}"/>
+        <Setter Property="AlternatingRowBackground" Value="{DynamicResource InputBackground}"/>
     </Style>
 
     <!-- EFB Style Resources -->
-    <SolidColorBrush x:Key="StatusActiveBrush" Color="#FF00A000"/>
-    <SolidColorBrush x:Key="StatusCompletedBrush" Color="#FFFFD700"/>
-    <SolidColorBrush x:Key="StatusWaitingBrush" Color="#FF1E90FF"/>
-    <SolidColorBrush x:Key="StatusDisconnectedBrush" Color="#FFFF0000"/>
-    <SolidColorBrush x:Key="StatusInactiveBrush" Color="#FFD3D3D3"/>
-
-    <Color x:Key="PrimaryColor">#FF1E90FF</Color>
-    <Color x:Key="SecondaryColor">#FF0078D7</Color>
-    <Color x:Key="HeaderBackground">#FF1E90FF</Color>
-    <Color x:Key="ContentBackground">#FFF8F8F8</Color>
-    <Color x:Key="SectionBackground">#FFFFFFFF</Color>
-    <Color x:Key="CategoryText">#FF1E90FF</Color>
-
-    <SolidColorBrush x:Key="PrimaryColorBrush" Color="{StaticResource PrimaryColor}"/>
-    <SolidColorBrush x:Key="HeaderBackgroundBrush" Color="{StaticResource HeaderBackground}"/>
-    <SolidColorBrush x:Key="ContentBackgroundBrush" Color="{StaticResource ContentBackground}"/>
-    <SolidColorBrush x:Key="CategoryTextBrush" Color="{StaticResource CategoryText}"/>
+    <!-- Note: color brushes (StatusActiveBrush, HeaderBackgroundBrush, PrimaryColorBrush, etc.)
+         are now injected at runtime by ThemeManager into Application.Current.Resources.
+         ThemeResources.xaml provides design-time defaults for these keys. -->
 
     <Style x:Key="SectionCardBorder" TargetType="Border">
-        <Setter Property="Background" Value="White"/>
+        <Setter Property="Background" Value="{DynamicResource SectionBackground}"/>
         <Setter Property="BorderBrush" Value="#FFE0E0E0"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="6"/>
@@ -229,7 +393,7 @@
     </Style>
 
     <Style x:Key="CategoryHeader" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-        <Setter Property="Foreground" Value="{StaticResource CategoryTextBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource CategoryTextBrush}"/>
         <Setter Property="FontSize" Value="16"/>
         <Setter Property="FontWeight" Value="DemiBold"/>
     </Style>
@@ -239,8 +403,8 @@
     </Style>
 
     <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource BtnDefault}">
-        <Setter Property="Background" Value="{StaticResource PrimaryColorBrush}"/>
-        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Background" Value="{DynamicResource PrimaryColorBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource HeaderText}"/>
     </Style>
 
     <!-- Modern EFB Tab Control -->
@@ -248,7 +412,7 @@
         <Setter Property="Margin" Value="0"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Background" Value="{StaticResource ContentBackgroundBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TabControl">
@@ -257,8 +421,8 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <!-- Dark navy tab strip -->
-                        <Border Grid.Row="0" Background="#FF0D1A2A">
+                        <!-- Tab strip — color controlled by theme -->
+                        <Border Grid.Row="0" Background="{DynamicResource TabBarBackground}">
                             <TabPanel x:Name="HeaderPanel"
                                       IsItemsHost="True"
                                       Background="Transparent"
