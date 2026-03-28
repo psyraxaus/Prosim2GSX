@@ -46,10 +46,10 @@
   </ItemGroup>
   
   <ItemGroup>
-  <PackageReference Include="CFIT.AppFramework" Version="2025.290.14.810" />
-  <PackageReference Include="CFIT.AppLogger" Version="2025.290.14.759" />
-  <PackageReference Include="CFIT.AppTools" Version="2025.290.14.779" />
-  <PackageReference Include="CFIT.SimConnectLib" Version="2025.290.14.797" />
+  <PackageReference Include="CFIT.AppFramework" Version="2025.347.9.1720" />
+  <PackageReference Include="CFIT.AppLogger" Version="2025.347.9.1580" />
+  <PackageReference Include="CFIT.AppTools" Version="2025.347.9.1633" />
+  <PackageReference Include="CFIT.SimConnectLib" Version="2025.347.9.1780" />
   <PackageReference Include="CoreAudio" Version="1.40.0" />
   <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
 	<PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />

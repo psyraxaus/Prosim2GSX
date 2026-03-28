@@ -61,7 +61,12 @@ namespace Prosim2GSX.Aircraft
         public AircraftInterface(GsxController controller)
         {
             Controller = controller;
-            ProsimInterface = new ProsimAircraftInterface(Controller);
+
+            // Create the SDK interface with the path from config
+            var sdkInterface = new ProsimSdkInterface(Controller.Config.ProSimSdkPath);
+
+            // Pass both controller and SDK interface to ProsimAircraftInterface
+            ProsimInterface = new ProsimAircraftInterface(Controller, sdkInterface);
         }
 
         public virtual void Init()
