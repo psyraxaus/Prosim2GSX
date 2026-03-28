@@ -24,10 +24,10 @@ namespace Prosim2GSX.GSX
     {
         protected bool _lock = false;
         public virtual CancellationToken RequestToken => AppService.Instance.RequestToken;
-        public virtual SimConnectManager SimConnect => Prosim2GSX.Instance.AppService.SimConnect;
+        public virtual SimConnectManager SimConnectManager => Prosim2GSX.Instance.AppService.SimConnect;
         public virtual SimConnectController SimController => Prosim2GSX.Instance.AppService.SimService.Controller;
         public virtual ProsimSdkService ProsimService => AppService.Instance.ProsimService;
-        public virtual bool IsMsfs2024 => SimConnect.GetSimVersion() == SimVersion.MSFS2024;
+        public virtual bool IsMsfs2024 => SimConnectManager.GetSimVersion() == SimVersion.MSFS2024;
         public virtual string PathInstallation { get; }
         public virtual GsxMenu Menu { get; }
         protected virtual DateTime NextMenuStartupCheck { get; set; } = DateTime.MinValue;
@@ -61,7 +61,7 @@ namespace Prosim2GSX.GSX
         public virtual bool IsAirStart { get; protected set; } = false;
         public virtual bool CanAutomationRun => Menu.FirstReadyReceived || IsAirStart || AircraftInterface?.EnginesRunning == true;
         protected virtual int GroundCounter { get; set; } = 0;
-        public virtual bool IsPaused => SimConnect.IsPaused;
+        public virtual bool IsPaused => SimConnectManager.IsPaused;
         public virtual bool IsWalkaround => CheckWalkAround();
         public virtual bool SkippedWalkAround { get; protected set; } = false;
         public virtual bool WalkAroundSkipActive { get; protected set; } = false;
@@ -233,7 +233,7 @@ namespace Prosim2GSX.GSX
                 if (!IsExecutionAllowed || RequestToken.IsCancellationRequested)
                     return;
 
-                if (IsMsfs2024 && SimConnect.CameraState == 30)
+                if (IsMsfs2024 && SimConnectManager.CameraState == 30)
                 {
                     await Task.Delay(Config.GsxServiceStartDelay, Token);
 
@@ -267,7 +267,7 @@ namespace Prosim2GSX.GSX
                 Logger.Debug($"GsxService active (VarsReceived: {CouatlVarsReceived} | FirstReady: {Menu.FirstReadyReceived})");
                 IsActive = true;
                 Logger.Information($"GsxController active - waiting for Menu to be ready");
-                while (SimConnect.IsSessionRunning && IsExecutionAllowed && !RequestToken.IsCancellationRequested)
+                while (SimConnectManager.IsSessionRunning && IsExecutionAllowed && !RequestToken.IsCancellationRequested)
                 {
                     if (Config.LogLevel == LogLevel.Verbose)
                         Logger.Verbose($"Controller Tick - VarsReceived: {CouatlVarsReceived} | FirstReady: {Menu.FirstReadyReceived} | VarsValid: {CouatlVarsValid} | IsGsxRunning: {IsGsxRunning}");
@@ -369,7 +369,7 @@ namespace Prosim2GSX.GSX
 
         public virtual bool CheckBinaries()
         {
-            var version = SimConnect.GetSimVersion();
+            var version = SimConnectManager.GetSimVersion();
             if (version == SimVersion.MSFS2020)
                 return Sys.GetProcessRunning(Config.BinaryGsx2020);
             else if (version == SimVersion.MSFS2024)
@@ -388,7 +388,7 @@ namespace Prosim2GSX.GSX
 
         protected virtual bool CheckSessionReady()
         {
-            return SimConnect.CameraState < 11;
+            return SimConnectManager.CameraState < 11;
         }
 
         protected virtual async Task SkipWalkaround()
