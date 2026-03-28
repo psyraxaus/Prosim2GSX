@@ -1,6 +1,7 @@
 using CFIT.AppTools;
 using Prosim2GSX.UI.Views.Audio;
 using Prosim2GSX.UI.Views.Monitor;
+using Prosim2GSX.UI.Views.Profiles;
 using Prosim2GSX.UI.Views.Settings;
 using System;
 using System.Reflection;
@@ -59,8 +60,9 @@ namespace Prosim2GSX.UI
         {
             MainTabControl.Items[0] = CreateTabItem("FLIGHT STATUS", new ViewMonitor());
             MainTabControl.Items[1] = CreateTabItem("AUTOMATION", new Views.Automation.ViewAutomation());
-            MainTabControl.Items[2] = CreateTabItem("AUDIO SETTINGS", new ViewAudio());
-            MainTabControl.Items[3] = CreateTabItem("APP SETTINGS", new ViewSettings());
+            MainTabControl.Items[2] = CreateTabItem("AIRCRAFT PROFILES", new ViewProfiles());
+            MainTabControl.Items[3] = CreateTabItem("AUDIO SETTINGS", new ViewAudio());
+            MainTabControl.Items[4] = CreateTabItem("APP SETTINGS", new ViewSettings());
 
             // Set index and previousTabIndex before subscribing so SelectionChanged
             // does not fire Start() while the window is still in its layout pass.
