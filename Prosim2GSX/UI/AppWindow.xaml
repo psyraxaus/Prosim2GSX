@@ -42,17 +42,17 @@
             </TabItem>
             <TabItem>
                 <TabItem.Header>
+                    <TextBlock Text="AUTOMATION" FontWeight="DemiBold" FontSize="11" Padding="12,8"/>
+                </TabItem.Header>
+            </TabItem>
+            <TabItem>
+                <TabItem.Header>
                     <TextBlock Text="AUDIO SETTINGS" FontWeight="DemiBold" FontSize="11" Padding="12,8"/>
                 </TabItem.Header>
             </TabItem>
             <TabItem>
                 <TabItem.Header>
                     <TextBlock Text="APP SETTINGS" FontWeight="DemiBold" FontSize="11" Padding="12,8"/>
-                </TabItem.Header>
-            </TabItem>
-            <TabItem>
-                <TabItem.Header>
-                    <TextBlock Text="GSX SETTINGS" FontWeight="DemiBold" FontSize="11" Padding="12,8"/>
                 </TabItem.Header>
             </TabItem>
         </TabControl>
