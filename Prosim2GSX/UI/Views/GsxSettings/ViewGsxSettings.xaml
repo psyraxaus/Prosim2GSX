@@ -1,0 +1,137 @@
+<UserControl x:Class="Prosim2GSX.UI.Views.GsxSettings.ViewGsxSettings"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:Prosim2GSX.UI.Views.GsxSettings"
+             xmlns:automation="clr-namespace:Prosim2GSX.UI.Views.Automation"
+             d:DataContext="{d:DesignInstance Type=automation:ModelAutomation}"
+             mc:Ignorable="d"
+             d:DesignHeight="768" d:DesignWidth="800">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../../StyleResources.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="12,8,12,8">
+
+            <!-- SECTION 1: BOARDING SETTINGS -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="BOARDING SETTINGS"/>
+            <Border Style="{StaticResource SectionCardBorder}">
+                <StackPanel>
+                    <CheckBox IsChecked="{Binding CallDeboardOnArrival}" Style="{StaticResource LocalCheckBoxStyle}">
+                        Automatically deboard passengers via GSX on arrival
+                    </CheckBox>
+                    <CheckBox IsChecked="{Binding RunDepartureOnArrival}" Style="{StaticResource LocalCheckBoxStyle}">
+                        Start departure services while deboarding is active
+                    </CheckBox>
+                    <CheckBox IsChecked="{Binding SkipCrewQuestion}" Style="{StaticResource LocalCheckBoxStyle}">
+                        Suppress crew boarding/deboarding question
+                    </CheckBox>
+                    <CheckBox IsChecked="{Binding RandomizePax, Converter={StaticResource InverseBooleanConverter}}" Style="{StaticResource LocalCheckBoxStyle}">
+                        Use actual passenger value (disable randomization)
+                    </CheckBox>
+                </StackPanel>
+            </Border>
+
+            <!-- SECTION 2: REFUELING SETTINGS -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="REFUELING SETTINGS"/>
+            <Border Style="{StaticResource SectionCardBorder}">
+                <StackPanel>
+                    <CheckBox IsChecked="{Binding SkipFuelOnTankering}" Style="{StaticResource LocalCheckBoxStyle}">
+                        Skip refuel when FOB is higher than planned (tankering)
+                    </CheckBox>
+                    <CheckBox IsChecked="{Binding RefuelFinishOnHose}" Style="{StaticResource LocalCheckBoxStyle}">
+                        Finish refuel immediately when the fuel hose disconnects
+                    </CheckBox>
+                    <StackPanel Orientation="Horizontal" Margin="6,6,6,6">
+                        <Label Width="130" VerticalAlignment="Center">Refuel Rate:</Label>
+                        <TextBox x:Name="InputGsxRefuelRate" Width="100" Style="{StaticResource TextBoxCentered}"/>
+                        <TextBlock Text="{Binding DisplayUnitCurrentString}" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="/sec" Margin="2,0,8,0" VerticalAlignment="Center"/>
+                        <RadioButton Content="KGS"
+                                     IsChecked="{Binding IsKgs, Mode=OneWay}"
+                                     GroupName="RefuelUnit"
+                                     VerticalAlignment="Center"
+                                     Margin="0,0,8,0"/>
+                        <RadioButton Content="LBS"
+                                     IsChecked="{Binding IsKgs, Mode=OneWay, Converter={StaticResource InverseBooleanConverter}}"
+                                     GroupName="RefuelUnit"
+                                     VerticalAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- SECTION 3: REPOSITIONING SETTINGS -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="REPOSITIONING SETTINGS"/>
+            <Border Style="{StaticResource SectionCardBorder}">
+                <StackPanel>
+                    <CheckBox IsChecked="{Binding CallReposition}" Style="{StaticResource LocalCheckBoxStyle}">
+                        Automatically reposition aircraft on session start
+                    </CheckBox>
+                </StackPanel>
+            </Border>
+
+            <!-- SECTION 4: DOOR SETTINGS -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="DOOR SETTINGS"/>
+            <Border Style="{StaticResource SectionCardBorder}">
+                <StackPanel>
+                    <CheckBox IsChecked="{Binding DoorCargoHandling}" Style="{StaticResource LocalCheckBoxStyle}">
+                        Open cargo doors for boarding/deboarding
+                    </CheckBox>
+                    <CheckBox IsChecked="{Binding DoorCateringHandling}" Style="{StaticResource LocalCheckBoxStyle}">
+                        Open aft door for catering
+                    </CheckBox>
+                    <CheckBox IsChecked="{Binding CloseDoorsOnFinal}" Style="{StaticResource LocalCheckBoxStyle}">
+                        Close doors when final loadsheet is transmitted
+                    </CheckBox>
+                </StackPanel>
+            </Border>
+
+            <!-- SECTION 5: JETWAY AND STAIR SETTINGS -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="JETWAY &amp; STAIR SETTINGS"/>
+            <Border Style="{StaticResource SectionCardBorder}">
+                <StackPanel>
+                    <CheckBox IsChecked="{Binding CallJetwayStairsOnPrep}" Style="{StaticResource LocalCheckBoxStyle}">
+                        Connect jetway and stairs on session start
+                    </CheckBox>
+                    <CheckBox IsChecked="{Binding CallJetwayStairsOnArrival}" Style="{StaticResource LocalCheckBoxStyle}">
+                        Connect jetway and stairs on arrival
+                    </CheckBox>
+                    <CheckBox IsChecked="{Binding RemoveJetwayStairsOnFinal}" Style="{StaticResource LocalCheckBoxStyle}">
+                        Remove jetway and stairs when final loadsheet is transmitted
+                    </CheckBox>
+                </StackPanel>
+            </Border>
+
+            <!-- SECTION 6: OTHER GSX SETTINGS -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="OTHER GSX SETTINGS"/>
+            <Border Style="{StaticResource SectionCardBorder}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="6,6,6,6">
+                        <Label Width="200" VerticalAlignment="Center">Connect pre-conditioned air:</Label>
+                        <ComboBox SelectedValue="{Binding ConnectPca}" SelectedValuePath="Tag" Style="{StaticResource ComboBoxDefault}" MinWidth="160">
+                            <ComboBoxItem Tag="0" Content="Never"/>
+                            <ComboBoxItem Tag="1" Content="Always"/>
+                            <ComboBoxItem Tag="2" Content="Only on Jetway Stand"/>
+                        </ComboBox>
+                    </StackPanel>
+                    <CheckBox IsChecked="{Binding SkipFollowMe}" Style="{StaticResource LocalCheckBoxStyle}">
+                        Skip follow-me question
+                    </CheckBox>
+                    <CheckBox IsChecked="{Binding SkipWalkAround}" Style="{StaticResource LocalCheckBoxStyle}">
+                        Skip walkaround check
+                    </CheckBox>
+                    <CheckBox IsChecked="{Binding CallPushbackOnBeacon}" Style="{StaticResource LocalCheckBoxStyle}">
+                        Call pushback when beacon is turned on
+                    </CheckBox>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

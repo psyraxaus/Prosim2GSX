@@ -25,9 +25,24 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <GroupBox Grid.Column="0" Grid.Row="0" Style="{StaticResource GroupBoxDefault}">
+            <GroupBox.Header>Audio API</GroupBox.Header>
+            <StackPanel Orientation="Horizontal" Margin="6">
+                <RadioButton x:Name="RadioCoreAudio"
+                             Content="Core Audio (Process Control)"
+                             IsChecked="{Binding IsCoreAudioSelected}"
+                             Margin="0,0,16,0"
+                             GroupName="AudioApi"/>
+                <RadioButton Content="VoiceMeeter API (Strip Control)"
+                             IsChecked="{Binding IsVoiceMeeterSelected}"
+                             GroupName="AudioApi"/>
+            </StackPanel>
+        </GroupBox>
+
+        <GroupBox Grid.Column="0" Grid.Row="1" Style="{StaticResource GroupBoxDefault}">
             <GroupBox.Header>ACP Source</GroupBox.Header>
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -46,7 +61,7 @@
             </Grid>
         </GroupBox>
 
-        <GroupBox Grid.Column="0" Grid.Row="1" Style="{StaticResource GroupBoxDefault}">
+        <GroupBox Grid.Column="0" Grid.Row="2" Style="{StaticResource GroupBoxDefault}">
             <GroupBox.Header>Audio Channel</GroupBox.Header>
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -80,7 +95,7 @@
             </Grid>
         </GroupBox>
 
-        <GroupBox Grid.Column="0" Grid.Row="2" Style="{StaticResource GroupBoxDefault}">
+        <GroupBox Grid.Column="0" Grid.Row="3" Style="{StaticResource GroupBoxDefault}">
             <GroupBox.Header>App Mappings</GroupBox.Header>
             <Grid>
                 <Grid.RowDefinitions>
@@ -162,7 +177,7 @@
             </Grid>
         </GroupBox>
 
-        <GroupBox Grid.Column="0" Grid.Row="3" Style="{StaticResource GroupBoxDefault}">
+        <GroupBox Grid.Column="0" Grid.Row="4" Style="{StaticResource GroupBoxDefault}">
             <GroupBox.Header>Device Blacklist</GroupBox.Header>
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -188,7 +203,7 @@
             </Grid>
         </GroupBox>
 
-        <GroupBox Grid.Column="0" Grid.Row="4" Style="{StaticResource GroupBoxDefault}">
+        <GroupBox Grid.Column="0" Grid.Row="5" Style="{StaticResource GroupBoxDefault}">
             <GroupBox.Header>Troubleshooting</GroupBox.Header>
             <Grid>
                 <Grid.ColumnDefinitions>

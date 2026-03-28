@@ -203,5 +203,7 @@ namespace Prosim2GSX.UI.Views.Automation
         public virtual bool FuelSaveLoadFob { get => Source.FuelSaveLoadFob; set => SetModelValue<bool>(value); }
         public virtual bool RandomizePax { get => Source.RandomizePax; set => SetModelValue<bool>(value); }
         public virtual double ChancePerSeat { get => Source.ChancePerSeat * 100.0; set => SetModelValue<double>(value / 100.0); }
+
+        public virtual bool IsKgs => Config.DisplayUnitCurrent == DisplayUnit.KG;
     }
 }
