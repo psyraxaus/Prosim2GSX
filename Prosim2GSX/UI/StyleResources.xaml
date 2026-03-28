@@ -243,4 +243,86 @@
         <Setter Property="Foreground" Value="White"/>
     </Style>
 
+    <!-- Modern EFB Tab Control -->
+    <Style x:Key="EfbTabControl" TargetType="TabControl">
+        <Setter Property="Margin" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Background" Value="{StaticResource ContentBackgroundBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabControl">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <!-- Dark navy tab strip -->
+                        <Border Grid.Row="0" Background="#FF0D1A2A">
+                            <TabPanel x:Name="HeaderPanel"
+                                      IsItemsHost="True"
+                                      Background="Transparent"
+                                      HorizontalAlignment="Left"/>
+                        </Border>
+                        <!-- Content area -->
+                        <Border Grid.Row="1"
+                                Background="{TemplateBinding Background}"
+                                BorderThickness="0">
+                            <ContentPresenter x:Name="PART_SelectedContentHost"
+                                              ContentSource="SelectedContent"
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Modern EFB Tab Item -->
+    <Style x:Key="EfbTabItem" TargetType="TabItem">
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Margin" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabItem">
+                    <Grid>
+                        <Border x:Name="TabBorder"
+                                Background="Transparent"
+                                Padding="18,12">
+                            <TextBlock x:Name="HeaderText"
+                                       Text="{TemplateBinding Header}"
+                                       FontWeight="DemiBold"
+                                       FontSize="11"
+                                       Foreground="#77FFFFFF"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                        <!-- Bottom accent line shown when selected -->
+                        <Rectangle x:Name="AccentBar"
+                                   Height="3"
+                                   Fill="Transparent"
+                                   VerticalAlignment="Bottom"
+                                   HorizontalAlignment="Stretch"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="TabBorder" Property="Background" Value="#1AFFFFFF"/>
+                            <Setter TargetName="HeaderText" Property="Foreground" Value="White"/>
+                            <Setter TargetName="AccentBar" Property="Fill" Value="#FF1E90FF"/>
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="IsSelected" Value="False"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="TabBorder" Property="Background" Value="#0FFFFFFF"/>
+                            <Setter TargetName="HeaderText" Property="Foreground" Value="#AAFFFFFF"/>
+                        </MultiTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 </ResourceDictionary>

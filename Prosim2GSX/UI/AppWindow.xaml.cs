@@ -79,19 +79,11 @@ namespace Prosim2GSX.UI
 
         private static TabItem CreateTabItem(string header, UIElement content)
         {
-            var item = new TabItem
+            return new TabItem
             {
+                Header = header,
                 Content = content
             };
-            var headerBlock = new TextBlock
-            {
-                Text = header,
-                FontWeight = FontWeights.DemiBold,
-                FontSize = 11
-            };
-            headerBlock.Padding = new Thickness(12, 8, 12, 8);
-            item.Header = headerBlock;
-            return item;
         }
 
         protected virtual void OnVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)

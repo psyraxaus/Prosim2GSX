@@ -34,32 +34,16 @@
         </StackPanel>
 
         <!-- Row 2: Main Tab Control -->
-        <TabControl Grid.Row="2" x:Name="MainTabControl" Margin="0" Padding="0">
-            <TabItem>
-                <TabItem.Header>
-                    <TextBlock Text="FLIGHT STATUS" FontWeight="DemiBold" FontSize="11" Padding="12,8"/>
-                </TabItem.Header>
-            </TabItem>
-            <TabItem>
-                <TabItem.Header>
-                    <TextBlock Text="AUTOMATION" FontWeight="DemiBold" FontSize="11" Padding="12,8"/>
-                </TabItem.Header>
-            </TabItem>
-            <TabItem>
-                <TabItem.Header>
-                    <TextBlock Text="AIRCRAFT PROFILES" FontWeight="DemiBold" FontSize="11" Padding="12,8"/>
-                </TabItem.Header>
-            </TabItem>
-            <TabItem>
-                <TabItem.Header>
-                    <TextBlock Text="AUDIO SETTINGS" FontWeight="DemiBold" FontSize="11" Padding="12,8"/>
-                </TabItem.Header>
-            </TabItem>
-            <TabItem>
-                <TabItem.Header>
-                    <TextBlock Text="APP SETTINGS" FontWeight="DemiBold" FontSize="11" Padding="12,8"/>
-                </TabItem.Header>
-            </TabItem>
+        <TabControl Grid.Row="2" x:Name="MainTabControl" Margin="0" Padding="0"
+                    Style="{StaticResource EfbTabControl}">
+            <TabControl.Resources>
+                <Style TargetType="TabItem" BasedOn="{StaticResource EfbTabItem}"/>
+            </TabControl.Resources>
+            <TabItem Header="FLIGHT STATUS"/>
+            <TabItem Header="AUTOMATION"/>
+            <TabItem Header="AIRCRAFT PROFILES"/>
+            <TabItem Header="AUDIO SETTINGS"/>
+            <TabItem Header="APP SETTINGS"/>
         </TabControl>
     </Grid>
 </Window>
