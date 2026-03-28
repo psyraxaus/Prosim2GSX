@@ -1,0 +1,23 @@
+{
+  "name": "Dark",
+  "description": "Dark theme for low-light environments",
+  "colors": {
+    "primaryColor": "#1E90FF",
+    "secondaryColor": "#0078D7",
+    "accentColor": "#FF6A33",
+    "headerBackground": "#2C3E50",
+    "tabBarBackground": "#0A0A0A",
+    "contentBackground": "#1E1E1E",
+    "sectionBackground": "#2D2D2D",
+    "headerText": "#FFFFFF",
+    "contentText": "#E0E0E0",
+    "categoryText": "#5AABFF",
+    "flightPhaseColors": {
+      "atGate": "#5AABFF",
+      "taxiOut": "#FF9800",
+      "inFlight": "#4CAF50",
+      "approach": "#CE93D8",
+      "arrived": "#4DB6AC"
+    }
+  }
+}

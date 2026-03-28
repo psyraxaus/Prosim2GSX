@@ -1,11 +1,11 @@
-﻿<UserControl x:Class="Prosim2GSX.UI.Views.Automation.ControlSkipQuestions"
+<UserControl x:Class="Prosim2GSX.UI.Views.Automation.ControlSkipQuestions"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:Prosim2GSX.UI.Views.Automation"
              d:DataContext="{d:DesignInstance Type=local:ModelAutomation}"
-             mc:Ignorable="d" 
+             mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
     <UserControl.Resources>
         <ResourceDictionary>
@@ -14,67 +14,46 @@
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition/>
-        </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
 
-        <GroupBox Grid.Column="0" Grid.Row="0" Margin="8,0,8,8" Style="{StaticResource GroupBoxDefault}">
-            <GroupBox.Header>Skip Questions / Pop-ups</GroupBox.Header>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-
-                <CheckBox Grid.Column="0" Grid.Row="0" IsChecked="{Binding SkipWalkAround}" Style="{StaticResource CheckBoxSettingItem}"
+    <StackPanel Margin="12,8,12,8">
+        <TextBlock Style="{StaticResource CategoryHeader}" Text="SKIP QUESTIONS / POP-UPS" Margin="0,0,0,4"/>
+        <Border Style="{StaticResource SectionCardBorder}">
+            <StackPanel>
+                <CheckBox IsChecked="{Binding SkipWalkAround}" Style="{StaticResource CheckBoxSettingItem}"
                           ToolTip="Automatically skip to the Cockpit in MSFS 2024 on Session Start.&#x0a;This can only work if you use the default Binding of 'Shift+C' for 'Take Control of Character'!&#x0a;You can use Walkaround Mode while the Departure Services run, except when any Door is about to be opened or closed.">
                     <TextBlock>Skip <Underline>Walkaround</Underline> on Session Start (MSFS 2024 - requires default Binding)</TextBlock>
                 </CheckBox>
 
-                <CheckBox Grid.Column="0" Grid.Row="1" IsChecked="{Binding SkipCrewQuestion}" Style="{StaticResource CheckBoxSettingItem}"
-                      ToolTip="Suppress or Skip Question if Crew should be boarded or deboarded.">
+                <CheckBox IsChecked="{Binding SkipCrewQuestion}" Style="{StaticResource CheckBoxSettingItem}"
+                          ToolTip="Suppress or Skip Question if Crew should be boarded or deboarded.">
                     <TextBlock>Suppress GSX <Underline>Crew Question</Underline> on Boarding &amp; Deboarding</TextBlock>
                 </CheckBox>
 
-                <StackPanel Grid.Column="0" Grid.Row="2" Style="{StaticResource SettingItemPanel}" ToolTip="Answer the GSX Question if the Tug should be attached during Boarding.">
+                <StackPanel Style="{StaticResource SettingItemPanel}" ToolTip="Answer the GSX Question if the Tug should be attached during Boarding.">
                     <TextBlock Style="{StaticResource TextBlockDefault}">Answer <Underline>Tug Question</Underline> during Boarding with: </TextBlock>
-                    <ComboBox SelectedValue="{Binding AttachTugDuringBoarding}" ItemsSource="{Binding TugOptions}" SelectedValuePath="Key" DisplayMemberPath="Value" Margin="4,0,0,0" Style="{StaticResource ComboBoxDefault}"
-                              ToolTip="">
-                    </ComboBox>
+                    <ComboBox SelectedValue="{Binding AttachTugDuringBoarding}" ItemsSource="{Binding TugOptions}" SelectedValuePath="Key" DisplayMemberPath="Value" Margin="4,0,0,0" Style="{StaticResource ComboBoxDefault}"/>
                 </StackPanel>
 
-                <CheckBox Grid.Column="0" Grid.Row="3" IsChecked="{Binding SkipFollowMe}" Style="{StaticResource CheckBoxSettingItem}"
+                <CheckBox IsChecked="{Binding SkipFollowMe}" Style="{StaticResource CheckBoxSettingItem}"
                           ToolTip="Automatically answer the Follow-Me Question after Gate or De-Ice Pad Selection with 'No'.">
                     <TextBlock>Skip <Underline>Follow-Me Question</Underline> on Gate or De-Ice Selection</TextBlock>
                 </CheckBox>
 
-                <CheckBox Grid.Column="0" Grid.Row="4" IsChecked="{Binding KeepDirectionMenuOpen}" Style="{StaticResource CheckBoxSettingItem}"
+                <CheckBox IsChecked="{Binding KeepDirectionMenuOpen}" Style="{StaticResource CheckBoxSettingItem}"
                           ToolTip="Automatically re-open the Pushback Direction Menu if the GSX Menu times out during Pushback.">
                     <TextBlock>Automatically reopen <Underline>Pushback Direction</Underline> Menu</TextBlock>
                 </CheckBox>
-                
-                <CheckBox Grid.Column="0" Grid.Row="5" IsChecked="{Binding AnswerCabinCallGround}" Style="{StaticResource CheckBoxSettingItem}"
+
+                <CheckBox IsChecked="{Binding AnswerCabinCallGround}" Style="{StaticResource CheckBoxSettingItem}"
                           ToolTip="Answer the Prosim Cabin Ready Call received by the Crew during Taxi-Out (always on the left ACP).&#x0a;The CAB Send Button will be pushed, then VHF1 will be reselected and RESET is pushed.">
                     <TextBlock>Answer <Underline>Cabin Call</Underline> during Taxi-Out</TextBlock>
                 </CheckBox>
 
-                <CheckBox Grid.Column="0" Grid.Row="6" IsChecked="{Binding AnswerCabinCallAir}" Style="{StaticResource CheckBoxSettingItem}"
+                <CheckBox IsChecked="{Binding AnswerCabinCallAir}" Style="{StaticResource CheckBoxSettingItem}"
                           ToolTip="Answer the Prosim Cabin Ready Call received by the Crew during Approach (always on the left ACP).&#x0a;The CAB Send Button will be pushed, then VHF1 will be reselected and RESET is pushed.">
                     <TextBlock>Answer <Underline>Cabin Call</Underline> during Approach</TextBlock>
                 </CheckBox>
-            </Grid>
-        </GroupBox>
-    </Grid>
+            </StackPanel>
+        </Border>
+    </StackPanel>
 </UserControl>

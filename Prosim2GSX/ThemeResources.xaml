@@ -1,0 +1,152 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        Default theme resource values (Light theme).
+        These are overridden at runtime by ThemeManager.ApplyThemeToResources().
+        Provides design-time defaults and a safe fallback if ThemeManager fails.
+    -->
+
+    <!-- Core palette -->
+    <SolidColorBrush x:Key="PrimaryColor"       Color="#FF1E90FF"/>
+    <SolidColorBrush x:Key="SecondaryColor"     Color="#FF0078D7"/>
+    <SolidColorBrush x:Key="AccentColor"        Color="#FFFF4500"/>
+    <SolidColorBrush x:Key="HeaderBackground"   Color="#FF1E90FF"/>
+    <SolidColorBrush x:Key="ContentBackground"  Color="#FFF8F8F8"/>
+    <SolidColorBrush x:Key="SectionBackground"  Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="HeaderText"         Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="ContentText"        Color="#FF333333"/>
+    <SolidColorBrush x:Key="CategoryText"       Color="#FF1E90FF"/>
+    <SolidColorBrush x:Key="TabBarBackground"   Color="#FF0D1A2A"/>
+
+    <!-- Flight phase brushes -->
+    <SolidColorBrush x:Key="AtGatePhase"    Color="#FF1E90FF"/>
+    <SolidColorBrush x:Key="TaxiOutPhase"   Color="#FFFF9800"/>
+    <SolidColorBrush x:Key="InFlightPhase"  Color="#FF4CAF50"/>
+    <SolidColorBrush x:Key="ApproachPhase"  Color="#FF9C27B0"/>
+    <SolidColorBrush x:Key="ArrivedPhase"   Color="#FF009688"/>
+
+    <!-- Status brushes (fixed across all themes) -->
+    <SolidColorBrush x:Key="ActiveStatus"       Color="#FF008000"/>
+    <SolidColorBrush x:Key="CompletedStatus"    Color="#FFFFD700"/>
+    <SolidColorBrush x:Key="WaitingStatus"      Color="#FF1E90FF"/>
+    <SolidColorBrush x:Key="DisconnectedStatus" Color="#FFFF0000"/>
+    <SolidColorBrush x:Key="InactiveStatus"     Color="#FFD3D3D3"/>
+
+    <!-- Derived UI element colors (computed by ThemeManager from SectionBackground) -->
+    <SolidColorBrush x:Key="InputBackground"  Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="ButtonBackground" Color="#FFE1E1E1"/>
+    <SolidColorBrush x:Key="InputBorderBrush" Color="#FFABABAB"/>
+
+    <!-- Legacy aliases (used by existing XAML before theme system) -->
+    <SolidColorBrush x:Key="PrimaryColorBrush"       Color="#FF1E90FF"/>
+    <SolidColorBrush x:Key="HeaderBackgroundBrush"   Color="#FF1E90FF"/>
+    <SolidColorBrush x:Key="ContentBackgroundBrush"  Color="#FFF8F8F8"/>
+    <SolidColorBrush x:Key="CategoryTextBrush"       Color="#FF1E90FF"/>
+    <SolidColorBrush x:Key="StatusActiveBrush"       Color="#FF008000"/>
+    <SolidColorBrush x:Key="StatusCompletedBrush"    Color="#FFFFD700"/>
+    <SolidColorBrush x:Key="StatusWaitingBrush"      Color="#FF1E90FF"/>
+    <SolidColorBrush x:Key="StatusDisconnectedBrush" Color="#FFFF0000"/>
+    <SolidColorBrush x:Key="StatusInactiveBrush"     Color="#FFD3D3D3"/>
+
+    <!--
+        Popup / context-menu styles.
+        These live here (Application.Current.Resources) rather than in StyleResources.xaml
+        because the tray-icon ContextMenu is created outside the main window's logical tree
+        and therefore cannot see Window.Resources / UserControl.Resources.
+    -->
+
+    <!-- ComboBoxItem: each row inside an open ComboBox dropdown -->
+    <Style TargetType="ComboBoxItem">
+        <Setter Property="Background" Value="{DynamicResource InputBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ContentText}"/>
+        <Setter Property="Padding"    Value="6,3"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBoxItem">
+                    <Border x:Name="Bd"
+                            Background="{TemplateBinding Background}"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PrimaryColorBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource HeaderText}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="Gray"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ContextMenu: the popup container -->
+    <Style TargetType="ContextMenu">
+        <Setter Property="Background"      Value="{DynamicResource InputBackground}"/>
+        <Setter Property="Foreground"      Value="{DynamicResource ContentText}"/>
+        <Setter Property="BorderBrush"     Value="{DynamicResource InputBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding"         Value="0,3"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContextMenu">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ItemsPresenter/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- MenuItem: each item inside a ContextMenu -->
+    <Style TargetType="MenuItem">
+        <Setter Property="Background"      Value="{DynamicResource InputBackground}"/>
+        <Setter Property="Foreground"      Value="{DynamicResource ContentText}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding"         Value="12,6"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Border x:Name="ItemBorder"
+                            Background="{TemplateBinding Background}"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter ContentSource="Header" RecognizesAccessKey="True"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource PrimaryColorBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource HeaderText}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="Gray"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Separator: horizontal divider inside a ContextMenu -->
+    <Style TargetType="Separator">
+        <Setter Property="Background" Value="{DynamicResource InputBorderBrush}"/>
+        <Setter Property="Height"     Value="1"/>
+        <Setter Property="Margin"     Value="6,3"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Separator">
+                    <Border Background="{TemplateBinding Background}"
+                            Height="{TemplateBinding Height}"
+                            Margin="{TemplateBinding Margin}"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>

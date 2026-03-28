@@ -1,0 +1,60 @@
+<UserControl x:Class="Prosim2GSX.UI.HeaderBarControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="60" d:DesignWidth="820"
+             Height="60">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../StyleResources.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid Background="{DynamicResource HeaderBackgroundBrush}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Left: App Title -->
+        <TextBlock Grid.Column="0"
+                   Text="PROSIM2GSX"
+                   FontSize="18"
+                   FontWeight="Bold"
+                   Foreground="White"
+                   Margin="16,0,0,0"
+                   VerticalAlignment="Center"/>
+
+        <!-- Center: Flight Number -->
+        <Border Grid.Column="1"
+                Background="#FF0078D7"
+                CornerRadius="4"
+                Padding="8,4"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+            <TextBlock Text="{Binding FlightNumber, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                       Foreground="White"
+                       FontWeight="Bold"
+                       FontSize="14"/>
+        </Border>
+
+        <!-- Right: Date Display -->
+        <StackPanel Grid.Column="2"
+                    Orientation="Horizontal"
+                    VerticalAlignment="Center"
+                    Margin="0,0,16,0">
+            <Border Background="#FF0078D7"
+                    CornerRadius="4"
+                    Margin="0,0,8,0"
+                    Padding="8,4">
+                <TextBlock Text="{Binding CurrentDateDisplay, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                           Foreground="White"
+                           FontSize="11"/>
+            </Border>
+        </StackPanel>
+    </Grid>
+</UserControl>

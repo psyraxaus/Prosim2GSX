@@ -111,12 +111,19 @@ All other relevant EFB Options will automatically be disabled by Prosim2GSX (inc
 The Configuration is done through the **GUI**, open it by **clicking on the System-Tray/Notification-Icon**. You do not need to configure anything to start using Prosim2GSX - although it is *recommended to get yourself familiar* with the Settings. Change them to your Preferences in order to improve your Experience. The default Settings aim to maximize Automation respectively minimize GSX Interaction. All Options have **ToolTips** to explain them further.<br/>
 Everything is stored persistently in the *AppConfig.json* File in the Application's Folder - so backup that File in order to backup your Settings!<br/>
 
+<br/>
+
+The GUI uses a modern **EFB-style card layout** with a left-hand navigation tab strip. The interface is fully themeable — select from the built-in themes (Light, Dark, and several airline-inspired options such as Delta, Finnair, Lufthansa and Qantas) or create your own by dropping a JSON file into the `Themes` folder beside the executable. See **[Themes/THEMES.md](Prosim2GSX/Themes/THEMES.md)** for full documentation on creating custom themes.
+
+| Light theme | Dark theme |
+|---|---|
+| <img src="img/Appmonitor_Light.PNG" width="400"> | <img src="img/Appmonitor_Dark.PNG" width="400"> |
+
 <br/><br/>
-<img src="img/ui.png"><br/><br/>
 Allmost all Settings regarding GSX, ProSim and the general Automation can be found in the '**Automation**' View. All Settings in this View are stored in a Profile.<br/>
 You can have many different Profiles which are automatically loaded depending on the current Aircraft's Registration, Title or Airline. To manage these Profiles use the '**Aircraft Profiles**' View.<br/>
 In order map Applications to the different ACP Audio Channels, use the '**Volume Control**' View. The Volume Control Settings are global - thay apply to all Profiles. Volume Control is generally independent from the GSX Integration/Automation.<br/>
-All central Settings regarding the Application (so applying to all Profiles) are found in the '**App Settings**' View.<br/><br/>
+All central Settings regarding the Application (so applying to all Profiles) are found in the '**App Settings**' View. The **Theme** selector is also located here — changes apply immediately without a restart.<br/><br/>
 Most Settings can be **changed dynamically** on the Fly, **BUT**: only change Settings not relevant in the current Automation/Flight Phase. For Example do not change the Departure Services in the Departure Phase and do not change Profiles while Services are active.<br/><br/>
 In general, it is up to **your Preference how much Automation** you want. I you want to keep Control of when Services are Called and/or the Jetway is connected, you can still enjoy the (De-)Boarding and Refueling Syncronization when the Automation-Options are disabled. The only Automation which **can not be disabled**: The Removal of the Ground-Equipment is always active to assist with Departure & Push-Back and Arrival.
 
@@ -402,7 +409,7 @@ You can manually call the Jetway/Stairs with the **INT/RAD** Switch once you're 
 
 
 You can use the '**App Monitor**' View of the UI to monitor the current State of Prosim2GSX:
-<img src="img/appmonitor.png" width="817"><br/><br/>
+<img src="img/Appmonitor_Light.PNG" width="817"><br/><br/>
 
 - The **Sim State** Section reports on the Connection to MSFS - it should be all green.
 - The **GSX State** Section reports the State of GSX and it Services. Prosim2GSX can only do as good as the Information provided by GSX!

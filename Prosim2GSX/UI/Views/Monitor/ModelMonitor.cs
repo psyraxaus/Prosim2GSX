@@ -17,6 +17,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Media;
+using System.Threading.Tasks;
 using System.Windows.Threading;
 
 namespace Prosim2GSX.UI.Views.Monitor
@@ -107,13 +108,30 @@ namespace Prosim2GSX.UI.Views.Monitor
             catch { }
         }
 
-        protected virtual void OnUpdate(object? sender, EventArgs e)
+        private volatile bool _isUpdating = false;
+
+        protected virtual async void OnUpdate(object? sender, EventArgs e)
         {
-            try { UpdateSim(); } catch (Exception ex) { Logger.LogException(ex); }
-            try { UpdateGsx(); } catch { }
-            try { UpdateApp(); } catch { }
-            try { UpdateLog(); } catch { }
-            ForceRefresh = false;
+            if (_isUpdating) return;
+            _isUpdating = true;
+            try
+            {
+                // Run blocking CFIT framework calls (SimConnectController, GsxController.CheckBinaries, etc.)
+                // on a background thread so the UI thread is never stalled waiting for WaitSimLoop locks.
+                await Task.Run(() =>
+                {
+                    try { UpdateSim(); } catch (Exception ex) { Logger.LogException(ex); }
+                    try { UpdateGsx(); } catch { }
+                    try { UpdateApp(); } catch { }
+                });
+                // UpdateLog modifies ObservableCollection — must stay on the UI thread.
+                try { UpdateLog(); } catch { }
+                ForceRefresh = false;
+            }
+            finally
+            {
+                _isUpdating = false;
+            }
         }
 
         protected virtual void UpdateSim()
@@ -253,7 +271,9 @@ namespace Prosim2GSX.UI.Views.Monitor
             UpdateBoolState(nameof(AppGsxController), nameof(AppGsxControllerColor), GsxController.IsActive);
             UpdateBoolState(nameof(AppAircraftBinary), nameof(AppAircraftBinaryColor), GsxController.AircraftBinary);
             UpdateBoolState(nameof(AppAircraftInterface), nameof(AppAircraftInterfaceColor), AircraftInterface.IsLoaded);
-            // ProSim SDK status
+            // ProSim binary connection (CONNECTION STATUS indicator)
+            UpdateBoolState(nameof(AppProsimConnected), nameof(AppProsimConnectedColor), this.Source.ProsimService?.IsConnected ?? false);
+            // ProSim SDK interface connection (APP STATUS indicator)
             UpdateBoolState(nameof(AppProsimSdkConnected), nameof(AppProsimSdkConnectedColor), AircraftInterface?.ProsimInterface?.SdkInterface?.IsConnected ?? false);
             UpdateBoolState(nameof(AppAutomationController), nameof(AppAutomationControllerColor), AutomationController.IsStarted);
             UpdateBoolState(nameof(AppAudioController), nameof(AppAudioControllerColor), AudioController.IsActive);
@@ -297,8 +317,12 @@ namespace Prosim2GSX.UI.Views.Monitor
         protected bool _AppAudioController = false;
 
         [ObservableProperty]
-        protected bool _AppProsimSdkConnected = false;
+        protected bool _AppProsimConnected = false;
+        [ObservableProperty]
+        protected SolidColorBrush _AppProsimConnectedColor = ColorInvalid;
 
+        [ObservableProperty]
+        protected bool _AppProsimSdkConnected = false;
         [ObservableProperty]
         protected SolidColorBrush _AppProsimSdkConnectedColor = ColorInvalid;
 
@@ -326,6 +350,10 @@ namespace Prosim2GSX.UI.Views.Monitor
         [ObservableProperty]
         protected string _AppAircraft = "Airline / Title / Registration";
 
+        // Approximate character width of Consolas 10pt at the log panel width (~760px available).
+        private const int LogCharsPerLine = 115;
+        private const int LogMaxVisualLines = 9;
+
         protected virtual void UpdateLog()
         {
             if (Logger.Messages.IsEmpty)
@@ -334,9 +362,19 @@ namespace Prosim2GSX.UI.Views.Monitor
             while (!Logger.Messages.IsEmpty)
             {
                 MessageLog.Add(Logger.Messages.Dequeue());
-                if (MessageLog.Count > 12)
+
+                // Trim from the front until estimated visual lines (accounting for wrapping) fit.
+                while (MessageLog.Count > 0 && LogVisualLineCount() > LogMaxVisualLines)
                     MessageLog.RemoveAt(0);
             }
+        }
+
+        private int LogVisualLineCount()
+        {
+            int total = 0;
+            foreach (var msg in MessageLog)
+                total += Math.Max(1, (int)Math.Ceiling((double)(msg?.Length ?? 0) / LogCharsPerLine));
+            return total;
         }
     }
 }

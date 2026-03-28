@@ -13,6 +13,26 @@ namespace Prosim2GSX.UI.Views.Audio
     {
         public ICommand CommandDebugInfo { get; } = new RelayCommand(() => AppService.Instance.AudioService.DeviceManager.WriteDebugInformation());
 
+        private bool _isCoreAudioSelected = true;
+
+        public virtual bool IsCoreAudioSelected
+        {
+            get => _isCoreAudioSelected;
+            set
+            {
+                if (_isCoreAudioSelected == value) return;
+                _isCoreAudioSelected = value;
+                NotifyPropertyChanged(nameof(IsCoreAudioSelected));
+                NotifyPropertyChanged(nameof(IsVoiceMeeterSelected));
+            }
+        }
+
+        public virtual bool IsVoiceMeeterSelected
+        {
+            get => !_isCoreAudioSelected;
+            set => IsCoreAudioSelected = !value;
+        }
+
         public ModelAudio(AppService appService) : base(appService.Config, appService)
         {
             AppMappingCollection = new(this);

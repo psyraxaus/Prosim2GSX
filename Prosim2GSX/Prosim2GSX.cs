@@ -7,6 +7,7 @@ using CFIT.AppFramework;
 using CFIT.AppLogger;
 using Prosim2GSX.AppConfig;
 using Prosim2GSX.Prosim;
+using Prosim2GSX.Themes;
 using Prosim2GSX.UI;
 using Prosim2GSX.UI.Dialogs;
 using Prosim2GSX.UI.NotifyIcon;
@@ -85,6 +86,10 @@ namespace Prosim2GSX
                     // We continue anyway as the SDK might connect later when ProSim starts
                 }
             }
+
+            // Initialise theme system before the window is created
+            ThemeManager.Instance.SetConfig(Config);
+            ThemeManager.Instance.Initialize();
 
             // Continue with normal startup sequence
             base.OnStartup(e);

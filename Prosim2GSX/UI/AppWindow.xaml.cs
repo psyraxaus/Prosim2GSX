@@ -1,6 +1,5 @@
-﻿using CFIT.AppTools;
+using CFIT.AppTools;
 using Prosim2GSX.UI.Views.Audio;
-using Prosim2GSX.UI.Views.Automation;
 using Prosim2GSX.UI.Views.Monitor;
 using Prosim2GSX.UI.Views.Profiles;
 using Prosim2GSX.UI.Views.Settings;
@@ -9,7 +8,6 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
-using System.Windows.Media;
 using System.Windows.Navigation;
 
 namespace Prosim2GSX.UI
@@ -23,30 +21,14 @@ namespace Prosim2GSX.UI
     public partial class AppWindow : Window
     {
         public static UiIconLoader IconLoader { get; } = new(Assembly.GetExecutingAssembly(), IconLoadSource.Embedded, "Prosim2GSX.UI.Icons.");
-        protected virtual Button CurrentButton { get; set; } = null;
-        protected virtual IView CurrentView { get; set; } = null;
-        protected static SolidColorBrush BrushDefault { get; } = SystemColors.WindowFrameBrush;
-        protected static SolidColorBrush BrushHighlight { get; } = SystemColors.HighlightBrush;
-        protected static Thickness ThicknessDefault { get; } = new(1);
-        protected static Thickness ThicknessHighlight { get; } = new(1.5);
 
-        protected virtual IView ViewMonitor { get; } = new ViewMonitor();
-        protected virtual IView ViewAutomation { get; } = new ViewAutomation();
-        protected virtual IView ViewProfiles { get; } = new ViewProfiles();
-        protected virtual IView ViewAudio { get; } = new ViewAudio();
-        protected virtual IView ViewSettings { get; } = new ViewSettings();
+        private int _previousTabIndex = -1;
 
         public AppWindow()
         {
             InitializeComponent();
             this.Loaded += OnWindowLoaded;
             this.IsVisibleChanged += OnVisibleChanged;
-
-            ButtonMonitor.Click += (_, _) => SetView(ButtonMonitor, ViewMonitor);
-            ButtonAutomation.Click += (_, _) => SetView(ButtonAutomation, ViewAutomation);
-            ButtonProfiles.Click += (_, _) => SetView(ButtonProfiles, ViewProfiles);
-            ButtonAudio.Click += (_, _) => SetView(ButtonAudio, ViewAudio);
-            ButtonSettings.Click += (_, _) => SetView(ButtonSettings, ViewSettings);
 
             if (Prosim2GSX.Instance.UpdateDetected)
             {
@@ -76,55 +58,55 @@ namespace Prosim2GSX.UI
 
         protected virtual void OnWindowLoaded(object sender, RoutedEventArgs e)
         {
-            if (CurrentButton == null)
-                SetView(ButtonAutomation, ViewAutomation);
+            MainTabControl.Items[0] = CreateTabItem("FLIGHT STATUS", new ViewMonitor());
+            MainTabControl.Items[1] = CreateTabItem("AUTOMATION", new Views.Automation.ViewAutomation());
+            MainTabControl.Items[2] = CreateTabItem("AIRCRAFT PROFILES", new ViewProfiles());
+            MainTabControl.Items[3] = CreateTabItem("AUDIO SETTINGS", new ViewAudio());
+            MainTabControl.Items[4] = CreateTabItem("APP SETTINGS", new ViewSettings());
+
+            // Set index and previousTabIndex before subscribing so SelectionChanged
+            // does not fire Start() while the window is still in its layout pass.
+            MainTabControl.SelectedIndex = 0;
+            _previousTabIndex = 0;
+            MainTabControl.SelectionChanged += OnTabSelectionChanged;
+
+            // Defer the initial Start() until after the window is fully rendered
+            // so backend services have a chance to initialise before polling begins.
+            Dispatcher.BeginInvoke(
+                System.Windows.Threading.DispatcherPriority.Background,
+                new Action(() => ((MainTabControl.Items[0] as TabItem)?.Content as IView)?.Start()));
+        }
+
+        private static TabItem CreateTabItem(string header, UIElement content)
+        {
+            return new TabItem
+            {
+                Header = header,
+                Content = content
+            };
         }
 
         protected virtual void OnVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
+            var selectedContent = (MainTabControl?.SelectedItem as TabItem)?.Content as IView;
             if (this.Visibility != Visibility.Visible)
-                CurrentView?.Stop();
+                selectedContent?.Stop();
             else
-                CurrentView?.Start();
+                selectedContent?.Start();
         }
 
-        protected virtual void SetView(Button menuButton, IView viewControl)
+        protected virtual void OnTabSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            CurrentView?.Stop();
-
-            if (CurrentButton != null)
+            if (_previousTabIndex >= 0 && _previousTabIndex < MainTabControl.Items.Count)
             {
-                CurrentButton.IsHitTestVisible = true;
-                CurrentButton.BorderBrush = BrushDefault;
-                CurrentButton.BorderThickness = ThicknessDefault;
+                var prevContent = (MainTabControl.Items[_previousTabIndex] as TabItem)?.Content as IView;
+                prevContent?.Stop();
             }
 
-            if (CurrentView != null)
-                ViewControl.SizeChanged -= OnViewSizeChanged;
+            var newContent = (MainTabControl?.SelectedItem as TabItem)?.Content as IView;
+            newContent?.Start();
 
-            CurrentButton = menuButton;
-            CurrentButton.IsHitTestVisible = false;
-            CurrentButton.BorderBrush = BrushHighlight;
-            CurrentButton.BorderThickness = ThicknessHighlight;
-
-            ViewControl.Content = viewControl;
-            CurrentView = viewControl;
-            ViewControl.SizeChanged += OnViewSizeChanged;
-            viewControl.Start();
-            InvalidateArrange();
-            InvalidateMeasure();
-            InvalidateVisual();
-        }
-
-        protected virtual void OnViewSizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            try
-            {
-                double height = Math.Max(ViewControl.ActualHeight + 96, 0);
-                this.MinHeight = height;
-                this.Height = height;
-            }
-            catch { }
+            _previousTabIndex = MainTabControl?.SelectedIndex ?? -1;
         }
     }
 }

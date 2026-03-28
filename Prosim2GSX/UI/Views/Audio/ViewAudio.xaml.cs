@@ -170,11 +170,15 @@ namespace Prosim2GSX.UI.Views.Audio
             }
         }
 
-        public virtual void Start()
+        public virtual async void Start()
         {
+            // GetDeviceNames() enumerates Core Audio COM endpoints — run off the UI thread
+            // to avoid blocking when switching to this tab.
+            var devices = await System.Threading.Tasks.Task.Run(() => ViewModel.AudioDevices);
             SelectorMappingDevice.ItemsSource = null;
-            SelectorMappingDevice.ItemsSource = ViewModel.AudioDevices;
-            SelectorMappingDevice.SelectedIndex = 0;
+            SelectorMappingDevice.ItemsSource = devices;
+            if (SelectorMappingDevice.Items.Count > 0)
+                SelectorMappingDevice.SelectedIndex = 0;
         }
 
         public virtual void Stop()

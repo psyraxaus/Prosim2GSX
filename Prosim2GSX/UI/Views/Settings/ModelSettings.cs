@@ -1,9 +1,15 @@
-﻿using Prosim2GSX.AppConfig;
+﻿using CommunityToolkit.Mvvm.Input;
+using Prosim2GSX.AppConfig;
+using Prosim2GSX.Themes;
 using ProsimInterface;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.Reflection;
 using System.Windows.Threading;
 
 namespace Prosim2GSX.UI.Views.Settings
@@ -38,6 +44,7 @@ namespace Prosim2GSX.UI.Views.Settings
         protected override void InitializeModel()
         {
             Config.PropertyChanged += OnConfigPropertyChanged;
+            LoadThemes();
         }
 
         protected virtual void OnSavedFuelCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -88,5 +95,70 @@ namespace Prosim2GSX.UI.Views.Settings
         public virtual bool RunAudioService { get => Source.RunAudioService; set => SetModelValue<bool>(value); }
         public virtual bool OpenAppWindowOnStart { get => Source.OpenAppWindowOnStart; set => SetModelValue<bool>(value); }
         public virtual string ProSimSdkPath { get => Source.ProSimSdkPath; set => SetModelValue<string>(value); }
+
+        // ── Theme selection ────────────────────────────────────────────────
+
+        private int _selectedThemeIndex = 0;
+        private string _selectedThemeName = "Light";
+        private readonly ObservableCollection<string> _themes = [];
+        private readonly string _themesPath =
+            Path.Combine(
+                Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? AppDomain.CurrentDomain.BaseDirectory,
+                "Themes");
+
+        public ObservableCollection<string> Themes => _themes;
+        public string SelectedThemeName => _selectedThemeName;
+        public string ThemesPath => _themesPath;
+
+        public int SelectedThemeIndex
+        {
+            get => _selectedThemeIndex;
+            set
+            {
+                if (value < 0 || value >= _themes.Count) return;
+                _selectedThemeIndex = value;
+                _selectedThemeName = _themes[value];
+                NotifyPropertyChanged(nameof(SelectedThemeIndex));
+                NotifyPropertyChanged(nameof(SelectedThemeName));
+                ThemeManager.Instance.ApplyTheme(_selectedThemeName);
+            }
+        }
+
+        [RelayCommand]
+        private void OpenThemeFolder()
+        {
+            try
+            {
+                if (Directory.Exists(_themesPath))
+                    Process.Start(new ProcessStartInfo("explorer.exe", _themesPath) { UseShellExecute = true });
+            }
+            catch { }
+        }
+
+        [RelayCommand]
+        private void RefreshThemes()
+        {
+            ThemeManager.Instance.RefreshThemes();
+            LoadThemes();
+        }
+
+        public void LoadThemes()
+        {
+            _themes.Clear();
+            foreach (var name in ThemeManager.Instance.AvailableThemes)
+                _themes.Add(name);
+
+            var saved = Source.CurrentTheme ?? "Light";
+            var idx = _themes.IndexOf(saved);
+            if (idx < 0 && _themes.Count > 0)
+                idx = 0;
+            if (idx >= 0)
+            {
+                _selectedThemeIndex = idx;
+                _selectedThemeName = _themes[idx];
+                NotifyPropertyChanged(nameof(SelectedThemeIndex));
+                NotifyPropertyChanged(nameof(SelectedThemeName));
+            }
+        }
     }
 }
