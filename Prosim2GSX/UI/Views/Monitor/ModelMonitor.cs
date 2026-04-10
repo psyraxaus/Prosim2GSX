@@ -41,6 +41,12 @@ namespace Prosim2GSX.UI.Views.Monitor
         protected virtual GsxServiceDeboarding GsxServiceDeboard => GsxServices[GsxServiceType.Deboarding] as GsxServiceDeboarding;
         protected virtual GsxServicePushback GsxServicePushBack => GsxServices[GsxServiceType.Pushback] as GsxServicePushback;
 
+        // Solari board blink timer (~600ms per side, full cycle ~1.2s)
+        protected virtual DispatcherTimer SolariTimer { get; set; }
+
+        [ObservableProperty]
+        protected bool _SolariToggle = false;
+
         protected override void InitializeModel()
         {
             UpdateTimer = new DispatcherTimer()
@@ -48,17 +54,25 @@ namespace Prosim2GSX.UI.Views.Monitor
                 Interval = TimeSpan.FromMilliseconds(AppService.Instance.Config.UiRefreshInterval),
             };
             UpdateTimer.Tick += OnUpdate;
+
+            SolariTimer = new DispatcherTimer()
+            {
+                Interval = TimeSpan.FromMilliseconds(600),
+            };
+            SolariTimer.Tick += (s, e) => SolariToggle = !SolariToggle;
         }
 
         public virtual void Start()
         {
             ForceRefresh = true;
             UpdateTimer.Start();
+            SolariTimer.Start();
         }
 
         public virtual void Stop()
         {
             UpdateTimer?.Stop();
+            SolariTimer?.Stop();
         }
 
         [RelayCommand]

@@ -8,6 +8,7 @@
 
     <conv:BoolVisibilityConverter x:Key="BoolVisibilityConverter"/>
     <localconv:GsxServiceStateToBrushConverter x:Key="GsxServiceStateToBrushConverter"/>
+    <localconv:SolariServiceBrushConverter x:Key="SolariServiceBrushConverter"/>
     <localconv:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
 
     <Style TargetType="{x:Type ContentPresenter}">

@@ -172,7 +172,7 @@
             <TextBlock Style="{StaticResource CategoryHeader}" Text="GSX STATE"/>
             <Border Style="{StaticResource SectionCardBorder}">
                 <StackPanel>
-                    <!-- Service indicators - 5 across, fixed item width so dots align -->
+                    <!-- Service indicators - Solari board style with dual alternating dots when Active -->
                     <ItemsControl>
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -181,50 +181,185 @@
                         </ItemsControl.ItemsPanel>
                         <!-- Jetway -->
                         <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
-                            <Ellipse Width="14" Height="14" Fill="{Binding ServiceJetway, Converter={StaticResource GsxServiceStateToBrushConverter}}" VerticalAlignment="Center"/>
+                            <Ellipse Width="10" Height="10" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="left">
+                                        <Binding Path="ServiceJetway"/>
+                                        <Binding Path="SolariToggle"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                            <Ellipse Width="10" Height="10" Margin="2,0,0,0" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="right">
+                                        <Binding Path="ServiceJetway"/>
+                                        <Binding Path="SolariToggle"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
+                            </Ellipse>
                             <TextBlock Margin="6,0,0,0" VerticalAlignment="Center">Jetway</TextBlock>
                         </StackPanel>
                         <!-- Stairs -->
                         <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
-                            <Ellipse Width="14" Height="14" Fill="{Binding ServiceStairs, Converter={StaticResource GsxServiceStateToBrushConverter}}" VerticalAlignment="Center"/>
+                            <Ellipse Width="10" Height="10" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="left">
+                                        <Binding Path="ServiceStairs"/>
+                                        <Binding Path="SolariToggle"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                            <Ellipse Width="10" Height="10" Margin="2,0,0,0" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="right">
+                                        <Binding Path="ServiceStairs"/>
+                                        <Binding Path="SolariToggle"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
+                            </Ellipse>
                             <TextBlock Margin="6,0,0,0" VerticalAlignment="Center">Stairs</TextBlock>
                         </StackPanel>
                         <!-- Refueling -->
                         <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
-                            <Ellipse Width="14" Height="14" Fill="{Binding ServiceRefuel, Converter={StaticResource GsxServiceStateToBrushConverter}}" VerticalAlignment="Center"/>
+                            <Ellipse Width="10" Height="10" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="left">
+                                        <Binding Path="ServiceRefuel"/>
+                                        <Binding Path="SolariToggle"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                            <Ellipse Width="10" Height="10" Margin="2,0,0,0" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="right">
+                                        <Binding Path="ServiceRefuel"/>
+                                        <Binding Path="SolariToggle"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
+                            </Ellipse>
                             <TextBlock Margin="6,0,0,0" VerticalAlignment="Center">Refueling</TextBlock>
                         </StackPanel>
                         <!-- Catering -->
                         <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
-                            <Ellipse Width="14" Height="14" Fill="{Binding ServiceCatering, Converter={StaticResource GsxServiceStateToBrushConverter}}" VerticalAlignment="Center"/>
+                            <Ellipse Width="10" Height="10" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="left">
+                                        <Binding Path="ServiceCatering"/>
+                                        <Binding Path="SolariToggle"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                            <Ellipse Width="10" Height="10" Margin="2,0,0,0" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="right">
+                                        <Binding Path="ServiceCatering"/>
+                                        <Binding Path="SolariToggle"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
+                            </Ellipse>
                             <TextBlock Margin="6,0,0,0" VerticalAlignment="Center">Catering</TextBlock>
                         </StackPanel>
                         <!-- Boarding -->
                         <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
-                            <Ellipse Width="14" Height="14" Fill="{Binding ServiceBoarding, Converter={StaticResource GsxServiceStateToBrushConverter}}" VerticalAlignment="Center"/>
+                            <Ellipse Width="10" Height="10" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="left">
+                                        <Binding Path="ServiceBoarding"/>
+                                        <Binding Path="SolariToggle"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                            <Ellipse Width="10" Height="10" Margin="2,0,0,0" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="right">
+                                        <Binding Path="ServiceBoarding"/>
+                                        <Binding Path="SolariToggle"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
+                            </Ellipse>
                             <TextBlock Margin="6,0,0,0" VerticalAlignment="Center">Boarding</TextBlock>
                         </StackPanel>
                         <!-- Deboarding -->
                         <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
-                            <Ellipse Width="14" Height="14" Fill="{Binding ServiceDeboarding, Converter={StaticResource GsxServiceStateToBrushConverter}}" VerticalAlignment="Center"/>
+                            <Ellipse Width="10" Height="10" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="left">
+                                        <Binding Path="ServiceDeboarding"/>
+                                        <Binding Path="SolariToggle"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                            <Ellipse Width="10" Height="10" Margin="2,0,0,0" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="right">
+                                        <Binding Path="ServiceDeboarding"/>
+                                        <Binding Path="SolariToggle"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
+                            </Ellipse>
                             <TextBlock Margin="6,0,0,0" VerticalAlignment="Center">Deboarding</TextBlock>
                         </StackPanel>
                         <!-- GPU -->
                         <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
-                            <Ellipse Width="14" Height="14" Fill="{Binding ServiceGpu, Converter={StaticResource GsxServiceStateToBrushConverter}}" VerticalAlignment="Center"/>
+                            <Ellipse Width="10" Height="10" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="left">
+                                        <Binding Path="ServiceGpu"/>
+                                        <Binding Path="SolariToggle"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                            <Ellipse Width="10" Height="10" Margin="2,0,0,0" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="right">
+                                        <Binding Path="ServiceGpu"/>
+                                        <Binding Path="SolariToggle"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
+                            </Ellipse>
                             <TextBlock Margin="6,0,0,0" VerticalAlignment="Center">GPU</TextBlock>
                         </StackPanel>
                         <!-- Cleaning -->
                         <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
-                            <Ellipse Width="14" Height="14" Fill="{Binding ServiceCleaning, Converter={StaticResource GsxServiceStateToBrushConverter}}" VerticalAlignment="Center"/>
+                            <Ellipse Width="10" Height="10" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="left">
+                                        <Binding Path="ServiceCleaning"/>
+                                        <Binding Path="SolariToggle"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                            <Ellipse Width="10" Height="10" Margin="2,0,0,0" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="right">
+                                        <Binding Path="ServiceCleaning"/>
+                                        <Binding Path="SolariToggle"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
+                            </Ellipse>
                             <TextBlock Margin="6,0,0,0" VerticalAlignment="Center">Cleaning</TextBlock>
                         </StackPanel>
                         <!-- Lavatory -->
                         <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
-                            <Ellipse Width="14" Height="14" Fill="{Binding ServiceLavatory, Converter={StaticResource GsxServiceStateToBrushConverter}}" VerticalAlignment="Center"/>
+                            <Ellipse Width="10" Height="10" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="left">
+                                        <Binding Path="ServiceLavatory"/>
+                                        <Binding Path="SolariToggle"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                            <Ellipse Width="10" Height="10" Margin="2,0,0,0" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="right">
+                                        <Binding Path="ServiceLavatory"/>
+                                        <Binding Path="SolariToggle"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
+                            </Ellipse>
                             <TextBlock Margin="6,0,0,0" VerticalAlignment="Center">Lavatory</TextBlock>
                         </StackPanel>
-                        <!-- Pushback -->
+                        <!-- Pushback (no Solari effect - covered by flight phase indicator) -->
                         <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
                             <Ellipse Width="14" Height="14" VerticalAlignment="Center">
                                 <Ellipse.Style>
@@ -254,7 +389,22 @@
                         </StackPanel>
                         <!-- Water -->
                         <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
-                            <Ellipse Width="14" Height="14" Fill="{Binding ServiceWater, Converter={StaticResource GsxServiceStateToBrushConverter}}" VerticalAlignment="Center"/>
+                            <Ellipse Width="10" Height="10" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="left">
+                                        <Binding Path="ServiceWater"/>
+                                        <Binding Path="SolariToggle"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                            <Ellipse Width="10" Height="10" Margin="2,0,0,0" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="right">
+                                        <Binding Path="ServiceWater"/>
+                                        <Binding Path="SolariToggle"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
+                            </Ellipse>
                             <TextBlock Margin="6,0,0,0" VerticalAlignment="Center">Water</TextBlock>
                         </StackPanel>
                     </ItemsControl>
