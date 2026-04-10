@@ -56,7 +56,7 @@
                            HorizontalAlignment="Center"/>
 
                     <!-- Phase progress bar -->
-                    <UniformGrid Rows="2" Columns="10" Margin="4,4,4,0">
+                    <UniformGrid Rows="2" Columns="7" Margin="4,4,4,0">
                         <!-- Row 0: Phase indicator blocks -->
                         <!-- PREFLIGHT / SessionStart=0, Preparation=1 -->
                         <Border Height="14" Margin="2,4,2,0" CornerRadius="3">
@@ -113,52 +113,13 @@
                                 </Style>
                             </Border.Style>
                         </Border>
-                        <!-- CLIMB (mapped to Flight) -->
+                        <!-- FLIGHT -->
                         <Border Height="14" Margin="2,4,2,0" CornerRadius="3">
                             <Border.Style>
                                 <Style TargetType="Border">
                                     <Setter Property="Background" Value="#FFD3D3D3"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding AppAutomationState}" Value="Flight">
-                                            <Setter Property="Background" Value="#FF1E90FF"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                        </Border>
-                        <!-- CRUISE (mapped to Flight) -->
-                        <Border Height="14" Margin="2,4,2,0" CornerRadius="3">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Setter Property="Background" Value="#FFD3D3D3"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding AppAutomationState}" Value="Flight">
-                                            <Setter Property="Background" Value="#FF1E90FF"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                        </Border>
-                        <!-- DESCENT (mapped to Flight) -->
-                        <Border Height="14" Margin="2,4,2,0" CornerRadius="3">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Setter Property="Background" Value="#FFD3D3D3"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding AppAutomationState}" Value="Flight">
-                                            <Setter Property="Background" Value="#FF1E90FF"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                        </Border>
-                        <!-- APPROACH (mapped to TaxiIn) -->
-                        <Border Height="14" Margin="2,4,2,0" CornerRadius="3">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Setter Property="Background" Value="#FFD3D3D3"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding AppAutomationState}" Value="TaxiIn">
                                             <Setter Property="Background" Value="#FF1E90FF"/>
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -200,10 +161,7 @@
                         <TextBlock Text="DEPARTURE" FontSize="9" HorizontalAlignment="Center" TextWrapping="NoWrap"/>
                         <TextBlock Text="PUSHBACK" FontSize="9" HorizontalAlignment="Center" TextWrapping="NoWrap"/>
                         <TextBlock Text="TAXI OUT" FontSize="9" HorizontalAlignment="Center" TextWrapping="NoWrap"/>
-                        <TextBlock Text="CLIMB" FontSize="9" HorizontalAlignment="Center" TextWrapping="NoWrap"/>
-                        <TextBlock Text="CRUISE" FontSize="9" HorizontalAlignment="Center" TextWrapping="NoWrap"/>
-                        <TextBlock Text="DESCENT" FontSize="9" HorizontalAlignment="Center" TextWrapping="NoWrap"/>
-                        <TextBlock Text="APPROACH" FontSize="9" HorizontalAlignment="Center" TextWrapping="NoWrap"/>
+                        <TextBlock Text="FLIGHT" FontSize="9" HorizontalAlignment="Center" TextWrapping="NoWrap"/>
                         <TextBlock Text="TAXI IN" FontSize="9" HorizontalAlignment="Center" TextWrapping="NoWrap"/>
                         <TextBlock Text="ARRIVAL" FontSize="9" HorizontalAlignment="Center" TextWrapping="NoWrap"/>
                     </UniformGrid>
