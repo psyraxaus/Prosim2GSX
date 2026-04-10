@@ -39,7 +39,7 @@
                     </StackPanel>
                     <!-- PROSIM -->
                     <StackPanel Orientation="Horizontal" Margin="12,4">
-                        <Ellipse Width="14" Height="14" VerticalAlignment="Center" Fill="{Binding AppProsimConnectedColor}"/>
+                        <Ellipse Width="14" Height="14" VerticalAlignment="Center" Fill="{Binding AppAircraftBinaryColor}"/>
                         <Label Margin="4,0,0,0" VerticalAlignment="Center">PROSIM</Label>
                     </StackPanel>
                 </WrapPanel>
