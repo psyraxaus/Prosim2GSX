@@ -9,7 +9,15 @@ namespace Prosim2GSX.UI
     {
         public static readonly DependencyProperty FlightNumberProperty =
             DependencyProperty.Register(nameof(FlightNumber), typeof(string), typeof(HeaderBarControl),
-                new PropertyMetadata("----"));
+                new PropertyMetadata("--------"));
+
+        public static readonly DependencyProperty TimeDisplayProperty =
+            DependencyProperty.Register(nameof(TimeDisplay), typeof(string), typeof(HeaderBarControl),
+                new PropertyMetadata("--:--Z"));
+
+        public static readonly DependencyProperty DateDisplayProperty =
+            DependencyProperty.Register(nameof(DateDisplay), typeof(string), typeof(HeaderBarControl),
+                new PropertyMetadata("------"));
 
         public string FlightNumber
         {
@@ -17,26 +25,66 @@ namespace Prosim2GSX.UI
             set => SetValue(FlightNumberProperty, value);
         }
 
-        public string CurrentDateDisplay => DateTime.Now.ToString("dd MMM yyyy");
+        public string TimeDisplay
+        {
+            get => (string)GetValue(TimeDisplayProperty);
+            set => SetValue(TimeDisplayProperty, value);
+        }
 
-        private readonly DispatcherTimer _dateTimer;
+        public string DateDisplay
+        {
+            get => (string)GetValue(DateDisplayProperty);
+            set => SetValue(DateDisplayProperty, value);
+        }
+
+        private readonly DispatcherTimer _updateTimer;
 
         public HeaderBarControl()
         {
             InitializeComponent();
 
-            _dateTimer = new DispatcherTimer
+            _updateTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromMinutes(1)
+                Interval = TimeSpan.FromSeconds(2)
             };
-            _dateTimer.Tick += (_, _) =>
+            _updateTimer.Tick += OnUpdate;
+            _updateTimer.Start();
+        }
+
+        private void OnUpdate(object sender, EventArgs e)
+        {
+            try
             {
-                var binding = GetBindingExpression(FlightNumberProperty);
-                binding?.UpdateTarget();
-                // Notify CurrentDateDisplay changed by triggering a layout update
-                InvalidateVisual();
-            };
-            _dateTimer.Start();
+                var appService = AppService.Instance;
+                var simConnect = appService?.SimConnect;
+                var gsxService = appService?.GsxService;
+                var aircraft = gsxService?.AircraftInterface;
+
+                // Flight number
+                string flightNum = aircraft?.FlightNumber;
+                FlightNumber = !string.IsNullOrWhiteSpace(flightNum) ? flightNum : "--------";
+
+                // Time: sim zulu time when connected, system UTC otherwise
+                bool simConnected = simConnect?.IsSimConnected == true && simConnect?.IsSessionRunning == true;
+                if (simConnected && aircraft != null)
+                {
+                    int zuluSec = aircraft.ZuluTimeSeconds;
+                    int hours = (zuluSec / 3600) % 24;
+                    int minutes = (zuluSec % 3600) / 60;
+                    TimeDisplay = $"{hours:D2}:{minutes:D2}Z";
+                }
+                else
+                {
+                    TimeDisplay = DateTime.UtcNow.ToString("HH:mm") + "Z";
+                }
+
+                // Date
+                DateDisplay = DateTime.UtcNow.ToString("dd MMM").ToUpper();
+            }
+            catch
+            {
+                // AppService may not be ready yet during startup
+            }
         }
     }
 }

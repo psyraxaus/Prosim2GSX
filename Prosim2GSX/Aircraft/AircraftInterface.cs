@@ -29,6 +29,7 @@ namespace Prosim2GSX.Aircraft
         protected virtual ISimResourceSubscription SubTitle { get; set; }
         protected virtual ISimResourceSubscription SubLivery { get; set; }
         protected virtual ISimResourceSubscription SubSpeed { get; set; }
+        protected virtual ISimResourceSubscription SubZuluTime { get; set; }
 
         public virtual string Airline => SubAirline?.GetString();
         public virtual string Title => !string.IsNullOrWhiteSpace(SubLivery?.GetString()) ? SubLivery.GetString() : SubTitle?.GetString() ?? "";
@@ -57,6 +58,8 @@ namespace Prosim2GSX.Aircraft
         public virtual bool IsBrakeSet => ProsimInterface.GetBrake();
         public virtual bool LightNav => ProsimInterface.GetLightNav();
         public virtual bool LightBeacon => ProsimInterface.GetLightBeacon();
+        public virtual string FlightNumber => ProsimInterface.FlightNumber ?? "";
+        public virtual int ZuluTimeSeconds => (int)(SubZuluTime?.GetNumber() ?? 0);
 
         public AircraftInterface(GsxController controller)
         {
@@ -78,7 +81,8 @@ namespace Prosim2GSX.Aircraft
                 if (Sys.GetProcessRunning(Config.BinaryMsfs2024))
                     SubLivery = SimStore.AddVariable("LIVERY NAME", SimUnitType.String);
                 SubSpeed = SimStore.AddVariable("GPS GROUND SPEED", SimUnitType.Knots);
-                
+                SubZuluTime = SimStore.AddVariable("ZULU TIME", SimUnitType.Seconds);
+
                 SimStore.AddVariable(ProsimConstants.VarAcpIntCallCpt, SimUnitType.Number);
                 SimStore.AddVariable(ProsimConstants.VarAcpIntCallFo, SimUnitType.Number);
                 SimStore.AddVariable(ProsimConstants.VarOhSigns, SimUnitType.Number);
@@ -138,6 +142,7 @@ namespace Prosim2GSX.Aircraft
             if (Sys.GetProcessRunning(Config.BinaryMsfs2024))
                 SimStore.Remove("LIVERY NAME");
             SimStore.Remove("GPS GROUND SPEED");
+            SimStore.Remove("ZULU TIME");
         }
 
         public virtual void Run()

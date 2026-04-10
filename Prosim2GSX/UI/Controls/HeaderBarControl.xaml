@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:Prosim2GSX.UI"
              mc:Ignorable="d"
              d:DesignHeight="60" d:DesignWidth="820"
              Height="60">
@@ -25,36 +26,46 @@
                    Text="PROSIM2GSX"
                    FontSize="18"
                    FontWeight="Bold"
-                   Foreground="White"
+                   Foreground="{DynamicResource HeaderText}"
                    Margin="16,0,0,0"
                    VerticalAlignment="Center"/>
 
-        <!-- Center: Flight Number -->
-        <Border Grid.Column="1"
-                Background="#FF0078D7"
-                CornerRadius="4"
-                Padding="8,4"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center">
-            <TextBlock Text="{Binding FlightNumber, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
-                       Foreground="White"
-                       FontWeight="Bold"
-                       FontSize="14"/>
-        </Border>
+        <!-- Center: Flight Number (Split-Flap) -->
+        <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <local:SplitFlapTextControl CharacterCount="8"
+                                        StaggerDelayMs="80"
+                                        Text="{Binding FlightNumber, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                        HorizontalAlignment="Center"/>
+            <TextBlock Text="FLT NO" FontSize="8" Opacity="0.7"
+                       Foreground="{DynamicResource HeaderText}"
+                       HorizontalAlignment="Center" Margin="0,1,0,0"/>
+        </StackPanel>
 
-        <!-- Right: Date Display -->
+        <!-- Right: Time and Date (Split-Flap) -->
         <StackPanel Grid.Column="2"
                     Orientation="Horizontal"
                     VerticalAlignment="Center"
                     Margin="0,0,16,0">
-            <Border Background="#FF0078D7"
-                    CornerRadius="4"
-                    Margin="0,0,8,0"
-                    Padding="8,4">
-                <TextBlock Text="{Binding CurrentDateDisplay, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
-                           Foreground="White"
-                           FontSize="11"/>
-            </Border>
+            <!-- Time display -->
+            <StackPanel VerticalAlignment="Center">
+                <local:SplitFlapTextControl CharacterCount="6"
+                                            StaggerDelayMs="80"
+                                            Text="{Binding TimeDisplay, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"/>
+                <TextBlock Text="UTC" FontSize="8" Opacity="0.7"
+                           Foreground="{DynamicResource HeaderText}"
+                           HorizontalAlignment="Center" Margin="0,1,0,0"/>
+            </StackPanel>
+            <!-- Spacer -->
+            <Border Width="8"/>
+            <!-- Date display -->
+            <StackPanel VerticalAlignment="Center">
+                <local:SplitFlapTextControl CharacterCount="6"
+                                            StaggerDelayMs="80"
+                                            Text="{Binding DateDisplay, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"/>
+                <TextBlock Text="DATE" FontSize="8" Opacity="0.7"
+                           Foreground="{DynamicResource HeaderText}"
+                           HorizontalAlignment="Center" Margin="0,1,0,0"/>
+            </StackPanel>
         </StackPanel>
     </Grid>
 </UserControl>
