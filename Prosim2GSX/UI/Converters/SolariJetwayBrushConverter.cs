@@ -8,27 +8,26 @@ using System.Windows.Media;
 namespace Prosim2GSX.UI.Converters
 {
     /// <summary>
-    /// Multi-value converter for Jetway/Stairs Solari indicators.
-    /// Bindings: [0] = GsxServiceState, [1] = SolariToggle (bool), [2] = AutomationState.
-    /// ConverterParameter: "left" or "right" to select which dot.
+    /// Multi-value converter for Jetway/Stairs single-indicator display.
+    /// Bindings: [0] = GsxServiceState, [1] = AutomationState.
     /// Grey when phase is not relevant (TaxiOut, Flight, TaxiIn, PushBack).
-    /// Requested (operating/moving) = amber alternating, Active (connected) = green, other = red.
+    /// Requested (operating/moving) = amber, Active (connected) = green,
+    /// Callable/Unknown = grey, NotAvailable/Bypassed = red.
     /// </summary>
     public class SolariJetwayBrushConverter : IMultiValueConverter
     {
         private static readonly SolidColorBrush BrushGray = new(Color.FromArgb(0xFF, 0xD3, 0xD3, 0xD3));
         private static readonly SolidColorBrush BrushRed = new(Color.FromArgb(0xFF, 0xDC, 0x14, 0x3C));
         private static readonly SolidColorBrush BrushGreen = new(Color.FromArgb(0xFF, 0x00, 0xA0, 0x00));
-        private static readonly SolidColorBrush BrushAmberBright = new(Color.FromArgb(0xFF, 0xFF, 0xD7, 0x00));
-        private static readonly SolidColorBrush BrushAmberDim = new(Color.FromArgb(0xFF, 0x8B, 0x69, 0x14));
+        private static readonly SolidColorBrush BrushAmber = new(Color.FromArgb(0xFF, 0xFF, 0xD7, 0x00));
 
         public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
         {
-            if (values.Length < 3 || values[0] is not GsxServiceState state)
+            if (values.Length < 2 || values[0] is not GsxServiceState state)
                 return BrushGray;
 
             // Check phase relevance — only show active colors during ground phases
-            if (values[2] is AutomationState phase)
+            if (values[1] is AutomationState phase)
             {
                 bool relevant = phase == AutomationState.Preparation
                              || phase == AutomationState.Departure
@@ -39,24 +38,15 @@ namespace Prosim2GSX.UI.Converters
                     return BrushGray;
             }
 
-            bool toggle = values[1] is bool t && t;
-            bool isLeft = string.Equals(parameter as string, "left", StringComparison.OrdinalIgnoreCase);
-
-            if (state == GsxServiceState.Requested)
+            return state switch
             {
-                // Operating/moving — Solari alternating amber
-                bool bright = isLeft ? toggle : !toggle;
-                return bright ? BrushAmberBright : BrushAmberDim;
-            }
-
-            if (state == GsxServiceState.Active)
-            {
-                // Connected/in place — solid green
-                return BrushGreen;
-            }
-
-            // All other states in relevant phases — red
-            return BrushRed;
+                GsxServiceState.Requested => BrushAmber,
+                GsxServiceState.Active => BrushGreen,
+                GsxServiceState.Completed => BrushGreen,
+                GsxServiceState.NotAvailable => BrushRed,
+                GsxServiceState.Bypassed => BrushRed,
+                _ => BrushGray
+            };
         }
 
         public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)

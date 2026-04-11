@@ -10,6 +10,7 @@
     <localconv:GsxServiceStateToBrushConverter x:Key="GsxServiceStateToBrushConverter"/>
     <localconv:SolariServiceBrushConverter x:Key="SolariServiceBrushConverter"/>
     <localconv:SolariJetwayBrushConverter x:Key="SolariJetwayBrushConverter"/>
+    <localconv:SolariPushbackBrushConverter x:Key="SolariPushbackBrushConverter"/>
     <localconv:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
 
     <Style TargetType="{x:Type ContentPresenter}">

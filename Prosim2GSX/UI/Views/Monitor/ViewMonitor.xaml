@@ -181,20 +181,10 @@
                         </ItemsControl.ItemsPanel>
                         <!-- Jetway -->
                         <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
-                            <Ellipse Width="10" Height="10" VerticalAlignment="Center">
+                            <Ellipse Width="14" Height="14" VerticalAlignment="Center">
                                 <Ellipse.Fill>
-                                    <MultiBinding Converter="{StaticResource SolariJetwayBrushConverter}" ConverterParameter="left">
+                                    <MultiBinding Converter="{StaticResource SolariJetwayBrushConverter}">
                                         <Binding Path="ServiceJetway"/>
-                                        <Binding Path="SolariToggle"/>
-                                        <Binding Path="AppAutomationState"/>
-                                    </MultiBinding>
-                                </Ellipse.Fill>
-                            </Ellipse>
-                            <Ellipse Width="10" Height="10" Margin="2,0,0,0" VerticalAlignment="Center">
-                                <Ellipse.Fill>
-                                    <MultiBinding Converter="{StaticResource SolariJetwayBrushConverter}" ConverterParameter="right">
-                                        <Binding Path="ServiceJetway"/>
-                                        <Binding Path="SolariToggle"/>
                                         <Binding Path="AppAutomationState"/>
                                     </MultiBinding>
                                 </Ellipse.Fill>
@@ -203,20 +193,10 @@
                         </StackPanel>
                         <!-- Stairs -->
                         <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
-                            <Ellipse Width="10" Height="10" VerticalAlignment="Center">
+                            <Ellipse Width="14" Height="14" VerticalAlignment="Center">
                                 <Ellipse.Fill>
-                                    <MultiBinding Converter="{StaticResource SolariJetwayBrushConverter}" ConverterParameter="left">
+                                    <MultiBinding Converter="{StaticResource SolariJetwayBrushConverter}">
                                         <Binding Path="ServiceStairs"/>
-                                        <Binding Path="SolariToggle"/>
-                                        <Binding Path="AppAutomationState"/>
-                                    </MultiBinding>
-                                </Ellipse.Fill>
-                            </Ellipse>
-                            <Ellipse Width="10" Height="10" Margin="2,0,0,0" VerticalAlignment="Center">
-                                <Ellipse.Fill>
-                                    <MultiBinding Converter="{StaticResource SolariJetwayBrushConverter}" ConverterParameter="right">
-                                        <Binding Path="ServiceStairs"/>
-                                        <Binding Path="SolariToggle"/>
                                         <Binding Path="AppAutomationState"/>
                                     </MultiBinding>
                                 </Ellipse.Fill>
@@ -348,31 +328,15 @@
                             </Ellipse>
                             <TextBlock Margin="6,0,0,0" VerticalAlignment="Center">Lavatory</TextBlock>
                         </StackPanel>
-                        <!-- Pushback (no Solari effect - covered by flight phase indicator) -->
+                        <!-- Pushback -->
                         <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
                             <Ellipse Width="14" Height="14" VerticalAlignment="Center">
-                                <Ellipse.Style>
-                                    <Style TargetType="Ellipse">
-                                        <Setter Property="Fill" Value="#FFD3D3D3"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding ServicePushback}" Value="Active (0)">
-                                                <Setter Property="Fill" Value="#FFFFD700"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding ServicePushback}" Value="Active (1)">
-                                                <Setter Property="Fill" Value="#FFFFD700"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding ServicePushback}" Value="Active (2)">
-                                                <Setter Property="Fill" Value="#FFFFD700"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding ServicePushback}" Value="Requested (0)">
-                                                <Setter Property="Fill" Value="#FF1E90FF"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding ServicePushback}" Value="Completed (0)">
-                                                <Setter Property="Fill" Value="#FF00A000"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Ellipse.Style>
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource SolariPushbackBrushConverter}">
+                                        <Binding Path="ServicePushback"/>
+                                        <Binding Path="AppAutomationState"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
                             </Ellipse>
                             <TextBlock Margin="6,0,0,0" VerticalAlignment="Center">Pushback</TextBlock>
                         </StackPanel>
