@@ -11,7 +11,8 @@ Function UpdateAssemblyInfo{
 	param ($projectDir, $assemblyField, $newValue)
 	$inFile = Join-Path $projectDir "Properties\AssemblyInfo.cs"
 	$outFile = Join-Path $projectDir "Properties\AssemblyInfo.out"
-	Get-Content -Path $inFile | % { $_ -Replace ('\[assembly: (' + "$assemblyField" + ')\("([^"]*)"\)]'), ('[assembly: $1("' + "$newValue" + '")]') } | Out-File $outFile -Encoding utf8NoBOM
+	$content = (Get-Content -Path $inFile) -Replace ('\[assembly: (' + "$assemblyField" + ')\("([^"]*)"\)]'), ('[assembly: $1("' + "$newValue" + '")]')
+	[System.IO.File]::WriteAllLines($outFile, $content)
 	Move-Item $outFile $inFile -Force | Out-Null
 }
 
@@ -38,12 +39,13 @@ $year = Get-Date -Format "yyyy"
 
 #Version JSON
 Write-Host "Create version.json ..."
-@"
+$versionJson = @"
 {
 	"Version": "$version",
 	"Timestamp": "$timestamp"
 }
-"@ | Out-File (Join-Path $pathPayload "version.json") -Encoding utf8NoBOM
+"@
+[System.IO.File]::WriteAllText((Join-Path $pathPayload "version.json"), $versionJson)
 
 #AssemblyInfo File
 Write-Host "Update Installer AssemblyInfo ..."
