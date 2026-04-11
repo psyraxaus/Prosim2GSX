@@ -183,17 +183,19 @@
                         <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
                             <Ellipse Width="10" Height="10" VerticalAlignment="Center">
                                 <Ellipse.Fill>
-                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="left">
+                                    <MultiBinding Converter="{StaticResource SolariJetwayBrushConverter}" ConverterParameter="left">
                                         <Binding Path="ServiceJetway"/>
                                         <Binding Path="SolariToggle"/>
+                                        <Binding Path="AppAutomationState"/>
                                     </MultiBinding>
                                 </Ellipse.Fill>
                             </Ellipse>
                             <Ellipse Width="10" Height="10" Margin="2,0,0,0" VerticalAlignment="Center">
                                 <Ellipse.Fill>
-                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="right">
+                                    <MultiBinding Converter="{StaticResource SolariJetwayBrushConverter}" ConverterParameter="right">
                                         <Binding Path="ServiceJetway"/>
                                         <Binding Path="SolariToggle"/>
+                                        <Binding Path="AppAutomationState"/>
                                     </MultiBinding>
                                 </Ellipse.Fill>
                             </Ellipse>
@@ -203,17 +205,19 @@
                         <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
                             <Ellipse Width="10" Height="10" VerticalAlignment="Center">
                                 <Ellipse.Fill>
-                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="left">
+                                    <MultiBinding Converter="{StaticResource SolariJetwayBrushConverter}" ConverterParameter="left">
                                         <Binding Path="ServiceStairs"/>
                                         <Binding Path="SolariToggle"/>
+                                        <Binding Path="AppAutomationState"/>
                                     </MultiBinding>
                                 </Ellipse.Fill>
                             </Ellipse>
                             <Ellipse Width="10" Height="10" Margin="2,0,0,0" VerticalAlignment="Center">
                                 <Ellipse.Fill>
-                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="right">
+                                    <MultiBinding Converter="{StaticResource SolariJetwayBrushConverter}" ConverterParameter="right">
                                         <Binding Path="ServiceStairs"/>
                                         <Binding Path="SolariToggle"/>
+                                        <Binding Path="AppAutomationState"/>
                                     </MultiBinding>
                                 </Ellipse.Fill>
                             </Ellipse>
@@ -301,22 +305,7 @@
                         </StackPanel>
                         <!-- GPU -->
                         <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
-                            <Ellipse Width="10" Height="10" VerticalAlignment="Center">
-                                <Ellipse.Fill>
-                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="left">
-                                        <Binding Path="ServiceGpu"/>
-                                        <Binding Path="SolariToggle"/>
-                                    </MultiBinding>
-                                </Ellipse.Fill>
-                            </Ellipse>
-                            <Ellipse Width="10" Height="10" Margin="2,0,0,0" VerticalAlignment="Center">
-                                <Ellipse.Fill>
-                                    <MultiBinding Converter="{StaticResource SolariServiceBrushConverter}" ConverterParameter="right">
-                                        <Binding Path="ServiceGpu"/>
-                                        <Binding Path="SolariToggle"/>
-                                    </MultiBinding>
-                                </Ellipse.Fill>
-                            </Ellipse>
+                            <Ellipse Width="14" Height="14" VerticalAlignment="Center" Fill="{Binding ServiceGpuConnectedColor}"/>
                             <TextBlock Margin="6,0,0,0" VerticalAlignment="Center">GPU</TextBlock>
                         </StackPanel>
                         <!-- Cleaning -->

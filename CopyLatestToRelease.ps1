@@ -1,5 +1,5 @@
 ### Run in SolutionDir
-$appName = "Fenix2GSX"
+$appName = "Prosim2GSX"
 $suffix = "latest"
 $versionPath = "Installer\Payload\version.json"
 $releaseDir = "Releases\"

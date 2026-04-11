@@ -28,6 +28,7 @@ namespace Prosim2GSX.UI.Views.Monitor
         protected virtual bool ForceRefresh { get; set; } = false;
         protected static SolidColorBrush ColorValid { get; } = new(Colors.Green);
         protected static SolidColorBrush ColorInvalid { get; } = new(Colors.Red);
+        protected static SolidColorBrush ColorGray { get; } = new(Color.FromArgb(0xFF, 0xD3, 0xD3, 0xD3));
         protected virtual Config Config => this.Source.Config;
         protected virtual SimConnectController SimConnectController => this.Source.SimService.Controller;
         protected virtual SimConnectManager SimConnect => this.Source.SimConnect;
@@ -208,18 +209,53 @@ namespace Prosim2GSX.UI.Views.Monitor
             UpdateState<string>(nameof(GsxCargoProgress), $"{GsxServiceBoard?.SubCargoPercent?.GetValue<int>() ?? 0} | {GsxServiceDeboard?.SubCargoPercent?.GetValue<int>() ?? 0}");
 
             UpdateState<GsxServiceState>(nameof(ServiceReposition), GsxServices[GsxServiceType.Reposition].State);
-            UpdateState<GsxServiceState>(nameof(ServiceRefuel), GsxServices[GsxServiceType.Refuel].State);
-            UpdateState<GsxServiceState>(nameof(ServiceCatering), GsxServices[GsxServiceType.Catering].State);
-            UpdateState<GsxServiceState>(nameof(ServiceLavatory), GsxServices[GsxServiceType.Lavatory].State);
-            UpdateState<GsxServiceState>(nameof(ServiceWater), GsxServices[GsxServiceType.Water].State);
-            UpdateState<GsxServiceState>(nameof(ServiceCleaning), GsxServices[GsxServiceType.Cleaning].State);
-            UpdateState<GsxServiceState>(nameof(ServiceGpu), GsxServices[GsxServiceType.GPU].State);
+            UpdateState<GsxServiceState>(nameof(ServiceRefuel), LatchCompleted(GsxServices[GsxServiceType.Refuel]));
+            UpdateState<GsxServiceState>(nameof(ServiceCatering), LatchCompleted(GsxServices[GsxServiceType.Catering]));
+            UpdateState<GsxServiceState>(nameof(ServiceLavatory), LatchCompleted(GsxServices[GsxServiceType.Lavatory]));
+            UpdateState<GsxServiceState>(nameof(ServiceWater), LatchCompleted(GsxServices[GsxServiceType.Water]));
+            UpdateState<GsxServiceState>(nameof(ServiceCleaning), LatchCompleted(GsxServices[GsxServiceType.Cleaning]));
+            UpdateGpuIndicator();
 
-            UpdateState<GsxServiceState>(nameof(ServiceBoarding), GsxServices[GsxServiceType.Boarding].State);
+            UpdateState<GsxServiceState>(nameof(ServiceBoarding), LatchCompleted(GsxServices[GsxServiceType.Boarding]));
             UpdateState<GsxServiceState>(nameof(ServiceDeboarding), GsxServices[GsxServiceType.Deboarding].State);
             UpdateState<string>(nameof(ServicePushback), $"{GsxServicePushBack.State} ({GsxServicePushBack.PushStatus})");
             UpdateState<GsxServiceState>(nameof(ServiceJetway), GsxServices[GsxServiceType.Jetway].State);
             UpdateState<GsxServiceState>(nameof(ServiceStairs), GsxServices[GsxServiceType.Stairs].State);
+        }
+
+        /// <summary>
+        /// Returns Completed if the service was completed and the current phase is Departure or PushBack,
+        /// preventing GSX LVAR resets from reverting the indicator back to grey.
+        /// </summary>
+        protected virtual GsxServiceState LatchCompleted(GsxService service)
+        {
+            var phase = AutomationController?.State ?? AutomationState.SessionStart;
+            if (service.WasCompleted && (phase == AutomationState.Departure || phase == AutomationState.PushBack))
+                return GsxServiceState.Completed;
+
+            return service.State;
+        }
+
+        /// <summary>
+        /// GPU indicator: green when connected, red when not connected, grey when phase is not relevant.
+        /// Relevant phases: Preparation, Departure, Arrival, TurnAround.
+        /// </summary>
+        protected virtual void UpdateGpuIndicator()
+        {
+            var phase = AutomationController?.State ?? AutomationState.SessionStart;
+            bool relevant = phase == AutomationState.Preparation
+                         || phase == AutomationState.Departure
+                         || phase == AutomationState.Arrival
+                         || phase == AutomationState.TurnAround;
+
+            if (!relevant)
+            {
+                if (ServiceGpuConnectedColor != ColorGray || ForceRefresh)
+                    ServiceGpuConnectedColor = ColorGray;
+                return;
+            }
+
+            UpdateBoolState(nameof(ServiceGpuConnected), nameof(ServiceGpuConnectedColor), AircraftInterface?.EquipmentGpu ?? false);
         }
 
         [ObservableProperty]
@@ -263,7 +299,9 @@ namespace Prosim2GSX.UI.Views.Monitor
         protected GsxServiceState _ServiceCleaning = GsxServiceState.Unknown;
 
         [ObservableProperty]
-        protected GsxServiceState _ServiceGpu = GsxServiceState.Unknown;
+        protected bool _ServiceGpuConnected = false;
+        [ObservableProperty]
+        protected SolidColorBrush _ServiceGpuConnectedColor = ColorGray;
 
         [ObservableProperty]
         protected GsxServiceState _ServiceBoarding = GsxServiceState.Unknown;
