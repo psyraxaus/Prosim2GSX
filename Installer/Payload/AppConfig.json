@@ -121,8 +121,6 @@
   "DisplayUnitSource": 0,
   "FuelResetDefaultKg": 3000,
   "FuelRoundUp100": true,
-  "RefuelPanelCloseDelay": 42,
-  "RefuelPanelOpenDelay": 10,
   "FuelFobSaved": {},
   "CargoPercentChangePerSec": 5,
   "DoorCargoDelay": 16,
@@ -137,6 +135,14 @@
   "DelayServiceStateChange": 500,
   "SpeedTresholdTaxiOut": 2,
   "SpeedTresholdTaxiIn": 30,
+  "CurrentTheme": "Light",
+  "SolariAnimationEnabled": true,
+  "ProSimSdkPath": "",
+  "ProSimSdkHostname": "localhost",
+  "ProSimSdkReconnectInterval": 5000,
+  "ProSimSdkAutoReconnect": true,
+  "ProSimSdkConnectionTimeout": 10000,
+  "ProSimSdkMaxReconnectAttempts": 10,
   "AircraftProfiles": [
     {
       "Name": "default",
@@ -149,6 +155,7 @@
       "DoorStairHandling": true,
       "DoorStairIncludeL2": false,
       "DoorCargoHandling": true,
+      "DoorCateringHandling": true,
       "DoorOpenBoardActive": true,
       "FinalDelayMin": 90,
       "FinalDelayMax": 150,
@@ -246,6 +253,5 @@
   "SizeEvents": 5000,
   "SizeInputEvents": 5000,
   "BinaryMsfs2020": "FlightSimulator",
-  "BinaryMsfs2024": "FlightSimulator2024",
-  "ProSimSdkPath": ""
+  "BinaryMsfs2024": "FlightSimulator2024"
 }

@@ -39,6 +39,10 @@ namespace Installer
 
         protected override bool CreateDefaultConfig()
         {
+            string configDir = Path.GetDirectoryName(Config.ProductConfigPath);
+            if (!Directory.Exists(configDir))
+                Directory.CreateDirectory(configDir);
+
             using (var stream = GetAppConfig())
             {
                 var confStream = File.Create(Config.ProductConfigPath);
