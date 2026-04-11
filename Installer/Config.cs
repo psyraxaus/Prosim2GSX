@@ -2,7 +2,10 @@
 using CFIT.AppTools;
 using CFIT.Installer.Product;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
 namespace Installer
 {
@@ -15,6 +18,10 @@ namespace Installer
         public static readonly string OptionResetConfiguration = "ResetConfiguration";
         public static readonly string OptionRemoveMobiflight = "RemoveMobiflight";
         public static readonly string StateRemoveMobiAllowed = "RemoveMobiAllowed";
+        public static readonly string OptionProSimSdkPath = "ProSimSdkPath";
+        public static readonly string StateProSimSdkAutoDetected = "ProSimSdkAutoDetected";
+
+        private static readonly string ProSimSdkFileName = "ProSimSDK.dll";
 
         //Worker: .NET
         public virtual bool NetRuntimeDesktop { get; set; } = true;
@@ -36,6 +43,199 @@ namespace Installer
                 SetOption(StateRemoveMobiAllowed, false);
             else
                 SetOption(StateRemoveMobiAllowed, true);
+
+            // ProSim SDK Path - try auto-detect, then check existing config
+            string detectedPath = DetectProSimSdkPath();
+            bool autoDetected = !string.IsNullOrEmpty(detectedPath);
+            SetOption(StateProSimSdkAutoDetected, autoDetected);
+            SetOption(OptionProSimSdkPath, detectedPath ?? "");
+        }
+
+        /// <summary>
+        /// Attempts to auto-detect the ProSim SDK path by searching common locations,
+        /// the existing app config, the registry, and running ProSim processes.
+        /// </summary>
+        public static string DetectProSimSdkPath()
+        {
+            // 1. Check existing app config file for a previously configured path
+            string existingPath = GetSdkPathFromExistingConfig();
+            if (!string.IsNullOrEmpty(existingPath))
+            {
+                Logger.Information($"ProSim SDK found in existing config: {existingPath}");
+                return existingPath;
+            }
+
+            // 2. Check running ProSim process to find install directory
+            string processPath = GetSdkPathFromRunningProcess();
+            if (!string.IsNullOrEmpty(processPath))
+            {
+                Logger.Information($"ProSim SDK found via running process: {processPath}");
+                return processPath;
+            }
+
+            // 3. Search common installation directories
+            string commonPath = GetSdkPathFromCommonLocations();
+            if (!string.IsNullOrEmpty(commonPath))
+            {
+                Logger.Information($"ProSim SDK found in common location: {commonPath}");
+                return commonPath;
+            }
+
+            // 4. Check registry for ProSim install path
+            string registryPath = GetSdkPathFromRegistry();
+            if (!string.IsNullOrEmpty(registryPath))
+            {
+                Logger.Information($"ProSim SDK found via registry: {registryPath}");
+                return registryPath;
+            }
+
+            Logger.Warning("ProSim SDK could not be auto-detected");
+            return null;
+        }
+
+        private static string GetSdkPathFromExistingConfig()
+        {
+            try
+            {
+                string configPath = Path.Combine(Sys.FolderAppDataRoaming(), "Prosim2GSX", "AppConfig.json");
+                if (!File.Exists(configPath))
+                    return null;
+
+                string json = File.ReadAllText(configPath);
+                // Simple extraction — avoid pulling in the full app config type
+                string marker = "\"ProSimSdkPath\"";
+                int idx = json.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+                if (idx < 0)
+                    return null;
+
+                int colonIdx = json.IndexOf(':', idx + marker.Length);
+                if (colonIdx < 0)
+                    return null;
+
+                int quoteStart = json.IndexOf('"', colonIdx + 1);
+                int quoteEnd = json.IndexOf('"', quoteStart + 1);
+                if (quoteStart < 0 || quoteEnd < 0)
+                    return null;
+
+                string path = json.Substring(quoteStart + 1, quoteEnd - quoteStart - 1)
+                    .Replace("\\\\", "\\");
+
+                if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
+                    return path;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+
+            return null;
+        }
+
+        private static string GetSdkPathFromRunningProcess()
+        {
+            try
+            {
+                var process = Process.GetProcessesByName("ProSimA322-System").FirstOrDefault();
+                if (process != null)
+                {
+                    string processDir = Path.GetDirectoryName(process.MainModule?.FileName);
+                    if (!string.IsNullOrEmpty(processDir))
+                    {
+                        string sdkPath = Path.Combine(processDir, ProSimSdkFileName);
+                        if (File.Exists(sdkPath))
+                            return sdkPath;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+
+            return null;
+        }
+
+        private static string GetSdkPathFromCommonLocations()
+        {
+            var searchPaths = new List<string>
+            {
+                @"C:\ProSim-AR",
+                @"C:\ProSim",
+                @"C:\Program Files\ProSim",
+                @"C:\Program Files (x86)\ProSim",
+                @"C:\Program Files\ProSim-AR",
+                @"C:\Program Files (x86)\ProSim-AR",
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "ProSim-AR"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "ProSim"),
+            };
+
+            // Also check all drive roots
+            foreach (var drive in DriveInfo.GetDrives().Where(d => d.DriveType == DriveType.Fixed && d.IsReady))
+            {
+                searchPaths.Add(Path.Combine(drive.RootDirectory.FullName, "ProSim-AR"));
+                searchPaths.Add(Path.Combine(drive.RootDirectory.FullName, "ProSim"));
+            }
+
+            // Deduplicate
+            var searched = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string dir in searchPaths)
+            {
+                if (!searched.Add(dir))
+                    continue;
+
+                try
+                {
+                    string sdkPath = Path.Combine(dir, ProSimSdkFileName);
+                    if (File.Exists(sdkPath))
+                        return sdkPath;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogException(ex);
+                }
+            }
+
+            return null;
+        }
+
+        private static string GetSdkPathFromRegistry()
+        {
+            try
+            {
+                // Try common registry locations where ProSim might register
+                string[] registryPaths = new[]
+                {
+                    @"HKEY_LOCAL_MACHINE\SOFTWARE\ProSim-AR",
+                    @"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ProSim-AR",
+                    @"HKEY_CURRENT_USER\SOFTWARE\ProSim-AR",
+                };
+
+                foreach (string regPath in registryPaths)
+                {
+                    string installDir = Sys.GetRegistryValue<string>(regPath, "InstallDir");
+                    if (!string.IsNullOrEmpty(installDir))
+                    {
+                        string sdkPath = Path.Combine(installDir, ProSimSdkFileName);
+                        if (File.Exists(sdkPath))
+                            return sdkPath;
+                    }
+
+                    // Also try "InstallPath" key name
+                    installDir = Sys.GetRegistryValue<string>(regPath, "InstallPath");
+                    if (!string.IsNullOrEmpty(installDir))
+                    {
+                        string sdkPath = Path.Combine(installDir, ProSimSdkFileName);
+                        if (File.Exists(sdkPath))
+                            return sdkPath;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+
+            return null;
         }
 
         public static bool MobiInstalled()

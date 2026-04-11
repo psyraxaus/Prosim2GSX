@@ -22,7 +22,7 @@ namespace Installer
             label.Inlines.Add("Be sure to check out the ");
             Hyperlink hyperlink = new Hyperlink(new Run("README"))
             {
-                NavigateUri = new Uri("https://github.com/Fragtality/Prosim2GSX/blob/master/README.md")
+                NavigateUri = new Uri("https://github.com/psyraxaus/Prosim2GSX/blob/master/README.md")
             };
             label.Inlines.Add(hyperlink);
             label.Inlines.Add(" to gain a basic Understanding and find Answers to the most common Questions ;)");

@@ -47,9 +47,30 @@ namespace Prosim2GSX
 
         protected override void CreateServiceControllers()
         {
-            ProsimService = new ProsimSdkService(Config);
-            GsxService = new GsxController(Config);
-            AudioService = new AudioController(Config);
+            if (Prosim2GSX.Instance.IsSdkAvailable)
+            {
+                try
+                {
+                    ProsimService = new ProsimSdkService(Config);
+                    GsxService = new GsxController(Config);
+                    AudioService = new AudioController(Config);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Failed to create service controllers — running in degraded mode");
+                    Logger.LogException(ex);
+                    ProsimService = null;
+                    GsxService = null;
+                    AudioService = null;
+                }
+            }
+            else
+            {
+                Logger.Warning("ProSim SDK not available — services will not be created. Configure SDK path in Settings and restart.");
+                ProsimService = null;
+                GsxService = null;
+                AudioService = null;
+            }
         }
 
         protected override Task InitReceivers()
@@ -69,13 +90,13 @@ namespace Prosim2GSX
                 Logger.Debug($"Cancel Request Token");
                 RequestTokenSource.Cancel();
 
-                if (GsxService.IsActive)
+                if (GsxService?.IsActive == true)
                 {
                     Logger.Debug($"Stop GsxService");
                     GsxService.Stop();
                 }
 
-                if (AudioService.IsActive)
+                if (AudioService?.IsActive == true)
                 {
                     Logger.Debug($"Stop AudioService");
                     AudioService.Stop();
@@ -95,21 +116,28 @@ namespace Prosim2GSX
         {
             if (!IsProsimAircraft || IsSessionInitializing || IsSessionInitialized)
                 return;
+
+            if (!Prosim2GSX.Instance.IsSdkAvailable)
+            {
+                Logger.Warning("Session ready but ProSim SDK not available — skipping service initialization");
+                return;
+            }
+
             IsSessionInitializing = true;
-            SessionStopRequested = false;            
+            SessionStopRequested = false;
 
             try
             {
                 Logger.Debug($"Refresh Token");
                 RefreshToken();
 
-                if (App.Config.RunGsxService)
+                if (App.Config.RunGsxService && GsxService != null)
                 {
                     Logger.Debug($"Start GsxService");
                     GsxService.Start();
                 }
 
-                if (App.Config.RunAudioService)
+                if (App.Config.RunAudioService && AudioService != null)
                 {
                     Logger.Debug($"Start AudioService");
                     AudioService.Start();
@@ -126,6 +154,12 @@ namespace Prosim2GSX
 
         public virtual async Task RestartGsx()
         {
+            if (GsxService == null)
+            {
+                Logger.Warning("Cannot restart GSX — service not available (SDK not configured)");
+                return;
+            }
+
             Logger.Debug($"Kill Couatl Process");
             Sys.KillProcess(App.Config.BinaryGsx2020);
             Sys.KillProcess(App.Config.BinaryGsx2024);

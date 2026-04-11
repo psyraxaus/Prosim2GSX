@@ -1,21 +1,25 @@
 ﻿using System;
 using System.IO;
 using System.Reflection;
-using System.Threading.Tasks;
 using System.Windows;
 using CFIT.AppFramework;
 using CFIT.AppLogger;
 using Prosim2GSX.AppConfig;
-using Prosim2GSX.Prosim;
 using Prosim2GSX.Themes;
 using Prosim2GSX.UI;
-using Prosim2GSX.UI.Dialogs;
 using Prosim2GSX.UI.NotifyIcon;
 
 namespace Prosim2GSX
 {
     public class Prosim2GSX(Type windowType) : SimApp<Prosim2GSX, AppService, Config, Definition>(windowType, typeof(NotifyIconModelExt))
     {
+        /// <summary>
+        /// Indicates whether the ProSim SDK was successfully loaded at startup.
+        /// When false, the app runs in degraded mode — UI is accessible (especially Settings)
+        /// but ProSim integration is disabled.
+        /// </summary>
+        public bool IsSdkAvailable { get; private set; } = false;
+
         [STAThread]
         public static int Main(string[] args)
         {
@@ -30,103 +34,35 @@ namespace Prosim2GSX
                 return -1;
             }
         }
-        protected override async void OnStartup(StartupEventArgs e)
+        protected override void OnStartup(StartupEventArgs e)
         {
             // Check if ProSimSdkPath is configured and valid
             bool sdkPathValid = !string.IsNullOrEmpty(Config.ProSimSdkPath) && File.Exists(Config.ProSimSdkPath);
 
-            if (!sdkPathValid)
+            if (sdkPathValid)
             {
-                Logger.Warning($"ProSimSdkPath not configured or invalid: '{Config.ProSimSdkPath}'");
-                Logger.Information("Showing ProSim SDK configuration dialog...");
+                // SDK path is valid, set up assembly resolution and load
+                Logger.Information($"ProSimSdkPath is configured: {Config.ProSimSdkPath}");
+                SetupProSimSdkAssemblyResolver(Config.ProSimSdkPath);
+                LoadProSimSdkAssembly(Config.ProSimSdkPath);
+                IsSdkAvailable = true;
 
-                // Show dialog to configure the SDK path
-                var dialog = new ProSimSdkDialog(Config);
-                bool? result = dialog.ShowDialog();
-
-                if (result == true && !string.IsNullOrEmpty(Config.ProSimSdkPath) && File.Exists(Config.ProSimSdkPath))
-                {
-                    Logger.Information($"ProSimSdkPath configured by user: {Config.ProSimSdkPath}");
-
-                    // SDK path has been configured - app needs to restart to properly load the assembly
-                    Logger.Information("ProSim SDK path configured. Application restart required.");
-                    MessageBox.Show(
-                        "ProSim SDK path has been configured successfully.\n\nPlease restart the application to load the SDK.",
-                        "Restart Required",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
-                    RequestShutdown(0);
-                    return;
-                }
-                else
-                {
-                    Logger.Error("ProSimSdkPath configuration cancelled or invalid. Application cannot continue.");
-                    MessageBox.Show(
-                        "ProSim SDK is required for this application. The application will now close.",
-                        "Configuration Required",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-                    RequestShutdown(1);
-                    return;
-                }
+                Logger.Information("ProSim SDK loaded successfully");
             }
             else
             {
-                // SDK path is valid, ensure assembly resolution is set up
-                Logger.Information($"ProSimSdkPath is configured: {Config.ProSimSdkPath}");
-                SetupProSimSdkAssemblyResolver(Config.ProSimSdkPath);
-                
-                // Attempt to load the SDK assembly (non-blocking, will be verified during service init)
-                LoadProSimSdkAssembly(Config.ProSimSdkPath);
-
-                // Initialize the ProSim SDK Service early
-                if (!InitializeProSimSdkService())
-                {
-                    Logger.Warning("ProSim SDK service initialization had issues, but continuing with startup");
-                    // We continue anyway as the SDK might connect later when ProSim starts
-                }
+                // SDK path missing or invalid — launch in degraded mode
+                Logger.Warning($"ProSimSdkPath not configured or invalid: '{Config.ProSimSdkPath}'");
+                Logger.Information("Launching in degraded mode — ProSim integration disabled. Configure the SDK path in App Settings.");
+                IsSdkAvailable = false;
             }
 
             // Initialise theme system before the window is created
             ThemeManager.Instance.SetConfig(Config);
             ThemeManager.Instance.Initialize();
 
-            // Continue with normal startup sequence
+            // Continue with normal startup sequence (window will show SDK banner if degraded)
             base.OnStartup(e);
-        }
-
-        /// <summary>
-        /// Initialize the ProSim SDK Service before other services
-        /// </summary>
-        private bool InitializeProSimSdkService()
-        {
-            try
-            {
-                Logger.Information("Initializing ProSim SDK Service...");
-                
-                // Create the service (it's created in AppService.CreateServiceControllers but we need it earlier)
-                // We'll create a temporary instance for early initialization
-                var sdkService = new ProsimSdkService(Config);
-                
-                // Initialize the service (this verifies SDK types are accessible)
-                var initTask = sdkService.Initialize();
-                initTask.Wait(); // Blocking wait is acceptable during startup
-                
-                if (!initTask.Result)
-                {
-                    Logger.Error("ProSim SDK Service initialization failed");
-                    return false;
-                }
-
-                Logger.Information("ProSim SDK Service initialized successfully");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Exception during ProSim SDK Service initialization");
-                Logger.LogException(ex);
-                return false;
-            }
         }
 
         private void LoadProSimSdkAssembly(string sdkPath)

@@ -24,18 +24,27 @@
             <RowDefinition Height="60"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Row 0: Header Bar -->
         <local:HeaderBarControl Grid.Row="0" Height="60"/>
 
-        <!-- Row 1: Version Check -->
-        <StackPanel Grid.Row="1" Name="PanelVersion" Visibility="Collapsed" Orientation="Horizontal" HorizontalAlignment="Center" Margin="8">
+        <!-- Row 1: SDK Warning Banner (degraded mode) -->
+        <Border Grid.Row="1" Name="PanelSdkWarning" Visibility="Collapsed"
+                Background="#FFF3CD" BorderBrush="#FFCC02" BorderThickness="0,0,0,2" Padding="10,8">
+            <TextBlock Name="LabelSdkWarning" FontWeight="DemiBold" FontSize="13"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       TextWrapping="Wrap" Foreground="#664D03"/>
+        </Border>
+
+        <!-- Row 2: Version Check -->
+        <StackPanel Grid.Row="2" Name="PanelVersion" Visibility="Collapsed" Orientation="Horizontal" HorizontalAlignment="Center" Margin="8">
             <TextBlock Name="LabelVersionCheck" FontWeight="DemiBold" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </StackPanel>
 
-        <!-- Row 2: Main Tab Control -->
-        <TabControl Grid.Row="2" x:Name="MainTabControl" Margin="0" Padding="0"
+        <!-- Row 3: Main Tab Control -->
+        <TabControl Grid.Row="3" x:Name="MainTabControl" Margin="0" Padding="0"
                     Style="{StaticResource EfbTabControl}">
             <TabControl.Resources>
                 <Style TargetType="TabItem" BasedOn="{StaticResource EfbTabItem}"/>

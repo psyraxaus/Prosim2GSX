@@ -246,5 +246,6 @@
   "SizeEvents": 5000,
   "SizeInputEvents": 5000,
   "BinaryMsfs2020": "FlightSimulator",
-  "BinaryMsfs2024": "FlightSimulator2024"
+  "BinaryMsfs2024": "FlightSimulator2024",
+  "ProSimSdkPath": ""
 }

@@ -211,7 +211,7 @@
                     <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Path to the ProSim SDK DLL file required for ProSim integration.">ProSim SDK Path:</TextBlock>
                     <StackPanel Grid.Column="1" Grid.Row="0" Style="{StaticResource SettingItemPanel}" Orientation="Horizontal" ToolTip="Path to the ProSim SDK DLL file required for ProSim integration.">
                         <TextBox Name="InputProSimSdkPath" Style="{StaticResource TextBoxLeft}" MinWidth="200" MaxWidth="350" Text="{Binding ProSimSdkPath}" IsReadOnly="True"/>
-                        <Button Name="ButtonBrowseProSimSdk" Margin="6,0,0,0" Style="{StaticResource BtnSquareSmall}" ToolTip="Browse for ProSim SDK file">
+                        <Button Name="ButtonBrowseProSimSdk" Margin="6,0,0,0" Style="{StaticResource BtnSquareSmall}" ToolTip="Browse for ProSim SDK file" Click="ButtonBrowseProSimSdk_Click">
                             <Image Source="../../Icons/cursor.png" Style="{StaticResource ImgSquareSmall}"/>
                         </Button>
                     </StackPanel>

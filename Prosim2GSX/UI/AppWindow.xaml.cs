@@ -30,6 +30,13 @@ namespace Prosim2GSX.UI
             this.Loaded += OnWindowLoaded;
             this.IsVisibleChanged += OnVisibleChanged;
 
+            // Show SDK warning banner if running in degraded mode
+            if (!Prosim2GSX.Instance.IsSdkAvailable)
+            {
+                LabelSdkWarning.Text = "ProSim SDK is not configured. ProSim integration is disabled. Please set the SDK path in App Settings and restart the application.";
+                PanelSdkWarning.Visibility = Visibility.Visible;
+            }
+
             if (Prosim2GSX.Instance.UpdateDetected)
             {
                 if (Prosim2GSX.Instance.UpdateIsDev)
@@ -42,12 +49,12 @@ namespace Prosim2GSX.UI
                 if (Prosim2GSX.Instance.UpdateIsDev)
                     hyperlink = new Hyperlink(run)
                     {
-                        NavigateUri = new Uri("https://github.com/Fragtality/Prosim2GSX/blob/master/Prosim2GSX-Installer-latest.exe")
+                        NavigateUri = new Uri("https://github.com/psyraxaus/Prosim2GSX/blob/master/Prosim2GSX-Installer-latest.exe")
                     };
                 else
                     hyperlink = new Hyperlink(run)
                     {
-                        NavigateUri = new Uri("https://github.com/Fragtality/Prosim2GSX/releases/latest")
+                        NavigateUri = new Uri("https://github.com/psyraxaus/Prosim2GSX/releases/latest")
                     };
                 LabelVersionCheck.Inlines.Add(hyperlink);
                 LabelVersionCheck.Inlines.Add(" available!");
@@ -58,23 +65,57 @@ namespace Prosim2GSX.UI
 
         protected virtual void OnWindowLoaded(object sender, RoutedEventArgs e)
         {
-            MainTabControl.Items[0] = CreateTabItem("FLIGHT STATUS", new ViewMonitor());
-            MainTabControl.Items[1] = CreateTabItem("AUTOMATION", new Views.Automation.ViewAutomation());
-            MainTabControl.Items[2] = CreateTabItem("AIRCRAFT PROFILES", new ViewProfiles());
-            MainTabControl.Items[3] = CreateTabItem("AUDIO SETTINGS", new ViewAudio());
+            bool sdkAvailable = Prosim2GSX.Instance.IsSdkAvailable;
+
+            if (sdkAvailable)
+            {
+                MainTabControl.Items[0] = CreateTabItem("FLIGHT STATUS", new ViewMonitor());
+                MainTabControl.Items[1] = CreateTabItem("AUTOMATION", new Views.Automation.ViewAutomation());
+                MainTabControl.Items[2] = CreateTabItem("AIRCRAFT PROFILES", new ViewProfiles());
+                MainTabControl.Items[3] = CreateTabItem("AUDIO SETTINGS", new ViewAudio());
+            }
+            else
+            {
+                // In degraded mode, replace SDK-dependent tabs with placeholder content
+                var placeholder = CreateDegradedPlaceholder();
+                MainTabControl.Items[0] = CreateTabItem("FLIGHT STATUS", placeholder);
+                MainTabControl.Items[1] = CreateTabItem("AUTOMATION", CreateDegradedPlaceholder());
+                MainTabControl.Items[2] = CreateTabItem("AIRCRAFT PROFILES", CreateDegradedPlaceholder());
+                MainTabControl.Items[3] = CreateTabItem("AUDIO SETTINGS", CreateDegradedPlaceholder());
+            }
+
+            // Settings tab is always available (needed to configure SDK path)
             MainTabControl.Items[4] = CreateTabItem("APP SETTINGS", new ViewSettings());
 
             // Set index and previousTabIndex before subscribing so SelectionChanged
             // does not fire Start() while the window is still in its layout pass.
-            MainTabControl.SelectedIndex = 0;
-            _previousTabIndex = 0;
+            int defaultTab = sdkAvailable ? 0 : 4; // Go straight to Settings in degraded mode
+            MainTabControl.SelectedIndex = defaultTab;
+            _previousTabIndex = defaultTab;
             MainTabControl.SelectionChanged += OnTabSelectionChanged;
 
-            // Defer the initial Start() until after the window is fully rendered
-            // so backend services have a chance to initialise before polling begins.
-            Dispatcher.BeginInvoke(
-                System.Windows.Threading.DispatcherPriority.Background,
-                new Action(() => ((MainTabControl.Items[0] as TabItem)?.Content as IView)?.Start()));
+            if (sdkAvailable)
+            {
+                // Defer the initial Start() until after the window is fully rendered
+                // so backend services have a chance to initialise before polling begins.
+                Dispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.Background,
+                    new Action(() => ((MainTabControl.Items[0] as TabItem)?.Content as IView)?.Start()));
+            }
+        }
+
+        private static UIElement CreateDegradedPlaceholder()
+        {
+            return new TextBlock
+            {
+                Text = "ProSim SDK is not configured. Please set the SDK path in App Settings and restart the application.",
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                FontSize = 14,
+                Margin = new Thickness(20),
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = System.Windows.Media.Brushes.Gray
+            };
         }
 
         private static TabItem CreateTabItem(string header, UIElement content)
