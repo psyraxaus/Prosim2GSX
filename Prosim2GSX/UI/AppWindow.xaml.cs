@@ -27,8 +27,10 @@ namespace Prosim2GSX.UI
         public AppWindow()
         {
             InitializeComponent();
+            this.MaxHeight = SystemParameters.WorkArea.Height * 0.95;
             this.Loaded += OnWindowLoaded;
             this.IsVisibleChanged += OnVisibleChanged;
+            this.SizeChanged += OnWindowSizeChanged;
 
             // Show SDK warning banner if running in degraded mode
             if (!Prosim2GSX.Instance.IsSdkAvailable)
@@ -125,6 +127,20 @@ namespace Prosim2GSX.UI
                 Header = header,
                 Content = content
             };
+        }
+
+        private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (!e.HeightChanged) return;
+
+            var workArea = SystemParameters.WorkArea;
+            double windowBottom = this.Top + this.ActualHeight;
+            double workAreaBottom = workArea.Top + workArea.Height;
+
+            if (windowBottom > workAreaBottom)
+            {
+                this.Top = Math.Max(workArea.Top, workAreaBottom - this.ActualHeight);
+            }
         }
 
         protected virtual void OnVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
