@@ -38,6 +38,9 @@ namespace Prosim2GSX.UI
         }
 
         private readonly DispatcherTimer _updateTimer;
+        private string _lastFlightNumber;
+        private string _lastTimeDisplay;
+        private string _lastDateDisplay;
 
         public HeaderBarControl()
         {
@@ -60,26 +63,43 @@ namespace Prosim2GSX.UI
                 var gsxService = appService?.GsxService;
                 var aircraft = gsxService?.AircraftInterface;
 
-                // Flight number
-                string flightNum = aircraft?.FlightNumber;
-                FlightNumber = !string.IsNullOrWhiteSpace(flightNum) ? flightNum : "--------";
+                // Flight number — only update if changed
+                string flightNum = !string.IsNullOrWhiteSpace(aircraft?.FlightNumber)
+                    ? aircraft.FlightNumber
+                    : "--------";
+                if (flightNum != _lastFlightNumber)
+                {
+                    _lastFlightNumber = flightNum;
+                    FlightNumber = flightNum;
+                }
 
-                // Time: sim zulu time when connected, system UTC otherwise
+                // Time: sim zulu time when connected, system UTC otherwise — only update if changed
+                string timeStr;
                 bool simConnected = simConnect?.IsSimConnected == true && simConnect?.IsSessionRunning == true;
                 if (simConnected && aircraft != null)
                 {
                     int zuluSec = aircraft.ZuluTimeSeconds;
                     int hours = (zuluSec / 3600) % 24;
                     int minutes = (zuluSec % 3600) / 60;
-                    TimeDisplay = $"{hours:D2}:{minutes:D2}Z";
+                    timeStr = $"{hours:D2}:{minutes:D2}Z";
                 }
                 else
                 {
-                    TimeDisplay = DateTime.UtcNow.ToString("HH:mm") + "Z";
+                    timeStr = DateTime.UtcNow.ToString("HH:mm") + "Z";
+                }
+                if (timeStr != _lastTimeDisplay)
+                {
+                    _lastTimeDisplay = timeStr;
+                    TimeDisplay = timeStr;
                 }
 
-                // Date
-                DateDisplay = DateTime.UtcNow.ToString("dd MMM").ToUpper();
+                // Date — only update if changed
+                string dateStr = DateTime.UtcNow.ToString("dd MMM").ToUpper();
+                if (dateStr != _lastDateDisplay)
+                {
+                    _lastDateDisplay = dateStr;
+                    DateDisplay = dateStr;
+                }
             }
             catch
             {

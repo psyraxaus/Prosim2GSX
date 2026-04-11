@@ -11,14 +11,21 @@ namespace Prosim2GSX.UI
         private static readonly SolidColorBrush BrushAmber = new(Color.FromArgb(0xFF, 0xFF, 0xD7, 0x00));
         private static readonly SolidColorBrush BrushDimAmber = new(Color.FromArgb(0xFF, 0x8B, 0x69, 0x14));
 
-        // Character sets for cycling — letters and digits on separate drums like a real Solari
-        private static readonly string LetterDrum = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        private static readonly string DigitDrum = "0123456789";
+        // Single unified drum — space, letters, digits, and punctuation
+        private static readonly string UnifiedDrum = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:-/";
+
+        // Animation tuning
+        private const int MinimumFlips = 5;
+        private const double FastTickMs = 30;
+        private const double SlowTickMs = 90;
+        private const int DecelerationZone = 3;
 
         private char _currentChar = '-';
         private char _targetChar = '-';
-        private int _drumIndex = 0;
-        private string _activeDrum = null;
+        private int _drumIndex;
+        private int _targetIndex;
+        private int _remainingFlips;
+        private int _totalFlips;
         private DispatcherTimer _flipTimer;
 
         public static readonly DependencyProperty TargetCharacterProperty =
@@ -39,7 +46,7 @@ namespace Prosim2GSX.UI
 
             _flipTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromMilliseconds(50)
+                Interval = TimeSpan.FromMilliseconds(FastTickMs)
             };
             _flipTimer.Tick += OnFlipTick;
         }
@@ -55,75 +62,104 @@ namespace Prosim2GSX.UI
 
         private void StartFlip()
         {
+            _flipTimer.Stop();
+
             char target = char.ToUpper(_targetChar);
 
-            // Determine which drum to use
-            if (char.IsLetter(target) && char.IsLetter(_currentChar))
+            // Check animation toggle — snap directly if disabled
+            bool animationEnabled = AppService.Instance?.Config?.SolariAnimationEnabled ?? true;
+            if (!animationEnabled)
             {
-                _activeDrum = LetterDrum;
-                _drumIndex = LetterDrum.IndexOf(char.ToUpper(_currentChar));
-                if (_drumIndex < 0) _drumIndex = 0;
-            }
-            else if (char.IsDigit(target) && char.IsDigit(_currentChar))
-            {
-                _activeDrum = DigitDrum;
-                _drumIndex = DigitDrum.IndexOf(_currentChar);
-                if (_drumIndex < 0) _drumIndex = 0;
-            }
-            else
-            {
-                // Different type or special char — snap directly
                 _currentChar = target;
                 UpdateDisplay(_currentChar);
+                ResetFlipTransform();
                 return;
             }
 
-            // If already at target, nothing to do
-            if (_currentChar == target)
+            int targetIdx = UnifiedDrum.IndexOf(target);
+            if (targetIdx < 0)
+            {
+                // Unknown character — snap directly
+                _currentChar = target;
+                UpdateDisplay(_currentChar);
+                ResetFlipTransform();
+                return;
+            }
+
+            int currentIdx = UnifiedDrum.IndexOf(char.ToUpper(_currentChar));
+            if (currentIdx < 0)
+                currentIdx = 0;
+
+            // Already at target — nothing to do
+            if (char.ToUpper(_currentChar) == target)
                 return;
 
+            _drumIndex = currentIdx;
+            _targetIndex = targetIdx;
+
+            // Calculate forward distance on drum (wrapping)
+            int forwardDistance = (_targetIndex - _drumIndex + UnifiedDrum.Length) % UnifiedDrum.Length;
+
+            // Enforce minimum flip cycles — add a full revolution if too short
+            if (forwardDistance < MinimumFlips)
+                _remainingFlips = forwardDistance + UnifiedDrum.Length;
+            else
+                _remainingFlips = forwardDistance;
+
+            _totalFlips = _remainingFlips;
+            _flipTimer.Interval = TimeSpan.FromMilliseconds(FastTickMs);
             _flipTimer.Start();
         }
 
         private void OnFlipTick(object sender, EventArgs e)
         {
-            if (_activeDrum == null)
+            // Advance one position on the drum
+            _drumIndex = (_drumIndex + 1) % UnifiedDrum.Length;
+            _currentChar = UnifiedDrum[_drumIndex];
+            _remainingFlips--;
+
+            // Apply visual flip effect
+            ApplyFlipEffect();
+            UpdateDisplay(_currentChar);
+
+            if (_remainingFlips <= 0)
             {
                 _flipTimer.Stop();
+                ResetFlipTransform();
                 return;
             }
 
-            // Advance one position on the drum
-            _drumIndex = (_drumIndex + 1) % _activeDrum.Length;
-            _currentChar = _activeDrum[_drumIndex];
+            // Deceleration: slow down for the last few flips
+            if (_remainingFlips <= DecelerationZone)
+            {
+                double t = 1.0 - ((double)_remainingFlips / DecelerationZone);
+                double ms = FastTickMs + t * (SlowTickMs - FastTickMs);
+                _flipTimer.Interval = TimeSpan.FromMilliseconds(ms);
+            }
+        }
 
-            // Brief opacity dip to simulate flap snap
-            CharDisplay.Opacity = 0.7;
-            UpdateDisplay(_currentChar);
+        private void ApplyFlipEffect()
+        {
+            // Squeeze vertically to simulate flap folding
+            FlipTransform.ScaleY = 0.3;
+            CharDisplay.Foreground = BrushDimAmber;
 
-            // Restore opacity on next render
+            // Restore on next render pass — new character "drops" into place
             Dispatcher.BeginInvoke(DispatcherPriority.Render, () =>
             {
-                CharDisplay.Opacity = 1.0;
+                FlipTransform.ScaleY = 1.0;
             });
+        }
 
-            // Check if we've landed on the target
-            if (_currentChar == char.ToUpper(_targetChar))
-            {
-                _flipTimer.Stop();
-                _activeDrum = null;
-                CharDisplay.Foreground = BrushAmber;
-            }
+        private void ResetFlipTransform()
+        {
+            FlipTransform.ScaleY = 1.0;
+            CharDisplay.Foreground = BrushAmber;
         }
 
         private void UpdateDisplay(char c)
         {
             CharDisplay.Text = c.ToString();
-            // While flipping, use slightly dimmer colour
-            if (IsFlipping)
-                CharDisplay.Foreground = BrushDimAmber;
-            else
-                CharDisplay.Foreground = BrushAmber;
         }
     }
 }

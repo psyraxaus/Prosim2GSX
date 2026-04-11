@@ -40,7 +40,12 @@
                        FontWeight="Bold"
                        Foreground="#FFFFD700"
                        HorizontalAlignment="Center"
-                       VerticalAlignment="Center"/>
+                       VerticalAlignment="Center"
+                       RenderTransformOrigin="0.5,0.5">
+                <TextBlock.RenderTransform>
+                    <ScaleTransform x:Name="FlipTransform" ScaleX="1" ScaleY="1"/>
+                </TextBlock.RenderTransform>
+            </TextBlock>
         </Grid>
     </Border>
 </UserControl>

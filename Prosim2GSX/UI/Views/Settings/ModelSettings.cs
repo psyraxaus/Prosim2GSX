@@ -95,6 +95,7 @@ namespace Prosim2GSX.UI.Views.Settings
         public virtual bool RunAudioService { get => Source.RunAudioService; set => SetModelValue<bool>(value); }
         public virtual bool OpenAppWindowOnStart { get => Source.OpenAppWindowOnStart; set => SetModelValue<bool>(value); }
         public virtual string ProSimSdkPath { get => Source.ProSimSdkPath; set => SetModelValue<string>(value); }
+        public virtual bool SolariAnimationEnabled { get => Source.SolariAnimationEnabled; set => SetModelValue<bool>(value); }
 
         // ── Theme selection ────────────────────────────────────────────────
 

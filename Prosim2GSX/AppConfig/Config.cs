@@ -125,6 +125,9 @@ namespace Prosim2GSX.AppConfig
         // Theme
         public virtual string CurrentTheme { get; set; } = "Light";
 
+        // Display
+        public virtual bool SolariAnimationEnabled { get; set; } = true;
+
         //ProsimSDK
         public virtual string ProSimSdkPath { get; set; } = "";
         public virtual string ProSimSdkHostname { get; set; } = "localhost";

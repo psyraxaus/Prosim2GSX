@@ -67,6 +67,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Which Source is used to get the Unit used in the UI.">UI Unit Source:</TextBlock>
@@ -105,6 +106,9 @@
                         <CheckBox IsChecked="{Binding DingOnFinal}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Play the Sound when the Final Loadsheet was transmitted.">Ding on Final LS</CheckBox>
                         <CheckBox IsChecked="{Binding DingOnTurnaround}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Play the Sound when the Automation Phase switched to Turnaround.">Ding on Turnaround</CheckBox>
                     </StackPanel>
+
+                    <TextBlock Grid.Column="0" Grid.Row="8" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Enable the animated split-flap character cycling effect in the header bar displays.">Solari Animation:</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="8" IsChecked="{Binding SolariAnimationEnabled}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Enable the animated split-flap character cycling effect in the header bar displays."/>
                 </Grid>
             </Border>
 

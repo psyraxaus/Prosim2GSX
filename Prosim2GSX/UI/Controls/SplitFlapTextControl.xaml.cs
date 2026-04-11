@@ -78,7 +78,8 @@ namespace Prosim2GSX.UI
             if (_cells == null) return;
 
             string padded = (newText ?? "").PadRight(CharacterCount);
-            int staggerMs = StaggerDelayMs;
+            bool animate = AppService.Instance?.Config?.SolariAnimationEnabled ?? true;
+            int staggerMs = animate ? StaggerDelayMs : 0;
 
             for (int i = 0; i < _cells.Length; i++)
             {
