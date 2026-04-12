@@ -20,7 +20,7 @@ namespace Prosim2GSX.Prosim
         protected virtual bool IsMonitoring { get; set; } = false;
         protected virtual DateTime NextConnectionCheck { get; set; } = DateTime.MinValue;
         protected virtual int ReconnectAttempts { get; set; } = 0;
-        protected virtual bool ProsimBinaryRunning => Sys.GetProcessRunning(Config.ProsimBinary);
+        protected virtual bool ProsimBinaryRunning => !Config.IsProsimLocal || Sys.GetProcessRunning(Config.ProsimBinary);
 
         // SDK Interface
         public virtual ProsimAircraftInterface AircraftInterface { get; protected set; }

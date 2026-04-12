@@ -62,6 +62,7 @@ namespace Prosim2GSX
                     ProsimService = null;
                     GsxService = null;
                     AudioService = null;
+                    Prosim2GSX.Instance.IsSdkAvailable = false;
                 }
             }
             else

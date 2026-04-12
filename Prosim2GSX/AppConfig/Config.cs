@@ -137,6 +137,23 @@ namespace Prosim2GSX.AppConfig
         public virtual int ProSimSdkMaxReconnectAttempts { get; set; } = 10;
 
         [JsonIgnore]
+        public virtual bool IsProsimLocal
+        {
+            get
+            {
+                var host = ProSimSdkHostname?.Trim();
+                if (string.IsNullOrEmpty(host))
+                    return true;
+                if (host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+                    || host == "127.0.0.1"
+                    || host == "::1"
+                    || host.Equals(Environment.MachineName, StringComparison.OrdinalIgnoreCase))
+                    return true;
+                return false;
+            }
+        }
+
+        [JsonIgnore]
         public virtual AircraftProfile CurrentProfile => AppService.Instance?.GsxService?.AircraftProfile;
         public virtual List<AircraftProfile> AircraftProfiles { get; set; } = new()
         {
