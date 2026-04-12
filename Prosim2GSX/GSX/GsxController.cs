@@ -33,7 +33,7 @@ namespace Prosim2GSX.GSX
         protected virtual DateTime NextMenuStartupCheck { get; set; } = DateTime.MinValue;
         public virtual AircraftInterface AircraftInterface { get; }
         public virtual Flightplan Flightplan { get; } = new Flightplan();
-        public virtual bool AircraftBinary => Sys.GetProcessRunning(Config.ProsimBinary);
+        public virtual bool AircraftBinary => !Config.IsProsimLocal || Sys.GetProcessRunning(Config.ProsimBinary);
         public virtual IConfig IConfig => Config;
         public virtual AircraftProfile AircraftProfile { get; protected set; } = null;
         public event Action<AircraftProfile> ProfileChanged;

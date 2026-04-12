@@ -227,6 +227,62 @@ You might want to change the Weight Unit used in the UI, but you don't need to m
 Depending on your Preferences, you might want to check the Settings to round the planned Block Fuel or skipping Walkaround.<br/>
 If you only want to use Prosim2GSX for Volume-Control, uncheck 'Run GSX Controller' - in all other Cases leave it on!
 
+<br/><br/>
+
+#### 2.3.5 - Running ProSim on a Separate Computer
+
+Prosim2GSX supports setups where **ProSim runs on a different PC** to MSFS/Prosim2GSX (a common networked "sim rig" setup). Two small configuration changes are required on the MSFS PC — the one running Prosim2GSX.
+
+**Step 1 — Point Prosim2GSX at the ProSim SDK file on the other computer**
+
+The ProSim SDK (`ProSimSDK.dll`) lives inside your ProSim installation folder on the ProSim PC. Prosim2GSX needs to be able to read that file over the network.
+
+1. On the ProSim PC, locate the folder containing `ProSimSDK.dll` (typically inside the `ProSim...\ProSimA322-System\` or similar folder).
+2. **Share that folder** on the network so the MSFS PC can read it. Right-click the folder → *Properties* → *Sharing* → grant read access to the MSFS PC's user account (or everyone on a trusted home network).
+3. On the **MSFS PC**, open Prosim2GSX → **App Settings** tab → set the **ProSim SDK Path** to the UNC path of the shared DLL, for example:
+   ```
+   \\PROSIM-PC\ProSimA320\ProSimA322-System\ProSimSDK.dll
+   ```
+   Replace `PROSIM-PC` with the actual computer name (or IP address) of the machine running ProSim.
+4. **Restart Prosim2GSX** — the SDK is only loaded once at startup.
+
+**Step 2 — Tell Prosim2GSX which computer ProSim is running on**
+
+By default, Prosim2GSX assumes ProSim is on the same PC (`localhost`). For a remote setup you need to change this in the configuration file.
+
+1. **Close Prosim2GSX** first (right-click the tray icon → *Exit*). Editing the config while the app is running will have your changes overwritten on shutdown.
+2. Open File Explorer and paste this into the address bar, then press Enter:
+   ```
+   %appdata%\Prosim2GSX
+   ```
+3. Open `AppConfig.json` in Notepad (or any text editor).
+4. Find the line that looks like this:
+   ```json
+   "ProSimSdkHostname": "localhost",
+   ```
+5. Replace `localhost` with the **computer name or IP address of the PC running ProSim**. Keep the quote marks and the trailing comma. Examples:
+   ```json
+   "ProSimSdkHostname": "PROSIM-PC",
+   ```
+   or
+   ```json
+   "ProSimSdkHostname": "192.168.1.50",
+   ```
+6. Save the file and close Notepad.
+7. Start Prosim2GSX again.
+
+**Step 3 — Make sure the two PCs can talk to each other**
+
+- Both computers need to be on the **same local network** (same router / Wi-Fi).
+- Windows Firewall on the **ProSim PC** must allow incoming connections from ProSim. If ProSim prompted you to allow it through the firewall on first run, click *Allow*. If not, you may need to add a firewall rule manually.
+- Ensure **ProSim is running** on the other PC *before* you start Prosim2GSX — or at least before the flight is loaded.
+
+**How to check it's working**
+
+- Open the Prosim2GSX window → **App Monitor** tab.
+- The *App State* section should show a green *Connected* indicator to ProSim after a few seconds.
+- If it stays red, check the log file in `%appdata%\Prosim2GSX\log\` — it will say whether the SDK file was found, and whether the connection to the remote host succeeded.
+
 <br/><br/><br/>
 
 ## 3 - Usage
@@ -491,3 +547,15 @@ In most Cases this is caused by AI Aircraft or other Tools spawning SimObjects (
 **Offline Installer**
 
 There have been also Cases where the GSX Installation was somehow "corrupted". You can try to run the Check in the FSDT Installer multiple Times or use the [offline Installer](https://www.fsdreamteam.com/forum/index.php/topic,26826.0.html) (run a Check again after using that Installer). Else a complete fresh / clean Installation of GSX might be required.<br/>
+
+<br/>
+
+### 6.7 - ProSim runs on another PC (networked setup)
+
+This is a supported configuration — see section **2.3.5 - Running ProSim on a Separate Computer** for the step-by-step instructions. If you followed those steps and it still won't connect:
+
+- Double-check the UNC path to `ProSimSDK.dll` actually opens when you paste it into File Explorer on the MSFS PC. If Explorer can't reach it, Prosim2GSX can't either.
+- Double-check `ProSimSdkHostname` in `%appdata%\Prosim2GSX\AppConfig.json` matches the other PC's name or IP (no `http://`, no port number — just the hostname or IP).
+- Confirm the Windows Firewall on the ProSim PC is not blocking ProSim.
+
+<br/>

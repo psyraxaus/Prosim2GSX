@@ -18,7 +18,7 @@ namespace Prosim2GSX
         /// When false, the app runs in degraded mode — UI is accessible (especially Settings)
         /// but ProSim integration is disabled.
         /// </summary>
-        public bool IsSdkAvailable { get; private set; } = false;
+        public bool IsSdkAvailable { get; internal set; } = false;
 
         [STAThread]
         public static int Main(string[] args)
