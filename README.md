@@ -274,8 +274,34 @@ By default, Prosim2GSX assumes ProSim is on the same PC (`localhost`). For a rem
 **Step 3 — Make sure the two PCs can talk to each other**
 
 - Both computers need to be on the **same local network** (same router / Wi-Fi).
-- Windows Firewall on the **ProSim PC** must allow incoming connections from ProSim. If ProSim prompted you to allow it through the firewall on first run, click *Allow*. If not, you may need to add a firewall rule manually.
 - Ensure **ProSim is running** on the other PC *before* you start Prosim2GSX — or at least before the flight is loaded.
+- If Windows Defender Firewall is **enabled** on the ProSim PC, you need to allow two inbound TCP ports so Prosim2GSX on the MSFS PC can reach it:
+  - **TCP 8082** — ProSim SDK
+  - **TCP 5000** — ProSim EFB (GraphQL / REST / loadsheet)
+
+  If the firewall is disabled on the ProSim PC, skip this and move on.
+
+  You can open the ports either via the GUI or with a single PowerShell command — pick whichever you prefer.
+
+  **Method A — Windows Defender Firewall GUI (on the ProSim PC):**
+  1. Press `Win+R`, type `wf.msc`, press Enter.
+  2. In the left pane select *Inbound Rules*, then in the right pane click *New Rule…*.
+  3. Rule type: *Port* → *Next*.
+  4. Select *TCP*, then *Specific local ports* and enter: `8082, 5000` → *Next*.
+  5. *Allow the connection* → *Next*.
+  6. Leave all three profiles ticked (*Domain*, *Private*, *Public*) — or un-tick *Public* if this PC ever joins untrusted networks → *Next*.
+  7. Name the rule `Prosim2GSX (ProSim SDK + EFB)` → *Finish*.
+
+  **Method B — PowerShell (run as Administrator on the ProSim PC):**
+  ```powershell
+  New-NetFirewallRule -DisplayName "Prosim2GSX (ProSim SDK + EFB)" `
+    -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8082,5000
+  ```
+
+  To remove the rule later:
+  ```powershell
+  Remove-NetFirewallRule -DisplayName "Prosim2GSX (ProSim SDK + EFB)"
+  ```
 
 **How to check it's working**
 
@@ -556,6 +582,6 @@ This is a supported configuration — see section **2.3.5 - Running ProSim on a 
 
 - Double-check the UNC path to `ProSimSDK.dll` actually opens when you paste it into File Explorer on the MSFS PC. If Explorer can't reach it, Prosim2GSX can't either.
 - Double-check `ProSimSdkHostname` in `%appdata%\Prosim2GSX\AppConfig.json` matches the other PC's name or IP (no `http://`, no port number — just the hostname or IP).
-- Confirm the Windows Firewall on the ProSim PC is not blocking ProSim.
+- Confirm inbound **TCP 8082** (ProSim SDK) and **TCP 5000** (ProSim EFB) are allowed on the ProSim PC — see section **2.3.5**, Step 3 for the exact firewall rule.
 
 <br/>
