@@ -14,7 +14,9 @@ namespace Prosim2GSX.GSX.Services
         {
             var sequence = new GsxMenuSequence();
             sequence.Commands.Add(new(8, GsxConstants.MenuGate, true));
-            sequence.Commands.Add(new(4, GsxConstants.MenuAdditionalServices) { WaitReady = true });
+            var additional = new GsxMenuCommand(4, GsxConstants.MenuAdditionalServices) { WaitReady = true };
+            additional.AlternateTitles.Add(GsxConstants.MenuGate);
+            sequence.Commands.Add(additional);
             sequence.Commands.Add(GsxMenuCommand.CreateOperator());
             sequence.Commands.Add(GsxMenuCommand.CreateReset());
 
@@ -25,6 +27,11 @@ namespace Prosim2GSX.GSX.Services
         {
             SubWaterService = SimStore.AddVariable(GsxConstants.VarServiceWater);
             SubWaterService.OnReceived += OnStateChange;
+        }
+
+        protected override bool CheckCalled()
+        {
+            return base.CheckCalled() || SequenceResult;
         }
 
         protected override void DoReset()

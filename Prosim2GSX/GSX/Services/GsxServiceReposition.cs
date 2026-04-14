@@ -11,7 +11,9 @@ namespace Prosim2GSX.GSX.Services
         {
             var sequence = new GsxMenuSequence();
             sequence.Commands.Add(new(10, GsxConstants.MenuGate, true));
-            sequence.Commands.Add(new(1, GsxConstants.MenuParkingSelect) { WaitReady = true });
+            var parkingSelect = new GsxMenuCommand(1, GsxConstants.MenuParkingSelect) { WaitReady = true };
+            parkingSelect.AlternateTitles.Add(GsxConstants.MenuGate);
+            sequence.Commands.Add(parkingSelect);
             sequence.Commands.Add(GsxMenuCommand.CreateDummy());
             sequence.Commands.Add(GsxMenuCommand.CreateDummy());
             sequence.Commands.Add(GsxMenuCommand.CreateReset());

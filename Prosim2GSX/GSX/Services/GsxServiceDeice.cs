@@ -13,7 +13,9 @@ namespace Prosim2GSX.GSX.Services
         {
             var sequence = new GsxMenuSequence();
             sequence.Commands.Add(new(8, GsxConstants.MenuGate, true));
-            sequence.Commands.Add(new(2, GsxConstants.MenuAdditionalServices) { WaitReady = true });
+            var additional = new GsxMenuCommand(2, GsxConstants.MenuAdditionalServices) { WaitReady = true };
+            additional.AlternateTitles.Add(GsxConstants.MenuGate);
+            sequence.Commands.Add(additional);
             sequence.Commands.Add(GsxMenuCommand.CreateOperator());
             sequence.Commands.Add(GsxMenuCommand.CreateDummy());
 
