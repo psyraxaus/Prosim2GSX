@@ -431,9 +431,16 @@ namespace Prosim2GSX.GSX.Menu
             else if (command.WaitReady && (priorHidMenu || MenuState != GsxMenuState.READY))
             {
                 Logger.Verbose($"wait rdy (priorHid={priorHidMenu})");
-                await MsgMenuReady.ReceiveAsync(true, Config.MenuOpenTimeout, RequestToken);
+                var ready = await MsgMenuReady.ReceiveAsync(true, Config.MenuOpenTimeout, RequestToken);
                 if (priorHidMenu)
+                {
+                    if (ready == null)
+                    {
+                        Logger.Warning($"Menu Command aborted - expected submenu did not open after previous hide (MenuTitle: '{MenuTitle}')");
+                        return result;
+                    }
                     await Task.Delay(Config.MenuCheckInterval, RequestToken);
+                }
             }
 
             if (command.HasTitle && !command.MatchesAny(MatchTitle))
