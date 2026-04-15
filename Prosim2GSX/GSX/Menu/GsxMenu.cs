@@ -389,13 +389,16 @@ namespace Prosim2GSX.GSX.Menu
             WasOperatorSelected = false;
 
             int counter = 0;
+            bool justHidden = false;
             foreach (var command in sequence.Commands)
             {
                 if ((!Controller.IsGsxRunning && !sequence.IgnoreGsxState) || RequestToken.IsCancellationRequested)
                     break;
 
-                if (await RunCommand(command) == true)
+                if (await RunCommand(command, justHidden) == true)
                     counter++;
+
+                justHidden = command.OpenMenu && !command.NoHide;
             }
             result = counter == sequence.Commands.Count;
             if (result)
@@ -407,7 +410,7 @@ namespace Prosim2GSX.GSX.Menu
             return result;
         }
 
-        protected virtual async Task<bool> RunCommand(GsxMenuCommand command)
+        protected virtual async Task<bool> RunCommand(GsxMenuCommand command, bool priorHidMenu = false)
         {
             bool result = false;
             Logger.Verbose($"Run Cmd Type: {command.Type}");
@@ -425,13 +428,22 @@ namespace Prosim2GSX.GSX.Menu
                         return result;
                 }
             }
-            else if (command.WaitReady && MenuState != GsxMenuState.READY)
+            else if (command.WaitReady && (priorHidMenu || MenuState != GsxMenuState.READY))
             {
-                Logger.Verbose($"wait rdy");
-                await MsgMenuReady.ReceiveAsync(true, Config.MenuOpenTimeout, RequestToken);
+                Logger.Verbose($"wait rdy (priorHid={priorHidMenu})");
+                var ready = await MsgMenuReady.ReceiveAsync(true, Config.MenuOpenTimeout, RequestToken);
+                if (priorHidMenu)
+                {
+                    if (ready == null)
+                    {
+                        Logger.Warning($"Menu Command aborted - expected submenu did not open after previous hide (MenuTitle: '{MenuTitle}')");
+                        return result;
+                    }
+                    await Task.Delay(Config.MenuCheckInterval, RequestToken);
+                }
             }
 
-            if (command.HasTitle && !MatchTitle(command.Title))
+            if (command.HasTitle && !command.MatchesAny(MatchTitle))
             {
                 Logger.Warning($"Menu Command skipped - Title did not match: '{MenuTitle}' does not start with '{command.Title}'");
                 return result;

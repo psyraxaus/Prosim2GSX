@@ -75,7 +75,7 @@ namespace Prosim2GSX.GSX.Services
         public virtual bool IsCalling => CallSequence.IsExecuting;
         public virtual bool IsRunning => State == GsxServiceState.Requested || State == GsxServiceState.Active;
         public virtual bool IsActive => State == GsxServiceState.Active;
-        public virtual bool IsCompleted => State == GsxServiceState.Completed;
+        public virtual bool IsCompleted => State == GsxServiceState.Completed || WasCompleted;
         protected virtual double NumStateCompleted { get; } = 6;
         public virtual bool IsSkipped { get; set; } = false;
         public virtual bool WasActive { get; protected set; } = false;
@@ -133,14 +133,27 @@ namespace Prosim2GSX.GSX.Services
                 Logger.Information($"{Type} Service active");
                 RunStateActive();
             }
-            else if (EvaluateComplete(sub))
+            else if (sub.GetNumber() == NumStateCompleted && !WasCompleted && (WasActive || IsCalled))
             {
+                if (!WasActive)
+                {
+                    Logger.Debug($"{Type} Service reached completion state without observed Active — reconciling");
+                    WasActive = true;
+                }
                 Logger.Information($"{Type} Service completed");
                 WasCompleted = true;
                 RunStateCompleted();
                 NotifyCompleted();
             }
             NotifyStateChange();
+        }
+
+        public virtual void ReconcileState()
+        {
+            if (WasCompleted || !IsProsimAircraft || SubStateVar == null)
+                return;
+            if (SubStateVar.GetNumber() == NumStateCompleted)
+                OnStateChange(SubStateVar, null);
         }
 
         public virtual void ResetState(bool resetVariable = false)

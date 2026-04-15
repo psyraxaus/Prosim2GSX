@@ -273,6 +273,12 @@ namespace Prosim2GSX.GSX
                         Logger.Verbose($"Controller Tick - VarsReceived: {CouatlVarsReceived} | FirstReady: {Menu.FirstReadyReceived} | VarsValid: {CouatlVarsValid} | IsGsxRunning: {IsGsxRunning}");
                     CheckGround();
 
+                    if (IsGsxRunning)
+                    {
+                        foreach (var svc in GsxServices.Values)
+                            svc.ReconcileState();
+                    }
+
                     if (!CouatlVarsReceived && IsProcessRunning)
                         OnCouatlVariable(null, null);
 
