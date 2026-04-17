@@ -14,7 +14,7 @@
   
   <PropertyGroup>
     <SourceRevisionId>build$([System.DateTime]::UtcNow.ToString("yyyy.MM.dd.HHmm"))</SourceRevisionId>
-    <Version>0.6.3</Version>
+    <Version>0.6.4</Version>
     <Title>$(AssemblyName)</Title>
     <Authors>Fragtality, Psyraxaus</Authors>
     <Company>Fragtality, Protovision</Company>
@@ -75,11 +75,12 @@
   <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
 	<PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
 	<PackageReference Include="System.Private.Uri" Version="4.3.2" />
+	<PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.6" />
 	<PackageReference Include="System.ServiceModel.Duplex" Version="6.0.0" />
-	<PackageReference Include="System.ServiceModel.Http" Version="8.1.2" />
-	<PackageReference Include="System.ServiceModel.NetFramingBase" Version="8.1.2" />
-	<PackageReference Include="System.ServiceModel.NetTcp" Version="8.1.2" />
-	<PackageReference Include="System.ServiceModel.Primitives" Version="8.1.2" />
+	<PackageReference Include="System.ServiceModel.Http" Version="10.0.652802" />
+	<PackageReference Include="System.ServiceModel.NetFramingBase" Version="10.0.652802" />
+	<PackageReference Include="System.ServiceModel.NetTcp" Version="10.0.652802" />
+	<PackageReference Include="System.ServiceModel.Primitives" Version="10.0.652802" />
   </ItemGroup>
 
   <ItemGroup>

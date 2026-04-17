@@ -94,15 +94,44 @@ All other relevant EFB Options will automatically be disabled by Prosim2GSX (inc
 
 ### 2.2 - GSX Pro
 
-- Make sure you do not have a customized Aircraft Profile (GSX In-Game Menu -> Customize Aircraft -> should show as used Profile "Developer provided" or "Internal GSX Database"). A fair Chunk of Problems come from People having an outdated Custom Profile without knowing it. Just hit the "Reset" Button in the Customize Aircraft Dialog to delete the custom Profile (needs to be done on each Variant!)
+- Prosim2GSX includes custom **GSX Aircraft Profiles** for all three A322 variants (CFM, IAE, NEO) which are installed automatically to `%appdata%\Virtuali\Airplanes` during installation. If existing profiles are detected, the installer will ask whether you want to overwrite them.
 - It is recommended (but not required) to enter your **SimBrief Username** and have **Ignore Time** checked to have correct Information on the VDGS Displays.
-- For **Automated staircases** semi-automatic (half-checked) is recommended - but it should work with all Modes.
-- It is **not recommended** to use the **Always ask for pushback** Option (and if you use it: Prosim2GSX will default to auto-answer with 'Yes')
 - The De-/Boarding Speed of Passengers is dependant on the Passenger Density Setting (GSX In-Game Menu -> GSX Settings -> Timings). Higher Density => faster De/Boarding (But "Extreme" can be to extreme in some Cases).
 - Ensure the other two Settings under Timings are on their Default (15s, 1x).
 - As with GSX itself, Prosim2GSX runs best when you have a proper Airport Profile installed!
-- Some Users have reported they also need to disable *Estimate passengers number*.
 - Up to everyone's *Preference*, but disabling the **Aural Cues** (GSX In-Game Menu -> GSX Settings -> Audio) and setting **Message verbosity** to "*only Important*" (GSX In-Game Menu -> GSX Settings -> Simulation) can improve Immersion! 😉
+
+#### GSX Settings - Simulation
+
+The following settings should be configured on the **Simulation** tab (GSX In-Game Menu -> GSX Settings -> Simulation):
+
+<img src="img/GSX Settings - Simulation.png" width="600">
+
+**Enabled (checked):**
+- Multiple trips
+- Airport walkers
+- Good engine start confirmation
+- Speed up far vehicles
+- Pushback Wingwalkers
+- Progressive taxi AI rerouting
+- Loaders stay until departure
+
+**Disabled (unchecked):**
+- Estimate passengers number
+- Always refuel progressively
+- Detect custom aircraft system refueling
+- Assistance services Auto Mode
+- Auto Mode ignore doors
+- Automated staircases
+- Automated reposition
+- Ignore wingspan when parking
+- Always ask for pushback
+- FollowMe disable flee
+- Disable rear staircases if jetway
+- Connect Pushback on Boarding
+- Ignore crew in boarding/deboarding
+- Disable GSX in cruise
+- Ignore icing condition in Pushback
 
 <br/><br/>
 

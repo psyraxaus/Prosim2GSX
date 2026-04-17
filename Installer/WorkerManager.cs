@@ -24,6 +24,7 @@ namespace Installer
                 WorkerQueues[key].Enqueue(worker);
             }
             WorkerQueues[key].Enqueue(new WorkerInstallUpdate(Config));
+            WorkerQueues[key].Enqueue(new WorkerGSXProfiles(Config));
             WorkerQueues[key].Enqueue(new WorkerAutoStart<Config>(Config));
             if (Config?.GetOption<bool>(ConfigBase.OptionDesktopLink) == true)
                 WorkerQueues[key].Enqueue(new WorkerDesktopLinkCreate<Config>(Config));

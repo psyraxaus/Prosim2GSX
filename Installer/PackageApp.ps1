@@ -58,6 +58,12 @@ UpdateAssemblyInfo $pathProjectInstaller "AssemblyVersion" "$version"
 UpdateAssemblyInfo $pathProjectInstaller "AssemblyFileVersion" "$version"
 
 
+#GSX Profiles
+Write-Host "Copy GSX Profiles ..."
+$gsxProfilesSource = Join-Path $basePath "GSXProfiles"
+$gsxProfilesDest = Join-Path $pathPublish "GSXProfiles"
+Copy-Item -Path $gsxProfilesSource -Destination $gsxProfilesDest -Recurse -Force | Out-Null
+
 #AppPackage ZIP
 Write-Host "Zip AppPackage ..."
 Remove-Item $zipPath -ErrorAction SilentlyContinue | Out-Null
