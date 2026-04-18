@@ -425,23 +425,26 @@ Besides these general Best Practices, there is nothing Special to consider - Pla
 
 #### 3.1.8 - Arrival Phase
 
-- The Arrival Phase will only begin once the Aircraft is parked: **Brake is set, Engines are off and Beacon is off**
-- **Chocks** will be placed 10-20 Seconds after the Aircraft is parked. When the Chocks were placed, "MECH" Indicator on both ACPs (INT Button) will flash briefly to indicate that. You can release the Parking Brakes then.
-- **GPU** and **PCA** (if configured) will be connected once the Jetway or Stairs are connected (or latest when Deboarding starts).
-- With default Settings, Prosim2GSX will **automatically call Deboard** (which in turn calls the Jetway/Stairs). If not configured, you can still call Deboarding manually with the **INT/RAD** Switch.
+- The Arrival Phase will only begin once the Aircraft is truly parked: **Brake set, Engines off, Beacon off, and Ground Speed zero** — held stable for a short window (configurable via `ArrivalHoldTicks`, default ~1.5 s). This prevents false triggers during engine-out taxi stops or momentary halts mid-taxi.
+- **Chocks** will be placed 10-20 Seconds after the Aircraft is parked. The chock task re-verifies the parked state at placement time, so chocks are never set on an aircraft that has restarted engines or started moving again. When the Chocks are placed, Prosim2GSX presses the overhead **MECH Call** button — Prosim then drives the chime and INT-call lamp flash natively on both ACPs. You can release the Parking Brakes then.
+- **GPU** and **PCA** (if configured) will be connected once the Jetway or Stairs are connected (or when Deboarding starts), subject to standard safety checks — chocks in place, engines off, and no External Power already connected. No forced writes; the same ProSim safety interlocks apply.
+- With default Settings, Prosim2GSX will **automatically call Deboard** (which in turn calls the Jetway/Stairs). If not configured, you can still call Deboarding manually with the **INT/RAD** Switch. If Deboarding never runs (bypassed, cancelled in the GSX menu, or hung) you can also press **INT/RAD** to **force progression** out of the Arrival Phase — see Section 3.2.
+- A cabin chime plays on entry to the Arrival Phase (configurable via `ChimeOnParked`, default on).
 - **Dismiss** the Deboard Pop-Up in the **EFB** - Deboarding is handled by Prosim2GSX at its Synchronization!
 - **Wait** for Deboarding to **finish** if you plan for a **Turn-Around** - *do not import* a new Flightplan yet!
-- If Prosim2GSX is configured to start Departures Services while Deboarding:
+- If Prosim2GSX is configured to **start Departure Services while Deboarding** (`RunDepartureDuringDeboarding`):
   - Wait until Deboarding is fully running (Passengers are deboarding, Cargo is unloaded) before importing the new OFP
   - Departure Services will be called according to the configured Activation & Order - but do mind that it is up to GSX to decide which Services can run in parallel (i.e. the Fuel Truck will only arrive when Cargo has finised)
   - The new Pax Number will only be applied in the EFB after Deboarding has completed
-  - The App will skip the Turn-Around Phase completely and switches directly to the Departure Phase (after Deboarding has completed)
+- If a **new OFP** is detected at any time after Arrival Phase entry — whether *before*, *during*, or *after* Deboarding — Prosim2GSX will **skip the Turn-Around Phase** and go directly to Departure using a soft EFB reset that preserves your new flight plan. If no new OFP is detected, the standard Turn-Around Phase runs with a full EFB reset.
+- If Arrival lasts unusually long without Deboarding completing, Prosim2GSX will log a warning every minute (controlled by `ArrivalStallTimeoutSec`, default 10 minutes, `0` to disable). This is a prompt to either press INT/RAD to force progression or investigate the GSX state.
 
 <br/><br/>
 
 #### 3.1.9 - Turn-Around Phase
 
-- The Turn-Around Phase will begin once Deboarding has been completed. Prosim2GSX will **reset the EFB** to ensure a clean State. It will play the **Cabin Ding** once it is ready for import.
+- The Turn-Around Phase begins once Deboarding has completed *and* no new flight plan has been loaded since Arrival. Prosim2GSX will **reset the EFB** (full reset) to ensure a clean State. A **Cabin Chime** plays once it is ready for import (configurable via `ChimeOnDeboardComplete`, default on).
+- If you have already loaded a new OFP in the EFB before Deboarding completes, the Turn-Around Phase is **skipped entirely** and Prosim2GSX switches straight to Departure with a soft EFB reset that preserves your new flight plan.
 - As soon as you import a new Flightplan in the EFB, Prosim2GSX will start over with the Departure Phase.
 - Prosim2GSX will trigger a SimBrief Reload in GSX so that the VDGS Displays show the new and correct Flight Information.
 
@@ -456,6 +459,7 @@ You can also use the **INT/RAD** Switch on the ACP (both are monitored) to trigg
 - **Request Pushback** - Pushback Phase - Calls the GSX Pushback Service and **removes Ground-Equipment**. When Pushback was already called but not started yet, you can use the Switch again to **reopen the Direction Menu**.
 - **Stop / Confirm Pushback** - Pushback Phase - Selects **Menu Option 1** in the GSX Menu, so depending on the current State (and GSX Settings) it will either **Stop Pushback** or **Confirms** the good **Engine-Start**.
 - **Request Deboarding**, after Parking Brake set, Engines off and Beacon off. If Automatic Jetway/Stair Operation is enabled, wait for them to be called. Only works when automatic Deboarding is disabled.
+- **Force Arrival progression** - Arrival Phase - If Deboarding was never called, was bypassed, or hangs, press the Switch to force the Arrival Phase to end. Prosim2GSX will branch to Turnaround or straight to Departure depending on whether a new OFP has been loaded.
 - **Skip Turnaround** while you are in the Turnaround Phase. You should still prefer to trigger the Departure Phase by importing a new OFP in the EFB!
 
 <br/><br/><br/>
