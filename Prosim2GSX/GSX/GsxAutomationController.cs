@@ -597,7 +597,7 @@ namespace Prosim2GSX.GSX
             SeqStepTicksElapsed = 0;
             int lo = Math.Max(1, minSec);
             int hi = Math.Max(lo + 1, maxSec);
-            int delaySec = new Random().Next(lo, hi);
+            int delaySec = Random.Shared.Next(lo, hi);
             SeqStepTicksRequired = Math.Max(1, (delaySec * 1000) / Config.StateMachineInterval);
             Logger.Debug($"Departure sequence: entered {step} (delay {delaySec}s / {SeqStepTicksRequired} ticks)");
         }

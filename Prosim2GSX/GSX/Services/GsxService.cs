@@ -264,14 +264,12 @@ namespace Prosim2GSX.GSX.Services
             var state = ReadState();
 
             if (NumStateCompleted == 6)
-                return ReadState();
-            else
-            {
-                if ((state == GsxServiceState.Bypassed || state == (GsxServiceState)NumStateCompleted) && WasActive)
-                    return GsxServiceState.Completed;
-                else
-                    return state;
-            }
+                return state;
+
+            if ((state == GsxServiceState.Bypassed || state == (GsxServiceState)NumStateCompleted) && WasActive)
+                return GsxServiceState.Completed;
+
+            return state;
         }
 
         protected virtual void SetStateVariable(GsxServiceState state)

@@ -62,7 +62,8 @@ UpdateAssemblyInfo $pathProjectInstaller "AssemblyFileVersion" "$version"
 Write-Host "Copy GSX Profiles ..."
 $gsxProfilesSource = Join-Path $basePath "GSXProfiles"
 $gsxProfilesDest = Join-Path $pathPublish "GSXProfiles"
-Copy-Item -Path $gsxProfilesSource -Destination $gsxProfilesDest -Recurse -Force | Out-Null
+if (Test-Path $gsxProfilesDest) { Remove-Item -Recurse -Force $gsxProfilesDest | Out-Null }
+Copy-Item -Path $gsxProfilesSource -Destination $gsxProfilesDest -Recurse | Out-Null
 
 #AppPackage ZIP
 Write-Host "Zip AppPackage ..."

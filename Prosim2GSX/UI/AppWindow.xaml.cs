@@ -126,6 +126,8 @@ namespace Prosim2GSX.UI
             _logTrimTimer.Start();
         }
 
+        private bool _logTrimErrorReported = false;
+
         private void OnLogTrimTick(object sender, EventArgs e)
         {
             try
@@ -134,7 +136,11 @@ namespace Prosim2GSX.UI
                 while (Logger.Messages.Count > cap)
                     Logger.Messages.TryDequeue(out _);
             }
-            catch { }
+            catch (Exception ex) when (!_logTrimErrorReported)
+            {
+                _logTrimErrorReported = true;
+                Logger.LogException(ex);
+            }
         }
 
         private void OnWindowClosed(object sender, EventArgs e)
