@@ -122,6 +122,7 @@ namespace Prosim2GSX.AppConfig
         public virtual int SpeedTresholdTaxiIn { get; set; } = 30;
         public virtual int ArrivalHoldTicks { get; set; } = 3;              // consecutive ticks of stable parked state before TaxiIn → Arrival
         public virtual int ArrivalStallTimeoutSec { get; set; } = 600;      // 0 disables the stall-warning watchdog
+        public virtual int SequenceApuStallTimeoutSec { get; set; } = 120;  // warn if departure sequence waits for APU beyond this (0 disables)
 
         // Theme
         public virtual string CurrentTheme { get; set; } = "Light";

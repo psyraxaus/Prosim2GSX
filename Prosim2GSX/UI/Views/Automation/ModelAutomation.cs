@@ -168,6 +168,15 @@ namespace Prosim2GSX.UI.Views.Automation
         public virtual int CallPushbackWhenTugAttached { get => Source.CallPushbackWhenTugAttached; set => SetModelValue<int>(value); }
         public virtual bool CallPushbackOnBeacon { get => Source.CallPushbackOnBeacon; set => SetModelValue<bool>(value); }
 
+        // Beacon-orchestrated departure sequence
+        public virtual bool SequenceOnBeacon { get => Source.SequenceOnBeacon; set => SetModelValue<bool>(value); }
+        public virtual int SeqDoorsCloseDelayMin { get => Source.SeqDoorsCloseDelayMin; set => SetModelValue<int>(value); }
+        public virtual int SeqDoorsCloseDelayMax { get => Source.SeqDoorsCloseDelayMax; set => SetModelValue<int>(value); }
+        public virtual int SeqJetwayRetractDelayMin { get => Source.SeqJetwayRetractDelayMin; set => SetModelValue<int>(value); }
+        public virtual int SeqJetwayRetractDelayMax { get => Source.SeqJetwayRetractDelayMax; set => SetModelValue<int>(value); }
+        public virtual int SeqGpuDisconnectDelayMin { get => Source.SeqGpuDisconnectDelayMin; set => SetModelValue<int>(value); }
+        public virtual int SeqGpuDisconnectDelayMax { get => Source.SeqGpuDisconnectDelayMax; set => SetModelValue<int>(value); }
+
         //Operator Selection
         public virtual bool OperatorAutoSelect { get => Source.OperatorAutoSelect; set => SetModelValue<bool>(value); }
         public virtual ModelOperatorPreferences OperatorPreferences { get; }

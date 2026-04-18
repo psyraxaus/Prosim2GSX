@@ -173,7 +173,8 @@ It also allows you to completely disable the Door Automation. But even then the 
 **Ground Equipment**
 
 Configure the Chock-Delay, PCA Handling or the Removal when the Beacon is turned on.<br/>
-Note: Basic Ground Equipment Handling (GPU, Chocks) is always active and can not be disabled. Prosim2GSX will automatically place or remove the Equipment on Startup, during Pushback and on Arrival.
+Note: Basic Ground Equipment Handling (GPU, Chocks) is always active and can not be disabled. Prosim2GSX will automatically place or remove the Equipment on Startup, during Pushback and on Arrival.<br/>
+When the **Beacon-orchestrated Pushback Sequence** is enabled (default — see Section 3.1.4), GPU / PCA / Chocks removal happens as part of the sequence's GPU step with its own random delay, rather than on the legacy beacon gate. Either way, the underlying safety interlocks (GPU needs External Power off; Chocks need Brake set) still apply.
 
 <br/>
 
@@ -186,6 +187,7 @@ Configure how the GSX Services are handled:
 - How Refueling is handled: with a fixed Rate, a fixed Time Target or via Refuel Panel (or if the GSX Service is called at all to support Tankering)
 - With the Refuel Panel Method, the Rate is determined by the EFB Settingn
 - If and when Pushback should be called automatically
+- The **Beacon-orchestrated Pushback Sequence** (`SequenceOnBeacon`, default on) and the random per-step delay bounds for Doors close, Jetway retract, and GPU disconnect (see Section 3.1.4 for the full flow)
 
 <br/>
 
@@ -386,15 +388,38 @@ Besides these general Best Practices, there is nothing Special to consider - Pla
 
 #### 3.1.4 - Pushback Phase
 
-- With default Settings, Jetway/Stairs are removed and Doors are closed once the **Final Loadsheet** is received.
-- You can call GSX Pushback once you're ready with the **INT/RAD** Switch. There are also Options to call it automatically when Beacon is on or the Tug was already attached during Boarding.
+Prosim2GSX supports **two departure flows** in the Pushback Phase, selected by `SequenceOnBeacon` in the Aircraft Profile. The default (sequence) flow is a realistic, beacon-orchestrated ground-handling chain; the legacy flow is the original independent-trigger behaviour.
+
+##### Default: Beacon-orchestrated Sequence (`SequenceOnBeacon = true`)
+
+The sequence treats **Beacon ON** as the single "about-to-push" signal and runs the ground-handling steps in a realistic order, with randomised delays between each step to mimic real ground-crew timing.
+
+1. **Turn Beacon ON** — Prosim2GSX enters the sequence and waits for APU to be running *and* the Final Loadsheet to have been transmitted. If APU is not running after 2 minutes a warning is logged every 60 s (configurable via `SequenceApuStallTimeoutSec`, `0` disables).
+2. **Doors Close** — after a random 15-30 s delay.
+3. **Jetway / Stairs retract** — after another random 15-30 s delay.
+4. **Ground Equipment cleared** — GPU, PCA and Chocks released after another random 10-20 s delay. The existing safety interlocks still apply (GPU only if External Power disconnected, Chocks only if Brake set).
+5. **Ready for Push** — sequence idles here. If `CallPushbackOnBeacon = true`, pushback is called automatically; if `false`, press **INT/RAD** to call it.
+
+During the sequence:
+- **INT/RAD** on any step skips that step's remaining random delay and performs its action immediately (e.g. "I'm ready, close the doors now"). At Ready-for-Push it calls pushback.
+- **Turning Beacon OFF** pauses the sequence in place; turning it back ON resumes from the same step with no state loss. An APU shutdown behaves the same way.
+- The `CloseDoorsOnFinal` and `RemoveJetwayStairsOnFinal` profile options are **ignored** when the sequence is enabled — the sequence owns those transitions.
+- The per-step min/max delays are configurable in the Aircraft Profile (`SeqDoorsCloseDelayMin/Max`, `SeqJetwayRetractDelayMin/Max`, `SeqGpuDisconnectDelayMin/Max`).
+
+##### Legacy: Independent Triggers (`SequenceOnBeacon = false`)
+
+- Jetway/Stairs are removed and Doors are closed once the **Final Loadsheet** is received (`CloseDoorsOnFinal`, `RemoveJetwayStairsOnFinal`).
+- You can call GSX Pushback with the **INT/RAD** Switch, or automatically via `CallPushbackOnBeacon` once Beacon is on (requires Brake set, Engines off, External Power disconnected).
+- With `ClearGroundEquipOnBeacon`, Ground-Equipment is removed once you turn on the Beacon (again: External Power disconnected and Brake set).
+
+##### Common to both flows
+
 - You need to **enable the GSX Menu again** for the Pushback Phase to interact with the Menu! Prosim2GSX does not answer the Deice Question or select Pushback Direction.
 - With default Settings, Prosim2GSX will **automatically reopen** the Pushback Direction Menu if the GSX Menu should time out (hides itself again).
-- With default Settings, the **Ground-Equipment** is removed once you turn on the Beacon (while External Power disconnected and Brake set).
-- In any Case, **Ground-Equipment** will be removed **automatically** in this Phase when GSX Pushback/Deice Service is running or when the Engines are running (=start combusting)
-- Ground-Equipment is only ever **removed when safe** - i.e. the GPU is only removed when External Power is disconnected or the Chocks when the Brake is set.
-- Consider to only call GSX Pushback (either Way) on **Taxi-Out Gates** with are correctly configured in the Airport Profile for that!
-- When the Push is running, you can disable the Menu again - you can use the **INT/RAD** Switch to Stop the Push or Confirm the Engine Start (that means Menu Option 1 is always selected when you move the Switch).
+- **Ground-Equipment** will also be removed automatically when GSX Pushback/Deice Service is running or when the Engines are running (=start combusting).
+- Ground-Equipment is only ever **removed when safe** — i.e. the GPU is only removed when External Power is disconnected or the Chocks when the Brake is set.
+- Consider to only call GSX Pushback (either Way) on **Taxi-Out Gates** which are correctly configured in the Airport Profile for that!
+- When the Push is running, you can disable the Menu again — you can use the **INT/RAD** Switch to Stop the Push or Confirm the Engine Start (that means Menu Option 1 is always selected when you move the Switch).
 - **DO NOT USE ABORT PUSHBACK** (And if only as the very very last Resort, early stopping the Pushback is meant to be commenced with "Stop". If you abort, please set your Parking Brake.)
 
 <br/><br/>
@@ -456,8 +481,10 @@ You can also use the **INT/RAD** Switch on the ACP (both are monitored) to trigg
 
 - **Request Jetway/Stairs** - Preparation Phase - If Jetway/Stairs are not called automatically on **Session Start**, you can call them manually with the Switch.
 - **Request next Departure Service** - Departure Phase - Call the **next Departure Service**, including Services set to '**Manual**'. In a typical Scenario, you can use the Switch to **start Boarding while Refueling** is still active.
-- **Request Pushback** - Pushback Phase - Calls the GSX Pushback Service and **removes Ground-Equipment**. When Pushback was already called but not started yet, you can use the Switch again to **reopen the Direction Menu**.
-- **Stop / Confirm Pushback** - Pushback Phase - Selects **Menu Option 1** in the GSX Menu, so depending on the current State (and GSX Settings) it will either **Stop Pushback** or **Confirms** the good **Engine-Start**.
+- **Advance / Request Pushback** - Pushback Phase
+  - *Sequence mode* (`SequenceOnBeacon = true`, default): INT/RAD **skips the current step's remaining delay** in the beacon-orchestrated sequence — doors close, jetway retracts, GPU disconnects on demand. At the final **Ready-for-Push** state, INT/RAD calls the GSX Pushback Service.
+  - *Legacy mode* (`SequenceOnBeacon = false`): calls the GSX Pushback Service immediately and removes Ground-Equipment. When Pushback was already called but not started yet, you can use the Switch again to **reopen the Direction Menu**.
+- **Stop / Confirm Pushback** - Pushback Phase - Selects **Menu Option 1** in the GSX Menu, so depending on the current State (and GSX Settings) it will either **Stop Pushback** or **Confirms** the good **Engine-Start**. Applies in both sequence and legacy modes.
 - **Request Deboarding**, after Parking Brake set, Engines off and Beacon off. If Automatic Jetway/Stair Operation is enabled, wait for them to be called. Only works when automatic Deboarding is disabled.
 - **Force Arrival progression** - Arrival Phase - If Deboarding was never called, was bypassed, or hangs, press the Switch to force the Arrival Phase to end. Prosim2GSX will branch to Turnaround or straight to Departure depending on whether a new OFP has been loaded.
 - **Skip Turnaround** while you are in the Turnaround Phase. You should still prefer to trigger the Departure Phase by importing a new OFP in the EFB!
