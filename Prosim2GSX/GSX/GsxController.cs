@@ -56,7 +56,7 @@ namespace Prosim2GSX.GSX
         public virtual bool IsAutomationStarted => AutomationController?.IsStarted == true;
         public virtual AutomationState AutomationState => AutomationController?.State ?? AutomationState.SessionStart;
         public virtual bool IsGsxRunning => IsProcessRunning && CouatlVarsValid;
-        public virtual bool IsOnGround => SimStore["SIM ON GROUND"]?.GetNumber() == 1;
+        public virtual bool IsOnGround => AircraftInterface?.IsOnGround ?? true;
         public virtual bool FirstGroundCheck { get; protected set; } = true;
         public virtual bool IsAirStart { get; protected set; } = false;
         public virtual bool CanAutomationRun => Menu.FirstReadyReceived || IsAirStart || AircraftInterface?.EnginesRunning == true;
@@ -123,7 +123,6 @@ namespace Prosim2GSX.GSX
             SimStore.AddVariable(GsxConstants.VarCouatlStartProg6).OnReceived += OnCouatlVariable;
             SimStore.AddVariable(GsxConstants.VarCouatlStartProg7).OnReceived += OnCouatlVariable;
 
-            SimStore.AddVariable("SIM ON GROUND", SimUnitType.Bool);
             if (IsMsfs2024)
             {
                 SimStore.AddVariable("IS AIRCRAFT", SimUnitType.Number);
@@ -531,7 +530,6 @@ namespace Prosim2GSX.GSX
             SimStore.Remove(GsxConstants.VarCouatlStartProg6);
             SimStore.Remove(GsxConstants.VarCouatlStartProg7);
 
-            SimStore.Remove("SIM ON GROUND");
             if (IsMsfs2024)
             {
                 SimStore.Remove("IS AIRCRAFT");

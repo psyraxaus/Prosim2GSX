@@ -104,7 +104,6 @@
                     <StackPanel Grid.Column="1" Grid.Row="7" Style="{StaticResource SettingItemPanel}" Margin="0,6,6,6" ToolTip="If and when the Cabin Ding Sound should be played to announce certain Situations.">
                         <CheckBox IsChecked="{Binding DingOnStartup}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Play the Sound when Reposition was executed and Jetway/Stairs are connected or connecting.">Ding on Startup</CheckBox>
                         <CheckBox IsChecked="{Binding DingOnFinal}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Play the Sound when the Final Loadsheet was transmitted.">Ding on Final LS</CheckBox>
-                        <CheckBox IsChecked="{Binding DingOnTurnaround}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Play the Sound when the Automation Phase switched to Turnaround.">Ding on Turnaround</CheckBox>
                     </StackPanel>
 
                     <TextBlock Grid.Column="0" Grid.Row="8" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Enable the animated split-flap character cycling effect in the header bar displays.">Solari Animation:</TextBlock>

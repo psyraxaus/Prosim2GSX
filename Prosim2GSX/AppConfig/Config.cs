@@ -95,7 +95,6 @@ namespace Prosim2GSX.AppConfig
         public virtual int EfbCheckInterval { get; set; } = 1500;
         public virtual bool DingOnStartup { get; set; } = true;
         public virtual bool DingOnFinal { get; set; } = true;
-        public virtual bool DingOnTurnaround { get; set; } = true;
         [JsonIgnore]
         public virtual DisplayUnit DisplayUnitCurrent { get; set; }
         [JsonIgnore]
@@ -121,6 +120,8 @@ namespace Prosim2GSX.AppConfig
         public virtual int DelayServiceStateChange { get; set; } = 500;
         public virtual int SpeedTresholdTaxiOut { get; set; } = 2;
         public virtual int SpeedTresholdTaxiIn { get; set; } = 30;
+        public virtual int ArrivalHoldTicks { get; set; } = 3;              // consecutive ticks of stable parked state before TaxiIn → Arrival
+        public virtual int ArrivalStallTimeoutSec { get; set; } = 600;      // 0 disables the stall-warning watchdog
 
         // Theme
         public virtual string CurrentTheme { get; set; } = "Light";

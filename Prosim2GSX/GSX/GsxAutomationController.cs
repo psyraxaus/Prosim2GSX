@@ -81,7 +81,15 @@ namespace Prosim2GSX.GSX
         public virtual bool CabinDinged { get; protected set; } = false;
         public virtual string FlightPlanId => Aircraft.ProsimInterface.FlightPlanId;
         public virtual string OfpArrivalId { get; protected set; } = "0";
-        public virtual bool RunDepartureOnArrival { get; protected set; } = false;
+
+        // Arrival hardening state
+        protected virtual int ArrivalStableTicks { get; set; } = 0;
+        protected virtual DateTime ArrivalEnteredAt { get; set; } = DateTime.MinValue;
+        protected virtual DateTime ArrivalStallLastWarning { get; set; } = DateTime.MinValue;
+        protected virtual CancellationTokenSource ChockCts { get; set; }
+
+        public virtual bool IsNewOfpLoaded =>
+            !string.IsNullOrEmpty(FlightPlanId) && FlightPlanId != "0" && OfpArrivalId != FlightPlanId;
 
         public event Action<AutomationState> OnStateChange;
 
@@ -125,7 +133,10 @@ namespace Prosim2GSX.GSX
             ServiceCountTotal = 0;
 
             DepartureServicesCompleted = false;
-            RunDepartureOnArrival = false;
+            CancelChockTask();
+            ArrivalStableTicks = 0;
+            ArrivalEnteredAt = DateTime.MinValue;
+            ArrivalStallLastWarning = DateTime.MinValue;
             DepartureServicesCalled?.Clear();
             if (Profile?.DepartureServices != null)
             {
@@ -153,7 +164,10 @@ namespace Prosim2GSX.GSX
             OfpArrivalId = "0";
 
             DepartureServicesCompleted = false;
-            RunDepartureOnArrival = false;
+            CancelChockTask();
+            ArrivalStableTicks = 0;
+            ArrivalEnteredAt = DateTime.MinValue;
+            ArrivalStallLastWarning = DateTime.MinValue;
             DepartureServicesCalled.Clear();
             DepartureServicesEnumerator = Profile.DepartureServices.GetEnumerator();
             DepartureServicesEnumerator.MoveNext();
@@ -315,30 +329,54 @@ namespace Prosim2GSX.GSX
                     StateChange(AutomationState.TaxiIn);
                 }
             }
-            //TaxiIn => Arrival
+            //TaxiIn => Arrival (with hold window — requires stable parked state for ArrivalHoldTicks)
             else if (State == AutomationState.TaxiIn)
             {
-                if (!Aircraft.EnginesRunning && Aircraft.IsBrakeSet && !Aircraft.LightBeacon)
+                bool stableParked = !Aircraft.EnginesRunning
+                                 && Aircraft.IsBrakeSet
+                                 && !Aircraft.LightBeacon
+                                 && Aircraft.GroundSpeed < 1;
+
+                if (stableParked)
                 {
-                    await Controller.Menu.OpenHide();
-                    OfpArrivalId = FlightPlanId;
-                    StateChange(AutomationState.Arrival);
-                    await ServiceDeboard.SetPaxTarget(Aircraft.GetPaxDeboarding());
+                    ArrivalStableTicks++;
+                    if (ArrivalStableTicks >= Config.ArrivalHoldTicks)
+                    {
+                        await Controller.Menu.OpenHide();
+                        OfpArrivalId = FlightPlanId;
+                        ArrivalEnteredAt = DateTime.UtcNow;
+                        ArrivalStallLastWarning = DateTime.MinValue;
+                        StateChange(AutomationState.Arrival);
+                        await ServiceDeboard.SetPaxTarget(Aircraft.GetPaxDeboarding());
+                        if (Profile.ChimeOnParked)
+                            _ = Aircraft.DingCabin();
+                    }
+                }
+                else
+                {
+                    ArrivalStableTicks = 0;
                 }
             }
-            //Arrival => Turnaround (or Departure)
+            //Arrival => Turnaround (or Departure) — branch chosen at transition time based on OFP state
             else if (State == AutomationState.Arrival)
             {
                 if (ServiceDeboard.IsCompleted)
                 {
-                    if (!RunDepartureOnArrival)
-                        await SetTurnaround();
-                    else
-                    {
-                        await Aircraft.UnloadOfp(false);
-                        Controller.Menu.SuppressMenuRefresh = false;
-                        await SkipTurn(AutomationState.Departure);
-                    }
+                    await TransitionOutOfArrival();
+                }
+                else if (SmartButtonRequest && !ServiceDeboard.IsRunning)
+                {
+                    Logger.Information($"Automation: Force Arrival→next by INT/RAD (Deboard not running)");
+                    await TransitionOutOfArrival();
+                }
+                else if (Config.ArrivalStallTimeoutSec > 0
+                      && ArrivalEnteredAt != DateTime.MinValue
+                      && (DateTime.UtcNow - ArrivalEnteredAt).TotalSeconds > Config.ArrivalStallTimeoutSec
+                      && (DateTime.UtcNow - ArrivalStallLastWarning).TotalSeconds > 60)
+                {
+                    int minutes = (int)(DateTime.UtcNow - ArrivalEnteredAt).TotalMinutes;
+                    Logger.Warning($"Arrival state has been active for {minutes} min with Deboarding incomplete. Press INT/RAD to force progression.");
+                    ArrivalStallLastWarning = DateTime.UtcNow;
                 }
             }
             //Turnaround => Departure
@@ -370,9 +408,38 @@ namespace Prosim2GSX.GSX
         {
             await Aircraft.UnloadOfp();
             StateChange(AutomationState.TurnAround);
-            if (Config.DingOnTurnaround)
+            if (Profile.ChimeOnDeboardComplete)
                 await Aircraft.DingCabin();
             Controller.Menu.SuppressMenuRefresh = false;
+        }
+
+        protected virtual async Task TransitionOutOfArrival()
+        {
+            CancelChockTask();
+            if (IsNewOfpLoaded)
+            {
+                Logger.Information($"Automation: New OFP detected ({OfpArrivalId} → {FlightPlanId}) — soft unload and skip to Departure");
+                await Aircraft.UnloadOfp(false);
+                Controller.Menu.SuppressMenuRefresh = false;
+                if (Profile.ChimeOnDeboardComplete)
+                    await Aircraft.DingCabin();
+                await SkipTurn(AutomationState.Departure);
+            }
+            else
+            {
+                await SetTurnaround();
+            }
+        }
+
+        protected virtual void CancelChockTask()
+        {
+            try
+            {
+                ChockCts?.Cancel();
+                ChockCts?.Dispose();
+            }
+            catch { /* best effort */ }
+            ChockCts = null;
         }
 
         protected virtual async Task SkipTurn(AutomationState state)
@@ -405,7 +472,7 @@ namespace Prosim2GSX.GSX
                         Logger.Information($"GSX Restart on last Departure Service detected - skip to Pushback");
                         StateChange(AutomationState.PushBack);
                     }
-                    else if (DepartureServicesCalled.Any(s => s.Type == GsxServiceType.Refuel && s.WasActive && !s.WasCompleted) && !RunDepartureOnArrival)
+                    else if (DepartureServicesCalled.Any(s => s.Type == GsxServiceType.Refuel && s.WasActive && !s.WasCompleted))
                     {
                         Logger.Information($"GSX Restart during Departure Service detected - completing Refuel");
                         Controller.GsxServices[GsxServiceType.Refuel].ForceComplete();
@@ -833,19 +900,33 @@ namespace Prosim2GSX.GSX
 
         protected virtual async Task RunArrival()
         {
+            // Chock placement: random delay, re-verify state at completion so we don't chock a
+            // re-started or moving aircraft (goaround, reposition). Task is cancelled on leaving Arrival.
             if (ChockDelay == 0)
             {
                 ChockDelay = new Random().Next(Profile.ChockDelayMin, Profile.ChockDelayMax);
                 Logger.Information($"Automation: Placing Chocks on Arrival (ETA {ChockDelay}s)");
-                _ = Task.Delay(ChockDelay * 1000).ContinueWith((_) => Aircraft.SetChocks(true));
-                _ = Task.Delay(60000, RequestToken).ContinueWith(async (_) =>
+                ChockCts = CancellationTokenSource.CreateLinkedTokenSource(RequestToken);
+                var ct = ChockCts.Token;
+                _ = Task.Run(async () =>
                 {
-                    if (!Aircraft.EquipmentGpu)
+                    try
                     {
-                        Logger.Warning($"Failback: Setting GPU after Deboard was called");
-                        await Aircraft.SetGroundPower(true, true);
+                        await Task.Delay(ChockDelay * 1000, ct);
+                        if (!Aircraft.EnginesRunning
+                            && Aircraft.IsBrakeSet
+                            && !Aircraft.LightBeacon
+                            && Aircraft.GroundSpeed < 1)
+                        {
+                            await Aircraft.SetChocks(true);
+                        }
+                        else
+                        {
+                            Logger.Warning($"Chock placement aborted — parked state no longer stable");
+                        }
                     }
-                });
+                    catch (TaskCanceledException) { /* left Arrival — drop */ }
+                }, ct);
             }
 
             if (Aircraft.EquipmentChocks && !ChockFlashed)
@@ -854,38 +935,33 @@ namespace Prosim2GSX.GSX
                 ChockFlashed = true;
             }
 
-            if (!Aircraft.EquipmentGpu && (IsGateConnected || ServiceDeboard.IsActive))
+            // GPU placement: only when conditions support it. No forced writes — respect ProsimInterface safety.
+            if (!Aircraft.EquipmentGpu
+                && (IsGateConnected || ServiceDeboard.IsActive)
+                && Aircraft.EquipmentChocks
+                && !Aircraft.EnginesRunning
+                && !Aircraft.IsExternalPowerConnected)
             {
                 Logger.Information($"Automation: Placing GPU on Arrival");
                 await Aircraft.SetGroundPower(true);
                 await Task.Delay(1000, RequestToken);
             }
 
-            if (!Aircraft.EquipmentPca && Profile.ConnectPca > 0 && (IsGateConnected || ServiceDeboard.IsActive))
+            if (!Aircraft.EquipmentPca
+                && Profile.ConnectPca > 0
+                && (IsGateConnected || ServiceDeboard.IsActive)
+                && (Profile.ConnectPca == 1 || ServiceJetway.State != GsxServiceState.NotAvailable))
             {
-                if (Profile.ConnectPca == 1 || (Profile.ConnectPca == 2 && ServiceJetway.State != GsxServiceState.NotAvailable))
-                {
-                    Logger.Information($"Automation: Placing PCA on Arrival");
-                    await Aircraft.SetPca(true);
-                    await Task.Delay(1000, RequestToken);
-                }
-                else if (Aircraft.EquipmentPca && Profile.PcaOverride)
-                {
-                    Logger.Information($"Automation: Disconnecting PCA (not configured)");
-                    await Aircraft.SetPca(false);
-                    await Task.Delay(1000, RequestToken);
-                }
+                Logger.Information($"Automation: Placing PCA on Arrival");
+                await Aircraft.SetPca(true);
+                await Task.Delay(1000, RequestToken);
             }
 
-            GroundEquipmentPlaced = Aircraft.EquipmentGpu && Aircraft.EquipmentChocks;
+            GroundEquipmentPlaced = Aircraft.EquipmentGpu && Aircraft.EquipmentChocks && Aircraft.EquipmentPca;
 
-            if (!ServiceDeboard.IsCalled &&
-                (Profile.CallDeboardOnArrival || (!Profile.CallDeboardOnArrival && SmartButtonRequest)))
+            if (!ServiceDeboard.IsCalled && (Profile.CallDeboardOnArrival || SmartButtonRequest))
             {
-                if (SmartButtonRequest)
-                    Logger.Information("Call Deboard by INT/RAD");
-                else
-                    Logger.Information("Automation: Call Deboard on Arrival");
+                Logger.Information(SmartButtonRequest ? "Call Deboard by INT/RAD" : "Automation: Call Deboard on Arrival");
                 await ServiceDeboard.Call();
             }
             else if (!ServiceDeboard.IsCalled && !IsGateConnected && Profile.CallJetwayStairsOnArrival)
@@ -903,13 +979,11 @@ namespace Prosim2GSX.GSX
                 }
             }
 
-            if (Profile.RunDepartureOnArrival && !RunDepartureOnArrival && ServiceDeboard.IsActive && OfpArrivalId != FlightPlanId)
-            {
-                Logger.Information("Automation: Run Departure Services during Arrival");
-                RunDepartureOnArrival = true;
-            }
-
-            if (RunDepartureOnArrival && DepartureServicesCurrent.ServiceType != GsxServiceType.Boarding)
+            // Concurrent departure services during deboarding, only if a new OFP has actually landed.
+            if (Profile.RunDepartureDuringDeboarding
+                && ServiceDeboard.IsActive
+                && IsNewOfpLoaded
+                && DepartureServicesCurrent.ServiceType != GsxServiceType.Boarding)
             {
                 await RunDeparture();
             }

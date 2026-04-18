@@ -28,7 +28,6 @@ namespace Prosim2GSX.Aircraft
         protected virtual ISimResourceSubscription SubAirline { get; set; }
         protected virtual ISimResourceSubscription SubTitle { get; set; }
         protected virtual ISimResourceSubscription SubLivery { get; set; }
-        protected virtual ISimResourceSubscription SubSpeed { get; set; }
         protected virtual ISimResourceSubscription SubZuluTime { get; set; }
 
         public virtual string Airline => SubAirline?.GetString();
@@ -45,7 +44,8 @@ namespace Prosim2GSX.Aircraft
         public virtual double FuelCurrent => ProsimInterface.FuelCurrent;
         public virtual double FuelTarget => ProsimInterface.FuelTarget;
         public virtual bool SmartButtonRequest => ProsimInterface.SmartButtonRequest;
-        public virtual int GroundSpeed => (int)SubSpeed.GetNumber();
+        public virtual int GroundSpeed => (int)ProsimInterface.GetGroundSpeed();
+        public virtual bool IsOnGround => ProsimInterface.GetOnGround();
         public virtual bool EquipmentGpu => ProsimInterface.GetGpuState();
         public virtual bool EquipmentPca => ProsimInterface.GetPcaState();
         public virtual bool EquipmentChocks => ProsimInterface.GetChocksState();
@@ -80,7 +80,6 @@ namespace Prosim2GSX.Aircraft
                 SubTitle = SimStore.AddVariable("TITLE", SimUnitType.String);
                 if (Sys.GetProcessRunning(Config.BinaryMsfs2024))
                     SubLivery = SimStore.AddVariable("LIVERY NAME", SimUnitType.String);
-                SubSpeed = SimStore.AddVariable("GPS GROUND SPEED", SimUnitType.Knots);
                 SubZuluTime = SimStore.AddVariable("ZULU TIME", SimUnitType.Seconds);
 
                 SimStore.AddVariable(ProsimConstants.VarOhSigns, SimUnitType.Number);
@@ -137,7 +136,6 @@ namespace Prosim2GSX.Aircraft
             SimStore.Remove("TITLE");
             if (Sys.GetProcessRunning(Config.BinaryMsfs2024))
                 SimStore.Remove("LIVERY NAME");
-            SimStore.Remove("GPS GROUND SPEED");
             SimStore.Remove("ZULU TIME");
         }
 

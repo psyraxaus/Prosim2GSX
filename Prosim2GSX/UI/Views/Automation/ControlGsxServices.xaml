@@ -31,9 +31,19 @@
                     <TextBlock>Call Deboard on <Underline>Arrival</Underline> (after Engines &amp; Beacon off)</TextBlock>
                 </CheckBox>
 
-                <CheckBox IsChecked="{Binding RunDepartureOnArrival}" Style="{StaticResource CheckBoxSettingItem}"
+                <CheckBox IsChecked="{Binding RunDepartureDuringDeboarding}" Style="{StaticResource CheckBoxSettingItem}"
                           ToolTip="When the Deboarding Service becomes active, importing a new Flightplan (different OFP ID) will start the Departure Services.&#x0a;The Departure Services will be called as configured - as long as the next Service is not Boarding!&#x0a;The Deboard Service will not be considered as previous Service.">
                     <TextBlock>Start <Underline>Departure</Underline> Services while <Underline>Deboarding</Underline> is active</TextBlock>
+                </CheckBox>
+
+                <CheckBox IsChecked="{Binding ChimeOnParked}" Style="{StaticResource CheckBoxSettingItem}"
+                          ToolTip="Play cabin chime when the aircraft is parked (TaxiIn → Arrival transition).">
+                    <TextBlock>Cabin chime on <Underline>Parked</Underline></TextBlock>
+                </CheckBox>
+
+                <CheckBox IsChecked="{Binding ChimeOnDeboardComplete}" Style="{StaticResource CheckBoxSettingItem}"
+                          ToolTip="Play cabin chime when Deboarding completes (Arrival → Turnaround / Departure transition).">
+                    <TextBlock>Cabin chime on <Underline>Deboard Complete</Underline></TextBlock>
                 </CheckBox>
 
                 <Grid Margin="0,6,0,0">

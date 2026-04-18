@@ -26,7 +26,7 @@
                     <CheckBox IsChecked="{Binding CallDeboardOnArrival}" Style="{StaticResource LocalCheckBoxStyle}">
                         Automatically deboard passengers via GSX on arrival
                     </CheckBox>
-                    <CheckBox IsChecked="{Binding RunDepartureOnArrival}" Style="{StaticResource LocalCheckBoxStyle}">
+                    <CheckBox IsChecked="{Binding RunDepartureDuringDeboarding}" Style="{StaticResource LocalCheckBoxStyle}">
                         Start departure services while deboarding is active
                     </CheckBox>
                     <CheckBox IsChecked="{Binding SkipCrewQuestion}" Style="{StaticResource LocalCheckBoxStyle}">
