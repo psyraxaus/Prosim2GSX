@@ -1,4 +1,4 @@
-﻿using CFIT.SimConnectLib.SimResources;
+using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.GSX.Menu;
 
 namespace Prosim2GSX.GSX.Services
@@ -24,20 +24,12 @@ namespace Prosim2GSX.GSX.Services
 
         protected override void InitSubscriptions()
         {
-            SubGpuService = SimStore.AddVariable(GsxConstants.VarServiceGpu);
-            SubGpuService.OnReceived += OnStateChange;
+            SubGpuService = RegisterStateSubscription(GsxConstants.VarServiceGpu);
         }
 
         protected override void DoReset()
         {
 
-        }
-
-        public override void FreeResources()
-        {
-            SubGpuService.OnReceived -= OnStateChange;
-
-            SimStore.Remove(GsxConstants.VarServiceGpu);
         }
     }
 }

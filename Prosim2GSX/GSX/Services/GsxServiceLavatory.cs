@@ -25,8 +25,7 @@ namespace Prosim2GSX.GSX.Services
 
         protected override void InitSubscriptions()
         {
-            SubLavatoryService = SimStore.AddVariable(GsxConstants.VarServiceLavatory);
-            SubLavatoryService.OnReceived += OnStateChange;
+            SubLavatoryService = RegisterStateSubscription(GsxConstants.VarServiceLavatory);
         }
 
         protected override bool CheckCalled()
@@ -37,13 +36,6 @@ namespace Prosim2GSX.GSX.Services
         protected override void DoReset()
         {
 
-        }
-
-        public override void FreeResources()
-        {
-            SubLavatoryService.OnReceived -= OnStateChange;
-
-            SimStore.Remove(GsxConstants.VarServiceLavatory);
         }
     }
 }

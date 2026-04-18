@@ -1,4 +1,4 @@
-﻿using CFIT.AppLogger;
+using CFIT.AppLogger;
 using CFIT.AppTools;
 using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.GSX.Menu;
@@ -32,11 +32,8 @@ namespace Prosim2GSX.GSX.Services
 
         protected override void InitSubscriptions()
         {
-            SubRefuelService = SimStore.AddVariable(GsxConstants.VarServiceRefuel);
-            SubRefuelHose = SimStore.AddVariable(GsxConstants.VarServiceRefuelHose);
-
-            SubRefuelService.OnReceived += OnStateChange;
-            SubRefuelHose.OnReceived += OnHoseChange;
+            SubRefuelService = RegisterStateSubscription(GsxConstants.VarServiceRefuel);
+            SubRefuelHose = RegisterChangeSubscription(GsxConstants.VarServiceRefuelHose, OnHoseChange);
         }
 
         protected override bool EvaluateComplete(ISimResourceSubscription sub)
@@ -88,15 +85,6 @@ namespace Prosim2GSX.GSX.Services
         {
             CompleteNotified = false;
             WasHoseConnected = false;
-        }
-
-        public override void FreeResources()
-        {
-            SubRefuelService.OnReceived -= OnStateChange;
-            SubRefuelHose.OnReceived -= OnHoseChange;
-
-            SimStore.Remove(GsxConstants.VarServiceRefuel);
-            SimStore.Remove(GsxConstants.VarServiceRefuelHose);
         }
 
         protected override GsxServiceState GetState()

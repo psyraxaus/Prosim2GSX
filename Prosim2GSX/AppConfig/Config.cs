@@ -124,6 +124,12 @@ namespace Prosim2GSX.AppConfig
         public virtual int ArrivalStallTimeoutSec { get; set; } = 600;      // 0 disables the stall-warning watchdog
         public virtual int SequenceApuStallTimeoutSec { get; set; } = 120;  // warn if departure sequence waits for APU beyond this (0 disables)
 
+        // Hard cap on entries kept in the in-memory UI log buffer (Monitor tab).
+        public virtual int UiLogMaxMessages { get; set; } = 200;
+        // When CFIT.Logger.Messages exceeds this depth (e.g. Monitor tab idle for hours),
+        // the next drain trims the queue to UiLogMaxMessages and emits a single warning.
+        public virtual int UiLogQueueWarnThreshold { get; set; } = 1000;
+
         // Theme
         public virtual string CurrentTheme { get; set; } = "Light";
 

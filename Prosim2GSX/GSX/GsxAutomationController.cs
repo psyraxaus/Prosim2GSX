@@ -205,9 +205,14 @@ namespace Prosim2GSX.GSX
                     activation.ActivationCount = 0;
                 Logger.Information($"Automation Service started");
 
+                bool lastServicesValid = !ServicesValid;
                 while (RunFlag && Controller.IsActive && !Token.IsCancellationRequested && !RequestToken.IsCancellationRequested)
                 {
-                    Logger.Verbose($"Automation Tick - State: {State} | ServicesValid: {ServicesValid}");
+                    if (State != LastState || ServicesValid != lastServicesValid)
+                    {
+                        Logger.Verbose($"Automation Tick - State: {State} | ServicesValid: {ServicesValid}");
+                        lastServicesValid = ServicesValid;
+                    }
                     if (Controller.IsGsxRunning && Controller.CanAutomationRun)
                     {
                         await EvaluateState();

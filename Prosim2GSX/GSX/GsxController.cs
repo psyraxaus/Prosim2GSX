@@ -22,7 +22,10 @@ namespace Prosim2GSX.GSX
 {
     public class GsxController : ServiceController<Prosim2GSX, AppService, Config, Definition>, IGsxController
     {
-        protected bool _lock = false;
+        // Serialises concurrent OnCouatlVariable callbacks. Replaces a prior
+        // CPU-spinning busy-wait that could starve the very thread expected to
+        // release the flag under load.
+        private readonly object _couatlLock = new();
         public virtual CancellationToken RequestToken => AppService.Instance.RequestToken;
         public virtual SimConnectManager SimConnectManager => Prosim2GSX.Instance.AppService.SimConnect;
         public virtual SimConnectController SimController => Prosim2GSX.Instance.AppService.SimService.Controller;
@@ -153,47 +156,46 @@ namespace Prosim2GSX.GSX
 
         protected virtual void OnCouatlVariable(ISimResourceSubscription sub, object data)
         {
-            while (_lock && !Token.IsCancellationRequested) { }
-            _lock = true;
+            if (Token.IsCancellationRequested)
+                return;
 
-            try
+            lock (_couatlLock)
             {
-                CouatlLastStarted = (int)(SimStore[GsxConstants.VarCouatlStarted]?.GetNumber() ?? 0);
-                CouatlLastProgress = (int)Math.Max(
-                    Math.Max(SimStore[GsxConstants.VarCouatlStartProg5]?.GetNumber() ?? 100, SimStore[GsxConstants.VarCouatlStartProg6]?.GetNumber() ?? 100),
-                    SimStore[GsxConstants.VarCouatlStartProg7]?.GetNumber() ?? 100
-                    );
-                if (CouatlLastStarted == 1 && CouatlLastProgress == 0)
+                try
                 {
-                    if (!CouatlVarsValid)
+                    CouatlLastStarted = (int)(SimStore[GsxConstants.VarCouatlStarted]?.GetNumber() ?? 0);
+                    CouatlLastProgress = (int)Math.Max(
+                        Math.Max(SimStore[GsxConstants.VarCouatlStartProg5]?.GetNumber() ?? 100, SimStore[GsxConstants.VarCouatlStartProg6]?.GetNumber() ?? 100),
+                        SimStore[GsxConstants.VarCouatlStartProg7]?.GetNumber() ?? 100
+                        );
+                    if (CouatlLastStarted == 1 && CouatlLastProgress == 0)
                     {
-                        Logger.Debug($"Couatl Variables valid!");
-                        CouatlVarsValid = true;
-                        CouatlInvalidCount = 0;
-                        MessageService.Send(MessageGsx.Create<MsgGsxCouatlStarted>(this, true));
+                        if (!CouatlVarsValid)
+                        {
+                            Logger.Debug($"Couatl Variables valid!");
+                            CouatlVarsValid = true;
+                            CouatlInvalidCount = 0;
+                            MessageService.Send(MessageGsx.Create<MsgGsxCouatlStarted>(this, true));
+                        }
                     }
-                }
-                else
-                {
-                    if (CouatlVarsValid)
+                    else
                     {
-                        Logger.Debug($"Couatl Variables NOT valid! (started: {CouatlLastStarted} / progress: {CouatlLastProgress})");
-                        MessageService.Send(MessageGsx.Create<MsgGsxCouatlStopped>(this, true));
-                        CouatlVarsValid = false;
-                        CouatlConfigSet = false;
+                        if (CouatlVarsValid)
+                        {
+                            Logger.Debug($"Couatl Variables NOT valid! (started: {CouatlLastStarted} / progress: {CouatlLastProgress})");
+                            MessageService.Send(MessageGsx.Create<MsgGsxCouatlStopped>(this, true));
+                            CouatlVarsValid = false;
+                            CouatlConfigSet = false;
+                        }
                     }
-                }
 
-                CouatlVarsReceived = true;
+                    CouatlVarsReceived = true;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogException(ex);
+                }
             }
-            catch (Exception ex)
-            {
-                Logger.LogException(ex);
-            }
-            finally
-            {
-                _lock = false;
-            }            
         }
 
         protected virtual void CheckGround()
@@ -266,10 +268,24 @@ namespace Prosim2GSX.GSX
                 Logger.Debug($"GsxService active (VarsReceived: {CouatlVarsReceived} | FirstReady: {Menu.FirstReadyReceived})");
                 IsActive = true;
                 Logger.Information($"GsxController active - waiting for Menu to be ready");
+                bool lastVarsReceived = !CouatlVarsReceived;
+                bool lastFirstReady = !Menu.FirstReadyReceived;
+                bool lastVarsValid = !CouatlVarsValid;
+                bool lastGsxRunning = !IsGsxRunning;
                 while (SimConnectManager.IsSessionRunning && IsExecutionAllowed && !RequestToken.IsCancellationRequested)
                 {
-                    if (Config.LogLevel == LogLevel.Verbose)
+                    if (Config.LogLevel == LogLevel.Verbose &&
+                        (CouatlVarsReceived != lastVarsReceived
+                         || Menu.FirstReadyReceived != lastFirstReady
+                         || CouatlVarsValid != lastVarsValid
+                         || IsGsxRunning != lastGsxRunning))
+                    {
                         Logger.Verbose($"Controller Tick - VarsReceived: {CouatlVarsReceived} | FirstReady: {Menu.FirstReadyReceived} | VarsValid: {CouatlVarsValid} | IsGsxRunning: {IsGsxRunning}");
+                        lastVarsReceived = CouatlVarsReceived;
+                        lastFirstReady = Menu.FirstReadyReceived;
+                        lastVarsValid = CouatlVarsValid;
+                        lastGsxRunning = IsGsxRunning;
+                    }
                     CheckGround();
 
                     if (IsGsxRunning)

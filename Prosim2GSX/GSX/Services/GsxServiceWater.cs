@@ -25,8 +25,7 @@ namespace Prosim2GSX.GSX.Services
 
         protected override void InitSubscriptions()
         {
-            SubWaterService = SimStore.AddVariable(GsxConstants.VarServiceWater);
-            SubWaterService.OnReceived += OnStateChange;
+            SubWaterService = RegisterStateSubscription(GsxConstants.VarServiceWater);
         }
 
         protected override bool CheckCalled()
@@ -37,13 +36,6 @@ namespace Prosim2GSX.GSX.Services
         protected override void DoReset()
         {
 
-        }
-
-        public override void FreeResources()
-        {
-            SubWaterService.OnReceived -= OnStateChange;
-
-            SimStore.Remove(GsxConstants.VarServiceWater);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using CFIT.SimConnectLib.SimResources;
+using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.GSX.Menu;
 
 namespace Prosim2GSX.GSX.Services
@@ -24,20 +24,12 @@ namespace Prosim2GSX.GSX.Services
 
         protected override void InitSubscriptions()
         {
-            SubDeiceService = SimStore.AddVariable(GsxConstants.VarServiceDeice);
-            SubDeiceService.OnReceived += OnStateChange;
+            SubDeiceService = RegisterStateSubscription(GsxConstants.VarServiceDeice);
         }
 
         protected override void DoReset()
         {
 
-        }
-
-        public override void FreeResources()
-        {
-            SubDeiceService.OnReceived -= OnStateChange;
-
-            SimStore.Remove(GsxConstants.VarServiceDeice);
         }
     }
 }

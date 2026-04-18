@@ -32,11 +32,6 @@ namespace Prosim2GSX.GSX.Services
 
         }
 
-        public override void FreeResources()
-        {
-
-        }
-
         protected override GsxServiceState GetState()
         {
             if (SequenceResult)
@@ -52,7 +47,7 @@ namespace Prosim2GSX.GSX.Services
 
         protected override void SetStateVariable(GsxServiceState state)
         {
-            
+
         }
     }
 }

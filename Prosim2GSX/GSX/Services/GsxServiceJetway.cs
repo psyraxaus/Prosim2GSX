@@ -1,4 +1,4 @@
-﻿using CFIT.SimConnectLib.SimResources;
+using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.GSX.Menu;
 using System.Threading.Tasks;
 
@@ -28,21 +28,13 @@ namespace Prosim2GSX.GSX.Services
 
         protected override void InitSubscriptions()
         {
-            SubService = SimStore.AddVariable(GsxConstants.VarServiceJetway);
-            SubOperating = SimStore.AddVariable(GsxConstants.VarServiceJetwayOperation);
-            SubService.OnReceived += OnStateChange;
+            SubService = RegisterStateSubscription(GsxConstants.VarServiceJetway);
+            SubOperating = RegisterReadOnlyVariable(GsxConstants.VarServiceJetwayOperation);
         }
 
         protected override void DoReset()
         {
-            
-        }
 
-        public override void FreeResources()
-        {
-            SubService.OnReceived -= OnStateChange;
-            SimStore.Remove(GsxConstants.VarServiceJetway);
-            SimStore.Remove(GsxConstants.VarServiceJetwayOperation);
         }
 
         protected override bool CheckCalled()

@@ -1,4 +1,4 @@
-﻿using CFIT.AppLogger;
+using CFIT.AppLogger;
 using CFIT.AppTools;
 using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.GSX.Menu;
@@ -33,13 +33,9 @@ namespace Prosim2GSX.GSX.Services
 
         protected override void InitSubscriptions()
         {
-            SubDepartService = SimStore.AddVariable(GsxConstants.VarServiceDeparture);
-            SubDepartService.OnReceived += OnStateChange;
-            SubPushStatus = SimStore.AddVariable(GsxConstants.VarPusbackStatus);
-            SubPushStatus.OnReceived += OnPushChange;
-
-            SubBypassPin = SimStore.AddVariable(GsxConstants.VarBypassPin);
-            SubBypassPin.OnReceived += NotifyBypassPin;
+            SubDepartService = RegisterStateSubscription(GsxConstants.VarServiceDeparture);
+            SubPushStatus = RegisterChangeSubscription(GsxConstants.VarPusbackStatus, OnPushChange);
+            SubBypassPin = RegisterChangeSubscription(GsxConstants.VarBypassPin, NotifyBypassPin);
         }
 
         protected virtual void OnPushChange(ISimResourceSubscription sub, object data)
@@ -68,17 +64,6 @@ namespace Prosim2GSX.GSX.Services
         protected override void DoReset()
         {
             TugAttachedOnBoarding = false;
-        }
-
-        public override void FreeResources()
-        {
-            SubDepartService.OnReceived -= OnStateChange;
-            SubBypassPin.OnReceived -= NotifyBypassPin;
-            SubPushStatus.OnReceived -= OnPushChange;
-
-            SimStore.Remove(GsxConstants.VarServiceDeparture);
-            SimStore.Remove(GsxConstants.VarBypassPin);
-            SimStore.Remove(GsxConstants.VarPusbackStatus);
         }
 
         public override async Task Call()

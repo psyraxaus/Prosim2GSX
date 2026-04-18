@@ -1,10 +1,11 @@
-﻿using CFIT.AppFramework.ResourceStores;
+using CFIT.AppFramework.ResourceStores;
 using CFIT.AppLogger;
 using CFIT.AppTools;
 using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.AppConfig;
 using Prosim2GSX.GSX.Menu;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Prosim2GSX.GSX.Services
@@ -85,6 +86,25 @@ namespace Prosim2GSX.GSX.Services
         public event Func<GsxService, Task> OnCompleted;
         public event Func<GsxService, Task> OnStateChanged;
 
+        // Once-per-cycle notification guards. Reset in ResetState so the next service cycle
+        // can fire each event again. Without these, NotifyStateChange can fire on every
+        // ReconcileState tick (1Hz) — that drove the "Service callable" log spam observed in
+        // long flights.
+        protected GsxServiceState _lastNotifiedState = GsxServiceState.Unknown;
+        protected bool _activeNotified = false;
+        protected bool _completedNotified = false;
+
+        // Tracked subscriptions registered via the helper methods below. Base FreeResources
+        // unsubscribes and removes all of them, so subclasses no longer need bespoke cleanup.
+        private readonly List<TrackedSubscription> _trackedSubscriptions = new();
+
+        private sealed class TrackedSubscription
+        {
+            public ISimResourceSubscription Sub;
+            public Action<ISimResourceSubscription, object> Handler;
+            public string VarName;
+        }
+
         public GsxService(GsxController controller)
         {
             Controller = controller;
@@ -96,6 +116,38 @@ namespace Prosim2GSX.GSX.Services
         protected abstract GsxMenuSequence InitCallSequence();
 
         protected abstract void InitSubscriptions();
+
+        /// <summary>
+        /// Adds the service's primary state L-Var subscription and wires <see cref="OnStateChange"/>.
+        /// Tracked for automatic teardown in <see cref="FreeResources"/>.
+        /// </summary>
+        protected ISimResourceSubscription RegisterStateSubscription(string varName)
+        {
+            var sub = SimStore.AddVariable(varName);
+            sub.OnReceived += OnStateChange;
+            _trackedSubscriptions.Add(new TrackedSubscription { Sub = sub, Handler = OnStateChange, VarName = varName });
+            return sub;
+        }
+
+        /// <summary>
+        /// Adds an L-Var subscription with a custom handler. Tracked for automatic teardown.
+        /// </summary>
+        protected ISimResourceSubscription RegisterChangeSubscription(string varName, Action<ISimResourceSubscription, object> handler)
+        {
+            var sub = SimStore.AddVariable(varName);
+            if (handler != null)
+                sub.OnReceived += handler;
+            _trackedSubscriptions.Add(new TrackedSubscription { Sub = sub, Handler = handler, VarName = varName });
+            return sub;
+        }
+
+        /// <summary>
+        /// Adds an L-Var without wiring any callback (read-only access pattern). Tracked for teardown.
+        /// </summary>
+        protected ISimResourceSubscription RegisterReadOnlyVariable(string varName)
+        {
+            return RegisterChangeSubscription(varName, null);
+        }
 
         protected virtual bool EvaluateComplete(ISimResourceSubscription sub)
         {
@@ -162,6 +214,9 @@ namespace Prosim2GSX.GSX.Services
             IsSkipped = false;
             WasActive = false;
             WasCompleted = false;
+            _lastNotifiedState = GsxServiceState.Unknown;
+            _activeNotified = false;
+            _completedNotified = false;
             CallSequence.Reset();
             if (resetVariable)
                 SetStateVariable(GsxServiceState.Callable);
@@ -170,7 +225,26 @@ namespace Prosim2GSX.GSX.Services
 
         protected abstract void DoReset();
 
-        public abstract void FreeResources();
+        public virtual void FreeResources()
+        {
+            foreach (var t in _trackedSubscriptions)
+            {
+                if (t.Handler != null && t.Sub != null)
+                    t.Sub.OnReceived -= t.Handler;
+            }
+            foreach (var t in _trackedSubscriptions)
+            {
+                if (!string.IsNullOrEmpty(t.VarName))
+                    SimStore.Remove(t.VarName);
+            }
+            _trackedSubscriptions.Clear();
+            DoFreeResources();
+        }
+
+        /// <summary>
+        /// Subclass hook for cleanup beyond the tracked subscription list.
+        /// </summary>
+        protected virtual void DoFreeResources() { }
 
         protected virtual GsxServiceState ReadState()
         {
@@ -234,13 +308,15 @@ namespace Prosim2GSX.GSX.Services
             if (!IsProsimAircraft)
                 return;
 
-            if (State == GsxServiceState.Unknown)
-            {
-                Logger.Debug($"Ignoring State Change - State for {Type} is unknown");
+            var current = State;
+            if (current == GsxServiceState.Unknown)
                 return;
-            }
 
-            Logger.Debug($"Notify State Change for {Type}: {State}");
+            if (current == _lastNotifiedState)
+                return;
+
+            _lastNotifiedState = current;
+            Logger.Debug($"Notify State Change for {Type}: {current}");
             TaskTools.RunLogged(() => OnStateChanged?.Invoke(this), Controller.Token);
         }
 
@@ -248,7 +324,10 @@ namespace Prosim2GSX.GSX.Services
         {
             if (!IsProsimAircraft)
                 return;
+            if (_activeNotified)
+                return;
 
+            _activeNotified = true;
             Logger.Debug($"Notify Active for {Type}: {State}");
             TaskTools.RunLogged(() => OnActive?.Invoke(this), Controller.Token);
         }
@@ -257,7 +336,10 @@ namespace Prosim2GSX.GSX.Services
         {
             if (!IsProsimAircraft)
                 return;
+            if (_completedNotified)
+                return;
 
+            _completedNotified = true;
             Logger.Debug($"Notify Completed for {Type}: {State}");
             TaskTools.RunLogged(() => OnCompleted?.Invoke(this), Controller.Token);
         }
