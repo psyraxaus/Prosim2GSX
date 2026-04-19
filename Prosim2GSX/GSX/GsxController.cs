@@ -63,7 +63,7 @@ namespace Prosim2GSX.GSX
         public virtual bool FirstGroundCheck { get; protected set; } = true;
         public virtual bool IsAirStart { get; protected set; } = false;
         public virtual bool CanAutomationRun => Menu.FirstReadyReceived || IsAirStart || AircraftInterface?.EnginesRunning == true;
-        protected virtual int GroundCounter { get; set; } = 0;
+        public virtual int GroundCounter { get; protected set; } = 0;
         public virtual bool IsPaused => SimConnectManager.IsPaused;
         public virtual bool IsWalkaround => CheckWalkAround();
         public virtual bool SkippedWalkAround { get; protected set; } = false;
@@ -208,9 +208,10 @@ namespace Prosim2GSX.GSX
                 if (IsAirStart)
                     Logger.Debug($"Air Start detected");
             }
-            else if (AutomationController.IsOnGround != IsOnGround && !IsWalkaround)
+            else if (AutomationController.IsOnGround != IsOnGround)
             {
                 GroundCounter++;
+                Logger.Debug($"Ground state mismatch: raw={IsOnGround}, committed={AutomationController.IsOnGround}, counter={GroundCounter}/{Config.GroundTicks}");
                 if (GroundCounter > Config.GroundTicks)
                 {
                     GroundCounter = 0;
@@ -219,7 +220,10 @@ namespace Prosim2GSX.GSX
                 }
             }
             else if (AutomationController.IsOnGround == IsOnGround && GroundCounter > 0)
+            {
+                Logger.Debug($"Ground flicker reset: raw={IsOnGround} matched committed, counter was {GroundCounter}");
                 GroundCounter = 0;
+            }
         }
 
         protected override async Task DoRun()

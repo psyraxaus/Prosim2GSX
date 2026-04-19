@@ -99,6 +99,9 @@ namespace Prosim2GSX.GSX
         protected virtual DateTime ArrivalStallLastWarning { get; set; } = DateTime.MinValue;
         protected virtual CancellationTokenSource ChockCts { get; set; }
 
+        // Periodic Flight-state summary log cadence
+        protected virtual DateTime LastFlightSummaryAt { get; set; } = DateTime.MinValue;
+
         // Beacon-orchestrated departure sequence state
         protected virtual DepartureSequenceStep SequenceStep { get; set; } = DepartureSequenceStep.Idle;
         protected virtual int SeqStepTicksElapsed { get; set; } = 0;
@@ -155,6 +158,7 @@ namespace Prosim2GSX.GSX
             ArrivalStableTicks = 0;
             ArrivalEnteredAt = DateTime.MinValue;
             ArrivalStallLastWarning = DateTime.MinValue;
+            LastFlightSummaryAt = DateTime.MinValue;
             ResetDepartureSequence();
             DepartureServicesCalled?.Clear();
             if (Profile?.DepartureServices != null)
@@ -187,6 +191,7 @@ namespace Prosim2GSX.GSX
             ArrivalStableTicks = 0;
             ArrivalEnteredAt = DateTime.MinValue;
             ArrivalStallLastWarning = DateTime.MinValue;
+            LastFlightSummaryAt = DateTime.MinValue;
             ResetDepartureSequence();
             DepartureServicesCalled.Clear();
             DepartureServicesEnumerator = Profile.DepartureServices.GetEnumerator();
@@ -344,6 +349,15 @@ namespace Prosim2GSX.GSX
             //Flight => TaxiIn
             else if (State == AutomationState.Flight)
             {
+                if (Config.FlightPhaseLogIntervalSec > 0
+                    && (DateTime.UtcNow - LastFlightSummaryAt).TotalSeconds >= Config.FlightPhaseLogIntervalSec)
+                {
+                    Logger.Information(
+                        $"Flight phase: onGround={Controller.IsOnGround}, groundSpeed={Aircraft.GroundSpeed:F1}kt, "
+                      + $"engines={Aircraft.EnginesRunning}, groundCounter={Controller.GroundCounter}/{Config.GroundTicks}");
+                    LastFlightSummaryAt = DateTime.UtcNow;
+                }
+
                 if (IsOnGround && Aircraft.GroundSpeed < Config.SpeedTresholdTaxiIn)
                 {
                     if (Config.RestartGsxOnTaxiIn)
