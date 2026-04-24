@@ -30,6 +30,7 @@ namespace Prosim2GSX.GSX
         public virtual bool IsMsfs2024 => SimConnectManager.GetSimVersion() == SimVersion.MSFS2024;
         public virtual string PathInstallation { get; }
         public virtual GsxMenu Menu { get; }
+        public virtual GsxParkingSelector ParkingSelector { get; }
         protected virtual DateTime NextMenuStartupCheck { get; set; } = DateTime.MinValue;
         public virtual AircraftInterface AircraftInterface { get; }
         public virtual Flightplan Flightplan { get; } = new Flightplan();
@@ -77,6 +78,7 @@ namespace Prosim2GSX.GSX
         {
             PathInstallation = Sys.GetRegistryValue<string>(GsxConstants.RegPath, GsxConstants.RegValue, null) ?? GsxConstants.PathDefault;
             Menu = new(this);
+            ParkingSelector = new(this);
             AircraftInterface = new(this);
             AutomationController = new(this);
             SetAircraftProfile("default");
@@ -282,6 +284,8 @@ namespace Prosim2GSX.GSX
                     if (!CouatlVarsReceived && IsProcessRunning)
                         OnCouatlVariable(null, null);
 
+                    AircraftInterface.CheckFlightPlanChange();
+
                     if (!SkippedWalkAround && !WalkAroundSkipActive)
                     {
                         if (AutomationController.IsOnGround && !AircraftInterface.EnginesRunning && AutomationController.State == AutomationState.SessionStart && !AircraftProfile.SkipWalkAround && AircraftProfile.PlaceProsimStairsWalkaround && !AircraftInterface.ProsimInterface.StairsFwd)
@@ -456,6 +460,11 @@ namespace Prosim2GSX.GSX
             //SimStore[GsxConstants.VarSetProgFuel].WriteValue(-1);
             //SimStore[GsxConstants.VarSetCustFuel].WriteValue(-1);
             SimStore[GsxConstants.VarSetAutoMode].WriteValue(-1);
+        }
+
+        public virtual async Task<bool> SetArrivalParkingAsync(string gate)
+        {
+            return await ParkingSelector.ApplyAsync(gate);
         }
 
         public virtual async Task ReloadSimbrief()

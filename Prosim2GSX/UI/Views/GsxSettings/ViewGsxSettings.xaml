@@ -19,6 +19,49 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="12,8,12,8">
 
+            <!-- SECTION: ARRIVAL GATE ASSIGNMENT -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="ARRIVAL GATE ASSIGNMENT"/>
+            <Border Style="{StaticResource SectionCardBorder}">
+                <StackPanel>
+                    <!-- Data rows: visible when OFP loaded -->
+                    <StackPanel Visibility="{Binding IsOfpLoaded, Converter={StaticResource BoolVisibilityConverter}}">
+                        <StackPanel Orientation="Horizontal" Margin="6,4,6,4">
+                            <Label Width="80" VerticalAlignment="Center" Foreground="{DynamicResource CategoryTextBrush}">Departure</Label>
+                            <TextBlock Text="{Binding DepartureIcao}" FontWeight="Bold" VerticalAlignment="Center" MinWidth="60"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="6,4,6,4">
+                            <Label Width="80" VerticalAlignment="Center" Foreground="{DynamicResource CategoryTextBrush}">Arrival</Label>
+                            <TextBlock Text="{Binding ArrivalIcao}" FontWeight="Bold" VerticalAlignment="Center" MinWidth="60"/>
+                            <Label Width="50" VerticalAlignment="Center" Margin="20,0,0,0" Foreground="{DynamicResource CategoryTextBrush}">Gate</Label>
+                            <TextBox Text="{Binding ArrivalGate, UpdateSourceTrigger=PropertyChanged}"
+                                     Width="120"
+                                     VerticalAlignment="Center"
+                                     Style="{StaticResource TextBoxCentered}"
+                                     IsEnabled="{Binding IsOfpLoaded}"/>
+                        </StackPanel>
+                        <Button Content="Confirm Arrival Gate"
+                                Style="{StaticResource PrimaryButton}"
+                                Command="{Binding ConfirmArrivalGateCommand}"
+                                HorizontalAlignment="Right"
+                                Margin="6,8,6,4"
+                                Padding="12,4,12,4"/>
+                        <TextBlock Text="{Binding GateAssignmentStatus}"
+                                   FontStyle="Italic"
+                                   Foreground="{DynamicResource CategoryTextBrush}"
+                                   HorizontalAlignment="Right"
+                                   Margin="6,2,6,4"
+                                   Visibility="{Binding GateAssignmentStatus, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+                    </StackPanel>
+                    <!-- Placeholder: visible when no OFP loaded -->
+                    <TextBlock Text="Load an OFP to enable gate assignment"
+                               FontStyle="Italic"
+                               Foreground="{DynamicResource CategoryTextBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="6,8,6,8"
+                               Visibility="{Binding IsOfpNotLoaded, Converter={StaticResource BoolVisibilityConverter}}"/>
+                </StackPanel>
+            </Border>
+
             <!-- SECTION 1: BOARDING SETTINGS -->
             <TextBlock Style="{StaticResource CategoryHeader}" Text="BOARDING SETTINGS"/>
             <Border Style="{StaticResource SectionCardBorder}">

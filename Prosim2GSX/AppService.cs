@@ -7,6 +7,7 @@ using Prosim2GSX.AppConfig;
 using Prosim2GSX.Audio;
 using Prosim2GSX.GSX;
 using Prosim2GSX.Prosim;
+using Prosim2GSX.SayIntentions;
 using System;
 using System.IO;
 using System.Threading;
@@ -28,6 +29,7 @@ namespace Prosim2GSX
         public virtual ProsimSdkService ProsimService { get; protected set; }
         public virtual GsxController GsxService { get; protected set; }
         public virtual AudioController AudioService { get; protected set; }
+        public virtual ISayIntentionsService SayIntentionsService { get; protected set; } = new SayIntentionsService();
         public virtual AppResetRequest ResetRequested {  get; set; } = AppResetRequest.None;
         public virtual bool IsSessionInitializing { get; protected set; } = false;
         public virtual bool IsSessionInitialized { get; protected set; } = false;

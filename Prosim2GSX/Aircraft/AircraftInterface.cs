@@ -35,6 +35,28 @@ namespace Prosim2GSX.Aircraft
         public virtual string Title => !string.IsNullOrWhiteSpace(SubLivery?.GetString()) ? SubLivery.GetString() : SubTitle?.GetString() ?? "";
         public virtual string Registration => ProsimInterface.Registration;
         public virtual bool IsFlightPlanLoaded => ProsimInterface.IsFlightPlanLoaded;
+        public virtual string FmsOrigin => ProsimInterface?.FmsOrigin ?? "";
+        public virtual string FmsDestination => ProsimInterface?.FmsDestination ?? "";
+
+        public event Action OnFlightPlanChanged;
+        protected virtual bool LastIsFlightPlanLoaded { get; set; } = false;
+        protected virtual string LastFmsOriginSeen { get; set; } = "";
+        protected virtual string LastFmsDestinationSeen { get; set; } = "";
+
+        public virtual void CheckFlightPlanChange()
+        {
+            var loaded = IsFlightPlanLoaded;
+            var origin = FmsOrigin;
+            var destination = FmsDestination;
+            if (loaded != LastIsFlightPlanLoaded || origin != LastFmsOriginSeen || destination != LastFmsDestinationSeen)
+            {
+                LastIsFlightPlanLoaded = loaded;
+                LastFmsOriginSeen = origin;
+                LastFmsDestinationSeen = destination;
+                try { OnFlightPlanChanged?.Invoke(); }
+                catch (Exception ex) { Logger.LogException(ex); }
+            }
+        }
         public virtual bool IsLoaded => ProsimInterface.IsLoaded;
         public virtual bool IsRefueling => ProsimInterface.IsRefueling;
         public virtual DisplayUnit UnitAircraft => ProsimInterface.UnitAircraft;

@@ -12,6 +12,7 @@
     <localconv:SolariJetwayBrushConverter x:Key="SolariJetwayBrushConverter"/>
     <localconv:SolariPushbackBrushConverter x:Key="SolariPushbackBrushConverter"/>
     <localconv:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+    <localconv:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibilityConverter"/>
 
     <Style TargetType="{x:Type ContentPresenter}">
         <Setter Property="RecognizesAccessKey" Value="False" />
