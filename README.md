@@ -22,7 +22,7 @@ Full and proper GSX Integration and Automation for the ProSim A320! <br/>
 - A properly working and updated GSX Installation
 - Capability to actually read the Readme up until and beyond this Point :stuck_out_tongue_winking_eye:
 - The Installer will install the following Software automatically:
-  - .NET 8 Desktop Runtime (x64) - Reboot your System if it was installed for the first Time
+  - .NET 10 Desktop Runtime (x64) - Reboot your System if it was installed for the first Time
 
 <br/>
 
@@ -149,16 +149,17 @@ The GUI uses a modern **EFB-style card layout** with a left-hand navigation tab 
 | <img src="img/Appmonitor_Light.PNG" width="400"> | <img src="img/Appmonitor_Dark.PNG" width="400"> |
 
 <br/><br/>
-Allmost all Settings regarding GSX, ProSim and the general Automation can be found in the '**Automation**' View. All Settings in this View are stored in a Profile.<br/>
+Allmost all Settings regarding GSX, ProSim and the general Automation can be found in the '**GSX Settings**' View. All Settings in this View are stored in a Profile.<br/>
+The '**OFP**' View shows the loaded Operational Flight Plan, lets you assign an Arrival Gate to ATC and GSX, and shows ATIS / METAR for Departure and Arrival when SayIntentions is enabled.<br/>
 You can have many different Profiles which are automatically loaded depending on the current Aircraft's Registration, Title or Airline. To manage these Profiles use the '**Aircraft Profiles**' View.<br/>
-In order map Applications to the different ACP Audio Channels, use the '**Volume Control**' View. The Volume Control Settings are global - thay apply to all Profiles. Volume Control is generally independent from the GSX Integration/Automation.<br/>
-All central Settings regarding the Application (so applying to all Profiles) are found in the '**App Settings**' View. The **Theme** selector is also located here — changes apply immediately without a restart.<br/><br/>
+In order map Applications to the different ACP Audio Channels, use the '**Audio Settings**' View. The Audio Settings are global - thay apply to all Profiles. Volume Control is generally independent from the GSX Integration/Automation.<br/>
+All central Settings regarding the Application (so applying to all Profiles) are found in the '**App Settings**' View. The **Theme** selector and the **Use SayIntentions** toggle are also located here — Theme changes apply immediately without a restart.<br/><br/>
 Most Settings can be **changed dynamically** on the Fly, **BUT**: only change Settings not relevant in the current Automation/Flight Phase. For Example do not change the Departure Services in the Departure Phase and do not change Profiles while Services are active.<br/><br/>
 In general, it is up to **your Preference how much Automation** you want. I you want to keep Control of when Services are Called and/or the Jetway is connected, you can still enjoy the (De-)Boarding and Refueling Syncronization when the Automation-Options are disabled. The only Automation which **can not be disabled**: The Removal of the Ground-Equipment is always active to assist with Departure & Push-Back and Arrival.
 
 <br/><br/>
 
-#### 2.3.1 - Automation
+#### 2.3.1 - GSX Settings
 
 These are basically the core Settings to customize the Automation to your own Service-Flow. All Settings in this View are associated to an Aircraft Profile. The currently loaded Profile's Name is displayed on the Category Selection.<br/>
 The Settings are grouped into different Categories:<br/><br/>
@@ -220,7 +221,45 @@ By default, Prosim2GSX saves the FOB per Aircraft Registration upon Arrival. Whe
 
 <br/><br/>
 
-#### 2.3.2 - Aircraft Profiles
+#### 2.3.2 - OFP
+
+The OFP tab gives you a one-glance view of the loaded Operational Flight Plan, lets you assign an Arrival Gate to both ATC (via SayIntentions) and GSX, and shows live ATIS / METAR for Departure and Arrival when SayIntentions is enabled.
+
+<img src="img/OFP Tab.png" width="600"/>
+
+The tab populates in stages:
+- **Departure / Arrival ICAO** appear as soon as the Flight Plan is loaded into the MCDU (read directly from `aircraft.fms.origin` / `aircraft.fms.destination`).
+- **Route details** (Flight #, planned RWY, Alternate, Cruise FL, Block fuel, Block time, Pax, Air distance) populate after the SimBrief OFP has been imported.
+- **ATIS / METAR / wind / runway** are fetched from SayIntentions on tab open and via the **Refresh** button.
+
+##### Arrival Gate Assignment
+
+Type the destination gate identifier (e.g. `B38`, `W34A`) and click **Confirm**. The gate is **queued** but not transmitted yet — both ATC and GSX assignments are deferred until the aircraft reaches cruise (`AutomationState.Flight`), where they fire automatically. You can also click **Send Now** at any time to push the queued gate immediately (e.g. on short final).
+
+The two status lines beneath the buttons report each channel independently:
+- **ATC** — uses the SayIntentions `assignGate` API. Requires SayIntentions to be running with a flight loaded.
+- **GSX** — drives the GSX in-game menu (Select airport → Apron group → Stand) to set the parking position. The selector navigates the multi-level menu automatically and matches your typed gate against gate-range rows like *"Apron 1W (Gates W34-W48)"*.
+
+If either side fails, click **Send Now** again — only the failed channel is retried.
+
+##### SayIntentions Integration (optional)
+
+[SayIntentions.AI](https://p2.sayintentions.ai/p2/docs/) is an optional ATC-style add-on. Prosim2GSX integrates with it for two purposes: arrival gate assignment and weather (ATIS / METAR) display.
+
+To enable:
+1. Install and run **SayIntentions** — see the [SayIntentions documentation](https://p2.sayintentions.ai/p2/docs/) for setup. When a SimBrief OFP is loaded, SayIntentions normally starts a flight session automatically.
+2. In Prosim2GSX, open **App Settings** → tick **Use SayIntentions**.
+
+Prosim2GSX reads your API key from `%LOCALAPPDATA%\SayIntentionsAI\flight.json` (the `flight_details.api_key` field) — there's nothing to enter manually. The file is re-read on every API call, so the toggle becomes effective immediately without restarting the app.
+
+Behaviour notes:
+- **Arrival gate assignment** requires an *active SayIntentions flight session* (SayIntentions running with a flight loaded — usually automatic when SimBrief is being used). If no session is active you'll see *"No active flight could be found"* on the ATC status line.
+- **Weather (ATIS/METAR)** does *not* require an active session — only the API key. A single API call covers both ICAOs.
+- When **Use SayIntentions** is unchecked, the OFP tab still works for GSX gate assignment; the ATC channel is simply skipped.
+
+<br/><br/>
+
+#### 2.3.3 - Aircraft Profiles
 
 The Idea behind Aircraft Profiles is to have *different Automation Settings* for *different Operators* without having the Need to change the Settings manually every time.<br/>
 The *Profile Name* is only for display Purposes, it doesn't have a functional Impact. The *Match Type* defines on what Aircraft Information the *Match String* will be compared to. The Match String can contain multiple Values separated by a Pipe `|` - for Example `Condor|CFG` for a Match String for the Airline.<br/>
@@ -234,7 +273,7 @@ The **default Profile** can not be deleted and there can only ever be one Profil
 
 <br/><br/>
 
-#### 2.3.3 - Volume Control
+#### 2.3.4 - Audio Settings
 
 Prosim2GSX will only start to control Volume once the Plane is **powered** (=DC Essential Bus powered). When the Aircraft is powered, Prosim2GSX will set each Audio-Channel to the configured Startup State (e.g. 100% Volume and unmuted for VHF1). **Only one ACP** Panel is used for Volume Control at any given time. But you can change your Seat Position / Panel at any Time (the Startup State is only applied to the Panel selected at that Time).<br/>
 Prosim2GSX will automatically disable the native Volume Control when it starts. If you want to use the native Volume Control, disable the Volume Controller in the App Settings. In any Case: do not let both Apps control the same Stuff!<br/><br/>
@@ -251,16 +290,17 @@ Matching is done on the Start of the Device Name, but it is recommended to use t
 
 <br/><br/>
 
-#### 2.3.4 - App Settings
+#### 2.3.5 - App Settings
 
 These global Settings affect all Profiles and basic App Features. In most cases you only need to check if the Weight per Bag matches to your SimBrief Profile (the default Value matches the Default in the official SimBrief Profile).<br/>
 You might want to change the Weight Unit used in the UI, but you don't need to match that to SimBrief or the Airplane - it's just for displaying Purposes.<br/>
 Depending on your Preferences, you might want to check the Settings to round the planned Block Fuel or skipping Walkaround.<br/>
-If you only want to use Prosim2GSX for Volume-Control, uncheck 'Run GSX Controller' - in all other Cases leave it on!
+If you only want to use Prosim2GSX for Volume-Control, uncheck 'Run GSX Controller' - in all other Cases leave it on!<br/>
+Tick **Use SayIntentions** to enable the SayIntentions ATC and weather integration on the OFP tab — see Section 2.3.2 for details.
 
 <br/><br/>
 
-#### 2.3.5 - Running ProSim on a Separate Computer
+#### 2.3.6 - Running ProSim on a Separate Computer
 
 Prosim2GSX supports setups where **ProSim runs on a different PC** to MSFS/Prosim2GSX (a common networked "sim rig" setup). Two small configuration changes are required on the MSFS PC — the one running Prosim2GSX.
 
@@ -336,7 +376,7 @@ By default, Prosim2GSX assumes ProSim is on the same PC (`localhost`). For a rem
 
 **How to check it's working**
 
-- Open the Prosim2GSX window → **App Monitor** tab.
+- Open the Prosim2GSX window → **FLIGHT STATUS** tab.
 - The *App State* section should show a green *Connected* indicator to ProSim after a few seconds.
 - If it stays red, check the log file in `%appdata%\Prosim2GSX\log\` — it will say whether the SDK file was found, and whether the connection to the remote host succeeded.
 
@@ -544,13 +584,13 @@ You can manually call the Jetway/Stairs with the **INT/RAD** Switch once you're 
 2) Ensure you have checked the Instructions below for common/known Issues
 3) Ensure your GSX Installation is working correctly - Prosim2GSX ain't gonna fix it!
 4) If you report an Issue because you are *really really* sure that Prosim2GSX is misbehaving: provide a **meaningful Description** of the Issue and attach the **Log-File** covering the Issue ('Log-Directory' in the Systray or `%appdata%\Prosim2GSX\log`). If there are **multiple Flights** in one Log (it is one Log per Day for 3 Days), provide a **rough Timestamp** where/when to look.
-5) If your Issue is related to Volume Control, it is strongly recommended to attach the AudioDebug.txt File from the Log Directory (=> 'Write Debug Info' Button in the 'Volume Control' View)
+5) If your Issue is related to Volume Control, it is strongly recommended to attach the AudioDebug.txt File from the Log Directory (=> 'Write Debug Info' Button in the 'Audio Settings' View)
 
 
 **NOTE**: It is my personal Decision to provide support or not. So if you don't put any Effort in reading the Readme or properly reporting your Issue, I won't put any Effort in doing any Support or even responding at all. **You need** to help me in order for **me to help you**! 😉<br/><br/>
 
 
-You can use the '**App Monitor**' View of the UI to monitor the current State of Prosim2GSX:
+You can use the '**FLIGHT STATUS**' View of the UI to monitor the current State of Prosim2GSX:
 <img src="img/Appmonitor_Light.PNG" width="817"><br/><br/>
 
 - The **Sim State** Section reports on the Connection to MSFS - it should be all green.
@@ -565,8 +605,8 @@ You can use the '**App Monitor**' View of the UI to monitor the current State of
 ### 6.1 - Does not Start
 
 - It does not open a Window if you expect that. The GUI is only needed for Configuration and can be opened by clicking on the Icon in the SysTray / Notification Area (these Icons beside your Clock)
-- Ensure you have rebooted your PC after .NET 8 was installed
-- Check if the .NET Runtimes are correctly installed by running the Command `dotnet --list-runtimes` - it should show an Entry like `Microsoft.WindowsDesktop.App` (with Version 8.0.x).
+- Ensure you have rebooted your PC after .NET 10 was installed
+- Check if the .NET Runtimes are correctly installed by running the Command `dotnet --list-runtimes` - it should show an Entry like `Microsoft.WindowsDesktop.App` (with Version 10.0.x).
 - Please just don't "run as Admin" because you think that is needed. You can try if that helps, but it should run just fine without that!
 - Certain AV/Security Software might require setting an Exception
 
@@ -638,10 +678,10 @@ There have been also Cases where the GSX Installation was somehow "corrupted". Y
 
 ### 6.7 - ProSim runs on another PC (networked setup)
 
-This is a supported configuration — see section **2.3.5 - Running ProSim on a Separate Computer** for the step-by-step instructions. If you followed those steps and it still won't connect:
+This is a supported configuration — see section **2.3.6 - Running ProSim on a Separate Computer** for the step-by-step instructions. If you followed those steps and it still won't connect:
 
 - Double-check the UNC path to `ProSimSDK.dll` actually opens when you paste it into File Explorer on the MSFS PC. If Explorer can't reach it, Prosim2GSX can't either.
 - Double-check `ProSimSdkHostname` in `%appdata%\Prosim2GSX\AppConfig.json` matches the other PC's name or IP (no `http://`, no port number — just the hostname or IP).
-- Confirm inbound **TCP 8082** (ProSim SDK) and **TCP 5000** (ProSim EFB) are allowed on the ProSim PC — see section **2.3.5**, Step 3 for the exact firewall rule.
+- Confirm inbound **TCP 8082** (ProSim SDK) and **TCP 5000** (ProSim EFB) are allowed on the ProSim PC — see section **2.3.6**, Step 3 for the exact firewall rule.
 
 <br/>
