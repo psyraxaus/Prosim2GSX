@@ -43,6 +43,7 @@ namespace Prosim2GSX.AppConfig
         public virtual bool ResetGsxStateVarsFlight { get; set; } = true;
         public virtual bool RestartGsxOnTaxiIn { get; set; } = false;
         public virtual bool RunAudioService { get; set; } = true;
+        public virtual bool UseSayIntentions { get; set; } = false;
         public virtual string AudioDebugFile { get; set; } = "log\\AudioDebug.txt";
         public virtual DataFlow AudioDeviceFlow { get; set; } = DataFlow.Render;
         public virtual DeviceState AudioDeviceState { get; set; } = DeviceState.Active;

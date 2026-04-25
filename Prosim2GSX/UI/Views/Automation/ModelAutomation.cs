@@ -1,13 +1,9 @@
-﻿using CommunityToolkit.Mvvm.Input;
-using Prosim2GSX.AppConfig;
+﻿using Prosim2GSX.AppConfig;
 using Prosim2GSX.GSX.Services;
-using Prosim2GSX.SayIntentions;
 using ProsimInterface;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Threading;
 
 namespace Prosim2GSX.UI.Views.Automation
@@ -65,26 +61,6 @@ namespace Prosim2GSX.UI.Views.Automation
         {
             GsxController.ProfileChanged += OnProfileChanged;
             Config.PropertyChanged += OnConfigPropertyChanged;
-            if (AircraftInterface != null)
-                AircraftInterface.OnFlightPlanChanged += OnFlightPlanChanged;
-        }
-
-        protected virtual void OnFlightPlanChanged()
-        {
-            var dispatcher = Application.Current?.Dispatcher;
-            if (dispatcher != null && !dispatcher.CheckAccess())
-                dispatcher.BeginInvoke(new Action(NotifyOfpProperties));
-            else
-                NotifyOfpProperties();
-        }
-
-        protected virtual void NotifyOfpProperties()
-        {
-            NotifyPropertyChanged(nameof(DepartureIcao));
-            NotifyPropertyChanged(nameof(ArrivalIcao));
-            NotifyPropertyChanged(nameof(IsOfpLoaded));
-            NotifyPropertyChanged(nameof(IsOfpNotLoaded));
-            ConfirmArrivalGateCommand.NotifyCanExecuteChanged();
         }
 
         protected virtual void OnProfileChanged(AircraftProfile profile)
@@ -229,84 +205,5 @@ namespace Prosim2GSX.UI.Views.Automation
         public virtual double ChancePerSeat { get => Source.ChancePerSeat * 100.0; set => SetModelValue<double>(value / 100.0); }
 
         public virtual bool IsKgs => Config.DisplayUnitCurrent == DisplayUnit.KG;
-
-        // Arrival Gate Assignment (in-memory only, not persisted)
-        public virtual string DepartureIcao => AircraftInterface?.FmsOrigin ?? "";
-        public virtual string ArrivalIcao => AircraftInterface?.FmsDestination ?? "";
-        public virtual bool IsOfpLoaded => AircraftInterface?.IsFlightPlanLoaded == true;
-        public virtual bool IsOfpNotLoaded => !IsOfpLoaded;
-
-        protected string _arrivalGate = "";
-        public virtual string ArrivalGate
-        {
-            get => _arrivalGate;
-            set
-            {
-                if (_arrivalGate == value) return;
-                _arrivalGate = value ?? "";
-                OnPropertyChanged(nameof(ArrivalGate));
-                ConfirmArrivalGateCommand.NotifyCanExecuteChanged();
-            }
-        }
-
-        protected string _gateAssignmentStatus = "";
-        public virtual string GateAssignmentStatus
-        {
-            get => _gateAssignmentStatus;
-            set
-            {
-                if (_gateAssignmentStatus == value) return;
-                _gateAssignmentStatus = value ?? "";
-                OnPropertyChanged(nameof(GateAssignmentStatus));
-                OnPropertyChanged(nameof(HasGateAssignmentStatus));
-            }
-        }
-
-        public virtual bool HasGateAssignmentStatus => !string.IsNullOrWhiteSpace(GateAssignmentStatus);
-
-        [RelayCommand(CanExecute = nameof(CanConfirmArrivalGate))]
-        private async Task ConfirmArrivalGateAsync()
-        {
-            var gate = (ArrivalGate ?? "").Trim().ToUpperInvariant();
-            ArrivalGate = gate;
-
-            if (string.IsNullOrWhiteSpace(gate))
-            {
-                GateAssignmentStatus = "Please enter an arrival gate.";
-                return;
-            }
-
-            var sayIntentions = AppService?.SayIntentionsService;
-            var sayIntentionsActive = sayIntentions?.IsActive == true;
-            var icao = ArrivalIcao;
-
-            var sayTask = sayIntentionsActive
-                ? sayIntentions.AssignGateAsync(icao, gate)
-                : Task.FromResult(false);
-            var gsxTask = GsxController != null
-                ? GsxController.SetArrivalParkingAsync(gate)
-                : Task.FromResult(false);
-
-            await Task.WhenAll(sayTask, gsxTask);
-
-            var sayOk = sayTask.Result;
-            var gsxOk = gsxTask.Result;
-
-            if (sayIntentionsActive && sayOk)
-                GateAssignmentStatus = gsxOk
-                    ? "Gates confirmed. ATC and GSX updated."
-                    : "Gates confirmed. ATC updated; GSX selection failed — check GSX menu.";
-            else if (sayIntentionsActive && !sayOk)
-                GateAssignmentStatus = gsxOk
-                    ? "GSX gate set. SayIntentions assignment failed — check gate name."
-                    : "SayIntentions and GSX assignments failed — check gate name.";
-            else
-                GateAssignmentStatus = gsxOk
-                    ? "GSX gate set. SayIntentions not active."
-                    : "GSX gate selection failed. SayIntentions not active.";
-        }
-
-        private bool CanConfirmArrivalGate()
-            => IsOfpLoaded && !string.IsNullOrWhiteSpace(ArrivalGate);
     }
 }

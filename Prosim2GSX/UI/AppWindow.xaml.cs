@@ -72,26 +72,28 @@ namespace Prosim2GSX.UI
             if (sdkAvailable)
             {
                 MainTabControl.Items[0] = CreateTabItem("FLIGHT STATUS", new ViewMonitor());
-                MainTabControl.Items[1] = CreateTabItem("AUTOMATION", new Views.Automation.ViewAutomation());
-                MainTabControl.Items[2] = CreateTabItem("AIRCRAFT PROFILES", new ViewProfiles());
-                MainTabControl.Items[3] = CreateTabItem("AUDIO SETTINGS", new ViewAudio());
+                MainTabControl.Items[1] = CreateTabItem("OFP", new Views.Ofp.ViewOfp());
+                MainTabControl.Items[2] = CreateTabItem("GSX SETTINGS", new Views.Automation.ViewAutomation());
+                MainTabControl.Items[3] = CreateTabItem("AIRCRAFT PROFILES", new ViewProfiles());
+                MainTabControl.Items[4] = CreateTabItem("AUDIO SETTINGS", new ViewAudio());
             }
             else
             {
                 // In degraded mode, replace SDK-dependent tabs with placeholder content
                 var placeholder = CreateDegradedPlaceholder();
                 MainTabControl.Items[0] = CreateTabItem("FLIGHT STATUS", placeholder);
-                MainTabControl.Items[1] = CreateTabItem("AUTOMATION", CreateDegradedPlaceholder());
-                MainTabControl.Items[2] = CreateTabItem("AIRCRAFT PROFILES", CreateDegradedPlaceholder());
-                MainTabControl.Items[3] = CreateTabItem("AUDIO SETTINGS", CreateDegradedPlaceholder());
+                MainTabControl.Items[1] = CreateTabItem("OFP", CreateDegradedPlaceholder());
+                MainTabControl.Items[2] = CreateTabItem("GSX SETTINGS", CreateDegradedPlaceholder());
+                MainTabControl.Items[3] = CreateTabItem("AIRCRAFT PROFILES", CreateDegradedPlaceholder());
+                MainTabControl.Items[4] = CreateTabItem("AUDIO SETTINGS", CreateDegradedPlaceholder());
             }
 
             // Settings tab is always available (needed to configure SDK path)
-            MainTabControl.Items[4] = CreateTabItem("APP SETTINGS", new ViewSettings());
+            MainTabControl.Items[5] = CreateTabItem("APP SETTINGS", new ViewSettings());
 
             // Set index and previousTabIndex before subscribing so SelectionChanged
             // does not fire Start() while the window is still in its layout pass.
-            int defaultTab = sdkAvailable ? 0 : 4; // Go straight to Settings in degraded mode
+            int defaultTab = sdkAvailable ? 0 : 5; // Go straight to Settings in degraded mode
             MainTabControl.SelectedIndex = defaultTab;
             _previousTabIndex = defaultTab;
             MainTabControl.SelectionChanged += OnTabSelectionChanged;

@@ -50,7 +50,8 @@
                 <Style TargetType="TabItem" BasedOn="{StaticResource EfbTabItem}"/>
             </TabControl.Resources>
             <TabItem Header="FLIGHT STATUS"/>
-            <TabItem Header="AUTOMATION"/>
+            <TabItem Header="OFP"/>
+            <TabItem Header="GSX SETTINGS"/>
             <TabItem Header="AIRCRAFT PROFILES"/>
             <TabItem Header="AUDIO SETTINGS"/>
             <TabItem Header="APP SETTINGS"/>

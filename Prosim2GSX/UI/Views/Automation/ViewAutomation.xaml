@@ -28,7 +28,7 @@
                 <!-- Profile header -->
                 <Border DockPanel.Dock="Top" Background="#FF122439" Padding="12,10">
                     <StackPanel>
-                        <TextBlock Text="AUTOMATION" Foreground="#99FFFFFF" FontSize="9" FontWeight="Bold"/>
+                        <TextBlock Text="GSX SETTINGS" Foreground="#99FFFFFF" FontSize="9" FontWeight="Bold"/>
                         <TextBlock Text="{Binding ProfileName}"
                                    Foreground="White" FontSize="13" FontWeight="Bold"
                                    Margin="0,3,0,0"

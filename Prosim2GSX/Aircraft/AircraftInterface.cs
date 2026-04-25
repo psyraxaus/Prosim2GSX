@@ -37,6 +37,7 @@ namespace Prosim2GSX.Aircraft
         public virtual bool IsFlightPlanLoaded => ProsimInterface.IsFlightPlanLoaded;
         public virtual string FmsOrigin => ProsimInterface?.FmsOrigin ?? "";
         public virtual string FmsDestination => ProsimInterface?.FmsDestination ?? "";
+        public virtual SimbriefResponse LastSimbriefOfp => ProsimInterface?.LastSimbriefOfp;
 
         public event Action OnFlightPlanChanged;
         protected virtual bool LastIsFlightPlanLoaded { get; set; } = false;

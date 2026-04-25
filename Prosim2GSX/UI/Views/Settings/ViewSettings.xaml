@@ -176,6 +176,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Reset the GSX Service State Variables to 1 (callable) when switching to the Flight Phase.">Reset GSX Vars in Flight:</TextBlock>
@@ -196,6 +197,9 @@
 
                     <TextBlock Grid.Column="0" Grid.Row="4" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Enable / Disable the Audio Controller for App Volume Control.">Run Audio Controller:</TextBlock>
                     <CheckBox Grid.Column="1" Grid.Row="4" IsChecked="{Binding RunAudioService}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Enable / Disable the Audio Controller for App Volume Control."/>
+
+                    <TextBlock Grid.Column="0" Grid.Row="5" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Use SayIntentions.AI for ATIS/weather and gate assignment. Requires SayIntentions installed and api_key in flight.json.">Use SayIntentions:</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="5" IsChecked="{Binding UseSayIntentions}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Use SayIntentions.AI for ATIS/weather and gate assignment. Requires SayIntentions installed and api_key in flight.json."/>
                 </Grid>
             </Border>
 
