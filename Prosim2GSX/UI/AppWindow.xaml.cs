@@ -1,3 +1,4 @@
+using CFIT.AppLogger;
 using CFIT.AppTools;
 using Prosim2GSX.UI.Views.Audio;
 using Prosim2GSX.UI.Views.Monitor;
@@ -9,6 +10,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Navigation;
+using System.Windows.Threading;
 
 namespace Prosim2GSX.UI
 {
@@ -23,6 +25,7 @@ namespace Prosim2GSX.UI
         public static UiIconLoader IconLoader { get; } = new(Assembly.GetExecutingAssembly(), IconLoadSource.Embedded, "Prosim2GSX.UI.Icons.");
 
         private int _previousTabIndex = -1;
+        private DispatcherTimer _logTrimTimer;
 
         public AppWindow()
         {
@@ -31,6 +34,7 @@ namespace Prosim2GSX.UI
             this.Loaded += OnWindowLoaded;
             this.IsVisibleChanged += OnVisibleChanged;
             this.SizeChanged += OnWindowSizeChanged;
+            this.Closed += OnWindowClosed;
 
             // Show SDK warning banner if running in degraded mode
             if (!Prosim2GSX.Instance.IsSdkAvailable)
@@ -103,9 +107,48 @@ namespace Prosim2GSX.UI
                 // Defer the initial Start() until after the window is fully rendered
                 // so backend services have a chance to initialise before polling begins.
                 Dispatcher.BeginInvoke(
-                    System.Windows.Threading.DispatcherPriority.Background,
+                    DispatcherPriority.Background,
                     new Action(() => ((MainTabControl.Items[0] as TabItem)?.Content as IView)?.Start()));
             }
+
+            StartLogTrimTimer();
+        }
+
+        // Periodic safety net: trims Logger.Messages while the Monitor tab is not
+        // actively draining it (e.g. user spent hours on Settings). Without this, the
+        // CFIT logger's in-memory queue is unbounded and grows for every Information+
+        // log message until the app is closed or returns to the Monitor tab.
+        private void StartLogTrimTimer()
+        {
+            _logTrimTimer = new DispatcherTimer(DispatcherPriority.Background)
+            {
+                Interval = TimeSpan.FromSeconds(10),
+            };
+            _logTrimTimer.Tick += OnLogTrimTick;
+            _logTrimTimer.Start();
+        }
+
+        private bool _logTrimErrorReported = false;
+
+        private void OnLogTrimTick(object sender, EventArgs e)
+        {
+            try
+            {
+                int cap = Math.Max(1, Prosim2GSX.Instance?.AppService?.Config?.UiLogMaxMessages ?? 200);
+                while (Logger.Messages.Count > cap)
+                    Logger.Messages.TryDequeue(out _);
+            }
+            catch (Exception ex) when (!_logTrimErrorReported)
+            {
+                _logTrimErrorReported = true;
+                Logger.LogException(ex);
+            }
+        }
+
+        private void OnWindowClosed(object sender, EventArgs e)
+        {
+            _logTrimTimer?.Stop();
+            _logTrimTimer = null;
         }
 
         private static UIElement CreateDegradedPlaceholder()

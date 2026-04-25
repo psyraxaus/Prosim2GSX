@@ -74,6 +74,24 @@ namespace Prosim2GSX.UI.Views.Monitor
         {
             UpdateTimer?.Stop();
             SolariTimer?.Stop();
+            TrimLoggerMessagesQueue();
+        }
+
+        /// <summary>
+        /// When the Monitor tab is hidden the UpdateTimer no longer drains
+        /// <c>Logger.Messages</c>; over hours that queue grows unbounded. Trim it down
+        /// to the configured cap whenever the tab is stopped so the app's memory does
+        /// not balloon while the user is on another tab.
+        /// </summary>
+        private void TrimLoggerMessagesQueue()
+        {
+            try
+            {
+                int cap = Math.Max(1, Config?.UiLogMaxMessages ?? 200);
+                while (Logger.Messages.Count > cap)
+                    Logger.Messages.TryDequeue(out _);
+            }
+            catch { }
         }
 
         [RelayCommand]
@@ -224,12 +242,31 @@ namespace Prosim2GSX.UI.Views.Monitor
         }
 
         /// <summary>
-        /// Returns Completed if the service was completed and the current phase is Departure or PushBack,
-        /// preventing GSX LVAR resets from reverting the indicator back to grey.
+        /// Normalises the indicator state for services that latch to Completed in their
+        /// own GetState() (Refuel/Water/Lavatory/Cleaning) — without this layer those
+        /// indicators stay green through taxi-out and flight even after the service is
+        /// no longer relevant.
+        ///
+        ///   Departure / PushBack : green when completed (GSX resets the L-Var back to
+        ///                          Callable after completion — this latch keeps it green).
+        ///   TaxiOut / Flight /
+        ///   TaxiIn  / Arrival    : grey — ground services are not in play.
+        ///   SessionStart /
+        ///   Preparation /
+        ///   TurnAround           : raw service state — services become callable again
+        ///                          in TurnAround for the next leg and should reflect
+        ///                          whatever GSX reports.
         /// </summary>
         protected virtual GsxServiceState LatchCompleted(GsxService service)
         {
             var phase = AutomationController?.State ?? AutomationState.SessionStart;
+
+            if (phase == AutomationState.TaxiOut
+                || phase == AutomationState.Flight
+                || phase == AutomationState.TaxiIn
+                || phase == AutomationState.Arrival)
+                return GsxServiceState.Callable;
+
             if (service.WasCompleted && (phase == AutomationState.Departure || phase == AutomationState.PushBack))
                 return GsxServiceState.Completed;
 
@@ -406,19 +443,41 @@ namespace Prosim2GSX.UI.Views.Monitor
         private const int LogCharsPerLine = 115;
         private const int LogMaxVisualLines = 9;
 
+        // True after the queue overflow warning has been emitted; reset once the queue
+        // returns under threshold so a subsequent overflow surfaces a fresh warning.
+        private bool _queueOverflowWarned = false;
+
         protected virtual void UpdateLog()
         {
             if (Logger.Messages.IsEmpty)
-                NotifyPropertyChanged(nameof(MessageLog));
+                return;
 
-            while (!Logger.Messages.IsEmpty)
+            int warnThreshold = Math.Max(1, Config?.UiLogQueueWarnThreshold ?? 1000);
+            int hardCap = Math.Max(1, Config?.UiLogMaxMessages ?? 200);
+
+            int queueDepth = Logger.Messages.Count;
+            if (queueDepth >= warnThreshold && !_queueOverflowWarned)
             {
-                MessageLog.Add(Logger.Messages.Dequeue());
+                _queueOverflowWarned = true;
+                Logger.Warning($"UI log buffer overflow detected: queue depth {queueDepth} ≥ {warnThreshold}; dropping oldest entries");
+                while (Logger.Messages.Count > hardCap)
+                    Logger.Messages.TryDequeue(out _);
+            }
+            else if (queueDepth < warnThreshold / 2)
+            {
+                _queueOverflowWarned = false;
+            }
+
+            while (Logger.Messages.TryDequeue(out var msg))
+            {
+                MessageLog.Add(msg);
 
                 // Trim from the front until estimated visual lines (accounting for wrapping) fit.
                 while (MessageLog.Count > 0 && LogVisualLineCount() > LogMaxVisualLines)
                     MessageLog.RemoveAt(0);
             }
+
+            NotifyPropertyChanged(nameof(MessageLog));
         }
 
         private int LogVisualLineCount()

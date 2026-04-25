@@ -80,7 +80,6 @@ namespace Prosim2GSX.UI.Views.Settings
         public virtual bool FuelRoundUp100 { get => Source.FuelRoundUp100; set => SetModelValue<bool>(value); }
         public virtual bool DingOnStartup { get => Source.DingOnStartup; set => SetModelValue<bool>(value); }
         public virtual bool DingOnFinal { get => Source.DingOnFinal; set => SetModelValue<bool>(value); }
-        public virtual bool DingOnTurnaround { get => Source.DingOnTurnaround; set => SetModelValue<bool>(value); }
         public virtual int CargoPercentChangePerSec { get => Source.CargoPercentChangePerSec; set => SetModelValue<int>(value); }
         public virtual int DoorCargoDelay { get => Source.DoorCargoDelay; set => SetModelValue<int>(value); }
         public virtual int DoorCargoOpenDelay { get => Source.DoorCargoOpenDelay; set => SetModelValue<int>(value); }

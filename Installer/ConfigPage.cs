@@ -39,6 +39,8 @@ namespace Installer
             ConfigItemHelper.CreateRadioAutoStart(Config, Items);
             if (Config.Mode == SetupMode.UPDATE)
                 Items.Add(new ConfigItemCheckbox("Reset Configuration", "Reset App Configuration to Default (only for Troubleshooting)", Config.OptionResetConfiguration, Config));
+            if (Config.GetOption<bool>(Config.StateGSXProfilesExist))
+                Items.Add(new ConfigItemCheckbox("Overwrite GSX Profiles", "Existing GSX aircraft profiles were detected in %appdata%\\Virtuali\\Airplanes.\n\nCheck this option to overwrite them with the profiles included in this installation.\nIf unchecked, existing profiles will be kept.", Config.OptionOverwriteGSXProfiles, Config));
             if (Config.GetOption<bool>(Config.StateRemoveMobiAllowed))
                 Items.Add(new ConfigItemCheckbox("Remove Mobiflight Module", "Remove the Mobiflight Module from MSFS' Community Folder (not required anymore for Prosim2GSX).\n\nATTENTION: Make sure no other Application is using it before removing it!\n(You will only see this Option if MobiFlight Connector and PilotsDeck are not detected as installed)", Config.OptionRemoveMobiflight, Config));
         }

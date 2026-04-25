@@ -28,7 +28,6 @@ namespace Prosim2GSX.Aircraft
         protected virtual ISimResourceSubscription SubAirline { get; set; }
         protected virtual ISimResourceSubscription SubTitle { get; set; }
         protected virtual ISimResourceSubscription SubLivery { get; set; }
-        protected virtual ISimResourceSubscription SubSpeed { get; set; }
         protected virtual ISimResourceSubscription SubZuluTime { get; set; }
 
         public virtual string Airline => SubAirline?.GetString();
@@ -68,7 +67,8 @@ namespace Prosim2GSX.Aircraft
         public virtual double FuelCurrent => ProsimInterface.FuelCurrent;
         public virtual double FuelTarget => ProsimInterface.FuelTarget;
         public virtual bool SmartButtonRequest => ProsimInterface.SmartButtonRequest;
-        public virtual int GroundSpeed => (int)SubSpeed.GetNumber();
+        public virtual int GroundSpeed => (int)ProsimInterface.GetGroundSpeed();
+        public virtual bool IsOnGround => ProsimInterface.GetOnGround();
         public virtual bool EquipmentGpu => ProsimInterface.GetGpuState();
         public virtual bool EquipmentPca => ProsimInterface.GetPcaState();
         public virtual bool EquipmentChocks => ProsimInterface.GetChocksState();
@@ -103,11 +103,8 @@ namespace Prosim2GSX.Aircraft
                 SubTitle = SimStore.AddVariable("TITLE", SimUnitType.String);
                 if (Sys.GetProcessRunning(Config.BinaryMsfs2024))
                     SubLivery = SimStore.AddVariable("LIVERY NAME", SimUnitType.String);
-                SubSpeed = SimStore.AddVariable("GPS GROUND SPEED", SimUnitType.Knots);
                 SubZuluTime = SimStore.AddVariable("ZULU TIME", SimUnitType.Seconds);
 
-                SimStore.AddVariable(ProsimConstants.VarAcpIntCallCpt, SimUnitType.Number);
-                SimStore.AddVariable(ProsimConstants.VarAcpIntCallFo, SimUnitType.Number);
                 SimStore.AddVariable(ProsimConstants.VarOhSigns, SimUnitType.Number);
                 SimStore.AddVariable(ProsimConstants.VarOhPneumaticPack1, SimUnitType.Number);
                 SimStore.AddVariable(ProsimConstants.VarOhPneumaticPack2, SimUnitType.Number);
@@ -154,8 +151,6 @@ namespace Prosim2GSX.Aircraft
 
             Controller.MsgCouatlStarted.OnMessage -= OnCouatlStarted;
 
-            SimStore.Remove(ProsimConstants.VarAcpIntCallCpt);
-            SimStore.Remove(ProsimConstants.VarAcpIntCallFo);
             SimStore.Remove(ProsimConstants.VarOhSigns);
             SimStore.Remove(ProsimConstants.VarOhPneumaticPack1);
             SimStore.Remove(ProsimConstants.VarOhPneumaticPack2);
@@ -164,7 +159,6 @@ namespace Prosim2GSX.Aircraft
             SimStore.Remove("TITLE");
             if (Sys.GetProcessRunning(Config.BinaryMsfs2024))
                 SimStore.Remove("LIVERY NAME");
-            SimStore.Remove("GPS GROUND SPEED");
             SimStore.Remove("ZULU TIME");
         }
 
@@ -365,20 +359,7 @@ namespace Prosim2GSX.Aircraft
 
         public virtual async Task FlashMechCall()
         {
-            Logger.Debug($"Flash Mech Indicator");
-            int seconds = 10;
-            double value;
-
-            for (int i = 0; i <= seconds; i++)
-            {
-                value = seconds % 2 == 0 ? 1 : 0;
-                await SimStore[ProsimConstants.VarAcpIntCallCpt].WriteValue(value);
-                await SimStore[ProsimConstants.VarAcpIntCallFo].WriteValue(value);
-                await Task.Delay(1000, Controller.Token);
-            }
-
-            await SimStore[ProsimConstants.VarAcpIntCallCpt].WriteValue(0);
-            await SimStore[ProsimConstants.VarAcpIntCallFo].WriteValue(0);
+            await ProsimInterface.TriggerMechCall();
         }
     }
 }

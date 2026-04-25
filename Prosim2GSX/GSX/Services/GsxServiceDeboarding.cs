@@ -1,4 +1,4 @@
-﻿using CFIT.AppLogger;
+using CFIT.AppLogger;
 using CFIT.AppTools;
 using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.GSX.Menu;
@@ -34,36 +34,19 @@ namespace Prosim2GSX.GSX.Services
 
         protected override void InitSubscriptions()
         {
-            SubDeboardService = SimStore.AddVariable(GsxConstants.VarServiceDeboarding);
-            SubDeboardService.OnReceived += OnStateChange;
+            SubDeboardService = RegisterStateSubscription(GsxConstants.VarServiceDeboarding);
 
-            SubPaxTarget = SimStore.AddVariable(GsxConstants.VarPaxTarget);
-            SubPaxTotal = SimStore.AddVariable(GsxConstants.VarPaxTotalDeboard);
-            SubPaxTotal.OnReceived += NotifyPaxChange;
-            SubCargoPercent = SimStore.AddVariable(GsxConstants.VarCargoPercentDeboard);
-            SubCargoPercent.OnReceived += NotifyCargoChange;
+            SubPaxTarget = RegisterReadOnlyVariable(GsxConstants.VarPaxTarget);
+            SubPaxTotal = RegisterChangeSubscription(GsxConstants.VarPaxTotalDeboard, NotifyPaxChange);
+            SubCargoPercent = RegisterChangeSubscription(GsxConstants.VarCargoPercentDeboard, NotifyCargoChange);
 
-            SimStore.AddVariable(GsxConstants.VarNoCrewDeboard);
-            SimStore.AddVariable(GsxConstants.VarNoPilotsDeboard);
+            RegisterReadOnlyVariable(GsxConstants.VarNoCrewDeboard);
+            RegisterReadOnlyVariable(GsxConstants.VarNoPilotsDeboard);
         }
 
         protected override void DoReset()
         {
 
-        }
-
-        public override void FreeResources()
-        {
-            SubDeboardService.OnReceived -= OnStateChange;
-            SubPaxTotal.OnReceived -= NotifyPaxChange;
-            SubCargoPercent.OnReceived -= NotifyCargoChange;
-
-            SimStore.Remove(GsxConstants.VarServiceDeboarding);
-            SimStore.Remove(GsxConstants.VarPaxTarget);
-            SimStore.Remove(GsxConstants.VarPaxTotalDeboard);
-            SimStore.Remove(GsxConstants.VarCargoPercentDeboard);
-            SimStore.Remove(GsxConstants.VarNoCrewDeboard);
-            SimStore.Remove(GsxConstants.VarNoPilotsDeboard);
         }
 
         public virtual async Task<bool> SetPaxTarget(int num)
@@ -85,10 +68,7 @@ namespace Prosim2GSX.GSX.Services
                 return;
 
             if (State != GsxServiceState.Active)
-            {
-                Logger.Debug($"Ignoring Pax Change - Service not active");
                 return;
-            }
 
             var pax = sub.GetNumber();
             if (pax < 0 || pax > PaxTarget)
@@ -106,10 +86,7 @@ namespace Prosim2GSX.GSX.Services
                 return;
 
             if (State != GsxServiceState.Active)
-            {
-                Logger.Debug($"Ignoring Cargo Change - Service not active");
                 return;
-            }
 
             var cargo = sub.GetNumber();
             if (cargo < 0 || cargo > 100)
@@ -121,10 +98,7 @@ namespace Prosim2GSX.GSX.Services
             TaskTools.RunLogged(() => OnCargoChange?.Invoke(this), Controller.Token);
 
             if (cargo == 100 && !Profile.SkipCrewQuestion)
-            {
-                Logger.Debug($"Supressing Menu Refresh");
                 Controller.Menu.SuppressMenuRefresh = true;
-            }
         }
 
         protected override void OnStateChange(ISimResourceSubscription sub, object data)

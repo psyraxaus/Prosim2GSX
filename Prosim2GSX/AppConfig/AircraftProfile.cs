@@ -78,8 +78,19 @@ namespace Prosim2GSX.AppConfig
         public virtual bool CallPushbackOnBeacon { get; set; } = false;
         public virtual bool ClearGroundEquipOnBeacon { get; set; } = true;
         public virtual bool GradualGroundEquipRemoval { get; set; } = false;
+
+        // Beacon-orchestrated departure sequence
+        public virtual bool SequenceOnBeacon { get; set; } = true;
+        public virtual int SeqDoorsCloseDelayMin { get; set; } = 15;
+        public virtual int SeqDoorsCloseDelayMax { get; set; } = 30;
+        public virtual int SeqJetwayRetractDelayMin { get; set; } = 15;
+        public virtual int SeqJetwayRetractDelayMax { get; set; } = 30;
+        public virtual int SeqGpuDisconnectDelayMin { get; set; } = 10;
+        public virtual int SeqGpuDisconnectDelayMax { get; set; } = 20;
         public virtual bool CallDeboardOnArrival { get; set; } = true;
-        public virtual bool RunDepartureOnArrival { get; set; } = false;
+        public virtual bool RunDepartureDuringDeboarding { get; set; } = false;
+        public virtual bool ChimeOnParked { get; set; } = true;
+        public virtual bool ChimeOnDeboardComplete { get; set; } = true;
         public virtual bool AnswerCabinCallGround { get; set; } = true;
         public virtual int DelayCabinCallGround { get; set; } = 4000;
         public virtual bool AnswerCabinCallAir { get; set; } = true;

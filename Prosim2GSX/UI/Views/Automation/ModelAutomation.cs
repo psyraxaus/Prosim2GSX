@@ -134,7 +134,9 @@ namespace Prosim2GSX.UI.Views.Automation
         //GSX Services
         public virtual bool CallReposition { get => Source.CallReposition; set => SetModelValue<bool>(value); }
         public virtual bool CallDeboardOnArrival { get => Source.CallDeboardOnArrival; set => SetModelValue<bool>(value); }
-        public virtual bool RunDepartureOnArrival { get => Source.RunDepartureOnArrival; set => SetModelValue<bool>(value); }
+        public virtual bool RunDepartureDuringDeboarding { get => Source.RunDepartureDuringDeboarding; set => SetModelValue<bool>(value); }
+        public virtual bool ChimeOnParked { get => Source.ChimeOnParked; set => SetModelValue<bool>(value); }
+        public virtual bool ChimeOnDeboardComplete { get => Source.ChimeOnDeboardComplete; set => SetModelValue<bool>(value); }
         public virtual ModelDepartureServices DepartureServices { get; }
         public virtual Dictionary<GsxServiceActivation, string> TextServiceActivations => ServiceConfig.TextServiceActivations;
         public virtual Dictionary<GsxServiceConstraint, string> TextServiceConstraints => ServiceConfig.TextServiceConstraints;
@@ -165,6 +167,15 @@ namespace Prosim2GSX.UI.Views.Automation
         public virtual int AttachTugDuringBoarding { get => Source.AttachTugDuringBoarding; set => SetModelValue<int>(value); }
         public virtual int CallPushbackWhenTugAttached { get => Source.CallPushbackWhenTugAttached; set => SetModelValue<int>(value); }
         public virtual bool CallPushbackOnBeacon { get => Source.CallPushbackOnBeacon; set => SetModelValue<bool>(value); }
+
+        // Beacon-orchestrated departure sequence
+        public virtual bool SequenceOnBeacon { get => Source.SequenceOnBeacon; set => SetModelValue<bool>(value); }
+        public virtual int SeqDoorsCloseDelayMin { get => Source.SeqDoorsCloseDelayMin; set => SetModelValue<int>(value); }
+        public virtual int SeqDoorsCloseDelayMax { get => Source.SeqDoorsCloseDelayMax; set => SetModelValue<int>(value); }
+        public virtual int SeqJetwayRetractDelayMin { get => Source.SeqJetwayRetractDelayMin; set => SetModelValue<int>(value); }
+        public virtual int SeqJetwayRetractDelayMax { get => Source.SeqJetwayRetractDelayMax; set => SetModelValue<int>(value); }
+        public virtual int SeqGpuDisconnectDelayMin { get => Source.SeqGpuDisconnectDelayMin; set => SetModelValue<int>(value); }
+        public virtual int SeqGpuDisconnectDelayMax { get => Source.SeqGpuDisconnectDelayMax; set => SetModelValue<int>(value); }
 
         //Operator Selection
         public virtual bool OperatorAutoSelect { get => Source.OperatorAutoSelect; set => SetModelValue<bool>(value); }

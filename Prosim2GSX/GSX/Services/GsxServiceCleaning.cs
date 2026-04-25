@@ -1,4 +1,4 @@
-﻿using CFIT.SimConnectLib.SimResources;
+using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.GSX.Menu;
 
 namespace Prosim2GSX.GSX.Services
@@ -25,8 +25,7 @@ namespace Prosim2GSX.GSX.Services
 
         protected override void InitSubscriptions()
         {
-            SubCleaningService = SimStore.AddVariable(GsxConstants.VarServiceCleaning);
-            SubCleaningService.OnReceived += OnStateChange;
+            SubCleaningService = RegisterStateSubscription(GsxConstants.VarServiceCleaning);
         }
 
         protected override bool CheckCalled()
@@ -37,13 +36,6 @@ namespace Prosim2GSX.GSX.Services
         protected override void DoReset()
         {
 
-        }
-
-        public override void FreeResources()
-        {
-            SubCleaningService.OnReceived -= OnStateChange;
-
-            SimStore.Remove(GsxConstants.VarServiceCleaning);
         }
 
         protected override void RunStateRequested()

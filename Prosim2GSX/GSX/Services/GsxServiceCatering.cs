@@ -1,4 +1,4 @@
-﻿using CFIT.SimConnectLib.SimResources;
+using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.GSX.Menu;
 
 namespace Prosim2GSX.GSX.Services
@@ -21,20 +21,12 @@ namespace Prosim2GSX.GSX.Services
 
         protected override void InitSubscriptions()
         {
-            SubCaterService = SimStore.AddVariable(GsxConstants.VarServiceCatering);
-            SubCaterService.OnReceived += OnStateChange;
+            SubCaterService = RegisterStateSubscription(GsxConstants.VarServiceCatering);
         }
 
         protected override void DoReset()
         {
-            
-        }
 
-        public override void FreeResources()
-        {
-            SubCaterService.OnReceived -= OnStateChange;
-
-            SimStore.Remove(GsxConstants.VarServiceCatering);
         }
     }
 }
