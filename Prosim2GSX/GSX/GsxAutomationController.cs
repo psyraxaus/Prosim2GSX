@@ -352,7 +352,7 @@ namespace Prosim2GSX.GSX
                 if (Config.FlightPhaseLogIntervalSec > 0
                     && (DateTime.UtcNow - LastFlightSummaryAt).TotalSeconds >= Config.FlightPhaseLogIntervalSec)
                 {
-                    Logger.Information(
+                    Logger.Debug(
                         $"Flight phase: onGround={Controller.IsOnGround}, groundSpeed={Aircraft.GroundSpeed:F1}kt, "
                       + $"engines={Aircraft.EnginesRunning}, groundCounter={Controller.GroundCounter}/{Config.GroundTicks}");
                     LastFlightSummaryAt = DateTime.UtcNow;

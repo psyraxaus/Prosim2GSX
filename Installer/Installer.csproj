@@ -202,6 +202,7 @@
     <PackageReference Include="System.Security.Cryptography.Encoding" Version="4.3.0" />
     <PackageReference Include="System.Security.Cryptography.Primitives" Version="4.3.0" />
     <PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="8.0.3" />
     <PackageReference Include="System.Text.Encodings.Web" Version="9.0.9" />
     <PackageReference Include="System.Text.Json" Version="9.0.9" />
     <PackageReference Include="System.Threading.Channels" Version="9.0.9" />
