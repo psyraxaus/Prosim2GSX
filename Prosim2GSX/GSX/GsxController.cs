@@ -210,7 +210,7 @@ namespace Prosim2GSX.GSX
                 if (IsAirStart)
                     Logger.Debug($"Air Start detected");
             }
-            else if (AutomationController.IsOnGround != IsOnGround)
+            else if (AutomationController.IsOnGround != IsOnGround && !IsWalkaround)
             {
                 GroundCounter++;
                 Logger.Debug($"Ground state mismatch: raw={IsOnGround}, committed={AutomationController.IsOnGround}, counter={GroundCounter}/{Config.GroundTicks}");

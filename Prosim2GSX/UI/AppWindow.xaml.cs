@@ -5,7 +5,9 @@ using Prosim2GSX.UI.Views.Monitor;
 using Prosim2GSX.UI.Views.Profiles;
 using Prosim2GSX.UI.Views.Settings;
 using System;
+using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -26,6 +28,12 @@ namespace Prosim2GSX.UI
 
         private int _previousTabIndex = -1;
         private DispatcherTimer _logTrimTimer;
+        private DispatcherTimer _resourceHeartbeatTimer;
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern uint GetGuiResources(IntPtr hProcess, uint uiFlags);
+        private const uint GR_GDIOBJECTS = 0;
+        private const uint GR_USEROBJECTS = 1;
 
         public AppWindow()
         {
@@ -112,6 +120,43 @@ namespace Prosim2GSX.UI
             }
 
             StartLogTrimTimer();
+            StartResourceHeartbeat();
+        }
+
+        // Diagnostic: log USER / GDI / Handle counts for our own process every 60s.
+        // USER objects: windows, menus, hooks, popups, tooltips. GDI objects: pens,
+        // brushes, fonts, bitmaps, regions. A steady climb here points to a leak in
+        // this process; flat counts during a session-wide ERROR_NOT_ENOUGH_QUOTA
+        // crash points to another process (often MSFS) exhausting the desktop pool.
+        private void StartResourceHeartbeat()
+        {
+            _resourceHeartbeatTimer = new DispatcherTimer(DispatcherPriority.Background)
+            {
+                Interval = TimeSpan.FromSeconds(60),
+            };
+            _resourceHeartbeatTimer.Tick += OnResourceHeartbeatTick;
+            _resourceHeartbeatTimer.Start();
+            // Fire one immediately so we have a baseline at startup.
+            OnResourceHeartbeatTick(this, EventArgs.Empty);
+        }
+
+        private bool _resourceHeartbeatErrorReported = false;
+
+        private void OnResourceHeartbeatTick(object sender, EventArgs e)
+        {
+            try
+            {
+                using var proc = Process.GetCurrentProcess();
+                uint user = GetGuiResources(proc.Handle, GR_USEROBJECTS);
+                uint gdi = GetGuiResources(proc.Handle, GR_GDIOBJECTS);
+                int handles = proc.HandleCount;
+                Logger.Information($"Resource heartbeat: USER={user}, GDI={gdi}, Handles={handles}");
+            }
+            catch (Exception ex) when (!_resourceHeartbeatErrorReported)
+            {
+                _resourceHeartbeatErrorReported = true;
+                Logger.LogException(ex);
+            }
         }
 
         // Periodic safety net: trims Logger.Messages while the Monitor tab is not
@@ -149,6 +194,8 @@ namespace Prosim2GSX.UI
         {
             _logTrimTimer?.Stop();
             _logTrimTimer = null;
+            _resourceHeartbeatTimer?.Stop();
+            _resourceHeartbeatTimer = null;
         }
 
         private static UIElement CreateDegradedPlaceholder()

@@ -181,7 +181,7 @@ namespace Prosim2GSX.SayIntentions
                     });
                 }
 
-                Logger.Information($"SayIntentions: getWX returned {result.Count} airport(s) for [{icaoParam}]");
+                Logger.Debug($"SayIntentions: getWX returned {result.Count} airport(s) for [{icaoParam}]");
                 return result;
             }
             catch (Exception ex)

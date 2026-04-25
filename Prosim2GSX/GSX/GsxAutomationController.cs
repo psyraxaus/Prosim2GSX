@@ -101,6 +101,9 @@ namespace Prosim2GSX.GSX
 
         // Periodic Flight-state summary log cadence
         protected virtual DateTime LastFlightSummaryAt { get; set; } = DateTime.MinValue;
+        // TaxiIn arrival-condition diagnostics
+        protected virtual DateTime LastTaxiInSummaryAt { get; set; } = DateTime.MinValue;
+        protected virtual bool LastStableParked { get; set; } = false;
 
         // Beacon-orchestrated departure sequence state
         protected virtual DepartureSequenceStep SequenceStep { get; set; } = DepartureSequenceStep.Idle;
@@ -159,6 +162,8 @@ namespace Prosim2GSX.GSX
             ArrivalEnteredAt = DateTime.MinValue;
             ArrivalStallLastWarning = DateTime.MinValue;
             LastFlightSummaryAt = DateTime.MinValue;
+            LastTaxiInSummaryAt = DateTime.MinValue;
+            LastStableParked = false;
             ResetDepartureSequence();
             DepartureServicesCalled?.Clear();
             if (Profile?.DepartureServices != null)
@@ -192,6 +197,8 @@ namespace Prosim2GSX.GSX
             ArrivalEnteredAt = DateTime.MinValue;
             ArrivalStallLastWarning = DateTime.MinValue;
             LastFlightSummaryAt = DateTime.MinValue;
+            LastTaxiInSummaryAt = DateTime.MinValue;
+            LastStableParked = false;
             ResetDepartureSequence();
             DepartureServicesCalled.Clear();
             DepartureServicesEnumerator = Profile.DepartureServices.GetEnumerator();
@@ -371,10 +378,33 @@ namespace Prosim2GSX.GSX
             //TaxiIn => Arrival (with hold window — requires stable parked state for ArrivalHoldTicks)
             else if (State == AutomationState.TaxiIn)
             {
-                bool stableParked = !Aircraft.EnginesRunning
-                                 && Aircraft.IsBrakeSet
-                                 && !Aircraft.LightBeacon
-                                 && Aircraft.GroundSpeed < 1;
+                bool engOff = !Aircraft.EnginesRunning;
+                bool brake = Aircraft.IsBrakeSet;
+                bool beaconOff = !Aircraft.LightBeacon;
+                double gs = Aircraft.GroundSpeed;
+                // Ground speed: tolerate hardware-cockpit jitter at standstill
+                // (Prosim's RefGroundSpeed can sit at 1-2 kt fully stopped).
+                bool gsLow = gs < 2.0;
+
+                bool stableParked = engOff && brake && beaconOff && gsLow;
+
+                // Diagnostics: log on transition + throttled summary while waiting.
+                if (stableParked && !LastStableParked)
+                {
+                    Logger.Debug($"TaxiIn arrival countdown started — engines={!engOff}, brake={brake}, beacon={!beaconOff}, gs={gs:F1}kt (need ArrivalHoldTicks={Config.ArrivalHoldTicks})");
+                    LastTaxiInSummaryAt = DateTime.UtcNow;
+                }
+                else if (!stableParked && LastStableParked)
+                {
+                    Logger.Debug($"TaxiIn arrival countdown reset — engines={!engOff}, brake={brake}, beacon={!beaconOff}, gs={gs:F1}kt");
+                    LastTaxiInSummaryAt = DateTime.UtcNow;
+                }
+                else if (!stableParked && (DateTime.UtcNow - LastTaxiInSummaryAt).TotalSeconds >= 60)
+                {
+                    Logger.Debug($"TaxiIn waiting for parked state — engines={!engOff}, brake={brake}, beacon={!beaconOff}, gs={gs:F1}kt");
+                    LastTaxiInSummaryAt = DateTime.UtcNow;
+                }
+                LastStableParked = stableParked;
 
                 if (stableParked)
                 {
