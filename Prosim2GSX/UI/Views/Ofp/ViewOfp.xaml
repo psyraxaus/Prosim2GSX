@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:Prosim2GSX.UI.Views.Ofp"
+             xmlns:controls="clr-namespace:Prosim2GSX.UI"
              d:DataContext="{d:DesignInstance Type=local:ModelOfp}"
              mc:Ignorable="d"
              d:DesignHeight="768" d:DesignWidth="900">
@@ -78,6 +79,31 @@
                         <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding AirDistance}" FontWeight="Bold" VerticalAlignment="Center"/>
                     </Grid>
                 </StackPanel>
+            </Border>
+
+            <!-- PUSHBACK DIRECTION -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="PUSHBACK DIRECTION" Margin="0,8,0,4"/>
+            <Border Style="{StaticResource SectionCardBorder}">
+                <UniformGrid Rows="1" Columns="3" HorizontalAlignment="Center" Margin="6,4,6,4">
+                    <controls:KorryPushbackButton Arrow="TailLeft"
+                                                  Label="TAIL LEFT"
+                                                  Subtitle="NOSE RIGHT"
+                                                  IsActive="{Binding PushbackPrefIsTailLeft, Mode=TwoWay}"
+                                                  Margin="8,0,8,0"
+                                                  ToolTip="Auto-select 'Nose Right/Tail Left' when GSX shows the direction menu."/>
+                    <controls:KorryPushbackButton Arrow="Auto"
+                                                  Label="AUTO"
+                                                  Subtitle="GSX DECIDES"
+                                                  IsActive="{Binding PushbackPrefIsAuto, Mode=TwoWay}"
+                                                  Margin="8,0,8,0"
+                                                  ToolTip="Let GSX present the direction menu and choose manually."/>
+                    <controls:KorryPushbackButton Arrow="TailRight"
+                                                  Label="TAIL RIGHT"
+                                                  Subtitle="NOSE LEFT"
+                                                  IsActive="{Binding PushbackPrefIsTailRight, Mode=TwoWay}"
+                                                  Margin="8,0,8,0"
+                                                  ToolTip="Auto-select 'Nose Left/Tail Right' when GSX shows the direction menu."/>
+                </UniformGrid>
             </Border>
 
             <!-- ARRIVAL GATE ASSIGNMENT -->

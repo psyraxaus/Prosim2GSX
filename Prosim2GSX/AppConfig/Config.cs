@@ -47,6 +47,9 @@ namespace Prosim2GSX.AppConfig
         public virtual bool RunGsxService { get; set; } = true;
         public virtual bool ResetGsxStateVarsFlight { get; set; } = true;
         public virtual bool RestartGsxOnTaxiIn { get; set; } = false;
+        public virtual bool PushbackPreferenceReapplyOnChange { get; set; } = true;
+        public virtual bool AutoDeiceEnabled { get; set; } = false;
+        public virtual GSX.AutoDeiceFluid AutoDeiceFluid { get; set; } = GSX.AutoDeiceFluid.TypeIV100;
         public virtual bool RunAudioService { get; set; } = true;
         public virtual bool UseSayIntentions { get; set; } = false;
         public virtual string AudioDebugFile { get; set; } = "log\\AudioDebug.txt";

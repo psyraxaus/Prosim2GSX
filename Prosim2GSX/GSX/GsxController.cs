@@ -42,6 +42,8 @@ namespace Prosim2GSX.GSX
         public virtual AircraftProfile AircraftProfile { get; protected set; } = null;
         public event Action<AircraftProfile> ProfileChanged;
         public virtual IAircraftProfile IAircraftProfile => AircraftProfile;
+        public virtual PushbackPreference PushbackPreference { get; set; } = PushbackPreference.Auto;
+        public virtual bool PushbackDirectionAutoSelected { get; set; } = false;
         public virtual GsxAutomationController AutomationController { get; }
         public virtual MessageReceiver<MsgGsxCouatlStarted> MsgCouatlStarted { get; protected set; }
         public virtual MessageReceiver<MsgGsxCouatlStopped> MsgCouatlStopped { get; protected set; }

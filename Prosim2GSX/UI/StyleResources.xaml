@@ -411,6 +411,7 @@
         <Setter Property="Foreground" Value="{DynamicResource HeaderText}"/>
     </Style>
 
+
     <!-- Modern EFB Tab Control -->
     <Style x:Key="EfbTabControl" TargetType="TabControl">
         <Setter Property="Margin" Value="0"/>

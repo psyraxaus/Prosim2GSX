@@ -173,6 +173,26 @@
             </StackPanel>
         </Border>
 
+        <!-- DE-ICING -->
+        <TextBlock Style="{StaticResource CategoryHeader}" Text="DE-ICING" Margin="0,0,0,4"/>
+        <Border Style="{StaticResource SectionCardBorder}">
+            <StackPanel>
+                <CheckBox IsChecked="{Binding AutoDeiceEnabled}" Style="{StaticResource CheckBoxSettingItem}"
+                          ToolTip="Automatically answer Yes to the GSX de-icing request and select the configured fluid + concentration. When disabled, the de-icing menu is left open for manual selection.">
+                    <TextBlock>Automatically respond <Underline>Yes</Underline> to GSX de-icing request</TextBlock>
+                </CheckBox>
+                <StackPanel Style="{StaticResource SettingItemPanel}" IsEnabled="{Binding AutoDeiceEnabled}"
+                            ToolTip="Fluid type and concentration to auto-select after answering Yes. Matched against the GSX de-icing type menu by text (e.g. 'Type IV' + '100').">
+                    <TextBlock Style="{StaticResource TextBlockDefault}" Margin="0,0,6,0">Fluid:</TextBlock>
+                    <ComboBox Style="{StaticResource ComboBoxDefault}"
+                              SelectedValue="{Binding AutoDeiceFluid}"
+                              ItemsSource="{Binding AutoDeiceFluidOptions}"
+                              SelectedValuePath="Key"
+                              DisplayMemberPath="Value"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
         <!-- PUSHBACK & TUG -->
         <TextBlock Style="{StaticResource CategoryHeader}" Text="PUSHBACK &amp; TUG" Margin="0,0,0,4"/>
         <Border Style="{StaticResource SectionCardBorder}">

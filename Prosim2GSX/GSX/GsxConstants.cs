@@ -68,6 +68,7 @@
         public static string MenuPushbackDirection { get; } = "Select pushback direction";
         public static string MenuPushbackChange { get; } = "Change Direction";
         public static string MenuDeiceOnPush { get; } = "Ice warning: do you request the de-icing treatment";
+        public static string MenuDeiceType { get; } = "Select de-icing type";
         public static string MenuPushbackConfirm { get; } = "Interrupt pushback";
         public static string MenuPushbackRequest { get; } = "Do you want to request"; 
         public static string MenuFollowMe { get; } = "Request FollowMe";

@@ -64,6 +64,7 @@ namespace Prosim2GSX.GSX.Services
         protected override void DoReset()
         {
             TugAttachedOnBoarding = false;
+            Controller.PushbackDirectionAutoSelected = false;
         }
 
         public override async Task Call()

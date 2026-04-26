@@ -174,6 +174,31 @@ namespace Prosim2GSX.UI.Views.Ofp
 
         public virtual bool UseSayIntentions => Config?.UseSayIntentions == true;
 
+        // Pushback direction preference (in-memory, session-scoped, lives on GsxController)
+        public virtual bool PushbackPrefIsAuto
+        {
+            get => GsxController?.PushbackPreference == PushbackPreference.Auto;
+            set { if (value) SetPushbackPreference(PushbackPreference.Auto); }
+        }
+        public virtual bool PushbackPrefIsTailLeft
+        {
+            get => GsxController?.PushbackPreference == PushbackPreference.TailLeft;
+            set { if (value) SetPushbackPreference(PushbackPreference.TailLeft); }
+        }
+        public virtual bool PushbackPrefIsTailRight
+        {
+            get => GsxController?.PushbackPreference == PushbackPreference.TailRight;
+            set { if (value) SetPushbackPreference(PushbackPreference.TailRight); }
+        }
+        protected virtual void SetPushbackPreference(PushbackPreference preference)
+        {
+            if (GsxController == null || GsxController.PushbackPreference == preference) return;
+            GsxController.PushbackPreference = preference;
+            NotifyPropertyChanged(nameof(PushbackPrefIsAuto));
+            NotifyPropertyChanged(nameof(PushbackPrefIsTailLeft));
+            NotifyPropertyChanged(nameof(PushbackPrefIsTailRight));
+        }
+
         [RelayCommand(CanExecute = nameof(CanConfirmArrivalGate))]
         private Task ConfirmArrivalGateAsync()
         {
