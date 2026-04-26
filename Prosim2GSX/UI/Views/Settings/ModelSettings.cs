@@ -57,6 +57,8 @@ namespace Prosim2GSX.UI.Views.Settings
             if ((e?.PropertyName == nameof(Config.DisplayUnitCurrent) || e?.PropertyName == nameof(Config.DisplayUnitCurrentString))
                 && !UnitUpdateTimer.IsEnabled)
                 UnitUpdateTimer.Start();
+            if (e?.PropertyName == nameof(Config.WebServerAuthToken))
+                NotifyPropertyChanged(nameof(WebServerAuthToken));
         }
 
         protected virtual void UnitUpdateTimer_Tick(object? sender, EventArgs e)
@@ -96,6 +98,26 @@ namespace Prosim2GSX.UI.Views.Settings
         public virtual bool OpenAppWindowOnStart { get => Source.OpenAppWindowOnStart; set => SetModelValue<bool>(value); }
         public virtual string ProSimSdkPath { get => Source.ProSimSdkPath; set => SetModelValue<string>(value); }
         public virtual bool SolariAnimationEnabled { get => Source.SolariAnimationEnabled; set => SetModelValue<bool>(value); }
+
+        // ── Web interface (hot-toggled; WebHostService observes Config) ──────
+
+        public virtual bool WebServerEnabled { get => Source.WebServerEnabled; set => SetModelValue<bool>(value); }
+        public virtual int WebServerPort { get => Source.WebServerPort; set => SetModelValue<int>(value); }
+        public virtual bool WebServerBindAll { get => Source.WebServerBindAll; set => SetModelValue<bool>(value); }
+        // Token is read-only on the bound surface — regeneration goes through
+        // the dedicated command so the host can also kick existing clients.
+        public virtual string WebServerAuthToken => Source.WebServerAuthToken ?? "";
+
+        [RelayCommand]
+        private void RegenerateWebToken()
+        {
+            try
+            {
+                AppService.Instance?.WebHost?.RegenerateToken();
+                NotifyPropertyChanged(nameof(WebServerAuthToken));
+            }
+            catch { }
+        }
 
         // ── Theme selection ────────────────────────────────────────────────
 

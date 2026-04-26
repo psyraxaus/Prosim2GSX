@@ -237,6 +237,45 @@
                 </Grid>
             </Border>
 
+            <!-- WEB INTERFACE -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="WEB INTERFACE"/>
+            <Border Style="{StaticResource SectionCardBorder}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Run a local web server so a browser on the LAN can mirror this UI.">Enable Web Server:</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="0" IsChecked="{Binding WebServerEnabled}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Run a local web server so a browser on the LAN can mirror this UI."/>
+
+                    <TextBlock Grid.Column="0" Grid.Row="1" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="TCP port the web server listens on.">Port:</TextBlock>
+                    <StackPanel Grid.Column="1" Grid.Row="1" Style="{StaticResource SettingItemPanel}" Orientation="Horizontal" ToolTip="TCP port the web server listens on.">
+                        <TextBox Text="{Binding WebServerPort, UpdateSourceTrigger=LostFocus}" Style="{StaticResource TextBoxCentered}" MinWidth="80"/>
+                    </StackPanel>
+
+                    <TextBlock Grid.Column="0" Grid.Row="2" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="When enabled, bind to all interfaces (0.0.0.0) so other devices on the LAN can connect. Off = loopback only.">Expose to LAN:</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="2" IsChecked="{Binding WebServerBindAll}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="When enabled, bind to all interfaces (0.0.0.0) so other devices on the LAN can connect. Off = loopback only."/>
+
+                    <TextBlock Grid.Column="0" Grid.Row="3" Margin="6" VerticalAlignment="Top" Style="{StaticResource TextBlockDefault}" ToolTip="Bearer token required by every web request. Regenerate to invalidate existing clients.">Auth Token:</TextBlock>
+                    <StackPanel Grid.Column="1" Grid.Row="3" Margin="6" Orientation="Horizontal">
+                        <TextBox Text="{Binding WebServerAuthToken, Mode=OneWay}" IsReadOnly="True" Style="{StaticResource TextBoxLeft}" MinWidth="240" MaxWidth="320" FontFamily="Consolas"/>
+                        <Button Content="Regenerate"
+                                Command="{Binding RegenerateWebTokenCommand}"
+                                Background="{DynamicResource SecondaryColor}"
+                                Foreground="{DynamicResource HeaderText}"
+                                BorderThickness="0"
+                                Margin="8,0,0,0" Padding="10,5"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
         </StackPanel>
     </ScrollViewer>
 </UserControl>

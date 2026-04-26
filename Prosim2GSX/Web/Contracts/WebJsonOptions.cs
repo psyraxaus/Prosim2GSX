@@ -21,18 +21,25 @@ namespace Prosim2GSX.Web.Contracts
     {
         public static JsonSerializerOptions Default { get; } = Build();
 
-        private static JsonSerializerOptions Build()
+        // Apply the locked conventions to an existing JsonSerializerOptions
+        // instance — used by ASP.NET Core MVC's AddJsonOptions hook so the
+        // controller-side serializer shares the contract without us building
+        // a parallel JsonSerializerOptions tree.
+        public static void Configure(JsonSerializerOptions options)
         {
-            var options = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                WriteIndented = false,
-                ReadCommentHandling = JsonCommentHandling.Skip,
-                AllowTrailingCommas = true,
-            };
+            options.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+            options.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+            options.WriteIndented = false;
+            options.ReadCommentHandling = JsonCommentHandling.Skip;
+            options.AllowTrailingCommas = true;
             options.Converters.Add(new JsonStringEnumConverter());
             options.Converters.Add(new TimeSpanSecondsConverter());
+        }
+
+        private static JsonSerializerOptions Build()
+        {
+            var options = new JsonSerializerOptions();
+            Configure(options);
             return options;
         }
     }

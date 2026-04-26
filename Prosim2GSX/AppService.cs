@@ -9,6 +9,7 @@ using Prosim2GSX.GSX;
 using Prosim2GSX.Prosim;
 using Prosim2GSX.SayIntentions;
 using Prosim2GSX.State;
+using Prosim2GSX.Web;
 using System;
 using System.IO;
 using System.Threading;
@@ -53,6 +54,11 @@ namespace Prosim2GSX
         // the first tick fires; stopped in FreeResources during app shutdown.
         protected virtual StateUpdateWorker StateUpdateWorker { get; set; }
         protected virtual MessageLogDrainWorker MessageLogDrainWorker { get; set; }
+
+        // Embedded Kestrel host for the LAN browser interface. Constructed
+        // unconditionally so it can react to Config.WebServerEnabled changes
+        // at runtime; only Start()s when Config.WebServerEnabled is true.
+        public virtual WebHostService WebHost { get; protected set; }
 
         public AppService(Config config) : base(config)
         {
@@ -101,6 +107,12 @@ namespace Prosim2GSX
             MessageLogDrainWorker = new MessageLogDrainWorker(FlightStatus, Config);
             StateUpdateWorker.Start();
             MessageLogDrainWorker.Start();
+
+            // Web host follows Config.WebServerEnabled — constructed always so
+            // it can react to runtime toggles, only Start()s when enabled.
+            WebHost = new WebHostService(this);
+            if (Config.WebServerEnabled)
+                Task.Run(WebHost.Start);
         }
 
         protected override Task InitReceivers()
@@ -239,6 +251,7 @@ namespace Prosim2GSX
 
             try { StateUpdateWorker?.Stop(); } catch { }
             try { MessageLogDrainWorker?.Stop(); } catch { }
+            try { WebHost?.Stop(); } catch { }
 
             return Task.CompletedTask;
         }
