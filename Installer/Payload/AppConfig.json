@@ -147,6 +147,10 @@
   "UiLogQueueWarnThreshold": 1000,
   "CurrentTheme": "Light",
   "SolariAnimationEnabled": true,
+  "WebServerEnabled": false,
+  "WebServerPort": 5000,
+  "WebServerBindAll": false,
+  "WebServerAuthToken": "",
   "ProSimSdkPath": "",
   "ProSimSdkHostname": "localhost",
   "ProSimSdkReconnectInterval": 5000,
@@ -255,7 +259,7 @@
       }
     }
   ],
-  "ConfigVersion": 22,
+  "ConfigVersion": 23,
   "LogInterval": 3,
   "SizeLimit": 10485760,
   "LogCount": 3,

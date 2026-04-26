@@ -146,6 +146,14 @@ namespace Prosim2GSX.AppConfig
         // Display
         public virtual bool SolariAnimationEnabled { get; set; } = true;
 
+        // Web server (LAN browser interface). Off by default; loopback-only when
+        // first enabled. AuthToken is empty until the host generates one on first
+        // start with WebServerEnabled=true (Phase 6 concern).
+        public virtual bool WebServerEnabled { get; set; } = false;
+        public virtual int WebServerPort { get; set; } = 5000;
+        public virtual bool WebServerBindAll { get; set; } = false;
+        public virtual string WebServerAuthToken { get; set; } = "";
+
         //ProsimSDK
         public virtual string ProSimSdkPath { get; set; } = "";
         public virtual string ProSimSdkHostname { get; set; } = "localhost";
