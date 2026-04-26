@@ -121,8 +121,6 @@ namespace Prosim2GSX.GSX.Menu
         protected virtual async Task OnPushbackDirection(GsxMenu menu)
         {
             var preference = Controller.PushbackPreference;
-            if (preference == PushbackPreference.Auto)
-                return;
 
             if (!Config.PushbackPreferenceReapplyOnChange && Controller.PushbackDirectionAutoSelected)
             {
@@ -130,12 +128,20 @@ namespace Prosim2GSX.GSX.Menu
                 return;
             }
 
-            string tailToken = preference == PushbackPreference.TailLeft ? "Tail Left" : "Tail Right";
+            string searchToken = preference switch
+            {
+                PushbackPreference.TailLeft => "Tail Left",
+                PushbackPreference.TailRight => "Tail Right",
+                PushbackPreference.Straight => "Straight pushback",
+                _ => null,
+            };
+            if (searchToken == null)
+                return;
 
-            int index = FindPushbackLineByText(tailToken);
+            int index = FindPushbackLineByText(searchToken);
             string strategy = "text";
 
-            if (index < 0)
+            if (index < 0 && preference != PushbackPreference.Straight)
             {
                 index = FindPushbackLineByFixedIndex(preference);
                 strategy = "fixed-index";
@@ -143,7 +149,7 @@ namespace Prosim2GSX.GSX.Menu
 
             if (index < 0)
             {
-                Logger.Information($"Pushback direction menu: could not auto-pick '{tailToken}' (text and fixed-index both failed). Menu lines:");
+                Logger.Information($"Pushback direction menu: could not auto-pick '{searchToken}' (text{(preference != PushbackPreference.Straight ? " and fixed-index" : "")} failed). Menu lines:");
                 for (int i = 0; i < MenuLines.Count; i++)
                     Logger.Information($"  [{i + 1}] {MenuLines[i]}");
                 Logger.Information("Leaving menu open for manual selection.");

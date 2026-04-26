@@ -2,7 +2,7 @@ namespace Prosim2GSX.GSX
 {
     public enum PushbackPreference
     {
-        Auto,
+        Straight,
         TailLeft,
         TailRight,
     }

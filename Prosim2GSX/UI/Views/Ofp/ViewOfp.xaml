@@ -91,12 +91,12 @@
                                                   IsActive="{Binding PushbackPrefIsTailLeft, Mode=TwoWay}"
                                                   Margin="8,0,8,0"
                                                   ToolTip="Auto-select 'Nose Right/Tail Left' when GSX shows the direction menu."/>
-                    <controls:KorryPushbackButton Arrow="Auto"
-                                                  Label="AUTO"
-                                                  Subtitle="GSX DECIDES"
-                                                  IsActive="{Binding PushbackPrefIsAuto, Mode=TwoWay}"
+                    <controls:KorryPushbackButton Arrow="Straight"
+                                                  Label="STRAIGHT"
+                                                  Subtitle="STRAIGHT BACK"
+                                                  IsActive="{Binding PushbackPrefIsStraight, Mode=TwoWay}"
                                                   Margin="8,0,8,0"
-                                                  ToolTip="Let GSX present the direction menu and choose manually."/>
+                                                  ToolTip="Auto-select 'Straight pushback' when GSX shows the direction menu."/>
                     <controls:KorryPushbackButton Arrow="TailRight"
                                                   Label="TAIL RIGHT"
                                                   Subtitle="NOSE LEFT"

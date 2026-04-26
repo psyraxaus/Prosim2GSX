@@ -9,7 +9,7 @@ namespace Prosim2GSX.UI
     public enum KorryArrow
     {
         TailLeft,
-        Auto,
+        Straight,
         TailRight,
     }
 
@@ -17,7 +17,7 @@ namespace Prosim2GSX.UI
     {
         public static readonly DependencyProperty ArrowProperty =
             DependencyProperty.Register(nameof(Arrow), typeof(KorryArrow), typeof(KorryPushbackButton),
-                new FrameworkPropertyMetadata(KorryArrow.Auto, OnVisualPropertyChanged));
+                new FrameworkPropertyMetadata(KorryArrow.Straight, OnVisualPropertyChanged));
 
         public static readonly DependencyProperty IsActiveProperty =
             DependencyProperty.Register(nameof(IsActive), typeof(bool), typeof(KorryPushbackButton),
@@ -92,16 +92,16 @@ namespace Prosim2GSX.UI
         private void ApplyVisualState()
         {
             ArrowTailLeft.Visibility = Arrow == KorryArrow.TailLeft ? Visibility.Visible : Visibility.Collapsed;
-            ArrowAuto.Visibility = Arrow == KorryArrow.Auto ? Visibility.Visible : Visibility.Collapsed;
+            ArrowStraight.Visibility = Arrow == KorryArrow.Straight ? Visibility.Visible : Visibility.Collapsed;
             ArrowTailRight.Visibility = Arrow == KorryArrow.TailRight ? Visibility.Visible : Visibility.Collapsed;
 
             ButtonBody.BorderBrush = (Brush)(IsActive
                 ? FindResource("KorryBodyBorderActive")
                 : FindResource("KorryBodyBorder"));
 
-            bool isAuto = Arrow == KorryArrow.Auto;
+            bool isStraight = Arrow == KorryArrow.Straight;
             IconZone.Background = (Brush)(IsActive
-                ? FindResource(isAuto ? "KorryIconZoneActiveAuto" : "KorryIconZoneActiveGreen")
+                ? FindResource(isStraight ? "KorryIconZoneActiveAuto" : "KorryIconZoneActiveGreen")
                 : FindResource("KorryBodyBackground"));
 
             ApplyArrowColors();
@@ -126,15 +126,11 @@ namespace Prosim2GSX.UI
                         TailRightHead.Fill = brush;
                         break;
                     }
-                case KorryArrow.Auto:
+                case KorryArrow.Straight:
                     {
                         var arrowBrush = (Brush)FindResource(IsActive ? "KorryAutoActive" : "KorryAutoInactive");
-                        var dividerBrush = (Brush)FindResource(IsActive ? "KorryAutoDividerActive" : "KorryAutoDividerInactive");
-                        AutoLeftHead.Fill = arrowBrush;
-                        AutoRightHead.Fill = arrowBrush;
-                        AutoLeftStem.Stroke = arrowBrush;
-                        AutoRightStem.Stroke = arrowBrush;
-                        AutoDivider.Stroke = dividerBrush;
+                        StraightStem.Stroke = arrowBrush;
+                        StraightHead.Fill = arrowBrush;
                         break;
                     }
             }
@@ -151,10 +147,10 @@ namespace Prosim2GSX.UI
                 return;
             }
 
-            bool isAuto = Arrow == KorryArrow.Auto;
-            var bgKey = isAuto ? "KorryAmberLegendBackground" : "KorryGreenLegendBackground";
-            var textKey = isAuto ? "KorryAmberLegendText" : "KorryGreenLegendText";
-            var glowColor = isAuto
+            bool isStraight = Arrow == KorryArrow.Straight;
+            var bgKey = isStraight ? "KorryAmberLegendBackground" : "KorryGreenLegendBackground";
+            var textKey = isStraight ? "KorryAmberLegendText" : "KorryGreenLegendText";
+            var glowColor = isStraight
                 ? Color.FromRgb(0xFF, 0xC2, 0x00)
                 : Color.FromRgb(0x1A, 0x8F, 0xFF);
 

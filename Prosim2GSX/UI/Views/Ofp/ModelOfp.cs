@@ -175,10 +175,10 @@ namespace Prosim2GSX.UI.Views.Ofp
         public virtual bool UseSayIntentions => Config?.UseSayIntentions == true;
 
         // Pushback direction preference (in-memory, session-scoped, lives on GsxController)
-        public virtual bool PushbackPrefIsAuto
+        public virtual bool PushbackPrefIsStraight
         {
-            get => GsxController?.PushbackPreference == PushbackPreference.Auto;
-            set { if (value) SetPushbackPreference(PushbackPreference.Auto); }
+            get => GsxController?.PushbackPreference == PushbackPreference.Straight;
+            set { if (value) SetPushbackPreference(PushbackPreference.Straight); }
         }
         public virtual bool PushbackPrefIsTailLeft
         {
@@ -194,7 +194,7 @@ namespace Prosim2GSX.UI.Views.Ofp
         {
             if (GsxController == null || GsxController.PushbackPreference == preference) return;
             GsxController.PushbackPreference = preference;
-            NotifyPropertyChanged(nameof(PushbackPrefIsAuto));
+            NotifyPropertyChanged(nameof(PushbackPrefIsStraight));
             NotifyPropertyChanged(nameof(PushbackPrefIsTailLeft));
             NotifyPropertyChanged(nameof(PushbackPrefIsTailRight));
         }

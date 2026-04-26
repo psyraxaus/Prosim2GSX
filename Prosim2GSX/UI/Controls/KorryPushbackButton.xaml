@@ -71,29 +71,19 @@
                                      Points="7,37 19,30 19,44"/>
                         </Canvas>
 
-                        <!-- Auto (bidirectional) -->
-                        <Canvas x:Name="ArrowAuto" Width="50" Height="40"
+                        <!-- Straight (down) -->
+                        <Canvas x:Name="ArrowStraight" Width="56" Height="44"
                                 HorizontalAlignment="Center" VerticalAlignment="Center"
                                 Visibility="Collapsed">
-                            <Polygon x:Name="AutoLeftHead"
-                                     Fill="{StaticResource KorryAutoInactive}"
-                                     Points="2,20 13,13 13,27"/>
-                            <Line x:Name="AutoLeftStem"
-                                  X1="12" Y1="20" X2="25" Y2="20"
+                            <Line x:Name="StraightStem"
+                                  X1="28" Y1="3" X2="28" Y2="34"
                                   Stroke="{StaticResource KorryAutoInactive}"
-                                  StrokeThickness="3.5"/>
-                            <Polygon x:Name="AutoRightHead"
+                                  StrokeThickness="4"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"/>
+                            <Polygon x:Name="StraightHead"
                                      Fill="{StaticResource KorryAutoInactive}"
-                                     Points="48,20 37,13 37,27"/>
-                            <Line x:Name="AutoRightStem"
-                                  X1="25" Y1="20" X2="38" Y2="20"
-                                  Stroke="{StaticResource KorryAutoInactive}"
-                                  StrokeThickness="3.5"/>
-                            <Line x:Name="AutoDivider"
-                                  X1="25" Y1="8" X2="25" Y2="32"
-                                  Stroke="{StaticResource KorryAutoDividerInactive}"
-                                  StrokeThickness="1.5"
-                                  StrokeDashArray="2.5 3"/>
+                                     Points="28,43 18,30 38,30"/>
                         </Canvas>
 
                         <!-- Tail Right arrow (mirror of Tail Left) -->
