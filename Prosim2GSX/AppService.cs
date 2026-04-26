@@ -48,6 +48,12 @@ namespace Prosim2GSX
         // the AppSettingsState surface unchanged.
         public virtual Config Settings => Config;
 
+        // Long-lived workers that populate the stores independent of any tab.
+        // Started after CreateServiceControllers so the controllers exist when
+        // the first tick fires; stopped in FreeResources during app shutdown.
+        protected virtual StateUpdateWorker StateUpdateWorker { get; set; }
+        protected virtual MessageLogDrainWorker MessageLogDrainWorker { get; set; }
+
         public AppService(Config config) : base(config)
         {
             RefreshToken();
@@ -86,6 +92,15 @@ namespace Prosim2GSX
                 GsxService = null;
                 AudioService = null;
             }
+
+            // Start the long-lived workers regardless of SDK availability — the
+            // log drain still surfaces messages in degraded mode, and the state
+            // poller is null-safe so it simply leaves store fields at defaults
+            // until controllers come up.
+            StateUpdateWorker = new StateUpdateWorker(this);
+            MessageLogDrainWorker = new MessageLogDrainWorker(FlightStatus, Config);
+            StateUpdateWorker.Start();
+            MessageLogDrainWorker.Start();
         }
 
         protected override Task InitReceivers()
@@ -221,6 +236,10 @@ namespace Prosim2GSX
             base.FreeResources();
             ReceiverStore.Remove<MsgSessionReady>().OnMessage -= OnSessionReady;
             ReceiverStore.Remove<MsgSessionEnded>().OnMessage -= OnSessionEnded;
+
+            try { StateUpdateWorker?.Stop(); } catch { }
+            try { MessageLogDrainWorker?.Stop(); } catch { }
+
             return Task.CompletedTask;
         }
     }
