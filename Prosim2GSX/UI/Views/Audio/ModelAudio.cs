@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using CoreAudio;
 using Prosim2GSX.AppConfig;
 using Prosim2GSX.Audio;
+using Prosim2GSX.State;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Input;
@@ -13,24 +14,22 @@ namespace Prosim2GSX.UI.Views.Audio
     {
         public ICommand CommandDebugInfo { get; } = new RelayCommand(() => AppService.Instance.AudioService.DeviceManager.WriteDebugInformation());
 
-        private bool _isCoreAudioSelected = true;
+        // Audio backend selection lives on the long-lived AudioState store so the
+        // future web layer can observe and toggle the same value. The setter just
+        // writes through; INPC re-raise on this Model happens via the AudioState
+        // PropertyChanged subscription wired in InitializeModel.
+        protected virtual AudioState AudioState => AppService.Instance.Audio;
 
         public virtual bool IsCoreAudioSelected
         {
-            get => _isCoreAudioSelected;
-            set
-            {
-                if (_isCoreAudioSelected == value) return;
-                _isCoreAudioSelected = value;
-                NotifyPropertyChanged(nameof(IsCoreAudioSelected));
-                NotifyPropertyChanged(nameof(IsVoiceMeeterSelected));
-            }
+            get => AudioState.IsCoreAudioSelected;
+            set => AudioState.IsCoreAudioSelected = value;
         }
 
         public virtual bool IsVoiceMeeterSelected
         {
-            get => !_isCoreAudioSelected;
-            set => IsCoreAudioSelected = !value;
+            get => !AudioState.IsCoreAudioSelected;
+            set => AudioState.IsCoreAudioSelected = !value;
         }
 
         public ModelAudio(AppService appService) : base(appService.Config, appService)
@@ -45,6 +44,7 @@ namespace Prosim2GSX.UI.Views.Audio
         protected override void InitializeModel()
         {
             this.PropertyChanged += OnPropertyChanged;
+            AudioState.PropertyChanged += OnAudioStateChanged;
             AudioController.DeviceManager.DevicesChanged += () => NotifyPropertyChanged(nameof(AudioDevices));
         }
 
@@ -55,6 +55,15 @@ namespace Prosim2GSX.UI.Views.Audio
                 NotifyPropertyChanged(nameof(SetStartupVolume));
                 NotifyPropertyChanged(nameof(StartupVolume));
                 NotifyPropertyChanged(nameof(StartupUnmute));
+            }
+        }
+
+        protected virtual void OnAudioStateChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e?.PropertyName == nameof(AudioState.IsCoreAudioSelected))
+            {
+                NotifyPropertyChanged(nameof(IsCoreAudioSelected));
+                NotifyPropertyChanged(nameof(IsVoiceMeeterSelected));
             }
         }
 
