@@ -8,6 +8,7 @@ using Prosim2GSX.Audio;
 using Prosim2GSX.GSX;
 using Prosim2GSX.Prosim;
 using Prosim2GSX.SayIntentions;
+using Prosim2GSX.State;
 using System;
 using System.IO;
 using System.Threading;
@@ -35,6 +36,17 @@ namespace Prosim2GSX
         public virtual bool IsSessionInitialized { get; protected set; } = false;
         public virtual bool SessionStopRequested { get; protected set; } = false;
         public virtual bool IsProsimAircraft => SimConnect.AircraftString.Contains(Config.ProsimAircraftString, StringComparison.InvariantCultureIgnoreCase);
+
+        // Long-lived observable state stores. Populated by services/workers and
+        // observed by both the WPF Models and the future web/WebSocket layer.
+        // Constructed eagerly so they outlive any individual tab/view-model.
+        public virtual FlightStatusState FlightStatus { get; } = new();
+        public virtual GsxState Gsx { get; } = new();
+        public virtual AudioState Audio { get; } = new();
+        // Settings is an alias for the existing Config singleton — Config already
+        // implements INotifyPropertyChanged and persists itself, so it serves as
+        // the AppSettingsState surface unchanged.
+        public virtual Config Settings => Config;
 
         public AppService(Config config) : base(config)
         {
