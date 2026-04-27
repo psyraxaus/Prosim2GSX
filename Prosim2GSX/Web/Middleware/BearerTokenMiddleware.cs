@@ -27,8 +27,12 @@ namespace Prosim2GSX.Web.Middleware
 
         public async Task Invoke(HttpContext context)
         {
-            // WS upgrade path is auth'd by its own handler.
-            if (context.Request.Path.StartsWithSegments("/ws"))
+            // Bearer auth is required only for /api/*. The React HTML/JS bundle
+            // served from wwwroot is public — anyone on the LAN can LOAD the
+            // app, but the JS still needs the token to read/write data via
+            // /api endpoints. /ws has its own per-connection first-frame auth
+            // (browsers can't send custom headers on a WebSocket upgrade).
+            if (!context.Request.Path.StartsWithSegments("/api"))
             {
                 await _next(context);
                 return;

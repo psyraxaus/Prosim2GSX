@@ -130,6 +130,14 @@
     </None>
   </ItemGroup>
 
+  <!-- React app build output (Phase 7). Empty until the Vite build runs;
+       the glob resolves to nothing and the build still succeeds. -->
+  <ItemGroup>
+    <Content Include="wwwroot\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <Exec Command="powershell.exe -ExecutionPolicy Unrestricted -file &quot;$(ProjectDir)..\NuPreBuild.ps1&quot; $(SolutionDir) $(ProjectDir) &quot;Prosim2GSX&quot; &quot;CFIT.AppLogger&quot; &quot;CFIT.AppTools&quot; &quot;CFIT.SimConnectLib&quot; &quot;CFIT.AppFramework&quot;" />
   </Target>

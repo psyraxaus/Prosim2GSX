@@ -1,6 +1,7 @@
 using CFIT.AppLogger;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -144,7 +145,20 @@ namespace Prosim2GSX.Web
         // Builds the ASP.NET Core pipeline. Must be called under _lock.
         private void DoStart()
         {
-            var builder = WebApplication.CreateBuilder();
+            // Pin ContentRoot/WebRoot to the exe directory so static-file
+            // resolution works regardless of the process's current directory
+            // at launch (CFIT may set this to anything). wwwroot is created
+            // up-front so UseStaticFiles doesn't fail when Phase 7 hasn't
+            // built the React bundle yet.
+            var exeDir = System.AppContext.BaseDirectory;
+            var webRoot = System.IO.Path.Combine(exeDir, "wwwroot");
+            System.IO.Directory.CreateDirectory(webRoot);
+
+            var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+            {
+                ContentRootPath = exeDir,
+                WebRootPath = webRoot,
+            });
 
             builder.WebHost.ConfigureKestrel(options =>
             {
@@ -178,8 +192,13 @@ namespace Prosim2GSX.Web
             _webApp.UseCors();
 #endif
 
-            // Bearer-token gate sits before routing so unauthorised requests
-            // never reach controller code.
+            // Static files first so wwwroot/index.html / wwwroot/assets/* are
+            // served without going through the bearer gate. The HTML/JS bundle
+            // is public — only /api/* needs the token, and the bearer
+            // middleware enforces that explicitly by path prefix.
+            _webApp.UseStaticFiles();
+
+            // Bearer-token gate. Internally limits itself to /api/* paths.
             _webApp.UseMiddleware<BearerTokenMiddleware>();
 
             _webApp.UseRouting();
@@ -208,6 +227,34 @@ namespace Prosim2GSX.Web
 
                 using var socket = await context.WebSockets.AcceptWebSocketAsync();
                 await handler.HandleAsync(socket, context.RequestAborted);
+            });
+
+            // SPA fallback: any non-API, non-WS, non-static path serves the
+            // React app's index.html so client-side routing works (deep links
+            // like /audio reload cleanly). When wwwroot is empty (Phase 6
+            // state, before Phase 7 builds React) the response is a friendly
+            // 404 message rather than letting the browser see an empty body.
+            _webApp.MapFallback(async context =>
+            {
+                var path = context.Request.Path.Value ?? "";
+                if (path.StartsWith("/api", System.StringComparison.OrdinalIgnoreCase)
+                    || path.StartsWith("/ws", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    context.Response.StatusCode = 404;
+                    return;
+                }
+
+                var indexPath = System.IO.Path.Combine(webRoot, "index.html");
+                if (!System.IO.File.Exists(indexPath))
+                {
+                    context.Response.StatusCode = 404;
+                    context.Response.ContentType = "text/plain";
+                    await context.Response.WriteAsync(
+                        "Web UI not deployed. Run `npm run build` in Prosim2GSX.Web/ to populate wwwroot.");
+                    return;
+                }
+                context.Response.ContentType = "text/html";
+                await context.Response.SendFileAsync(indexPath);
             });
 
             _runCts = new CancellationTokenSource();
