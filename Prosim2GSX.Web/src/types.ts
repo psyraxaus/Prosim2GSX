@@ -504,3 +504,40 @@ export const PUSHBACK_OPTIONS: { value: PushbackPreference; label: string }[] = 
   { value: "TailLeft", label: "Tail Left" },
   { value: "TailRight", label: "Tail Right" },
 ];
+
+// ──────────────────────────────────────────────────────────────────────────
+// Aircraft Profiles (CRUD) wire shapes
+// ──────────────────────────────────────────────────────────────────────────
+
+export interface ProfileSummaryDto {
+  name: string;
+  matchType: ProfileMatchType;
+  matchString: string;
+  isActive: boolean;
+  isDefault: boolean;
+}
+
+export interface ProfilesListDto {
+  activeName: string;
+  profiles: ProfileSummaryDto[];
+  currentAirline: string;
+  currentTitle: string;
+  currentRegistration: string;
+}
+
+export interface SetActiveProfileRequest { name: string; }
+export interface CloneProfileRequest { sourceName: string; newName?: string; }
+export interface RenameProfileRequest { oldName: string; newName: string; }
+export interface UpdateProfileMetadataRequest {
+  name: string;
+  matchType: ProfileMatchType;
+  matchString: string;
+}
+export interface DeleteProfileRequest { name: string; }
+
+export const PROFILE_MATCH_TYPE_OPTIONS: { value: ProfileMatchType; label: string }[] = [
+  { value: "Default", label: "Default (fallback)" },
+  { value: "Airline", label: "Airline (starts with)" },
+  { value: "Title", label: "Title / Livery (contains)" },
+  { value: "Registration", label: "Registration (equals)" },
+];

@@ -105,3 +105,9 @@ export const PUSHBACK_OPTIONS = [
     { value: "TailLeft", label: "Tail Left" },
     { value: "TailRight", label: "Tail Right" },
 ];
+export const PROFILE_MATCH_TYPE_OPTIONS = [
+    { value: "Default", label: "Default (fallback)" },
+    { value: "Airline", label: "Airline (starts with)" },
+    { value: "Title", label: "Title / Livery (contains)" },
+    { value: "Registration", label: "Registration (equals)" },
+];
