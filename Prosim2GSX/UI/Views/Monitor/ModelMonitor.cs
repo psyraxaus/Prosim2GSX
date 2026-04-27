@@ -62,8 +62,16 @@ namespace Prosim2GSX.UI.Views.Monitor
             SolariTimer.Tick += (s, e) => SolariToggle = !SolariToggle;
         }
 
+        private bool _started;
+
         public virtual void Start()
         {
+            // AppWindow can call Start() twice on initial load (Loaded BeginInvoke +
+            // OnVisibleChanged), so keep this idempotent — otherwise duplicate
+            // CollectionChanged subscriptions cause every log message to appear twice.
+            if (_started) return;
+            _started = true;
+
             SyncMessageLogFromStore();
             FlightStatus.PropertyChanged += OnFlightStatusStateChanged;
             Gsx.PropertyChanged += OnGsxStateChanged;
@@ -75,6 +83,9 @@ namespace Prosim2GSX.UI.Views.Monitor
 
         public virtual void Stop()
         {
+            if (!_started) return;
+            _started = false;
+
             SolariTimer?.Stop();
             FlightStatus.PropertyChanged -= OnFlightStatusStateChanged;
             Gsx.PropertyChanged -= OnGsxStateChanged;
