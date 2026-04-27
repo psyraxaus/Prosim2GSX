@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useApi } from "../api/useApi";
 import { useAppState } from "../state/AppStateContext";
-import { FlightStatusDto, GsxServiceState } from "../types";
+import { AutomationState, FlightStatusDto, GsxServiceState } from "../types";
 import styles from "./FlightStatusPanel.module.css";
 
 // Read-only Monitor surface. Initial REST load on mount; live updates via
@@ -31,6 +31,8 @@ export function FlightStatusPanel() {
 
   return (
     <div className={styles.panel}>
+      <FlightPhaseBox phase={fs.gsx.appAutomationState} />
+
       <Section title="Sim">
         <Indicator label="Sim Running" ok={fs.simRunning} />
         <Indicator label="Sim Connected" ok={fs.simConnected} />
@@ -65,7 +67,6 @@ export function FlightStatusPanel() {
         <KV label="Pax Target" value={String(fs.gsx.gsxPaxTarget)} />
         <KV label="Pax Total (B|D)" value={fs.gsx.gsxPaxTotal} />
         <KV label="Cargo (B|D)" value={fs.gsx.gsxCargoProgress} />
-        <KV label="Phase" value={fs.gsx.appAutomationState} />
         <KV label="Departure Services" value={fs.gsx.appAutomationDepartureServices} />
       </Section>
 
@@ -88,6 +89,43 @@ export function FlightStatusPanel() {
         <LogTail messages={fs.messageLog} />
       </Section>
     </div>
+  );
+}
+
+// Mirrors ViewMonitor.xaml's FLIGHT PHASE section: a large centred phase
+// label above a 7-block progress bar (PREFLIGHT / DEPARTURE / PUSHBACK /
+// TAXI OUT / FLIGHT / TAXI IN / ARRIVAL). PREFLIGHT covers SessionStart and
+// Preparation; ARRIVAL covers Arrival and TurnAround.
+type PhaseBlock = { label: string; states: AutomationState[] };
+const PHASE_BLOCKS: PhaseBlock[] = [
+  { label: "PREFLIGHT", states: ["SessionStart", "Preparation"] },
+  { label: "DEPARTURE", states: ["Departure"] },
+  { label: "PUSHBACK",  states: ["PushBack"] },
+  { label: "TAXI OUT",  states: ["TaxiOut"] },
+  { label: "FLIGHT",    states: ["Flight"] },
+  { label: "TAXI IN",   states: ["TaxiIn"] },
+  { label: "ARRIVAL",   states: ["Arrival", "TurnAround"] },
+];
+
+function FlightPhaseBox({ phase }: { phase: AutomationState }) {
+  return (
+    <section className={`${styles.section} ${styles.phaseSection}`}>
+      <h3 className={styles.sectionTitle}>Flight Phase</h3>
+      <div className={styles.phaseBody}>
+        <div className={styles.phaseLabel}>{phase}</div>
+        <div className={styles.phaseGrid}>
+          {PHASE_BLOCKS.map((b) => (
+            <div
+              key={b.label}
+              className={`${styles.phaseBlock} ${b.states.includes(phase) ? styles.phaseBlockActive : ""}`}
+            />
+          ))}
+          {PHASE_BLOCKS.map((b) => (
+            <div key={`${b.label}-l`} className={styles.phaseBlockLabel}>{b.label}</div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 

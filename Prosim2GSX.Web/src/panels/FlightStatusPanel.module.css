@@ -24,6 +24,53 @@
 
 .section:last-child { grid-column: 1 / -1; }
 
+/* Flight Phase section spans the full width and sits at the top of the panel.
+   Mirrors ViewMonitor.xaml: large centred phase label + 7-column progress bar
+   with the active block highlighted in dodger-blue (#1E90FF) and inactive
+   blocks in light grey (#D3D3D3) — same colours the WPF uses. */
+.phaseSection { grid-column: 1 / -1; }
+
+.phaseBody {
+  padding: 12px 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.phaseLabel {
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
+  color: var(--accent, #1E90FF);
+}
+
+.phaseGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  column-gap: 4px;
+  row-gap: 2px;
+  margin-top: 4px;
+}
+
+.phaseBlock {
+  height: 14px;
+  border-radius: 3px;
+  background: #D3D3D3;
+  margin: 4px 0 0;
+}
+
+.phaseBlockActive {
+  background: #1E90FF;
+}
+
+.phaseBlockLabel {
+  font-size: 9px;
+  text-align: center;
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
 .sectionTitle {
   margin: 0;
   padding: 9px 14px;
