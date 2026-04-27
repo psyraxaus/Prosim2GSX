@@ -276,6 +276,55 @@
                 </Grid>
             </Border>
 
+            <!-- QUICK ACCESS (URL + QR code for onboarding from a phone) -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="QUICK ACCESS"/>
+            <Border Style="{StaticResource SectionCardBorder}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="LAN address used in the QR code. Best guess auto-selected; pick another if you have multiple NICs (VPN, Hyper-V virtual switch, etc.). Only used when 'Expose to LAN' is on; loopback otherwise.">LAN Address:</TextBlock>
+                    <StackPanel Grid.Column="1" Grid.Row="0" Style="{StaticResource SettingItemPanel}" Orientation="Horizontal">
+                        <ComboBox ItemsSource="{Binding AvailableIpAddresses}"
+                                  SelectedItem="{Binding SelectedIpAddress}"
+                                  IsEnabled="{Binding WebServerBindAll}"
+                                  MinWidth="180" MaxWidth="240"/>
+                        <Button Content="Refresh"
+                                Command="{Binding RefreshIpAddressesCommand}"
+                                Background="{DynamicResource SecondaryColor}"
+                                Foreground="{DynamicResource HeaderText}"
+                                BorderThickness="0"
+                                Margin="8,0,0,0" Padding="10,5"
+                                ToolTip="Re-enumerate network interfaces (e.g. after switching WiFi networks)."/>
+                    </StackPanel>
+
+                    <TextBlock Grid.Column="0" Grid.Row="1" Margin="6" VerticalAlignment="Top" Style="{StaticResource TextBlockDefault}" ToolTip="The URL encoded in the QR code below. The token in the URL hash fragment is moved into localStorage and stripped from the address bar by the React app on first paint.">Connection URL:</TextBlock>
+                    <TextBox Grid.Column="1" Grid.Row="1"
+                             Text="{Binding WebServerUrl, Mode=OneWay}"
+                             IsReadOnly="True"
+                             Style="{StaticResource TextBoxLeft}"
+                             FontFamily="Consolas"
+                             Margin="6"
+                             TextWrapping="Wrap"/>
+
+                    <TextBlock Grid.Column="0" Grid.Row="2" Margin="6" VerticalAlignment="Top" Style="{StaticResource TextBlockDefault}" ToolTip="Scan with a camera or QR app on your phone or tablet on the same LAN. Auth token is included in the URL hash fragment and never sent to the server.">QR Code:</TextBlock>
+                    <Image Grid.Column="1" Grid.Row="2"
+                           Source="{Binding WebServerQrImage}"
+                           Width="200" Height="200"
+                           HorizontalAlignment="Left"
+                           Margin="6"
+                           RenderOptions.BitmapScalingMode="NearestNeighbor"
+                           Stretch="Uniform"/>
+                </Grid>
+            </Border>
+
         </StackPanel>
     </ScrollViewer>
 </UserControl>

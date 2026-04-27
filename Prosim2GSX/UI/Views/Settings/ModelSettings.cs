@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.Input;
 using Prosim2GSX.AppConfig;
 using Prosim2GSX.Themes;
+using Prosim2GSX.Web;
 using ProsimInterface;
 using System;
 using System.Collections.Generic;
@@ -10,6 +11,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace Prosim2GSX.UI.Views.Settings
@@ -58,7 +60,17 @@ namespace Prosim2GSX.UI.Views.Settings
                 && !UnitUpdateTimer.IsEnabled)
                 UnitUpdateTimer.Start();
             if (e?.PropertyName == nameof(Config.WebServerAuthToken))
+            {
                 NotifyPropertyChanged(nameof(WebServerAuthToken));
+                NotifyPropertyChanged(nameof(WebServerUrl));
+                NotifyPropertyChanged(nameof(WebServerQrImage));
+            }
+            if (e?.PropertyName == nameof(Config.WebServerPort)
+                || e?.PropertyName == nameof(Config.WebServerBindAll))
+            {
+                NotifyPropertyChanged(nameof(WebServerUrl));
+                NotifyPropertyChanged(nameof(WebServerQrImage));
+            }
         }
 
         protected virtual void UnitUpdateTimer_Tick(object? sender, EventArgs e)
@@ -150,8 +162,69 @@ namespace Prosim2GSX.UI.Views.Settings
             {
                 AppService.Instance?.WebHost?.RegenerateToken();
                 NotifyPropertyChanged(nameof(WebServerAuthToken));
+                NotifyPropertyChanged(nameof(WebServerUrl));
+                NotifyPropertyChanged(nameof(WebServerQrImage));
             }
             catch { }
+        }
+
+        // ── QR-code panel ────────────────────────────────────────────────────
+        // LAN-IP discovery + connection URL + QR image for onboarding from a
+        // phone. URL hash fragment (#token=...) carries the auth token; the
+        // React app's bootstrapAuth moves it from the hash into localStorage
+        // and then history.replaceState's it out of the address bar so the
+        // token never leaves client-side memory after the first paint.
+
+        private List<string> _availableIpAddresses;
+        private string _selectedIpAddress;
+
+        public virtual List<string> AvailableIpAddresses
+            => _availableIpAddresses ??= IpHelper.GetLanIPv4Addresses();
+
+        public virtual string SelectedIpAddress
+        {
+            get => _selectedIpAddress ??= IpHelper.BestGuessLanIp();
+            set
+            {
+                if (_selectedIpAddress == value) return;
+                _selectedIpAddress = value;
+                NotifyPropertyChanged(nameof(SelectedIpAddress));
+                NotifyPropertyChanged(nameof(WebServerUrl));
+                NotifyPropertyChanged(nameof(WebServerQrImage));
+            }
+        }
+
+        public virtual string WebServerUrl
+        {
+            get
+            {
+                var host = Source.WebServerBindAll ? SelectedIpAddress : "127.0.0.1";
+                var port = Source.WebServerPort;
+                var token = Source.WebServerAuthToken;
+                if (string.IsNullOrEmpty(token))
+                    return $"http://{host}:{port}/";
+                return $"http://{host}:{port}/#token={token}";
+            }
+        }
+
+        public virtual ImageSource WebServerQrImage => QrHelper.Generate(WebServerUrl);
+
+        [RelayCommand]
+        private void RefreshIpAddresses()
+        {
+            _availableIpAddresses = IpHelper.GetLanIPv4Addresses();
+            NotifyPropertyChanged(nameof(AvailableIpAddresses));
+
+            // If the previously-selected IP isn't in the refreshed list any
+            // more (NIC unplugged, switched network), reset to the new best
+            // guess so the dropdown isn't pointing at a stale entry.
+            if (!_availableIpAddresses.Contains(_selectedIpAddress))
+            {
+                _selectedIpAddress = IpHelper.BestGuessLanIp();
+                NotifyPropertyChanged(nameof(SelectedIpAddress));
+                NotifyPropertyChanged(nameof(WebServerUrl));
+                NotifyPropertyChanged(nameof(WebServerQrImage));
+            }
         }
 
         // ── Theme selection ────────────────────────────────────────────────

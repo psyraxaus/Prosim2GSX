@@ -1,4 +1,5 @@
 using Prosim2GSX.AppConfig;
+using Prosim2GSX.Themes;
 using ProsimInterface;
 
 namespace Prosim2GSX.Web.Contracts
@@ -148,7 +149,28 @@ namespace Prosim2GSX.Web.Contracts
             c.ProSimSdkPath = ProSimSdkPath ?? "";
 
             c.SolariAnimationEnabled = SolariAnimationEnabled;
-            c.CurrentTheme = CurrentTheme ?? "Light";
+
+            // Theme: persist the name AND tell the live WPF window to
+            // restyle. Setting c.CurrentTheme alone only writes the value;
+            // ThemeManager.ApplyTheme is what actually swaps the brushes
+            // on the running window. ThemeManager handles same-name calls
+            // gracefully so a no-op re-save is cheap.
+            var requestedTheme = string.IsNullOrEmpty(CurrentTheme) ? "Light" : CurrentTheme;
+            try
+            {
+                ThemeManager.Instance?.ApplyTheme(requestedTheme);
+            }
+            catch { }
+            c.CurrentTheme = requestedTheme;
+
+            // Capture old web-server values BEFORE writing so we can fire
+            // INPC only on actual change (Config's auto-property setters
+            // don't raise PropertyChanged themselves; without an explicit
+            // raise, WebHostService never sees the toggle).
+            var oldEnabled = c.WebServerEnabled;
+            var oldPort = c.WebServerPort;
+            var oldBindAll = c.WebServerBindAll;
+            var oldToken = c.WebServerAuthToken ?? "";
 
             c.WebServerEnabled = WebServerEnabled;
             c.WebServerPort = WebServerPort;
@@ -162,6 +184,18 @@ namespace Prosim2GSX.Web.Contracts
                 c.WebServerAuthToken = WebServerAuthToken;
 
             c.SaveConfiguration();
+
+            // Raise PropertyChanged for the web-server fields only when they
+            // actually changed — otherwise every Save would unnecessarily
+            // restart Kestrel even if the user only edited an unrelated field.
+            if (oldEnabled != WebServerEnabled)
+                c.NotifyPropertyChanged(nameof(Config.WebServerEnabled));
+            if (oldPort != WebServerPort)
+                c.NotifyPropertyChanged(nameof(Config.WebServerPort));
+            if (oldBindAll != WebServerBindAll)
+                c.NotifyPropertyChanged(nameof(Config.WebServerBindAll));
+            if (!string.IsNullOrEmpty(WebServerAuthToken) && WebServerAuthToken != oldToken)
+                c.NotifyPropertyChanged(nameof(Config.WebServerAuthToken));
 
             // Trigger display-unit re-evaluation so the change takes effect
             // immediately (matches the WPF tab's DisplayUnitDefault setter).

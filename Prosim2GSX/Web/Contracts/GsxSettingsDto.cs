@@ -282,6 +282,16 @@ namespace Prosim2GSX.Web.Contracts
             config.AutoDeiceFluid = AutoDeiceFluid;
 
             config.SaveConfiguration();
+
+            // Re-fire ProfileChanged so the WPF ModelAutomation re-binds all
+            // its fields against the freshly-mutated profile. AircraftProfile
+            // is plain POCO with no INPC, so this event is the only path the
+            // existing WPF UI uses to detect profile changes — without it the
+            // GSX Settings tab keeps showing pre-save values until the user
+            // closes and reopens the tab. SetAircraftProfile re-resolves the
+            // same name, which is a no-op assignment for the profile reference
+            // and a synchronous ProfileChanged invocation.
+            try { app.GsxService?.SetAircraftProfile(profile.Name); } catch { }
         }
     }
 }

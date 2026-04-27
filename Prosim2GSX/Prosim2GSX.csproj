@@ -77,6 +77,7 @@
   <PackageReference Include="CFIT.SimConnectLib" Version="2025.347.9.1780" />
   <PackageReference Include="CoreAudio" Version="1.40.0" />
   <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+  <PackageReference Include="QRCoder" Version="1.6.0" />
 	<PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
 	<PackageReference Include="System.Private.Uri" Version="4.3.2" />
 	<PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.7" />
@@ -140,6 +141,43 @@
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <Exec Command="powershell.exe -ExecutionPolicy Unrestricted -file &quot;$(ProjectDir)..\NuPreBuild.ps1&quot; $(SolutionDir) $(ProjectDir) &quot;Prosim2GSX&quot; &quot;CFIT.AppLogger&quot; &quot;CFIT.AppTools&quot; &quot;CFIT.SimConnectLib&quot; &quot;CFIT.AppFramework&quot;" />
+  </Target>
+
+  <!-- Build the React (Vite) frontend in Release builds only.
+       - npm install is intentionally NOT run here (user audits package-lock.json
+         manually before installing — see project memory phase7_design_decisions).
+       - Fail-soft when Node is not on PATH (Debug builds, CI without Node, etc.):
+         logs a warning and continues so the WPF project remains buildable
+         without a JS toolchain.
+       - Fail-hard when Node IS on PATH but `npm run build` returns non-zero:
+         the WPF build fails, surfacing TypeScript / Vite errors immediately.
+       - Skipped entirely if node_modules/ is missing: emits a clear message
+         pointing at the manual `npm install` step. -->
+  <Target Name="BuildWebFrontend" BeforeTargets="PreBuildEvent" Condition="'$(Configuration)' == 'Release'">
+    <PropertyGroup>
+      <WebProjectDir>$(MSBuildProjectDirectory)\..\Prosim2GSX.Web</WebProjectDir>
+    </PropertyGroup>
+
+    <Exec Command="node --version"
+          ContinueOnError="true"
+          EchoOff="true"
+          IgnoreStandardErrorWarningFormat="true"
+          StandardOutputImportance="low"
+          StandardErrorImportance="low">
+      <Output TaskParameter="ExitCode" PropertyName="_NodeExitCode" />
+    </Exec>
+
+    <Message Importance="high"
+             Text="Web frontend: Node not found on PATH; skipping `npm run build`. Install Node and run `npm install &amp;&amp; npm run build` in $(WebProjectDir) before publishing."
+             Condition="'$(_NodeExitCode)' != '0'" />
+
+    <Message Importance="high"
+             Text="Web frontend: Prosim2GSX.Web/node_modules missing; skipping `npm run build`. Run `npm install` in $(WebProjectDir) once before publishing."
+             Condition="'$(_NodeExitCode)' == '0' AND !Exists('$(WebProjectDir)\node_modules')" />
+
+    <Exec Command="npm run build"
+          WorkingDirectory="$(WebProjectDir)"
+          Condition="'$(_NodeExitCode)' == '0' AND Exists('$(WebProjectDir)\node_modules') AND Exists('$(WebProjectDir)\package.json')" />
   </Target>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
