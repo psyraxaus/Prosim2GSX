@@ -146,38 +146,61 @@
   <!-- Build the React (Vite) frontend in Release builds only.
        - npm install is intentionally NOT run here (user audits package-lock.json
          manually before installing — see project memory phase7_design_decisions).
-       - Fail-soft when Node is not on PATH (Debug builds, CI without Node, etc.):
+       - Fail-soft when Node is not found at all (Debug builds, CI without Node):
          logs a warning and continues so the WPF project remains buildable
          without a JS toolchain.
-       - Fail-hard when Node IS on PATH but `npm run build` returns non-zero:
+       - Fail-hard when Node IS found but `npm run build` returns non-zero:
          the WPF build fails, surfacing TypeScript / Vite errors immediately.
        - Skipped entirely if node_modules/ is missing: emits a clear message
-         pointing at the manual `npm install` step. -->
+         pointing at the manual `npm install` step.
+
+       Node discovery falls back through common install locations if PATH
+       lookup fails — covers the common case where Node is installed via
+       the official MSI but Visual Studio cached an older PATH (or only
+       user-PATH was updated). -->
   <Target Name="BuildWebFrontend" BeforeTargets="PreBuildEvent" Condition="'$(Configuration)' == 'Release'">
     <PropertyGroup>
       <WebProjectDir>$(MSBuildProjectDirectory)\..\Prosim2GSX.Web</WebProjectDir>
     </PropertyGroup>
 
-    <Exec Command="node --version"
+    <!-- 1. Probe PATH. -->
+    <Exec Command="where npm.cmd"
           ContinueOnError="true"
           EchoOff="true"
           IgnoreStandardErrorWarningFormat="true"
           StandardOutputImportance="low"
           StandardErrorImportance="low">
-      <Output TaskParameter="ExitCode" PropertyName="_NodeExitCode" />
+      <Output TaskParameter="ExitCode" PropertyName="_NpmOnPathExitCode" />
     </Exec>
 
+    <!-- 2. If PATH lookup failed, search common install locations. -->
+    <PropertyGroup Condition="'$(_NpmOnPathExitCode)' != '0'">
+      <_NpmFallbackDir Condition="Exists('$(ProgramFiles)\nodejs\npm.cmd')">$(ProgramFiles)\nodejs</_NpmFallbackDir>
+      <_NpmFallbackDir Condition="'$(_NpmFallbackDir)' == '' AND Exists('$(ProgramW6432)\nodejs\npm.cmd')">$(ProgramW6432)\nodejs</_NpmFallbackDir>
+      <_NpmFallbackDir Condition="'$(_NpmFallbackDir)' == '' AND Exists('$(LOCALAPPDATA)\Programs\nodejs\npm.cmd')">$(LOCALAPPDATA)\Programs\nodejs</_NpmFallbackDir>
+    </PropertyGroup>
+
+    <!-- 3. Resolve the actual command we'll Exec. -->
+    <PropertyGroup>
+      <_NpmCommand Condition="'$(_NpmOnPathExitCode)' == '0'">npm run build</_NpmCommand>
+      <_NpmCommand Condition="'$(_NpmOnPathExitCode)' != '0' AND '$(_NpmFallbackDir)' != ''">"$(_NpmFallbackDir)\npm.cmd" run build</_NpmCommand>
+    </PropertyGroup>
+
     <Message Importance="high"
-             Text="Web frontend: Node not found on PATH; skipping `npm run build`. Install Node and run `npm install &amp;&amp; npm run build` in $(WebProjectDir) before publishing."
-             Condition="'$(_NodeExitCode)' != '0'" />
+             Text="Web frontend: Node/npm not found on PATH or in common install locations (C:\Program Files\nodejs, %25LOCALAPPDATA%25\Programs\nodejs). Install Node from https://nodejs.org and restart Visual Studio, or run `npm install &amp;&amp; npm run build` in $(WebProjectDir) manually."
+             Condition="'$(_NpmCommand)' == ''" />
 
     <Message Importance="high"
              Text="Web frontend: Prosim2GSX.Web/node_modules missing; skipping `npm run build`. Run `npm install` in $(WebProjectDir) once before publishing."
-             Condition="'$(_NodeExitCode)' == '0' AND !Exists('$(WebProjectDir)\node_modules')" />
+             Condition="'$(_NpmCommand)' != '' AND !Exists('$(WebProjectDir)\node_modules')" />
 
-    <Exec Command="npm run build"
+    <Message Importance="high"
+             Text="Web frontend: building React bundle ($(_NpmCommand))..."
+             Condition="'$(_NpmCommand)' != '' AND Exists('$(WebProjectDir)\node_modules') AND Exists('$(WebProjectDir)\package.json')" />
+
+    <Exec Command="$(_NpmCommand)"
           WorkingDirectory="$(WebProjectDir)"
-          Condition="'$(_NodeExitCode)' == '0' AND Exists('$(WebProjectDir)\node_modules') AND Exists('$(WebProjectDir)\package.json')" />
+          Condition="'$(_NpmCommand)' != '' AND Exists('$(WebProjectDir)\node_modules') AND Exists('$(WebProjectDir)\package.json')" />
   </Target>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">

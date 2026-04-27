@@ -5,6 +5,7 @@ using CFIT.AppTools;
 using CFIT.SimConnectLib.Definitions;
 using Prosim2GSX.AppConfig;
 using Prosim2GSX.Audio;
+using Prosim2GSX.Commands;
 using Prosim2GSX.GSX;
 using Prosim2GSX.Prosim;
 using Prosim2GSX.SayIntentions;
@@ -67,6 +68,12 @@ namespace Prosim2GSX
         // a few delegate invocations per state tick.
         public virtual StateWebSocketHandler WebSocketHandler { get; protected set; }
 
+        // Centralised named-command dispatcher. REST controllers (Phase 8B+)
+        // and — eventually — WPF RelayCommands invoke operations through this
+        // registry instead of directly poking services. Handlers register at
+        // startup via CommandsBootstrap.RegisterAll.
+        public virtual CommandRegistry Commands { get; protected set; }
+
         public AppService(Config config) : base(config)
         {
             RefreshToken();
@@ -122,6 +129,12 @@ namespace Prosim2GSX
             WebSocketHandler.AttachToWebHost(WebHost);
             if (Config.WebServerEnabled)
                 Task.Run(WebHost.Start);
+
+            // Command registry + bootstrap. Empty in Phase 8.0a; subsequent
+            // commits populate handler bundles for OFP, Aircraft Profiles,
+            // and (later) the existing Audio/Gsx/AppSettings ApplyTo paths.
+            Commands = new CommandRegistry();
+            CommandsBootstrap.RegisterAll(this, Commands);
         }
 
         protected override Task InitReceivers()
