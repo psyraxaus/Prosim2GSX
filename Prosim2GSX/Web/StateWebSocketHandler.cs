@@ -1,7 +1,9 @@
 using CFIT.AppLogger;
 using Prosim2GSX.AppConfig;
+using Prosim2GSX.GSX;
 using Prosim2GSX.State;
 using Prosim2GSX.Web.Contracts;
+using Prosim2GSX.Web.Contracts.Commands;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -56,7 +58,13 @@ namespace Prosim2GSX.Web
             _app.Gsx.PropertyChanged += OnGsxChanged;
             _app.Audio.PropertyChanged += OnAudioChanged;
             _app.Config.PropertyChanged += OnConfigChanged;
+            _app.Ofp.PropertyChanged += OnOfpChanged;
             _app.FlightStatus.MessageLog.CollectionChanged += OnMessageLogChanged;
+
+            // GsxService is null in degraded mode (no SDK). Subscribe only when
+            // present so a missing SDK doesn't NRE the handler ctor.
+            if (_app.GsxService != null)
+                _app.GsxService.PushbackPreferenceChanged += OnPushbackPreferenceChanged;
 
             // Connection kicking is wired from AppService once WebHost is
             // available — see AppService.CreateServiceControllers.
@@ -202,6 +210,75 @@ namespace Prosim2GSX.Web
             if (string.IsNullOrEmpty(e?.PropertyName)) return;
             if (!ConfigBroadcastWhitelist.Contains(e.PropertyName)) return;
             Broadcast(channel: "appSettings", e.PropertyName, sender);
+        }
+
+        // OFP-specific broadcast: skips internal-only flags
+        // (AutoFired/SayIntentionsSent/GsxSent are workflow plumbing, not
+        // wire surface) and projects the cached SayIntentionsAirportWx into
+        // the WeatherDto wire shape so the internal type doesn't leak.
+        private void OnOfpChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (_connections.IsEmpty) return;
+            var name = e?.PropertyName ?? "";
+            if (string.IsNullOrEmpty(name)) return;
+            if (sender is not OfpState ofp) return;
+
+            object value;
+            switch (name)
+            {
+                case nameof(OfpState.AutoFired):
+                case nameof(OfpState.SayIntentionsSent):
+                case nameof(OfpState.GsxSent):
+                    return; // internal flags, not on the wire
+                case nameof(OfpState.DepartureWeather):
+                    value = WeatherDto.From(ofp.DepartureWeather);
+                    break;
+                case nameof(OfpState.ArrivalWeather):
+                    value = WeatherDto.From(ofp.ArrivalWeather);
+                    break;
+                default:
+                    var prop = typeof(OfpState).GetProperty(name);
+                    if (prop == null) return;
+                    value = prop.GetValue(ofp);
+                    break;
+            }
+
+            var camel = JsonNamingPolicy.CamelCase.ConvertName(name);
+            try
+            {
+                var envelope = new
+                {
+                    channel = "ofp",
+                    patch = new Dictionary<string, object> { [camel] = value },
+                };
+                BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+        }
+
+        // GsxController.PushbackPreferenceChanged → "ofp" channel patch.
+        // Lives outside the OFP store because the preference itself is on
+        // GsxController (in-memory, session-scoped); the WS broadcast keeps
+        // multiple clients synchronised regardless of who wrote it.
+        private void OnPushbackPreferenceChanged(PushbackPreference pref)
+        {
+            if (_connections.IsEmpty) return;
+            try
+            {
+                var envelope = new
+                {
+                    channel = "ofp",
+                    patch = new Dictionary<string, object> { ["pushbackPreference"] = pref },
+                };
+                BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
         }
 
         private void OnMessageLogChanged(object sender, NotifyCollectionChangedEventArgs e)

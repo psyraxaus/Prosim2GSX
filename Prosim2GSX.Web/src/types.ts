@@ -13,9 +13,9 @@
 
 export type ConnectionStatus = "connecting" | "open" | "reconnecting" | "closed";
 
-export type WsChannel = "flightStatus" | "gsx" | "audio" | "appSettings";
+export type WsChannel = "flightStatus" | "gsx" | "audio" | "appSettings" | "ofp";
 
-export type StateChannel = "flightStatus" | "audio" | "gsxSettings" | "appSettings";
+export type StateChannel = "flightStatus" | "audio" | "gsxSettings" | "appSettings" | "ofp";
 
 export interface PatchEnvelope {
   channel: WsChannel;
@@ -104,6 +104,10 @@ export type AutoDeiceFluid =
   | "TypeII75"
   | "TypeIV100"
   | "TypeIV75";
+
+export type PushbackPreference = "Straight" | "TailLeft" | "TailRight";
+
+export type ProfileMatchType = "Default" | "Airline" | "Title" | "Registration";
 
 // ──────────────────────────────────────────────────────────────────────────
 // FlightStatusDto + GsxLiveDto (read-only — Monitor tab)
@@ -426,4 +430,77 @@ export const SERVICE_CONSTRAINT_OPTIONS: { value: GsxServiceConstraint; label: s
   { value: "TurnAround", label: "Only Turn" },
   { value: "CompanyHub", label: "Only on Hub" },
   { value: "NonCompanyHub", label: "Only on Non-Hub" },
+];
+
+// ──────────────────────────────────────────────────────────────────────────
+// OFP DTO + command wire shapes
+// ──────────────────────────────────────────────────────────────────────────
+
+export interface WeatherDto {
+  airport: string;
+  atis: string;
+  metar: string;
+  taf: string;
+  activeRunway: string;
+  windDirection: number | null;
+  windSpeed: number | null;
+}
+
+export interface OfpDto {
+  isOfpLoaded: boolean;
+  departureIcao: string;
+  arrivalIcao: string;
+  alternateIcao: string;
+  flightNumber: string;
+  departurePlanRwy: string;
+  arrivalPlanRwy: string;
+  cruiseAltitude: string;
+  blockFuelKg: string;
+  blockTimeFormatted: string;
+  paxCount: string;
+  airDistance: string;
+
+  pendingArrivalGate: string;
+  gateAssignmentStatus: string;
+  gsxAssignmentStatus: string;
+
+  departureWeather: WeatherDto | null;
+  arrivalWeather: WeatherDto | null;
+  weatherStatus: string;
+  isRefreshingWeather: boolean;
+
+  pushbackPreference: PushbackPreference;
+  useSayIntentions: boolean;
+  sayIntentionsActive: boolean;
+}
+
+export interface ConfirmArrivalGateRequest {
+  gate: string;
+}
+
+export interface SetPushbackPreferenceRequest {
+  preference: PushbackPreference;
+}
+
+export interface GateAssignmentDto {
+  pendingArrivalGate: string;
+  gateAssignmentStatus: string;
+  gsxAssignmentStatus: string;
+}
+
+export interface PushbackPreferenceResponseDto {
+  preference: PushbackPreference;
+}
+
+export interface WeatherSnapshotDto {
+  departureWeather: WeatherDto | null;
+  arrivalWeather: WeatherDto | null;
+  weatherStatus: string;
+  isRefreshingWeather: boolean;
+}
+
+export const PUSHBACK_OPTIONS: { value: PushbackPreference; label: string }[] = [
+  { value: "Straight", label: "Straight" },
+  { value: "TailLeft", label: "Tail Left" },
+  { value: "TailRight", label: "Tail Right" },
 ];

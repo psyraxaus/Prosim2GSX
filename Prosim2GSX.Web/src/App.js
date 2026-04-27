@@ -10,6 +10,7 @@ import { FlightStatusPanel } from "./panels/FlightStatusPanel";
 import { AudioSettingsPanel } from "./panels/AudioSettingsPanel";
 import { AppSettingsPanel } from "./panels/AppSettingsPanel";
 import { GsxSettingsPanel } from "./panels/GsxSettingsPanel";
+import { OfpPanel } from "./panels/OfpPanel";
 import { PanelPlaceholder } from "./components/PanelPlaceholder";
 import styles from "./App.module.css";
 export function App() {
@@ -33,5 +34,5 @@ function AppShell() {
     const { dispatch } = useAppState();
     useWebSocket(dispatch);
     const [tab, setTab] = useState("flightStatus");
-    return (_jsxs("div", { className: styles.app, children: [_jsx(Header, {}), _jsx(TabBar, { active: tab, onSelect: setTab }), _jsxs("main", { className: styles.main, children: [tab === "flightStatus" && _jsx(FlightStatusPanel, {}), tab === "ofp" && _jsx(PanelPlaceholder, { title: "OFP" }), tab === "gsxSettings" && _jsx(GsxSettingsPanel, {}), tab === "aircraftProfiles" && _jsx(PanelPlaceholder, { title: "Aircraft Profiles" }), tab === "audioSettings" && _jsx(AudioSettingsPanel, {}), tab === "appSettings" && _jsx(AppSettingsPanel, {})] })] }));
+    return (_jsxs("div", { className: styles.app, children: [_jsx(Header, {}), _jsx(TabBar, { active: tab, onSelect: setTab }), _jsxs("main", { className: styles.main, children: [tab === "flightStatus" && _jsx(FlightStatusPanel, {}), tab === "ofp" && _jsx(OfpPanel, {}), tab === "gsxSettings" && _jsx(GsxSettingsPanel, {}), tab === "aircraftProfiles" && _jsx(PanelPlaceholder, { title: "Aircraft Profiles" }), tab === "audioSettings" && _jsx(AudioSettingsPanel, {}), tab === "appSettings" && _jsx(AppSettingsPanel, {})] })] }));
 }

@@ -100,3 +100,8 @@ export const SERVICE_CONSTRAINT_OPTIONS = [
     { value: "CompanyHub", label: "Only on Hub" },
     { value: "NonCompanyHub", label: "Only on Non-Hub" },
 ];
+export const PUSHBACK_OPTIONS = [
+    { value: "Straight", label: "Straight" },
+    { value: "TailLeft", label: "Tail Left" },
+    { value: "TailRight", label: "Tail Right" },
+];

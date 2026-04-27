@@ -22,6 +22,7 @@ export interface AppState {
   audio: Record<string, unknown> | null;
   gsxSettings: Record<string, unknown> | null;
   appSettings: Record<string, unknown> | null;
+  ofp: Record<string, unknown> | null;
   connection: ConnectionStatus;
 }
 
@@ -36,6 +37,7 @@ const initialState: AppState = {
   audio: null,
   gsxSettings: null,
   appSettings: null,
+  ofp: null,
   connection: "closed",
 };
 

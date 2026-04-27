@@ -9,6 +9,7 @@ import { FlightStatusPanel } from "./panels/FlightStatusPanel";
 import { AudioSettingsPanel } from "./panels/AudioSettingsPanel";
 import { AppSettingsPanel } from "./panels/AppSettingsPanel";
 import { GsxSettingsPanel } from "./panels/GsxSettingsPanel";
+import { OfpPanel } from "./panels/OfpPanel";
 import { PanelPlaceholder } from "./components/PanelPlaceholder";
 import styles from "./App.module.css";
 
@@ -49,7 +50,7 @@ function AppShell() {
       <TabBar active={tab} onSelect={setTab} />
       <main className={styles.main}>
         {tab === "flightStatus" && <FlightStatusPanel />}
-        {tab === "ofp" && <PanelPlaceholder title="OFP" />}
+        {tab === "ofp" && <OfpPanel />}
         {tab === "gsxSettings" && <GsxSettingsPanel />}
         {tab === "aircraftProfiles" && <PanelPlaceholder title="Aircraft Profiles" />}
         {tab === "audioSettings" && <AudioSettingsPanel />}

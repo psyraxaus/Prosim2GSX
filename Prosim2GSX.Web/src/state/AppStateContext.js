@@ -13,6 +13,7 @@ const initialState = {
     audio: null,
     gsxSettings: null,
     appSettings: null,
+    ofp: null,
     connection: "closed",
 };
 function reducer(state, action) {
