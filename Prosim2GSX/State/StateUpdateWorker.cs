@@ -153,8 +153,12 @@ namespace Prosim2GSX.State
         {
             var gsx = _app.Gsx;
             var phase = _app.GsxService?.AutomationController?.State ?? AutomationState.SessionStart;
+            // PushBack is included so the GPU indicator reflects reality during
+            // the pre-pushback window where ground equipment is physically still
+            // attached until the departure sequence clears it.
             bool relevant = phase == AutomationState.Preparation
                          || phase == AutomationState.Departure
+                         || phase == AutomationState.PushBack
                          || phase == AutomationState.Arrival
                          || phase == AutomationState.TurnAround;
 
