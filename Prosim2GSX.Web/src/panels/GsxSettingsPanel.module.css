@@ -1,6 +1,9 @@
 .panel {
-  padding: 16px 18px;
-  max-width: 920px;
+  /* Reserve room at the bottom for the DirtyBar so when it slides in it
+     doesn't cover the last form row. Constant kept loose enough for the
+     bar's content + a small gap. */
+  padding-bottom: 80px;
+  max-width: 1080px;
   margin: 0 auto;
 }
 
@@ -15,19 +18,11 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 14px;
-  padding: 10px 14px;
+  padding: 10px 18px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-}
-
-.toolbarStatus {
-  margin-left: auto;
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
+  margin: 12px 18px;
 }
 
 .profileName {
@@ -36,8 +31,20 @@
   font-family: var(--font-mono);
 }
 
-.info { color: var(--success); font-size: 12px; }
-.error { color: var(--danger); font-size: 12px; }
+.body {
+  display: flex;
+  margin: 0 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.content {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 14px 18px;
+}
 
 .empty {
   color: var(--text-muted);
@@ -45,6 +52,7 @@
   padding: 8px 0;
 }
 
+/* Departure-services table inside GsxServicesSection */
 .servicesHeader {
   display: grid;
   grid-template-columns: 1fr 1.2fr 1fr 90px 100px;
@@ -137,6 +145,11 @@
 }
 
 @media (max-width: 720px) {
+  /* Stack rail-on-top + content below on narrow viewports. SectionNav's
+     own media query already converts itself to a horizontal pill bar; we
+     just need to make the parent flex column-direction here. */
+  .body { flex-direction: column; }
+
   .servicesHeader { display: none; }
   .serviceRow {
     grid-template-columns: 1fr;

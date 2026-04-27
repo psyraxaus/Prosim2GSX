@@ -1,17 +1,27 @@
 import styles from "./TabBar.module.css";
 
-export type TabKey = "flightStatus" | "audioSettings" | "appSettings" | "gsxSettings";
+export type TabKey =
+  | "flightStatus"
+  | "ofp"
+  | "gsxSettings"
+  | "aircraftProfiles"
+  | "audioSettings"
+  | "appSettings";
 
 interface Tab {
   key: TabKey;
   label: string;
 }
 
+// Order locked in project memory phase8_design_decisions:
+// Flight Status → OFP → GSX Settings → Aircraft Profiles → Audio Settings → App Settings.
 const TABS: Tab[] = [
   { key: "flightStatus", label: "Flight Status" },
+  { key: "ofp", label: "OFP" },
+  { key: "gsxSettings", label: "GSX Settings" },
+  { key: "aircraftProfiles", label: "Aircraft Profiles" },
   { key: "audioSettings", label: "Audio Settings" },
   { key: "appSettings", label: "App Settings" },
-  { key: "gsxSettings", label: "GSX Settings" },
 ];
 
 interface Props {
