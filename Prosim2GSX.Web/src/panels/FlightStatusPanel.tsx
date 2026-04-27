@@ -46,9 +46,8 @@ export function FlightStatusPanel() {
 
       <Section title="App">
         <Indicator label="GSX Controller" ok={fs.appGsxController} />
-        <Indicator label="Aircraft Binary" ok={fs.appAircraftBinary} />
+        <Indicator label="ProSim Binary" ok={fs.appAircraftBinary} />
         <Indicator label="Aircraft Interface" ok={fs.appAircraftInterface} />
-        <Indicator label="ProSim Connected" ok={fs.appProsimConnected} />
         <Indicator label="ProSim SDK Connected" ok={fs.appProsimSdkConnected} />
         <Indicator label="Automation Controller" ok={fs.appAutomationController} />
         <Indicator label="Audio Controller" ok={fs.appAudioController} />

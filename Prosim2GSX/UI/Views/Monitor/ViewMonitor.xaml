@@ -37,10 +37,10 @@
                         <Ellipse Width="14" Height="14" VerticalAlignment="Center" Fill="{Binding SimSessionColor}"/>
                         <Label Margin="4,0,0,0" VerticalAlignment="Center">SESSION</Label>
                     </StackPanel>
-                    <!-- PROSIM -->
+                    <!-- PROSIM BINARY -->
                     <StackPanel Orientation="Horizontal" Margin="12,4">
                         <Ellipse Width="14" Height="14" VerticalAlignment="Center" Fill="{Binding AppAircraftBinaryColor}"/>
-                        <Label Margin="4,0,0,0" VerticalAlignment="Center">PROSIM</Label>
+                        <Label Margin="4,0,0,0" VerticalAlignment="Center">PROSIM BINARY</Label>
                     </StackPanel>
                 </WrapPanel>
             </Border>

@@ -155,7 +155,6 @@ export interface FlightStatusDto {
   appGsxController: boolean;
   appAircraftBinary: boolean;
   appAircraftInterface: boolean;
-  appProsimConnected: boolean;
   appProsimSdkConnected: boolean;
   appAutomationController: boolean;
   appAudioController: boolean;

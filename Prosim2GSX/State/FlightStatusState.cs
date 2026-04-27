@@ -21,7 +21,6 @@ namespace Prosim2GSX.State
         [ObservableProperty] private bool _AppGsxController;
         [ObservableProperty] private bool _AppAircraftBinary;
         [ObservableProperty] private bool _AppAircraftInterface;
-        [ObservableProperty] private bool _AppProsimConnected;
         [ObservableProperty] private bool _AppProsimSdkConnected;
         [ObservableProperty] private bool _AppAutomationController;
         [ObservableProperty] private bool _AppAudioController;

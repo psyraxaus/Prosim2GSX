@@ -177,7 +177,6 @@ namespace Prosim2GSX.State
             fs.AppGsxController = ctrl?.IsActive ?? false;
             fs.AppAircraftBinary = ctrl?.AircraftBinary ?? false;
             fs.AppAircraftInterface = ai?.IsLoaded ?? false;
-            fs.AppProsimConnected = _app.ProsimService?.IsConnected ?? false;
             fs.AppProsimSdkConnected = ai?.ProsimInterface?.SdkInterface?.IsConnected ?? false;
             fs.AppAutomationController = auto?.IsStarted ?? false;
             fs.AppAudioController = _app.AudioService?.IsActive ?? false;

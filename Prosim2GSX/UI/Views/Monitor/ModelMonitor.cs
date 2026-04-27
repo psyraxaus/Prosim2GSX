@@ -164,9 +164,6 @@ namespace Prosim2GSX.UI.Views.Monitor
         public bool AppAircraftInterface => FlightStatus.AppAircraftInterface;
         public SolidColorBrush AppAircraftInterfaceColor => FlightStatus.AppAircraftInterface ? ColorValid : ColorInvalid;
 
-        public bool AppProsimConnected => FlightStatus.AppProsimConnected;
-        public SolidColorBrush AppProsimConnectedColor => FlightStatus.AppProsimConnected ? ColorValid : ColorInvalid;
-
         public bool AppProsimSdkConnected => FlightStatus.AppProsimSdkConnected;
         public SolidColorBrush AppProsimSdkConnectedColor => FlightStatus.AppProsimSdkConnected ? ColorValid : ColorInvalid;
 
@@ -206,7 +203,6 @@ namespace Prosim2GSX.UI.Views.Monitor
                 case nameof(FlightStatusState.AppGsxController):        NotifyPropertyChanged(nameof(AppGsxControllerColor)); break;
                 case nameof(FlightStatusState.AppAircraftBinary):       NotifyPropertyChanged(nameof(AppAircraftBinaryColor)); break;
                 case nameof(FlightStatusState.AppAircraftInterface):    NotifyPropertyChanged(nameof(AppAircraftInterfaceColor)); break;
-                case nameof(FlightStatusState.AppProsimConnected):      NotifyPropertyChanged(nameof(AppProsimConnectedColor)); break;
                 case nameof(FlightStatusState.AppProsimSdkConnected):   NotifyPropertyChanged(nameof(AppProsimSdkConnectedColor)); break;
                 case nameof(FlightStatusState.AppAutomationController): NotifyPropertyChanged(nameof(AppAutomationControllerColor)); break;
                 case nameof(FlightStatusState.AppAudioController):      NotifyPropertyChanged(nameof(AppAudioControllerColor)); break;

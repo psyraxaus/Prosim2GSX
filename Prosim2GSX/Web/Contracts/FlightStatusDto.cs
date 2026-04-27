@@ -29,7 +29,6 @@ namespace Prosim2GSX.Web.Contracts
         public bool AppGsxController { get; set; }
         public bool AppAircraftBinary { get; set; }
         public bool AppAircraftInterface { get; set; }
-        public bool AppProsimConnected { get; set; }
         public bool AppProsimSdkConnected { get; set; }
         public bool AppAutomationController { get; set; }
         public bool AppAudioController { get; set; }
@@ -73,7 +72,6 @@ namespace Prosim2GSX.Web.Contracts
                 AppGsxController = fs.AppGsxController,
                 AppAircraftBinary = fs.AppAircraftBinary,
                 AppAircraftInterface = fs.AppAircraftInterface,
-                AppProsimConnected = fs.AppProsimConnected,
                 AppProsimSdkConnected = fs.AppProsimSdkConnected,
                 AppAutomationController = fs.AppAutomationController,
                 AppAudioController = fs.AppAudioController,
