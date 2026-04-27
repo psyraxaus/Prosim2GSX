@@ -45,6 +45,7 @@ namespace Prosim2GSX
         public virtual FlightStatusState FlightStatus { get; } = new();
         public virtual GsxState Gsx { get; } = new();
         public virtual AudioState Audio { get; } = new();
+        public virtual OfpState Ofp { get; } = new();
         // Settings is an alias for the existing Config singleton — Config already
         // implements INotifyPropertyChanged and persists itself, so it serves as
         // the AppSettingsState surface unchanged.

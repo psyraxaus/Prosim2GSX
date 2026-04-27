@@ -33,6 +33,27 @@ namespace Prosim2GSX.UI.Views.Ofp
                 Config.PropertyChanged += OnConfigPropertyChanged;
             if (GsxController?.AutomationController != null)
                 GsxController.AutomationController.OnStateChange += OnAutomationStateChanged;
+            // Subscribe to PushbackPreference mutations from anywhere (web
+            // command handler, future cross-client sync) so the WPF tab's
+            // radio buttons reflect external changes rather than going stale.
+            if (GsxController != null)
+                GsxController.PushbackPreferenceChanged += OnPushbackPreferenceChanged;
+        }
+
+        protected virtual void OnPushbackPreferenceChanged(PushbackPreference _)
+        {
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher != null && !dispatcher.CheckAccess())
+                dispatcher.BeginInvoke(new Action(NotifyPushbackPropertiesChanged));
+            else
+                NotifyPushbackPropertiesChanged();
+        }
+
+        protected virtual void NotifyPushbackPropertiesChanged()
+        {
+            NotifyPropertyChanged(nameof(PushbackPrefIsStraight));
+            NotifyPropertyChanged(nameof(PushbackPrefIsTailLeft));
+            NotifyPropertyChanged(nameof(PushbackPrefIsTailRight));
         }
 
         protected virtual void OnFlightPlanChanged()

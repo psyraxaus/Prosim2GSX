@@ -42,7 +42,23 @@ namespace Prosim2GSX.GSX
         public virtual AircraftProfile AircraftProfile { get; protected set; } = null;
         public event Action<AircraftProfile> ProfileChanged;
         public virtual IAircraftProfile IAircraftProfile => AircraftProfile;
-        public virtual PushbackPreference PushbackPreference { get; set; } = PushbackPreference.Straight;
+        // PushbackPreference now fires PushbackPreferenceChanged on transition
+        // so the WPF OFP tab and the future web WS layer can react to mutations
+        // from any caller (Phase 8B will subscribe the WS broadcast handler).
+        // Backing field + setter rather than auto-property because the auto
+        // form gives no INPC hook.
+        private PushbackPreference _pushbackPreference = PushbackPreference.Straight;
+        public virtual PushbackPreference PushbackPreference
+        {
+            get => _pushbackPreference;
+            set
+            {
+                if (_pushbackPreference == value) return;
+                _pushbackPreference = value;
+                try { PushbackPreferenceChanged?.Invoke(value); } catch { }
+            }
+        }
+        public event Action<PushbackPreference> PushbackPreferenceChanged;
         public virtual bool PushbackDirectionAutoSelected { get; set; } = false;
         public virtual GsxAutomationController AutomationController { get; }
         public virtual MessageReceiver<MsgGsxCouatlStarted> MsgCouatlStarted { get; protected set; }
