@@ -43,6 +43,10 @@ namespace Prosim2GSX.Web
         private int _tokenGeneration;
         public int TokenGeneration => Volatile.Read(ref _tokenGeneration);
 
+        // Raised after a successful RegenerateToken — StateWebSocketHandler
+        // subscribes and kicks every active connection.
+        public event Action TokenRotated;
+
         public bool IsRunning
         {
             get { lock (_lock) return _webApp != null; }
@@ -107,6 +111,7 @@ namespace Prosim2GSX.Web
             _app.Config.WebServerAuthToken = newToken;
             _app.Config.SaveConfiguration();
             Interlocked.Increment(ref _tokenGeneration);
+            try { TokenRotated?.Invoke(); } catch { }
             Logger.Information("Web server auth token regenerated; existing clients invalidated.");
             return newToken;
         }
@@ -179,6 +184,31 @@ namespace Prosim2GSX.Web
 
             _webApp.UseRouting();
             _webApp.MapControllers();
+
+            // WebSocket endpoint at /ws. Authentication is per-connection on
+            // the first inbound frame (browsers can't send custom headers on
+            // a WS upgrade and putting the token in the URL would leak it),
+            // so the bearer-token middleware exempts /ws and the handler does
+            // its own check.
+            _webApp.UseWebSockets();
+            _webApp.Map("/ws", async context =>
+            {
+                if (!context.WebSockets.IsWebSocketRequest)
+                {
+                    context.Response.StatusCode = 400;
+                    return;
+                }
+
+                var handler = _app?.WebSocketHandler;
+                if (handler == null)
+                {
+                    context.Response.StatusCode = 503;
+                    return;
+                }
+
+                using var socket = await context.WebSockets.AcceptWebSocketAsync();
+                await handler.HandleAsync(socket, context.RequestAborted);
+            });
 
             _runCts = new CancellationTokenSource();
 

@@ -60,6 +60,13 @@ namespace Prosim2GSX
         // at runtime; only Start()s when Config.WebServerEnabled is true.
         public virtual WebHostService WebHost { get; protected set; }
 
+        // WebSocket fan-out handler for live state push. Owned by AppService
+        // (peer to WebHost) so subscriptions to the stores are stable across
+        // host Stop/Start cycles. Constructed even when the web server is
+        // disabled — broadcasts are no-ops with zero connections, the cost is
+        // a few delegate invocations per state tick.
+        public virtual StateWebSocketHandler WebSocketHandler { get; protected set; }
+
         public AppService(Config config) : base(config)
         {
             RefreshToken();
@@ -111,6 +118,8 @@ namespace Prosim2GSX
             // Web host follows Config.WebServerEnabled — constructed always so
             // it can react to runtime toggles, only Start()s when enabled.
             WebHost = new WebHostService(this);
+            WebSocketHandler = new StateWebSocketHandler(this);
+            WebSocketHandler.AttachToWebHost(WebHost);
             if (Config.WebServerEnabled)
                 Task.Run(WebHost.Start);
         }
