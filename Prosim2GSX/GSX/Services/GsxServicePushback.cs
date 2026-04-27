@@ -43,13 +43,16 @@ namespace Prosim2GSX.GSX.Services
             SubBypassPin = RegisterChangeSubscription(GsxConstants.VarBypassPin, NotifyBypassPin);
         }
 
+        protected virtual int LastLoggedPushStatus { get; set; } = -1;
+
         protected virtual void OnPushChange(ISimResourceSubscription sub, object data)
         {
             if (!IsProsimAircraft)
                 return;
 
-            var state = sub.GetNumber();
-            Logger.Debug($"Push Status Change: {state}");
+            var state = (int)sub.GetNumber();
+            Logger.Information($"Push Status: {LastLoggedPushStatus} -> {state} (WasPushing={WasPushing}, EngineStartConfirmed={EngineStartConfirmed})");
+            LastLoggedPushStatus = state;
             if (!TugAttachedOnBoarding && state > 0 && (Controller.GsxServices[GsxServiceType.Boarding].State == GsxServiceState.Active || Controller.GsxServices[GsxServiceType.Boarding].State == GsxServiceState.Requested))
             {
                 Logger.Information($"Tug attaching during Boarding");
@@ -57,7 +60,10 @@ namespace Prosim2GSX.GSX.Services
                 Controller.Menu.SuppressMenuRefresh = false;
             }
             if (!WasPushing && state >= 5)
+            {
                 WasPushing = true;
+                Logger.Information($"WasPushing latched at PushStatus={state}");
+            }
         }
 
         protected virtual void NotifyBypassPin(ISimResourceSubscription sub, object data)

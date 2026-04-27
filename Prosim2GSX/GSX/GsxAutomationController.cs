@@ -111,6 +111,7 @@ namespace Prosim2GSX.GSX
         protected virtual int SeqStepTicksRequired { get; set; } = 0;
         protected virtual DateTime ApuWaitStartedAt { get; set; } = DateTime.MinValue;
         protected virtual DateTime ApuStallLastWarning { get; set; } = DateTime.MinValue;
+        protected virtual DateTime EngineStartGateLastLog { get; set; } = DateTime.MinValue;
 
         public virtual bool IsNewOfpLoaded =>
             !string.IsNullOrEmpty(FlightPlanId) && FlightPlanId != "0" && OfpArrivalId != FlightPlanId;
@@ -1090,6 +1091,13 @@ namespace Prosim2GSX.GSX
             // while the tug is still attached) it asks crew to set the parking brake
             // and then waits for "Confirm good engine start" on the Interrupt menu.
             // Auto-confirm once brakes are set and engines are running.
+            if (ServicePushBack.PushStatus > 0 && !ServicePushBack.EngineStartConfirmed
+                && (DateTime.UtcNow - EngineStartGateLastLog).TotalSeconds >= 2)
+            {
+                Logger.Information($"Engine-start gate: PushStatus={ServicePushBack.PushStatus}, WasPushing={ServicePushBack.WasPushing}, BrakeSet={Aircraft.IsBrakeSet}, EnginesRunning={Aircraft.EnginesRunning}, Confirmed={ServicePushBack.EngineStartConfirmed}");
+                EngineStartGateLastLog = DateTime.UtcNow;
+            }
+
             if (ServicePushBack.WasPushing
                 && ServicePushBack.PushStatus > 0
                 && ServicePushBack.PushStatus < 5

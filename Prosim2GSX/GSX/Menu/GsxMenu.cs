@@ -258,7 +258,7 @@ namespace Prosim2GSX.GSX.Menu
 
         protected virtual async Task OnDeiceTypeSelect(GsxMenu menu)
         {
-            Logger.Debug($"DeIce Type Select menu active");
+            Logger.Information($"DeIce Type Select menu active - AutoDeiceEnabled={Config.AutoDeiceEnabled}, AutoDeiceFluid={Config.AutoDeiceFluid}, MenuTitle='{MenuTitle}', Lines={MenuLineCount}");
 
             if (!Config.AutoDeiceEnabled)
                 return;
@@ -419,6 +419,13 @@ namespace Prosim2GSX.GSX.Menu
                 await TaskTools.RunLogged(() => MenuTitleChanged?.Invoke(MenuTitle), RequestToken);
                 if (IsGateMenu)
                     FollowMeAnswered = false;
+
+                if (DeIceQuestionAnswered && Config.AutoDeiceEnabled && !MatchTitle(GsxConstants.MenuDeiceType))
+                {
+                    Logger.Information($"Auto-deice diag: title changed after YES, did NOT match '{GsxConstants.MenuDeiceType}'. Title='{MenuTitle}', Lines={MenuLineCount}:");
+                    for (int i = 0; i < MenuLines.Count; i++)
+                        Logger.Information($"  [{i + 1}] {MenuLines[i]}");
+                }
             }
 
             if (IsOperatorMenu && AircraftProfile.OperatorAutoSelect)

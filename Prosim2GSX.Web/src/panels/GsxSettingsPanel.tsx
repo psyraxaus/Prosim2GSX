@@ -166,18 +166,22 @@ export function GsxSettingsPanel() {
 
   return (
     <div className={styles.panel}>
-      <div className={styles.toolbar}>
-        {draft.profileName && (
-          <span className={styles.profileName}>Profile: {draft.profileName}</span>
-        )}
-      </div>
-
       <div className={styles.body}>
-        <SectionNav
-          items={SECTIONS}
-          active={activeSection}
-          onSelect={setActiveSection}
-        />
+        <div className={styles.railColumn}>
+          <div className={styles.stickyRail}>
+            <div className={styles.railHeader}>
+              <div className={styles.railHeaderLabel}>GSX SETTINGS</div>
+              {draft.profileName && (
+                <div className={styles.railHeaderProfile}>{draft.profileName}</div>
+              )}
+            </div>
+            <SectionNav
+              items={SECTIONS}
+              active={activeSection}
+              onSelect={setActiveSection}
+            />
+          </div>
+        </div>
         <div className={styles.content}>
           {activeSection === "gateDoors" && <GateDoorsSection {...sectionProps} />}
           {activeSection === "groundEquip" && <GroundEquipmentSection {...sectionProps} />}

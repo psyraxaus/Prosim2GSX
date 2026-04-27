@@ -1,10 +1,14 @@
 .panel {
-  /* Reserve room at the bottom for the DirtyBar so when it slides in it
-     doesn't cover the last form row. Constant kept loose enough for the
-     bar's content + a small gap. */
-  padding-bottom: 80px;
-  max-width: 1080px;
-  margin: 0 auto;
+  /* Full-bleed: the left rail anchors to the viewport edge AND extends
+     to the top/bottom edges of the scroll area, mirroring the WPF GSX
+     Settings tab. The negative top/bottom margins absorb the 16px padding
+     on .main (App.module.css) so the dark rail meets the tab bar above
+     and the viewport bottom below without a gap. The DirtyBar reservation
+     moved to .content so the rail itself isn't shortened. */
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100% + 32px);
+  margin: -16px 0;
 }
 
 .loading {
@@ -14,36 +18,60 @@
   font-size: 13px;
 }
 
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 18px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  margin: 12px 18px;
-}
-
-.profileName {
-  font-size: 12px;
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-}
-
 .body {
   display: flex;
-  margin: 0 18px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
+  align-items: stretch;
+  flex: 1 1 auto;
+}
+
+/* Fills the full body height with the dark sidebar colour, mirroring the
+   WPF ViewAutomation sidebar that extends to the bottom of the window even
+   when there are only a handful of items. The actual sticky pinning is
+   handled by .stickyRail nested inside. */
+.railColumn {
+  align-self: stretch;
+  background: var(--bg-secondary);
+  display: flex;
+  flex-direction: column;
+}
+
+.stickyRail {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 1;
+}
+
+.railHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.railHeaderLabel {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-on-dark-muted);
+}
+
+.railHeaderProfile {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-on-dark);
+  font-family: var(--font-mono);
 }
 
 .content {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 14px 18px;
+  /* padding-bottom reserves room for the DirtyBar so it doesn't cover
+     the last form row when it slides in. */
+  padding: 30px 18px 96px;
+  max-width: 1080px;
 }
 
 .empty {
@@ -149,6 +177,20 @@
      own media query already converts itself to a horizontal pill bar; we
      just need to make the parent flex column-direction here. */
   .body { flex-direction: column; }
+
+  /* Disable sticky in the narrow horizontal-pill layout. */
+  .stickyRail {
+    position: static;
+  }
+  .railColumn {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .railHeader {
+    padding: 10px 14px;
+  }
+
+  .railHeaderProfile { font-size: 14px; }
 
   .servicesHeader { display: none; }
   .serviceRow {
