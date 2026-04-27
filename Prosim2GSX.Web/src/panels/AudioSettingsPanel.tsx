@@ -1,0 +1,209 @@
+import { useEffect, useState } from "react";
+import { useApi } from "../api/useApi";
+import { Section } from "../components/forms/Section";
+import { BoolField, SelectField } from "../components/forms/Field";
+import { PrimaryButton } from "../components/forms/PrimaryButton";
+import {
+  ACP_SIDE_OPTIONS,
+  AUDIO_CHANNELS,
+  AudioChannel,
+  AudioDto,
+  AudioMappingDto,
+  DATA_FLOW_OPTIONS,
+  DEVICE_STATE_OPTIONS,
+} from "../types";
+import styles from "./AudioSettingsPanel.module.css";
+
+export function AudioSettingsPanel() {
+  const { get, post } = useApi();
+  const [draft, setDraft] = useState<AudioDto | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+
+  async function reload() {
+    setError(null);
+    try {
+      const dto = await get<AudioDto>("/audio");
+      setDraft(dto);
+    } catch (e: unknown) {
+      setError((e as Error).message ?? "Failed to load");
+    }
+  }
+  useEffect(() => { reload(); }, []);
+
+  async function save() {
+    if (!draft) return;
+    setSaving(true); setError(null); setInfo(null);
+    try {
+      const fresh = await post<AudioDto>("/audio", draft);
+      setDraft(fresh);
+      setInfo("Saved.");
+      setTimeout(() => setInfo(null), 1500);
+    } catch (e: unknown) {
+      setError((e as Error).message ?? "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!draft) {
+    return <div className={styles.loading}>{error ? `Error: ${error}` : "Loading audio settings…"}</div>;
+  }
+
+  function update<K extends keyof AudioDto>(key: K, value: AudioDto[K]) {
+    setDraft((d) => (d ? { ...d, [key]: value } : d));
+  }
+
+  function updateMapping(idx: number, partial: Partial<AudioMappingDto>) {
+    setDraft((d) => {
+      if (!d) return d;
+      const mappings = d.mappings.map((m, i) => (i === idx ? { ...m, ...partial } : m));
+      return { ...d, mappings };
+    });
+  }
+  function removeMapping(idx: number) {
+    setDraft((d) => (d ? { ...d, mappings: d.mappings.filter((_, i) => i !== idx) } : d));
+  }
+  function addMapping() {
+    setDraft((d) => {
+      if (!d) return d;
+      const fresh: AudioMappingDto = {
+        channel: "VHF1",
+        device: "",
+        binary: "",
+        useLatch: true,
+        onlyActive: true,
+      };
+      return { ...d, mappings: [...d.mappings, fresh] };
+    });
+  }
+
+  function updateBlacklist(idx: number, value: string) {
+    setDraft((d) => {
+      if (!d) return d;
+      const blacklist = d.blacklist.map((s, i) => (i === idx ? value : s));
+      return { ...d, blacklist };
+    });
+  }
+  function addBlacklist() {
+    setDraft((d) => (d ? { ...d, blacklist: [...d.blacklist, ""] } : d));
+  }
+  function removeBlacklist(idx: number) {
+    setDraft((d) => (d ? { ...d, blacklist: d.blacklist.filter((_, i) => i !== idx) } : d));
+  }
+
+  function setStartupVolume(channel: AudioChannel, raw: string) {
+    // Convention: -1.0 means "do not set". Empty input is also "do not set".
+    const val = raw === "" ? -1 : Number(raw);
+    setDraft((d) => {
+      if (!d) return d;
+      return { ...d, startupVolumes: { ...d.startupVolumes, [channel]: val } };
+    });
+  }
+  function toggleStartupUnmute(channel: AudioChannel, value: boolean) {
+    setDraft((d) => {
+      if (!d) return d;
+      return { ...d, startupUnmute: { ...d.startupUnmute, [channel]: value } };
+    });
+  }
+
+  return (
+    <div className={styles.panel}>
+      <div className={styles.toolbar}>
+        <PrimaryButton onClick={save} disabled={saving}>Save</PrimaryButton>
+        <PrimaryButton onClick={reload} variant="secondary" disabled={saving}>Reload</PrimaryButton>
+        <div className={styles.toolbarStatus}>
+          {error && <span className={styles.error}>{error}</span>}
+          {info && <span className={styles.info}>{info}</span>}
+        </div>
+      </div>
+
+      <Section title="Backend">
+        <BoolField label="CoreAudio Backend (off = VoiceMeeter)"
+          value={draft.isCoreAudioSelected}
+          onChange={(v) => update("isCoreAudioSelected", v)} />
+        <SelectField label="ACP Side" value={draft.audioAcpSide}
+          options={ACP_SIDE_OPTIONS}
+          onChange={(v) => update("audioAcpSide", v)} />
+        <SelectField label="Device Flow" value={draft.audioDeviceFlow}
+          options={DATA_FLOW_OPTIONS}
+          onChange={(v) => update("audioDeviceFlow", v)} />
+        <SelectField label="Device State" value={draft.audioDeviceState}
+          options={DEVICE_STATE_OPTIONS}
+          onChange={(v) => update("audioDeviceState", v)} />
+      </Section>
+
+      <Section title="Startup Volumes" hint="-1 = do not set on startup. Range 0.0–1.0.">
+        {AUDIO_CHANNELS.map((c) => {
+          const vol = draft.startupVolumes[c];
+          const unmute = draft.startupUnmute[c] ?? false;
+          return (
+            <div key={c} className={styles.channelRow}>
+              <span className={styles.channelLabel}>{c}</span>
+              <input type="number" step="0.05" min={-1} max={1}
+                value={vol === undefined ? "" : vol}
+                onChange={(e) => setStartupVolume(c, e.target.value)}
+                className={styles.channelVolume}
+                placeholder="—" />
+              <label className={styles.channelUnmute}>
+                <input type="checkbox" checked={unmute}
+                  onChange={(e) => toggleStartupUnmute(c, e.target.checked)} />
+                Unmute on startup
+              </label>
+            </div>
+          );
+        })}
+      </Section>
+
+      <Section title="App → Channel Mappings">
+        <div className={styles.mappingsHeader}>
+          <span>Channel</span>
+          <span>Binary</span>
+          <span>Device</span>
+          <span>Latch</span>
+          <span>Active</span>
+          <span />
+        </div>
+        {draft.mappings.length === 0 && <div className={styles.empty}>No mappings configured.</div>}
+        {draft.mappings.map((m, i) => (
+          <div key={i} className={styles.mappingRow}>
+            <select value={m.channel}
+              onChange={(e) => updateMapping(i, { channel: e.target.value as AudioChannel })}
+              className={styles.cellSelect}>
+              {AUDIO_CHANNELS.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <input value={m.binary}
+              onChange={(e) => updateMapping(i, { binary: e.target.value })}
+              placeholder="ProcessName"
+              className={styles.cellInput} />
+            <input value={m.device}
+              onChange={(e) => updateMapping(i, { device: e.target.value })}
+              placeholder="(All)"
+              className={styles.cellInput} />
+            <input type="checkbox" checked={m.useLatch}
+              onChange={(e) => updateMapping(i, { useLatch: e.target.checked })} />
+            <input type="checkbox" checked={m.onlyActive}
+              onChange={(e) => updateMapping(i, { onlyActive: e.target.checked })} />
+            <button type="button" className={styles.removeBtn} onClick={() => removeMapping(i)}>×</button>
+          </div>
+        ))}
+        <PrimaryButton onClick={addMapping} variant="secondary">Add mapping</PrimaryButton>
+      </Section>
+
+      <Section title="Device Blacklist">
+        {draft.blacklist.length === 0 && <div className={styles.empty}>No devices blacklisted.</div>}
+        {draft.blacklist.map((d, i) => (
+          <div key={i} className={styles.blacklistRow}>
+            <input value={d}
+              onChange={(e) => updateBlacklist(i, e.target.value)}
+              placeholder="Device name"
+              className={styles.cellInput} />
+            <button type="button" className={styles.removeBtn} onClick={() => removeBlacklist(i)}>×</button>
+          </div>
+        ))}
+        <PrimaryButton onClick={addBlacklist} variant="secondary">Add device</PrimaryButton>
+      </Section>
+    </div>
+  );
+}

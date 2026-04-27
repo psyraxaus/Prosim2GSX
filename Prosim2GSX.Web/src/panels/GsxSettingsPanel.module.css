@@ -1,0 +1,149 @@
+.panel {
+  padding: 16px 18px;
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.loading {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.toolbarStatus {
+  margin-left: auto;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.profileName {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.info { color: var(--success); font-size: 12px; }
+.error { color: var(--danger); font-size: 12px; }
+
+.empty {
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 8px 0;
+}
+
+.servicesHeader {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr 90px 100px;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+
+.serviceRow {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr 90px 100px;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.serviceActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cellSelect,
+.cellInput,
+.cellNumber {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 5px 7px;
+  font-size: 12px;
+  outline: none;
+  width: 100%;
+  font-family: var(--font-mono);
+}
+
+.cellSelect:focus,
+.cellInput:focus,
+.cellNumber:focus { border-color: var(--accent); }
+
+.iconBtn {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  width: 26px;
+  height: 26px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.iconBtn:hover:not(:disabled) {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.iconBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.removeBtn {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--danger);
+  border-radius: var(--radius-sm);
+  width: 26px;
+  height: 26px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.removeBtn:hover { background: rgba(244,67,54,0.12); }
+
+.listEditor { display: flex; flex-direction: column; gap: 4px; }
+
+.listLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.listRow {
+  display: grid;
+  grid-template-columns: 1fr 32px;
+  gap: 8px;
+  align-items: center;
+}
+
+@media (max-width: 720px) {
+  .servicesHeader { display: none; }
+  .serviceRow {
+    grid-template-columns: 1fr;
+    grid-auto-flow: row;
+    gap: 6px;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .serviceActions { justify-content: flex-end; }
+}

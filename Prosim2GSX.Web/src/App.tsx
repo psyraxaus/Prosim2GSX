@@ -5,7 +5,10 @@ import { AppStateProvider, useAppState } from "./state/AppStateContext";
 import { useWebSocket } from "./ws/useWebSocket";
 import { Header } from "./components/Header";
 import { TabBar, TabKey } from "./components/TabBar";
-import { PanelPlaceholder } from "./components/PanelPlaceholder";
+import { FlightStatusPanel } from "./panels/FlightStatusPanel";
+import { AudioSettingsPanel } from "./panels/AudioSettingsPanel";
+import { AppSettingsPanel } from "./panels/AppSettingsPanel";
+import { GsxSettingsPanel } from "./panels/GsxSettingsPanel";
 import styles from "./App.module.css";
 
 export function App() {
@@ -44,10 +47,10 @@ function AppShell() {
       <Header />
       <TabBar active={tab} onSelect={setTab} />
       <main className={styles.main}>
-        {tab === "flightStatus" && <PanelPlaceholder title="Flight Status" />}
-        {tab === "audioSettings" && <PanelPlaceholder title="Audio Settings" />}
-        {tab === "appSettings" && <PanelPlaceholder title="App Settings" />}
-        {tab === "gsxSettings" && <PanelPlaceholder title="GSX Settings" />}
+        {tab === "flightStatus" && <FlightStatusPanel />}
+        {tab === "audioSettings" && <AudioSettingsPanel />}
+        {tab === "appSettings" && <AppSettingsPanel />}
+        {tab === "gsxSettings" && <GsxSettingsPanel />}
       </main>
     </div>
   );

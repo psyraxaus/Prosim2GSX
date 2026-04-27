@@ -6,7 +6,10 @@ import { AppStateProvider, useAppState } from "./state/AppStateContext";
 import { useWebSocket } from "./ws/useWebSocket";
 import { Header } from "./components/Header";
 import { TabBar } from "./components/TabBar";
-import { PanelPlaceholder } from "./components/PanelPlaceholder";
+import { FlightStatusPanel } from "./panels/FlightStatusPanel";
+import { AudioSettingsPanel } from "./panels/AudioSettingsPanel";
+import { AppSettingsPanel } from "./panels/AppSettingsPanel";
+import { GsxSettingsPanel } from "./panels/GsxSettingsPanel";
 import styles from "./App.module.css";
 export function App() {
     // The auth gate is shown until a token is in localStorage. Re-checked
@@ -29,5 +32,5 @@ function AppShell() {
     const { dispatch } = useAppState();
     useWebSocket(dispatch);
     const [tab, setTab] = useState("flightStatus");
-    return (_jsxs("div", { className: styles.app, children: [_jsx(Header, {}), _jsx(TabBar, { active: tab, onSelect: setTab }), _jsxs("main", { className: styles.main, children: [tab === "flightStatus" && _jsx(PanelPlaceholder, { title: "Flight Status" }), tab === "audioSettings" && _jsx(PanelPlaceholder, { title: "Audio Settings" }), tab === "appSettings" && _jsx(PanelPlaceholder, { title: "App Settings" }), tab === "gsxSettings" && _jsx(PanelPlaceholder, { title: "GSX Settings" })] })] }));
+    return (_jsxs("div", { className: styles.app, children: [_jsx(Header, {}), _jsx(TabBar, { active: tab, onSelect: setTab }), _jsxs("main", { className: styles.main, children: [tab === "flightStatus" && _jsx(FlightStatusPanel, {}), tab === "audioSettings" && _jsx(AudioSettingsPanel, {}), tab === "appSettings" && _jsx(AppSettingsPanel, {}), tab === "gsxSettings" && _jsx(GsxSettingsPanel, {})] })] }));
 }
