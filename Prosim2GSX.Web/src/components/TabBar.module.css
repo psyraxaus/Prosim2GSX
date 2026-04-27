@@ -12,7 +12,11 @@
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
-  color: var(--text-secondary);
+  /* The tab bar always sits on tabBarBackground (dark in every shipped
+     theme), so the tab text must also always be light. Using
+     --text-secondary would inherit contentText, which is dark in light
+     themes — unreadable on dark navy. */
+  color: var(--text-on-dark-muted);
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.04em;
@@ -21,12 +25,12 @@
 }
 
 .tab:hover {
-  color: var(--text-primary);
-  background: var(--bg-card-hover);
+  color: var(--text-on-dark);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .tab.active {
-  color: var(--text-primary);
+  color: var(--text-on-dark);
   border-bottom-color: var(--accent);
 }
 

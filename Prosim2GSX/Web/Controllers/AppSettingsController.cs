@@ -1,6 +1,9 @@
+using CFIT.AppLogger;
 using Microsoft.AspNetCore.Mvc;
 using Prosim2GSX.Themes;
 using Prosim2GSX.Web.Contracts;
+using System;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -50,6 +53,46 @@ namespace Prosim2GSX.Web.Controllers
             // themes ship as a plain endpoint, NOT promoted into AppSettingsDto.
             var themes = ThemeManager.Instance?.AvailableThemes ?? new System.Collections.Generic.List<string>();
             return Ok(themes);
+        }
+
+        // Returns the raw JSON content of a single theme file from
+        // <exe-dir>/Themes/<name>.json. The React app applies the colors
+        // object as CSS custom properties so the web UI matches whichever
+        // theme is active in the WPF window.
+        [HttpGet("theme/{name}")]
+        public IActionResult Theme(string name)
+        {
+            if (!IsSafeThemeName(name))
+                return BadRequest("Invalid theme name.");
+
+            var file = Path.Combine(AppContext.BaseDirectory, "Themes", name + ".json");
+            if (!System.IO.File.Exists(file))
+                return NotFound();
+
+            try
+            {
+                var json = System.IO.File.ReadAllText(file);
+                return Content(json, "application/json; charset=utf-8");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+                return StatusCode(500, "Failed to read theme file.");
+            }
+        }
+
+        // Whitelist alphanumeric + dash + underscore so the {name} segment
+        // can't traverse out of the Themes directory (no '..', no path
+        // separators, no extensions).
+        private static bool IsSafeThemeName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return false;
+            foreach (var c in name)
+            {
+                if (!char.IsLetterOrDigit(c) && c != '-' && c != '_')
+                    return false;
+            }
+            return true;
         }
 
         [HttpPost("regenerate-token")]

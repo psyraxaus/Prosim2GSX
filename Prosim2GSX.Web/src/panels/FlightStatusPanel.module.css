@@ -29,8 +29,8 @@
   font-size: 11px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--text-primary);
-  background: var(--bg-secondary);
+  color: var(--category-text);
+  background: var(--bg-card);
   border-bottom: 1px solid var(--border);
 }
 
@@ -90,7 +90,10 @@
 .log {
   height: 220px;
   overflow-y: auto;
-  background: var(--bg-secondary);
+  /* bg-input is shifted from sectionBackground so the log scrollbox reads
+     as a recessed surface against the card — works in both light and
+     dark themes without going dark-on-dark. */
+  background: var(--bg-input);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 8px 10px;

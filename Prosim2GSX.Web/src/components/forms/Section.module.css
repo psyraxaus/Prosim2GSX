@@ -8,7 +8,11 @@
 
 .header {
   padding: 10px 14px;
-  background: var(--bg-secondary);
+  /* bg-card so the section header reads as part of the card surface
+     in both light and dark themes. bg-secondary is the always-dark
+     tab-bar colour and pairing it with content-text would be unreadable
+     in light themes. */
+  background: var(--bg-card);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: baseline;
@@ -21,7 +25,9 @@
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--text-primary);
+  /* Brand-coloured emphasis matching the WPF CategoryHeader, which binds
+     to {DynamicResource CategoryTextBrush}. */
+  color: var(--category-text);
 }
 
 .hint {

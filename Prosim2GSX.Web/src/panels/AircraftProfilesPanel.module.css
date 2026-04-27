@@ -67,7 +67,11 @@
 }
 
 .card {
-  background: var(--bg-secondary);
+  /* Per-profile card sits inside the Profiles Section card; bg-input
+     gives a slight raised surface that adapts to theme polarity (was
+     bg-secondary which is always-dark and clashed with content-text
+     in light themes). */
+  background: var(--bg-input);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 12px 14px;

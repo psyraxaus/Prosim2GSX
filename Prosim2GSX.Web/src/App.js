@@ -4,6 +4,8 @@ import { AUTH_FAIL_EVENT, getStoredToken } from "./auth/auth";
 import { AuthGate } from "./auth/AuthGate";
 import { AppStateProvider, useAppState } from "./state/AppStateContext";
 import { useWebSocket } from "./ws/useWebSocket";
+import { useApi } from "./api/useApi";
+import { useTheme } from "./theme/useTheme";
 import { Header } from "./components/Header";
 import { TabBar } from "./components/TabBar";
 import { FlightStatusPanel } from "./panels/FlightStatusPanel";
@@ -31,8 +33,34 @@ export function App() {
     return (_jsx(AppStateProvider, { children: _jsx(AppShell, {}) }));
 }
 function AppShell() {
-    const { dispatch } = useAppState();
+    const { state, dispatch } = useAppState();
     useWebSocket(dispatch);
+    const { get } = useApi();
+    // Pre-fetch AppSettings once on app load so the active theme name is in
+    // state.appSettings.currentTheme before any panel mounts. Without this
+    // pre-fetch the theme would only apply once the user opened the App
+    // Settings tab. The AppSettingsPanel still does its own fetch on mount
+    // to populate its draft/baseline pair — it just sees the cached state.
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const dto = await get("/appsettings");
+                if (!cancelled)
+                    dispatch({ type: "set", channel: "appSettings", state: dto });
+            }
+            catch {
+                /* ignore — theme stays at the CSS default until something else loads */
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [get, dispatch]);
+    // Apply the active theme. Re-runs whenever currentTheme changes — both
+    // the local "user saved a new theme" path and the cross-client "another
+    // client / WPF window changed the theme" path (which arrives as a WS
+    // patch on the appSettings channel into state.appSettings.currentTheme).
+    const themeName = state.appSettings?.currentTheme ?? null;
+    useTheme(themeName);
     const [tab, setTab] = useState("flightStatus");
     return (_jsxs("div", { className: styles.app, children: [_jsx(Header, {}), _jsx(TabBar, { active: tab, onSelect: setTab }), _jsxs("main", { className: styles.main, children: [tab === "flightStatus" && _jsx(FlightStatusPanel, {}), tab === "ofp" && _jsx(OfpPanel, {}), tab === "gsxSettings" && _jsx(GsxSettingsPanel, {}), tab === "aircraftProfiles" && _jsx(AircraftProfilesPanel, {}), tab === "audioSettings" && _jsx(AudioSettingsPanel, {}), tab === "appSettings" && _jsx(AppSettingsPanel, {})] })] }));
 }

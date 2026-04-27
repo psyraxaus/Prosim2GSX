@@ -541,3 +541,35 @@ export const PROFILE_MATCH_TYPE_OPTIONS: { value: ProfileMatchType; label: strin
   { value: "Title", label: "Title / Livery (contains)" },
   { value: "Registration", label: "Registration (equals)" },
 ];
+
+// ──────────────────────────────────────────────────────────────────────────
+// Theme JSON (mirrors the WPF Themes/<name>.json shape)
+// ──────────────────────────────────────────────────────────────────────────
+
+export interface FlightPhaseColors {
+  atGate: string;
+  taxiOut: string;
+  inFlight: string;
+  approach: string;
+  arrived: string;
+}
+
+export interface ThemeColors {
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  headerBackground: string;
+  tabBarBackground: string;
+  contentBackground: string;
+  sectionBackground: string;
+  headerText: string;
+  contentText: string;
+  categoryText: string;
+  flightPhaseColors: FlightPhaseColors;
+}
+
+export interface ThemeFile {
+  name: string;
+  description: string;
+  colors: ThemeColors;
+}

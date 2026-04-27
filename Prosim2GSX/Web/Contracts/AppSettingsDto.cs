@@ -156,12 +156,18 @@ namespace Prosim2GSX.Web.Contracts
             // on the running window. ThemeManager handles same-name calls
             // gracefully so a no-op re-save is cheap.
             var requestedTheme = string.IsNullOrEmpty(CurrentTheme) ? "Light" : CurrentTheme;
+            var oldTheme = c.CurrentTheme ?? "";
             try
             {
                 ThemeManager.Instance?.ApplyTheme(requestedTheme);
             }
             catch { }
             c.CurrentTheme = requestedTheme;
+            // Cross-client sync: fire Config INPC so the WS handler
+            // broadcasts on the "appSettings" channel. Open web clients
+            // see the patch and refetch + apply the new theme immediately.
+            if (!string.Equals(oldTheme, requestedTheme, System.StringComparison.Ordinal))
+                c.NotifyPropertyChanged(nameof(Config.CurrentTheme));
 
             // Capture old web-server values BEFORE writing so we can fire
             // INPC only on actual change (Config's auto-property setters

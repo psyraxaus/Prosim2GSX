@@ -252,6 +252,10 @@ namespace Prosim2GSX.UI.Views.Settings
                 NotifyPropertyChanged(nameof(SelectedThemeIndex));
                 NotifyPropertyChanged(nameof(SelectedThemeName));
                 ThemeManager.Instance.ApplyTheme(_selectedThemeName);
+                // Tell Config subscribers that the persisted theme name has
+                // changed so the WS handler broadcasts on the "appSettings"
+                // channel and any open web clients re-apply their CSS variables.
+                Source.NotifyPropertyChanged(nameof(Source.CurrentTheme));
             }
         }
 

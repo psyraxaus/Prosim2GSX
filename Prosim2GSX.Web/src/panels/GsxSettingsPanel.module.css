@@ -83,7 +83,7 @@
 .cellSelect,
 .cellInput,
 .cellNumber {
-  background: var(--bg-secondary);
+  background: var(--bg-input);
   color: var(--text-primary);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);

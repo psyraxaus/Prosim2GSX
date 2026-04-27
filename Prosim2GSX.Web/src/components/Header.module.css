@@ -3,7 +3,10 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 18px;
-  background: var(--bg-secondary);
+  /* Themed header. Falls back to --bg-secondary if no theme has applied
+     yet (boot frame before useTheme finishes the first fetch). */
+  background: var(--header-bg, var(--bg-secondary));
+  color: var(--header-text, var(--text-primary));
   border-bottom: 1px solid var(--border);
 }
 
@@ -17,16 +20,16 @@
   font-size: 16px;
   font-weight: 600;
   letter-spacing: 0.18em;
-  color: var(--text-primary);
+  color: var(--header-text, var(--text-primary));
 }
 
 .brandTag {
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.18em;
-  color: var(--accent);
+  color: var(--header-text, var(--accent));
   padding: 2px 6px;
-  border: 1px solid var(--accent);
+  border: 1px solid currentColor;
   border-radius: var(--radius-sm);
-  background: rgba(33, 150, 243, 0.08);
+  background: rgba(255, 255, 255, 0.12);
 }

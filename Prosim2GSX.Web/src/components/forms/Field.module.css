@@ -40,7 +40,11 @@
 .numberInput,
 .textInput,
 .select {
-  background: var(--bg-secondary);
+  /* bg-input is shifted from sectionBackground (lighter for dark themes,
+     darker for light themes) so inputs read as raised surfaces against
+     the card behind them — same trick the WPF ThemeManager uses when
+     deriving InputBackground. */
+  background: var(--bg-input);
   color: var(--text-primary);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);

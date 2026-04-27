@@ -74,7 +74,7 @@
 }
 
 .gateInput {
-  background: var(--bg-secondary);
+  background: var(--bg-input);
   color: var(--text-primary);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
@@ -169,7 +169,10 @@
 }
 
 .weatherCard {
-  background: var(--bg-secondary);
+  /* Sub-card sitting inside a Section card — bg-input gives a slightly
+     raised surface that adapts to the active theme (works on both
+     dark and light section cards). */
+  background: var(--bg-input);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 12px;
