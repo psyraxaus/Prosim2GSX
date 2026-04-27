@@ -1086,6 +1086,22 @@ namespace Prosim2GSX.GSX
                 }
             }
 
+            // After GSX has finished the physical push (PushStatus drops back below 5
+            // while the tug is still attached) it asks crew to set the parking brake
+            // and then waits for "Confirm good engine start" on the Interrupt menu.
+            // Auto-confirm once brakes are set and engines are running.
+            if (ServicePushBack.WasPushing
+                && ServicePushBack.PushStatus > 0
+                && ServicePushBack.PushStatus < 5
+                && Aircraft.IsBrakeSet
+                && Aircraft.EnginesRunning
+                && !ServicePushBack.EngineStartConfirmed)
+            {
+                Logger.Information($"Automation: Push complete + brakes set + engines running — sending Confirm good engine start");
+                await ServicePushBack.ConfirmEngineStart();
+                await Task.Delay(Config.StateMachineInterval, RequestToken);
+            }
+
             if (SmartButtonRequest)
             {
                 Logger.Debug($"INT/RAD on Push ({ServicePushBack.PushStatus})");
