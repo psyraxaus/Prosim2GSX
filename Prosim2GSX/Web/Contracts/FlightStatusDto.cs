@@ -41,6 +41,11 @@ namespace Prosim2GSX.Web.Contracts
         public string AppProfile { get; set; } = "";
         public string AppAircraft { get; set; } = "";
 
+        // Header strip (mirrors WPF HeaderBarControl) — read-only display.
+        public string FlightNumber { get; set; } = "--------";
+        public string UtcTime { get; set; } = "--:--Z";
+        public string UtcDate { get; set; } = "------";
+
         // Live GSX runtime sub-section
         public GsxLiveDto Gsx { get; set; } = new();
 
@@ -77,6 +82,9 @@ namespace Prosim2GSX.Web.Contracts
                 AppInMotion = fs.AppInMotion,
                 AppProfile = fs.AppProfile,
                 AppAircraft = fs.AppAircraft,
+                FlightNumber = fs.FlightNumber,
+                UtcTime = fs.UtcTime,
+                UtcDate = fs.UtcDate,
                 Gsx = GsxLiveDto.From(app.Gsx),
                 MessageLog = SafeMessageLogTail(fs.MessageLog, MessageLogTailSize),
             };

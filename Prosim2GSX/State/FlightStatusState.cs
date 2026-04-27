@@ -32,6 +32,11 @@ namespace Prosim2GSX.State
         [ObservableProperty] private string _AppProfile = "";
         [ObservableProperty] private string _AppAircraft = "Airline / Title / Registration";
 
+        // Header-strip parity with the WPF HeaderBarControl. Read-only on the wire.
+        [ObservableProperty] private string _FlightNumber = "--------";
+        [ObservableProperty] private string _UtcTime = "--:--Z";
+        [ObservableProperty] private string _UtcDate = "------";
+
         // Bounded ring buffer of recent log messages drained from CFIT Logger.Messages.
         // The drain worker is the only mutator; all reads/writes happen on the WPF
         // dispatcher (so existing WPF binding semantics are preserved).

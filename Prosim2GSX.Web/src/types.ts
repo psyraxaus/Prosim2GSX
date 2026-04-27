@@ -166,6 +166,10 @@ export interface FlightStatusDto {
   appProfile: string;
   appAircraft: string;
 
+  flightNumber: string;
+  utcTime: string;
+  utcDate: string;
+
   gsx: GsxLiveDto;
   messageLog: string[];
 }

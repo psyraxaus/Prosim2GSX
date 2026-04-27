@@ -1,0 +1,59 @@
+/* Split-flap display — mirrors WPF SplitFlapCharacterControl exactly:
+   14x20 cells, dark gradient halves, #2A2A2A border, #333 mid-seam,
+   amber #FFD700 character, ScaleY squeeze + dim-amber #8B6914 on flip. */
+
+.text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cell {
+  position: relative;
+  display: inline-block;
+  width: 14px;
+  height: 20px;
+  margin: 0 1px;
+  border: 1px solid #2A2A2A;
+  border-radius: 1px;
+  background:
+    linear-gradient(to bottom, #222 0%, #1A1A1A 50%) no-repeat 0 0 / 100% 50%,
+    linear-gradient(to bottom, #1A1A1A 0%, #151515 100%) no-repeat 0 100% / 100% 50%;
+}
+
+.seam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: #333333;
+  transform: translateY(-0.5px);
+  pointer-events: none;
+}
+
+.char {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 11px;
+  font-weight: bold;
+  color: #FFD700;
+  transform-origin: 50% 50%;
+  animation: flapTick 60ms ease-out;
+  will-change: transform, color;
+}
+
+@keyframes flapTick {
+  0% {
+    transform: scaleY(0.3);
+    color: #8B6914;
+  }
+  100% {
+    transform: scaleY(1);
+    color: #FFD700;
+  }
+}

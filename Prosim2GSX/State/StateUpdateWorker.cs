@@ -195,6 +195,30 @@ namespace Prosim2GSX.State
 
             fs.AppProfile = ctrl?.AircraftProfile?.ToString() ?? "";
             fs.AppAircraft = $"{ai?.Airline ?? ""} / {ai?.Title ?? ""} / {ai?.Registration ?? ""}";
+
+            // Header strip values — mirror HeaderBarControl.OnUpdate so the web
+            // header reads identically to the WPF top bar.
+            try
+            {
+                fs.FlightNumber = !string.IsNullOrWhiteSpace(ai?.FlightNumber) ? ai.FlightNumber : "--------";
+
+                var sim = _app.SimConnect;
+                bool simConnected = sim?.IsSimConnected == true && sim?.IsSessionRunning == true;
+                if (simConnected && ai != null)
+                {
+                    int zuluSec = ai.ZuluTimeSeconds;
+                    int hours = (zuluSec / 3600) % 24;
+                    int minutes = (zuluSec % 3600) / 60;
+                    fs.UtcTime = $"{hours:D2}:{minutes:D2}Z";
+                }
+                else
+                {
+                    fs.UtcTime = DateTime.UtcNow.ToString("HH:mm") + "Z";
+                }
+
+                fs.UtcDate = DateTime.UtcNow.ToString("dd MMM").ToUpper();
+            }
+            catch { }
         }
     }
 }
