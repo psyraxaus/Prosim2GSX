@@ -14,11 +14,21 @@ namespace Prosim2GSX.GSX
         protected static readonly Regex GateIdRegex = new(@"^([A-Z]*)(\d+)([A-Z]*)$", RegexOptions.Compiled);
         // Range pattern in a menu line, e.g. "W34-W48" or "W34 - W48" or "W34—W48"
         protected static readonly Regex RangeRegex = new(@"\b([A-Z]*)(\d+)\s*[-‐-―]\s*([A-Z]*)(\d+)\b", RegexOptions.Compiled);
-        // Bare gate identifiers in a menu line, e.g. "Gate W34A" or " W34 ".
-        protected static readonly Regex GateTokenRegex = new(@"\b([A-Z]+)(\d+)([A-Z]*)\b", RegexOptions.Compiled);
+        // Bare gate identifier on a menu line. Letter prefix is optional so we
+        // can match lines like "Gate 46" once we're inside an apron context
+        // (where the apron implies the prefix). Requires the GATE keyword to
+        // anchor the match so we don't pick up unrelated numbers in the line.
+        protected static readonly Regex GateTokenRegex = new(@"\bGATE\s+([A-Z]*)(\d+)([A-Z]*)\b", RegexOptions.Compiled);
+        // Extract implied apron prefix from titles like "All Apron 1W (Gates W34-W48) positions".
+        protected static readonly Regex ApronPrefixRegex = new(@"APRON\s+\d+([A-Z]+)", RegexOptions.Compiled);
 
         protected const int MaxNavigationDepth = 6;
+        protected const int MaxPageClicksPerLevel = 8;
         protected const string AirportSelectTitle = "Select airport";
+        protected const string GateListTitlePrefix = "All Apron";
+        protected const string NextPageToken = "NEXT PAGE";
+        protected const string PreviousPageToken = "PREVIOUS PAGE";
+        protected const string BackToken = "BACK";
 
         protected virtual GsxController Controller { get; }
         protected virtual GsxMenu Menu => Controller.Menu;
@@ -53,16 +63,29 @@ namespace Prosim2GSX.GSX
                     return false;
                 }
 
-                // Open the GSX gate/parking menu (item 10 = "Activate Services at" or "Select airport"
-                // depending on whether GSX considers us parked).
-                var rootTitle = Menu.MenuTitle;
-                await Menu.Select(10);
-                if (!await WaitForMenuChange(rootTitle, Menu.MenuLineCount, Controller.Config.MenuOpenTimeout))
+                // Pre-detect: if GSX is already showing a page in the gate-selection
+                // tree (airport list, parking list, or apron's gate list), skip the
+                // root-level Select(10) — that index doesn't exist on these pages
+                // and the menu would silently refuse to advance.
+                if (!IsAlreadyInGateTree())
                 {
-                    Logger.Warning($"GsxParkingSelector: GSX menu did not advance from '{rootTitle}'");
-                    Menu.Hide();
-                    return false;
+                    // Open the GSX gate/parking menu (item 10 = "Activate Services at" or "Select airport"
+                    // depending on whether GSX considers us parked).
+                    var rootTitle = Menu.MenuTitle;
+                    await Menu.Select(10);
+                    if (!await WaitForMenuChange(rootTitle, Menu.MenuLineCount, Controller.Config.MenuOpenTimeout))
+                    {
+                        Logger.Warning($"GsxParkingSelector: GSX menu did not advance from '{rootTitle}'");
+                        Menu.Hide();
+                        return false;
+                    }
                 }
+                else
+                {
+                    Logger.Information($"GsxParkingSelector: menu already in gate tree at '{Menu.MenuTitle}' — skipping root Select(10)");
+                }
+
+                int pageClicksAtLevel = 0;
 
                 for (int step = 0; step < MaxNavigationDepth; step++)
                 {
@@ -74,9 +97,11 @@ namespace Prosim2GSX.GSX
                         return false;
                     }
 
+                    var impliedPrefix = ImpliedApronPrefix(Menu.MenuTitle);
+
                     // Always try exact gate match first — covers the case where we've drilled
                     // down to the stand list and the target stand is now visible.
-                    int chosen = FindExactGateIndex(lines, target);
+                    int chosen = FindExactGateIndex(lines, target, impliedPrefix);
                     if (chosen >= 0)
                     {
                         Logger.Information($"GsxParkingSelector: exact gate '{gate}' matched at row {chosen + 1}: '{lines[chosen]}'");
@@ -103,6 +128,27 @@ namespace Prosim2GSX.GSX
 
                     if (chosen < 0)
                     {
+                        // No drill-down match. If the page has a "Next Page" entry we're on a
+                        // paginated apron list — click it and stay at the same logical depth.
+                        int nextPageIdx = FindNextPageIndex(lines);
+                        if (nextPageIdx >= 0 && pageClicksAtLevel < MaxPageClicksPerLevel)
+                        {
+                            pageClicksAtLevel++;
+                            Logger.Information($"GsxParkingSelector: gate '{gate}' not on this page — paginating (click {pageClicksAtLevel}) at row {nextPageIdx + 1}");
+                            var prevTitle = Menu.MenuTitle;
+                            var prevCount = lines.Count;
+                            await Menu.Select(nextPageIdx + 1);
+                            if (!await WaitForMenuChange(prevTitle, prevCount, Controller.Config.MenuOpenTimeout))
+                            {
+                                Logger.Warning($"GsxParkingSelector: menu did not refresh after Next Page at row {nextPageIdx + 1}");
+                                Menu.Hide();
+                                return false;
+                            }
+                            // Stay at same depth — pagination doesn't drill deeper.
+                            step--;
+                            continue;
+                        }
+
                         Logger.Warning($"GsxParkingSelector: gate '{gate}' not found at depth {step} — title: '{Menu.MenuTitle}', {lines.Count} lines:");
                         for (int i = 0; i < lines.Count; i++)
                             Logger.Warning($"  [{i + 1}] '{lines[i]}'");
@@ -110,11 +156,14 @@ namespace Prosim2GSX.GSX
                         return false;
                     }
 
+                    // Drill-down — reset the per-level page counter.
+                    pageClicksAtLevel = 0;
+
                     Logger.Information($"GsxParkingSelector: drilling into row {chosen + 1} (depth {step}): '{lines[chosen]}'");
-                    var prevTitle = Menu.MenuTitle;
-                    var prevCount = lines.Count;
+                    var prevTitleDrill = Menu.MenuTitle;
+                    var prevCountDrill = lines.Count;
                     await Menu.Select(chosen + 1);
-                    if (!await WaitForMenuChange(prevTitle, prevCount, Controller.Config.MenuOpenTimeout))
+                    if (!await WaitForMenuChange(prevTitleDrill, prevCountDrill, Controller.Config.MenuOpenTimeout))
                     {
                         Logger.Warning($"GsxParkingSelector: menu did not refresh after selecting row {chosen + 1} (still '{Menu.MenuTitle}')");
                         Menu.Hide();
@@ -132,6 +181,13 @@ namespace Prosim2GSX.GSX
                     Logger.LogException(ex);
                 return false;
             }
+        }
+
+        protected virtual bool IsAlreadyInGateTree()
+        {
+            return Menu.MatchTitle(AirportSelectTitle)
+                || Menu.MatchTitle(GsxConstants.MenuParkingSelect)
+                || Menu.MatchTitle(GateListTitlePrefix);
         }
 
         protected virtual async Task<bool> WaitForMenuChange(string previousTitle, int previousLineCount, int timeoutMs)
@@ -159,7 +215,19 @@ namespace Prosim2GSX.GSX
             return -1;
         }
 
-        protected virtual int FindExactGateIndex(IReadOnlyList<string> lines, string normalisedTarget)
+        protected virtual int FindNextPageIndex(IReadOnlyList<string> lines)
+        {
+            for (int i = 0; i < lines.Count; i++)
+            {
+                var upper = (lines[i] ?? "").ToUpperInvariant();
+                // Match "Next Page" but not "Previous Page" — both contain "PAGE".
+                if (upper.Contains(NextPageToken) && !upper.Contains(PreviousPageToken))
+                    return i;
+            }
+            return -1;
+        }
+
+        protected virtual int FindExactGateIndex(IReadOnlyList<string> lines, string normalisedTarget, string impliedPrefix)
         {
             var (targetPrefix, targetNumber, targetSuffix) = ParseGateId(normalisedTarget);
             if (targetNumber < 0)
@@ -167,11 +235,24 @@ namespace Prosim2GSX.GSX
 
             for (int i = 0; i < lines.Count; i++)
             {
-                foreach (Match m in GateTokenRegex.Matches(lines[i].ToUpperInvariant()))
+                var upper = lines[i].ToUpperInvariant();
+                // Skip page-nav rows so they aren't accidentally treated as gates.
+                if (upper.Contains(NextPageToken) || upper.Contains(PreviousPageToken) || upper.StartsWith(BackToken))
+                    continue;
+
+                foreach (Match m in GateTokenRegex.Matches(upper))
                 {
                     var prefix = m.Groups[1].Value;
                     var number = int.Parse(m.Groups[2].Value);
                     var suffix = m.Groups[3].Value;
+
+                    // If the menu line shows a bare-number gate (no letter prefix on the token),
+                    // treat the apron-implied prefix as the line's effective prefix. This matches
+                    // GSX's convention of dropping the apron letter inside an apron's gate list
+                    // (e.g. "Gate 46" inside Apron 1W means W46).
+                    if (string.IsNullOrEmpty(prefix) && !string.IsNullOrEmpty(impliedPrefix))
+                        prefix = impliedPrefix;
+
                     if (prefix == targetPrefix && number == targetNumber && suffix == targetSuffix)
                         return i;
                 }
@@ -210,6 +291,14 @@ namespace Prosim2GSX.GSX
                 }
             }
             return bestIndex;
+        }
+
+        protected static string ImpliedApronPrefix(string menuTitle)
+        {
+            if (string.IsNullOrEmpty(menuTitle))
+                return "";
+            var m = ApronPrefixRegex.Match(menuTitle.ToUpperInvariant());
+            return m.Success ? m.Groups[1].Value : "";
         }
 
         protected static (string prefix, int number, string suffix) ParseGateId(string normalised)
