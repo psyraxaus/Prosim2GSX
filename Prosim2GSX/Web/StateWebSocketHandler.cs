@@ -268,7 +268,15 @@ namespace Prosim2GSX.Web
             foreach (var conn in _connections.Values)
             {
                 try { conn.Cts.Cancel(); } catch { }
-                try { _ = conn.Socket.CloseAsync(status, reason, CancellationToken.None); } catch { }
+                // Route through TryClose (which catches internally) instead of
+                // a bare _ = Socket.CloseAsync(...). The bare form's Task can
+                // fault when the socket has raced into the Aborted state; the
+                // fault is unobserved (no awaiter, no .Exception read), and a
+                // later finalizer pass re-throws it as AggregateException —
+                // which the CFIT unhandled-exception handler treats as an app
+                // crash. TryClose's internal catch ensures the returned Task
+                // never faults, so the discard is safe.
+                _ = TryClose(conn.Socket, status, reason);
             }
         }
 

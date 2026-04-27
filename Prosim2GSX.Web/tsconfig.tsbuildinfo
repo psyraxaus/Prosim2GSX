@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/types.ts","./src/vite-env.d.ts","./src/api/useapi.ts","./src/auth/authgate.tsx","./src/auth/auth.ts","./src/components/connectionindicator.tsx","./src/components/header.tsx","./src/components/panelplaceholder.tsx","./src/components/tabbar.tsx","./src/state/appstatecontext.tsx","./src/ws/usewebsocket.ts"],"version":"5.9.3"}

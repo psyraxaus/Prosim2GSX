@@ -100,10 +100,45 @@ namespace Prosim2GSX.UI.Views.Settings
         public virtual bool SolariAnimationEnabled { get => Source.SolariAnimationEnabled; set => SetModelValue<bool>(value); }
 
         // ── Web interface (hot-toggled; WebHostService observes Config) ──────
+        //
+        // Config's INPC is not raised by the auto-property setters that
+        // SetModelValue / SetSourceValue write through (Config only fires
+        // PropertyChanged from its own NotifyPropertyChanged, which is
+        // currently only used for DisplayUnitCurrent). For the WebHostService
+        // subscription to react to runtime changes, each setter explicitly
+        // raises Source.NotifyPropertyChanged after the write — otherwise the
+        // hot-toggle silently does nothing until the next app launch.
 
-        public virtual bool WebServerEnabled { get => Source.WebServerEnabled; set => SetModelValue<bool>(value); }
-        public virtual int WebServerPort { get => Source.WebServerPort; set => SetModelValue<int>(value); }
-        public virtual bool WebServerBindAll { get => Source.WebServerBindAll; set => SetModelValue<bool>(value); }
+        public virtual bool WebServerEnabled
+        {
+            get => Source.WebServerEnabled;
+            set
+            {
+                SetModelValue<bool>(value);
+                Source.NotifyPropertyChanged(nameof(Source.WebServerEnabled));
+            }
+        }
+
+        public virtual int WebServerPort
+        {
+            get => Source.WebServerPort;
+            set
+            {
+                SetModelValue<int>(value);
+                Source.NotifyPropertyChanged(nameof(Source.WebServerPort));
+            }
+        }
+
+        public virtual bool WebServerBindAll
+        {
+            get => Source.WebServerBindAll;
+            set
+            {
+                SetModelValue<bool>(value);
+                Source.NotifyPropertyChanged(nameof(Source.WebServerBindAll));
+            }
+        }
+
         // Token is read-only on the bound surface — regeneration goes through
         // the dedicated command so the host can also kick existing clients.
         public virtual string WebServerAuthToken => Source.WebServerAuthToken ?? "";

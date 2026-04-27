@@ -111,6 +111,11 @@ namespace Prosim2GSX.Web
             var newToken = Guid.NewGuid().ToString("N");
             _app.Config.WebServerAuthToken = newToken;
             _app.Config.SaveConfiguration();
+            // Config's auto-property setter doesn't raise PropertyChanged, so
+            // the WS handler's "appSettings" channel and any other Config
+            // subscriber would otherwise miss this change. Raise it
+            // explicitly to keep wire-side observers in sync with the WPF UI.
+            _app.Config.NotifyPropertyChanged(nameof(Config.WebServerAuthToken));
             Interlocked.Increment(ref _tokenGeneration);
             try { TokenRotated?.Invoke(); } catch { }
             Logger.Information("Web server auth token regenerated; existing clients invalidated.");
@@ -132,10 +137,21 @@ namespace Prosim2GSX.Web
                 case nameof(Config.WebServerBindAll):
                     if (_app.Config.WebServerEnabled)
                     {
+                        // Wrapped in try/catch so any future bug in Stop/Start
+                        // can't escape as an unobserved Task exception (which
+                        // would crash the app at the next finalizer pass).
                         Task.Run(() =>
                         {
-                            Stop();
-                            Start();
+                            try
+                            {
+                                Stop();
+                                Start();
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.Error("Web server hot-restart failed.");
+                                Logger.LogException(ex);
+                            }
                         });
                     }
                     break;
@@ -192,7 +208,14 @@ namespace Prosim2GSX.Web
             _webApp.UseCors();
 #endif
 
-            // Static files first so wwwroot/index.html / wwwroot/assets/* are
+            // WebSockets middleware MUST be registered BEFORE UseRouting /
+            // MapControllers, otherwise the endpoint that handles /ws fires
+            // before the upgrade middleware has populated HttpContext.WebSockets,
+            // and the handshake fails (browser sees a generic
+            // "WebSocket connection failed" with no useful detail).
+            _webApp.UseWebSockets();
+
+            // Static files next so wwwroot/index.html / wwwroot/assets/* are
             // served without going through the bearer gate. The HTML/JS bundle
             // is public — only /api/* needs the token, and the bearer
             // middleware enforces that explicitly by path prefix.
@@ -209,7 +232,6 @@ namespace Prosim2GSX.Web
             // a WS upgrade and putting the token in the URL would leak it),
             // so the bearer-token middleware exempts /ws and the handler does
             // its own check.
-            _webApp.UseWebSockets();
             _webApp.Map("/ws", async context =>
             {
                 if (!context.WebSockets.IsWebSocketRequest)
@@ -268,11 +290,28 @@ namespace Prosim2GSX.Web
         // Best-effort shutdown — must be called under _lock. Swallows any
         // shutdown exception because we've already logged the start failure
         // path; trying to surface a stop failure on top would be noise.
+        //
+        // Active WebSocket connections will hold the host open until they
+        // drain naturally, so we kick them upfront — otherwise Kestrel waits
+        // for the browser's ws to close before completing shutdown, which
+        // can stall a hot-toggle (port/bind change) for many seconds.
         private void DoStopBestEffort()
         {
+            try
+            {
+                _app?.WebSocketHandler?.KickAll(
+                    System.Net.WebSockets.WebSocketCloseStatus.EndpointUnavailable,
+                    "host restart");
+            }
+            catch { }
+
             try { _runCts?.Cancel(); } catch { }
-            try { _runTask?.Wait(TimeSpan.FromSeconds(5)); } catch { }
-            try { (_webApp as IAsyncDisposable)?.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(5)); } catch { }
+            // Short waits — if a peer refuses to close cleanly we'd rather
+            // let DisposeAsync force-tear-down than block the UI thread for
+            // 10 seconds. 1.5s is enough for an orderly graceful shutdown
+            // on loopback / LAN.
+            try { _runTask?.Wait(TimeSpan.FromSeconds(1.5)); } catch { }
+            try { (_webApp as IAsyncDisposable)?.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(1.5)); } catch { }
             _webApp = null;
             _runCts?.Dispose();
             _runCts = null;
