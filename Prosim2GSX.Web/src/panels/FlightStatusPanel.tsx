@@ -80,7 +80,7 @@ export function FlightStatusPanel() {
         <GpuRow connected={fs.gsx.serviceGpuConnected} relevant={fs.gsx.serviceGpuPhaseRelevant} />
         <ServiceRow label="Boarding" state={fs.gsx.serviceBoarding} />
         <ServiceRow label="Deboarding" state={fs.gsx.serviceDeboarding} />
-        <KV label="Pushback" value={fs.gsx.servicePushback} />
+        <ServiceRow label="Pushback" state={parsePushbackState(fs.gsx.servicePushback)} />
         <ServiceRow label="Jetway" state={fs.gsx.serviceJetway} />
         <ServiceRow label="Stairs" state={fs.gsx.serviceStairs} />
       </Section>
@@ -178,6 +178,14 @@ function GpuRow({ connected, relevant }: { connected: boolean; relevant: boolean
       </span>
     </div>
   );
+}
+
+// Pushback arrives as "{State} ({PushStatus})" (e.g. "Unknown (0)") because
+// the WPF Monitor view shows the push-status count alongside the state. The
+// web Services list only renders the state pill, so peel the leading word.
+function parsePushbackState(value: string): GsxServiceState {
+  const head = value?.split(" ", 1)[0] ?? "";
+  return (head || "Unknown") as GsxServiceState;
 }
 
 function serviceTone(s: GsxServiceState): "neutral" | "ok" | "warn" | "active" | "bad" {
