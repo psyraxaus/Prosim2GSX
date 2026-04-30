@@ -150,7 +150,8 @@ namespace Prosim2GSX.AppConfig
         // first enabled. AuthToken is empty until the host generates one on first
         // start with WebServerEnabled=true (Phase 6 concern).
         public virtual bool WebServerEnabled { get; set; } = false;
-        public virtual int WebServerPort { get; set; } = 5000;
+        // Default 5001: ProSim's own services occupy 5000 on the same host.
+        public virtual int WebServerPort { get; set; } = 5001;
         public virtual bool WebServerBindAll { get; set; } = false;
         public virtual string WebServerAuthToken { get; set; } = "";
 

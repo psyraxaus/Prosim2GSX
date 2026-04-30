@@ -43,5 +43,11 @@ namespace Prosim2GSX.State
 
         [ObservableProperty] private AutomationState _AppAutomationState = AutomationState.SessionStart;
         [ObservableProperty] private string _AppAutomationDepartureServices = "0 / 0";
+
+        // GSX SetGate readback — formatted display string ("C3", "Gate 12", or
+        // "" when unassigned). Written by StateUpdateWorker each tick from the
+        // SetGate_Name/Number/Suffix LVARs; mirrored on OfpState for the OFP
+        // panel which broadcasts on a separate WS channel.
+        [ObservableProperty] private string _AssignedArrivalGate = "";
     }
 }

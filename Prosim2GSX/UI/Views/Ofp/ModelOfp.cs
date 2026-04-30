@@ -5,9 +5,11 @@ using Prosim2GSX.Aircraft;
 using Prosim2GSX.AppConfig;
 using Prosim2GSX.GSX;
 using Prosim2GSX.SayIntentions;
+using Prosim2GSX.State;
 using ProsimInterface;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -20,6 +22,7 @@ namespace Prosim2GSX.UI.Views.Ofp
         protected virtual GsxController GsxController => AppService?.GsxService;
         protected virtual AircraftInterface AircraftInterface => GsxController?.AircraftInterface;
         protected virtual ISayIntentionsService SayIntentions => AppService?.SayIntentionsService;
+        protected virtual OfpState OfpState => AppService?.Ofp;
 
         public ModelOfp(AppService appService) : base(appService)
         {
@@ -38,6 +41,28 @@ namespace Prosim2GSX.UI.Views.Ofp
             // radio buttons reflect external changes rather than going stale.
             if (GsxController != null)
                 GsxController.PushbackPreferenceChanged += OnPushbackPreferenceChanged;
+            // Mirror OfpState.AssignedArrivalGate (written by StateUpdateWorker
+            // each tick) onto a local notifier so the WPF Tab's binding stays
+            // in sync without the panel having to know about the store.
+            if (OfpState != null)
+                OfpState.PropertyChanged += OnOfpStateChanged;
+        }
+
+        protected virtual void OnOfpStateChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e?.PropertyName != nameof(State.OfpState.AssignedArrivalGate)) return;
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher != null && !dispatcher.CheckAccess())
+                dispatcher.BeginInvoke(new Action(() =>
+                {
+                    NotifyPropertyChanged(nameof(AssignedArrivalGate));
+                    NotifyPropertyChanged(nameof(HasAssignedArrivalGate));
+                }));
+            else
+            {
+                NotifyPropertyChanged(nameof(AssignedArrivalGate));
+                NotifyPropertyChanged(nameof(HasAssignedArrivalGate));
+            }
         }
 
         protected virtual void OnPushbackPreferenceChanged(PushbackPreference _)
@@ -192,6 +217,11 @@ namespace Prosim2GSX.UI.Views.Ofp
             }
         }
         public virtual bool HasPendingArrivalGate => !string.IsNullOrWhiteSpace(PendingArrivalGate);
+
+        // GSX SetGate readback — view-only mirror of OfpState.AssignedArrivalGate,
+        // populated by StateUpdateWorker.UpdateAssignedGate each tick.
+        public virtual string AssignedArrivalGate => OfpState?.AssignedArrivalGate ?? "";
+        public virtual bool HasAssignedArrivalGate => !string.IsNullOrWhiteSpace(AssignedArrivalGate);
 
         public virtual bool UseSayIntentions => Config?.UseSayIntentions == true;
 

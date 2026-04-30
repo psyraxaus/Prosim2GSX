@@ -34,6 +34,8 @@ namespace Prosim2GSX.Web.Contracts
         public string PendingArrivalGate { get; set; } = "";
         public string GateAssignmentStatus { get; set; } = "";
         public string GsxAssignmentStatus { get; set; } = "";
+        // GSX SetGate readback — formatted display ("C3", "Gate 12", or "").
+        public string AssignedArrivalGate { get; set; } = "";
 
         // Weather
         public WeatherDto DepartureWeather { get; set; }
@@ -78,6 +80,7 @@ namespace Prosim2GSX.Web.Contracts
                 PendingArrivalGate = ofpState?.PendingArrivalGate ?? "",
                 GateAssignmentStatus = ofpState?.GateAssignmentStatus ?? "",
                 GsxAssignmentStatus = ofpState?.GsxAssignmentStatus ?? "",
+                AssignedArrivalGate = ofpState?.AssignedArrivalGate ?? "",
 
                 DepartureWeather = WeatherDto.From(ofpState?.DepartureWeather),
                 ArrivalWeather = WeatherDto.From(ofpState?.ArrivalWeather),

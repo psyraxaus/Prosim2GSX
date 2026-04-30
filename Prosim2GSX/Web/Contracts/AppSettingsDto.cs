@@ -65,7 +65,7 @@ namespace Prosim2GSX.Web.Contracts
         // bulk POST. ApplyTo refuses to clobber a non-empty token with an
         // empty one (defensive — see ApplyTo).
         public bool WebServerEnabled { get; set; }
-        public int WebServerPort { get; set; } = 5000;
+        public int WebServerPort { get; set; } = 5001;
         public bool WebServerBindAll { get; set; }
         public string WebServerAuthToken { get; set; } = "";
 

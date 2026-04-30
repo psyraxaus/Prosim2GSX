@@ -17,7 +17,7 @@ npm run dev
 ```
 
 Vite dev server runs on `http://localhost:5173` with `/api` and `/ws`
-proxied to `http://localhost:5000` (the embedded Kestrel host). The
+proxied to `http://localhost:5001` (the embedded Kestrel host). The
 desktop app must be running with the web server enabled.
 
 ## Build

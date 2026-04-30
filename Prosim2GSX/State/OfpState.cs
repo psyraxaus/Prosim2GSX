@@ -27,6 +27,11 @@ namespace Prosim2GSX.State
         [ObservableProperty] private bool _SayIntentionsSent;
         [ObservableProperty] private bool _GsxSent;
 
+        // GSX SetGate readback — formatted display string ("C3", "Gate 12", or
+        // "" when unassigned). Mirrored on GsxState for the Monitor live view;
+        // both are written by StateUpdateWorker from the same SimConnect read.
+        [ObservableProperty] private string _AssignedArrivalGate = "";
+
         // Weather cache (most recent SayIntentions response). Held as the
         // raw service type so OfpDto.From can project to a wire-safe shape
         // in Phase 8B without OfpState having to know about WeatherDto.

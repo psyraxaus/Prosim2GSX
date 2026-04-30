@@ -167,6 +167,12 @@ namespace Prosim2GSX.GSX
             SimStore.AddVariable(GsxConstants.VarSetCustFuel);
             SimStore.AddVariable(GsxConstants.VarSetAutoMode);
 
+            // SetGate readback — polled by StateUpdateWorker into
+            // OfpState/GsxState.AssignedArrivalGate. No callback needed.
+            SimStore.AddVariable(GsxConstants.VarSetGateName);
+            SimStore.AddVariable(GsxConstants.VarSetGateNumber);
+            SimStore.AddVariable(GsxConstants.VarSetGateSuffix);
+
             InitGsxServices();
             Menu.Init();
             AircraftInterface.Init();
@@ -567,6 +573,10 @@ namespace Prosim2GSX.GSX
             SimStore.Remove(GsxConstants.VarDoorToggleCargo2);
             SimStore.Remove(GsxConstants.VarDoorToggleService1);
             SimStore.Remove(GsxConstants.VarDoorToggleService2);
+
+            SimStore.Remove(GsxConstants.VarSetGateName);
+            SimStore.Remove(GsxConstants.VarSetGateNumber);
+            SimStore.Remove(GsxConstants.VarSetGateSuffix);
 
             SimStore[GsxConstants.VarCouatlStarted].OnReceived -= OnCouatlVariable;
             SimStore[GsxConstants.VarCouatlStartProg5].OnReceived -= OnCouatlVariable;

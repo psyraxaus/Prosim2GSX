@@ -67,6 +67,7 @@ export function FlightStatusPanel() {
         <KV label="Pax Total (B|D)" value={fs.gsx.gsxPaxTotal} />
         <KV label="Cargo (B|D)" value={fs.gsx.gsxCargoProgress} />
         <KV label="Departure Services" value={fs.gsx.appAutomationDepartureServices} />
+        <KV label="Assigned Gate" value={fs.gsx.assignedArrivalGate || "—"} />
       </Section>
 
       <Section title="Services">

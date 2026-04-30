@@ -206,6 +206,13 @@ export function OfpPanel() {
           </div>
         )}
 
+        {ofp.assignedArrivalGate && (
+          <div className={styles.assigned}>
+            <span className={styles.assignedLabel}>GSX Assigned</span>
+            <span className={styles.assignedValue}>{ofp.assignedArrivalGate}</span>
+          </div>
+        )}
+
         {ofp.gateAssignmentStatus && (
           <StatusLine label="ATC" value={ofp.gateAssignmentStatus} />
         )}

@@ -39,6 +39,9 @@ namespace Prosim2GSX.Web.Contracts
         public AutomationState AppAutomationState { get; set; } = AutomationState.SessionStart;
         public string AppAutomationDepartureServices { get; set; } = "0 / 0";
 
+        // GSX SetGate readback — formatted display ("C3", "Gate 12", or "").
+        public string AssignedArrivalGate { get; set; } = "";
+
         public static GsxLiveDto From(State.GsxState s) => new()
         {
             GsxRunning = s.GsxRunning,
@@ -63,6 +66,7 @@ namespace Prosim2GSX.Web.Contracts
             ServiceStairs = s.ServiceStairs,
             AppAutomationState = s.AppAutomationState,
             AppAutomationDepartureServices = s.AppAutomationDepartureServices,
+            AssignedArrivalGate = s.AssignedArrivalGate,
         };
     }
 }

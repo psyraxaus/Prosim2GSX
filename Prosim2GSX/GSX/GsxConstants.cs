@@ -55,6 +55,15 @@
         public static string VarDoorToggleService1 { get; } = "L:FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE";
         public static string VarDoorToggleService2 { get; } = "L:FSDT_GSX_AIRCRAFT_SERVICE_2_TOGGLE";
 
+        // SetGate readback — three confirmation LVARs GSX writes after a gate
+        // assignment lands. Polled in StateUpdateWorker to surface the active
+        // gate as OfpState/GsxState.AssignedArrivalGate. SetGate_Suffix == -1
+        // is the unassigned sentinel; SetGate_Name carries the letter via an
+        // integer enum (12=A..37=Z, 10=GATE no-letter, 0=NONE).
+        public static string VarSetGateName { get; } = "L:FSDT_GSX_SetGate_Name";
+        public static string VarSetGateNumber { get; } = "L:FSDT_GSX_SetGate_Number";
+        public static string VarSetGateSuffix { get; } = "L:FSDT_GSX_SetGate_Suffix";
+
         //Menu
         public static string GsxChoice { get; } = "[GSX choice]";
         public static string MenuGate { get; } = "Activate Services at";

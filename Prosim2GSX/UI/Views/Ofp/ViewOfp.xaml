@@ -146,6 +146,17 @@
                                    HorizontalAlignment="Right"
                                    Margin="6,0,6,4"
                                    Visibility="{Binding GsxAssignmentStatus, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+                        <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Right"
+                                    Margin="6,0,6,4"
+                                    Visibility="{Binding HasAssignedArrivalGate, Converter={StaticResource BoolVisibilityConverter}}">
+                            <TextBlock Text="GSX assigned: "
+                                       Foreground="{DynamicResource CategoryTextBrush}"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding AssignedArrivalGate}"
+                                       FontWeight="Bold"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
                     </StackPanel>
                     <TextBlock Text="Load an OFP to enable gate assignment"
                                FontStyle="Italic"

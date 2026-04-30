@@ -128,6 +128,49 @@ namespace Prosim2GSX.State
             if (pushback != null) gsx.ServicePushback = $"{pushback.State} ({pushback.PushStatus})";
             if (services.TryGetValue(GsxServiceType.Jetway, out s)) gsx.ServiceJetway = s.State;
             if (services.TryGetValue(GsxServiceType.Stairs, out s)) gsx.ServiceStairs = s.State;
+
+            UpdateAssignedGate();
+        }
+
+        // Reads the three GSX SetGate LVARs and writes the formatted display
+        // string into OfpState and GsxState. Suffix == -1 is GSX's "no
+        // assignment" sentinel; Name == 0 (NONE) also means unassigned.
+        // Name == 10 (GATE) yields "Gate {N}" (no letter prefix).
+        // Names 12..37 map to letters A..Z, so display becomes "{Letter}{N}".
+        // The two store writes only fire INPC when the value actually changes
+        // (the [ObservableProperty]-generated setter does the equality check),
+        // so a stable readback per tick is broadcast-cheap.
+        protected virtual void UpdateAssignedGate()
+        {
+            var ctrl = _app.GsxService;
+            var simStore = ctrl?.SimStore;
+            if (simStore == null) return;
+
+            int name, number, suffix;
+            try
+            {
+                name = (int)(simStore[GsxConstants.VarSetGateName]?.GetNumber() ?? 0);
+                number = (int)(simStore[GsxConstants.VarSetGateNumber]?.GetNumber() ?? 0);
+                suffix = (int)(simStore[GsxConstants.VarSetGateSuffix]?.GetNumber() ?? -1);
+            }
+            catch { return; }
+
+            var display = FormatAssignedGate(name, number, suffix);
+            _app.Ofp.AssignedArrivalGate = display;
+            _app.Gsx.AssignedArrivalGate = display;
+        }
+
+        protected static string FormatAssignedGate(int name, int number, int suffix)
+        {
+            if (suffix == -1) return "";
+            if (name == 0) return "";
+            if (name == 10) return $"Gate {number}";
+            if (name >= 12 && name <= 37)
+            {
+                char letter = (char)('A' + (name - 12));
+                return $"{letter}{number}";
+            }
+            return "";
         }
 
         // Mirrors ModelMonitor.LatchCompleted: services that latch to Completed in

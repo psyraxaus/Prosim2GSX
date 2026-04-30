@@ -362,9 +362,11 @@
                         </StackPanel>
                     </ItemsControl>
 
-                    <!-- GSX status detail row - 4 across -->
+                    <!-- GSX status detail row - 5 across -->
                     <Grid Margin="4,6,4,0" HorizontalAlignment="Center">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
@@ -381,7 +383,9 @@
                         <TextBlock Grid.Column="4" Text="Pax Total:" FontSize="11" VerticalAlignment="Center" Margin="0,2,6,2" FontWeight="SemiBold"/>
                         <TextBlock Grid.Column="5" Text="{Binding GsxPaxTotal}" FontSize="11" VerticalAlignment="Center" Margin="0,2,12,2"/>
                         <TextBlock Grid.Column="6" Text="Cargo:" FontSize="11" VerticalAlignment="Center" Margin="0,2,6,2" FontWeight="SemiBold"/>
-                        <TextBlock Grid.Column="7" Text="{Binding GsxCargoProgress}" FontSize="11" VerticalAlignment="Center" Margin="0,2,0,2"/>
+                        <TextBlock Grid.Column="7" Text="{Binding GsxCargoProgress}" FontSize="11" VerticalAlignment="Center" Margin="0,2,12,2"/>
+                        <TextBlock Grid.Column="8" Text="Assigned Gate:" FontSize="11" VerticalAlignment="Center" Margin="0,2,6,2" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="9" Text="{Binding AssignedArrivalGate}" FontSize="11" VerticalAlignment="Center" Margin="0,2,0,2"/>
                     </Grid>
                 </StackPanel>
             </Border>

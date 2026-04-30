@@ -140,6 +140,8 @@ export interface GsxLiveDto {
 
   appAutomationState: AutomationState;
   appAutomationDepartureServices: string;
+
+  assignedArrivalGate: string;
 }
 
 export interface FlightStatusDto {
@@ -466,6 +468,7 @@ export interface OfpDto {
   pendingArrivalGate: string;
   gateAssignmentStatus: string;
   gsxAssignmentStatus: string;
+  assignedArrivalGate: string;
 
   departureWeather: WeatherDto | null;
   arrivalWeather: WeatherDto | null;

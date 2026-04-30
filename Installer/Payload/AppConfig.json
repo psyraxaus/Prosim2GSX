@@ -148,7 +148,7 @@
   "CurrentTheme": "Light",
   "SolariAnimationEnabled": true,
   "WebServerEnabled": false,
-  "WebServerPort": 5000,
+  "WebServerPort": 5001,
   "WebServerBindAll": false,
   "WebServerAuthToken": "",
   "ProSimSdkPath": "",

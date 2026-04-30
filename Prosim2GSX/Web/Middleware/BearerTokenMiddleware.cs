@@ -38,6 +38,17 @@ namespace Prosim2GSX.Web.Middleware
                 return;
             }
 
+            // GSX handler script (gsx_handler.py) runs inside MSFS's Stackless
+            // Python and cannot present a bearer token. The /api/gsxmenu/*
+            // endpoints are read-only consumers of OfpState data, and the
+            // server is loopback-only by default — exempt them so the in-sim
+            // poll can succeed without leaking the token into the script file.
+            if (context.Request.Path.StartsWithSegments("/api/gsxmenu"))
+            {
+                await _next(context);
+                return;
+            }
+
             // CORS preflight must succeed without auth so the browser can ask.
             if (HttpMethods.IsOptions(context.Request.Method))
             {

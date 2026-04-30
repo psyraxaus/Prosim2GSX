@@ -176,6 +176,8 @@ namespace Prosim2GSX.UI.Views.Monitor
         public AutomationState AppAutomationState => Gsx.AppAutomationState;
         public string AppAutomationDepartureServices => Gsx.AppAutomationDepartureServices;
 
+        public string AssignedArrivalGate => Gsx.AssignedArrivalGate;
+
         public bool AppOnGround => FlightStatus.AppOnGround;
         public bool AppEnginesRunning => FlightStatus.AppEnginesRunning;
         public bool AppInMotion => FlightStatus.AppInMotion;
