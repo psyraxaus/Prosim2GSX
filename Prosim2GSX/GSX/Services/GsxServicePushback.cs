@@ -12,9 +12,12 @@ namespace Prosim2GSX.GSX.Services
         public override GsxServiceType Type => GsxServiceType.Pushback;
         public virtual ISimResourceSubscription SubDepartService { get; protected set; }
         public virtual ISimResourceSubscription SubPushStatus { get; protected set; }
+        public virtual ISimResourceSubscription SubVehiclePushbackState { get; protected set; }
         protected override ISimResourceSubscription SubStateVar => SubDepartService;
         public virtual bool IsPinInserted => SubBypassPin.GetNumber() == 1;
         public virtual int PushStatus => (int)SubPushStatus.GetNumber();
+        public virtual int VehiclePushbackState => (int)SubVehiclePushbackState.GetNumber();
+        public virtual string VehiclePushbackStateLabel => MapVehiclePushbackState(VehiclePushbackState);
         public virtual bool IsTugConnected => SubPushStatus.GetNumber() == 3 || SubPushStatus.GetNumber() == 4;
         public virtual bool TugAttachedOnBoarding { get; protected set; } = false;
         public virtual bool EngineStartConfirmed { get; protected set; } = false;
@@ -40,10 +43,33 @@ namespace Prosim2GSX.GSX.Services
         {
             SubDepartService = RegisterStateSubscription(GsxConstants.VarServiceDeparture);
             SubPushStatus = RegisterChangeSubscription(GsxConstants.VarPusbackStatus, OnPushChange);
+            SubVehiclePushbackState = RegisterChangeSubscription(GsxConstants.VarVehiclePushbackState, OnVehiclePushbackStateChange);
             SubBypassPin = RegisterChangeSubscription(GsxConstants.VarBypassPin, NotifyBypassPin);
         }
 
         protected virtual int LastLoggedPushStatus { get; set; } = -1;
+        protected virtual int LastLoggedVehiclePushbackState { get; set; } = -1;
+
+        protected static string MapVehiclePushbackState(int state) => state switch
+        {
+            8 => "Pushing back",
+            11 => "Waiting for engine shutdown",
+            12 => "Awaiting engine start confirmation",
+            13 => "Disconnecting",
+            14 => "Clear to start",
+            0 => "Idle",
+            _ => $"State {state}",
+        };
+
+        protected virtual void OnVehiclePushbackStateChange(ISimResourceSubscription sub, object data)
+        {
+            if (!IsProsimAircraft)
+                return;
+
+            var state = (int)sub.GetNumber();
+            Logger.Information($"Vehicle Pushback State: {LastLoggedVehiclePushbackState} -> {state} ({MapVehiclePushbackState(state)})");
+            LastLoggedVehiclePushbackState = state;
+        }
 
         protected virtual void OnPushChange(ISimResourceSubscription sub, object data)
         {

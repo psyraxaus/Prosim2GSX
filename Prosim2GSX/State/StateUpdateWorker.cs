@@ -125,7 +125,13 @@ namespace Prosim2GSX.State
 
             if (services.TryGetValue(GsxServiceType.Boarding, out s)) gsx.ServiceBoarding = LatchCompleted(s);
             if (services.TryGetValue(GsxServiceType.Deboarding, out s)) gsx.ServiceDeboarding = s.State;
-            if (pushback != null) gsx.ServicePushback = $"{pushback.State} ({pushback.PushStatus})";
+            if (pushback != null)
+            {
+                gsx.ServicePushback = $"{pushback.State} ({pushback.PushStatus})";
+                gsx.PushbackVehicleState = pushback.VehiclePushbackStateLabel;
+                gsx.BypassPinInserted = pushback.IsPinInserted;
+                gsx.EngineStartConfirmed = pushback.EngineStartConfirmed;
+            }
             if (services.TryGetValue(GsxServiceType.Jetway, out s)) gsx.ServiceJetway = s.State;
             if (services.TryGetValue(GsxServiceType.Stairs, out s)) gsx.ServiceStairs = s.State;
 

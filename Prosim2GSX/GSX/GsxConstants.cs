@@ -36,6 +36,11 @@
         public static string VarServiceDeparture { get; } = "L:FSDT_GSX_DEPARTURE_STATE";
         public static string VarServiceGpu { get; } = "L:FSDT_GSX_GPU_STATE";
         public static string VarPusbackStatus { get; } = "L:FSDT_GSX_PUSHBACK_STATUS";
+        // Per-vehicle pushback state (GSX Pro v3.9.4+). Discrete documented values:
+        // 8=Push, 11=WaitForEnginesStopped, 12=WaitForConfirmation (the "good engine
+        // start?" prompt), 13=Detach, 14=ClearToStart. More reliable than the coarse
+        // VarPusbackStatus for detecting the confirmation gate.
+        public static string VarVehiclePushbackState { get; } = "L:FSDT_GSX_VEHICLE_PUSHBACK_STATE";
         public static string VarBypassPin { get; } = "L:FSDT_GSX_BYPASS_PIN";
         public static string VarServiceDeice { get; } = "L:FSDT_GSX_DEICING_STATE";
         public static string VarServiceLavatory { get; } = "L:FSDT_GSX_LAVATORY_STATE";

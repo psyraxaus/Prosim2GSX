@@ -33,6 +33,9 @@ namespace Prosim2GSX.Web.Contracts
         public GsxServiceState ServiceBoarding { get; set; }
         public GsxServiceState ServiceDeboarding { get; set; }
         public string ServicePushback { get; set; } = "";
+        public string PushbackVehicleState { get; set; } = "Idle";
+        public bool BypassPinInserted { get; set; }
+        public bool EngineStartConfirmed { get; set; }
         public GsxServiceState ServiceJetway { get; set; }
         public GsxServiceState ServiceStairs { get; set; }
 
@@ -62,6 +65,9 @@ namespace Prosim2GSX.Web.Contracts
             ServiceBoarding = s.ServiceBoarding,
             ServiceDeboarding = s.ServiceDeboarding,
             ServicePushback = s.ServicePushback,
+            PushbackVehicleState = s.PushbackVehicleState,
+            BypassPinInserted = s.BypassPinInserted,
+            EngineStartConfirmed = s.EngineStartConfirmed,
             ServiceJetway = s.ServiceJetway,
             ServiceStairs = s.ServiceStairs,
             AppAutomationState = s.AppAutomationState,

@@ -1087,25 +1087,23 @@ namespace Prosim2GSX.GSX
                 }
             }
 
-            // After GSX has finished the physical push (PushStatus drops back below 5
-            // while the tug is still attached) it asks crew to set the parking brake
-            // and then waits for "Confirm good engine start" on the Interrupt menu.
-            // Auto-confirm once brakes are set and engines are running.
+            // GSX exposes the "good engine start" prompt via VEHICLE_PUSHBACK_STATE == 12
+            // (WaitForConfirmation) — the explicit signal that the tug has stopped and is
+            // waiting for crew to confirm engine start on the Interrupt menu. Auto-confirm
+            // once brakes are set and both engines are running.
             if (ServicePushBack.PushStatus > 0 && !ServicePushBack.EngineStartConfirmed
                 && (DateTime.UtcNow - EngineStartGateLastLog).TotalSeconds >= 2)
             {
-                Logger.Information($"Engine-start gate: PushStatus={ServicePushBack.PushStatus}, WasPushing={ServicePushBack.WasPushing}, BrakeSet={Aircraft.IsBrakeSet}, EnginesRunning={Aircraft.EnginesRunning}, Confirmed={ServicePushBack.EngineStartConfirmed}");
+                Logger.Information($"Engine-start gate: PushStatus={ServicePushBack.PushStatus}, VehicleState={ServicePushBack.VehiclePushbackState}, WasPushing={ServicePushBack.WasPushing}, BrakeSet={Aircraft.IsBrakeSet}, EnginesRunning={Aircraft.EnginesRunning}, Confirmed={ServicePushBack.EngineStartConfirmed}");
                 EngineStartGateLastLog = DateTime.UtcNow;
             }
 
-            if (ServicePushBack.WasPushing
-                && ServicePushBack.PushStatus > 0
-                && ServicePushBack.PushStatus < 5
+            if (ServicePushBack.VehiclePushbackState == 12
                 && Aircraft.IsBrakeSet
                 && Aircraft.EnginesRunning
                 && !ServicePushBack.EngineStartConfirmed)
             {
-                Logger.Information($"Automation: Push complete + brakes set + engines running — sending Confirm good engine start");
+                Logger.Information($"Automation: VehiclePushbackState=12 + brakes set + engines running — sending Confirm good engine start");
                 await ServicePushBack.ConfirmEngineStart();
                 await Task.Delay(Config.StateMachineInterval, RequestToken);
             }

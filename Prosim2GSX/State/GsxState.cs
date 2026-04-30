@@ -38,6 +38,12 @@ namespace Prosim2GSX.State
         [ObservableProperty] private GsxServiceState _ServiceBoarding = GsxServiceState.Unknown;
         [ObservableProperty] private GsxServiceState _ServiceDeboarding = GsxServiceState.Unknown;
         [ObservableProperty] private string _ServicePushback = $"{GsxServiceState.Unknown} (0)";
+        // Per-vehicle pushback phase from L:FSDT_GSX_VEHICLE_PUSHBACK_STATE, mapped to
+        // a human-readable label (e.g. "Awaiting engine start confirmation"). Additive
+        // alongside ServicePushback to avoid regressing existing bindings.
+        [ObservableProperty] private string _PushbackVehicleState = "Idle";
+        [ObservableProperty] private bool _BypassPinInserted;
+        [ObservableProperty] private bool _EngineStartConfirmed;
         [ObservableProperty] private GsxServiceState _ServiceJetway = GsxServiceState.Unknown;
         [ObservableProperty] private GsxServiceState _ServiceStairs = GsxServiceState.Unknown;
 
