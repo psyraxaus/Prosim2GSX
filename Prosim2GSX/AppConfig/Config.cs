@@ -143,6 +143,13 @@ namespace Prosim2GSX.AppConfig
         // Theme
         public virtual string CurrentTheme { get; set; } = "Light";
 
+        // Debug tab. When true, AppWindow appends a "Debug" tab at index 6 and
+        // the web host exposes /api/debug + /debug. Off by default so end users
+        // never see the developer surface unless they opt in via AppConfig.json.
+        public virtual bool ShowDebugTab { get; set; } = false;
+        // Polling cadence for the Debug tab and /debug HTML auto-refresh.
+        public virtual int DebugRefreshMs { get; set; } = 500;
+
         // Display
         public virtual bool SolariAnimationEnabled { get; set; } = true;
 

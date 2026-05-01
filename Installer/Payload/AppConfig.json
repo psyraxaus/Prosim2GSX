@@ -146,6 +146,8 @@
   "UiLogMaxMessages": 200,
   "UiLogQueueWarnThreshold": 1000,
   "CurrentTheme": "Light",
+  "ShowDebugTab": false,
+  "DebugRefreshMs": 500,
   "SolariAnimationEnabled": true,
   "WebServerEnabled": false,
   "WebServerPort": 5001,
