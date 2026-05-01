@@ -60,6 +60,12 @@ namespace Prosim2GSX.Web
             // takes effect live. Unsubscription happens implicitly when the
             // app process exits — WebHostService lives for the app's lifetime.
             _app.Config.PropertyChanged += OnConfigChanged;
+
+            // Keep the in-sim Python handler's PROSIM2GSX_PORT line aligned
+            // with the configured port — runs unconditionally on startup
+            // regardless of WebServerEnabled, since the installer always
+            // drops the script and the user may flip the toggle later.
+            GsxHandlerSync.EnsurePort(_app.Config.WebServerPort);
         }
 
         // Start the host if Config.WebServerEnabled and not already running.
@@ -135,6 +141,8 @@ namespace Prosim2GSX.Web
 
                 case nameof(Config.WebServerPort):
                 case nameof(Config.WebServerBindAll):
+                    if (e?.PropertyName == nameof(Config.WebServerPort))
+                        GsxHandlerSync.EnsurePort(_app.Config.WebServerPort);
                     if (_app.Config.WebServerEnabled)
                     {
                         // Wrapped in try/catch so any future bug in Stop/Start
