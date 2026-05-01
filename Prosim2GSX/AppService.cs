@@ -75,6 +75,12 @@ namespace Prosim2GSX
         // startup via CommandsBootstrap.RegisterAll.
         public virtual CommandRegistry Commands { get; protected set; }
 
+        // Read-only diagnostic snapshot service. Surface is gated by
+        // Config.ShowDebugTab at the WPF and web boundaries; the service is
+        // constructed unconditionally so flipping the flag at runtime works
+        // without any restart.
+        public virtual DebugDataService DebugData { get; protected set; }
+
         public AppService(Config config) : base(config)
         {
             RefreshToken();
@@ -136,6 +142,10 @@ namespace Prosim2GSX
             // and (later) the existing Audio/Gsx/AppSettings ApplyTo paths.
             Commands = new CommandRegistry();
             CommandsBootstrap.RegisterAll(this, Commands);
+
+            // Debug snapshot service. Reads-only; safe to construct in
+            // SDK-degraded mode because every dereference inside is null-safe.
+            DebugData = new DebugDataService(this);
         }
 
         protected override Task InitReceivers()
