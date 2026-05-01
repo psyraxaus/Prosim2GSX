@@ -1,6 +1,7 @@
 using CFIT.AppLogger;
 using CFIT.AppTools;
 using Prosim2GSX.UI.Views.Audio;
+using Prosim2GSX.UI.Views.Debug;
 using Prosim2GSX.UI.Views.Monitor;
 using Prosim2GSX.UI.Views.Profiles;
 using Prosim2GSX.UI.Views.Settings;
@@ -102,6 +103,14 @@ namespace Prosim2GSX.UI
 
             // Settings tab is always available (needed to configure SDK path)
             MainTabControl.Items[5] = CreateTabItem("APP SETTINGS", new ViewSettings());
+
+            // Optional Debug tab — appended at index 6 only when AppConfig
+            // ShowDebugTab is true. Kept out of the XAML so the visual tree
+            // never even constructs the view in normal end-user installs.
+            if (Prosim2GSX.Instance.AppService?.Config?.ShowDebugTab == true)
+            {
+                MainTabControl.Items.Add(CreateTabItem("DEBUG", new ViewDebug()));
+            }
 
             // Set index and previousTabIndex before subscribing so SelectionChanged
             // does not fire Start() while the window is still in its layout pass.
