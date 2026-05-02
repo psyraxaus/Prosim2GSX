@@ -430,7 +430,9 @@ namespace Prosim2GSX.State
 
         // Evaluate either a single condition (DataRef + DataRefCondition) or
         // a compound AND-list (DataRefs[]). Returns null for manual items so
-        // the caller knows to leave them alone.
+        // the caller knows to leave them alone. SteadyDataRef takes precedence
+        // over DataRef for the read so momentary switches can be documented
+        // under DataRef while the actual evaluation hits the steady LED/gate.
         protected virtual bool? EvaluateItem(global::ProsimInterface.ProsimSdkInterface sdk, ChecklistItem def)
         {
             if (def?.DataRefs != null && def.DataRefs.Count > 0)
@@ -442,7 +444,8 @@ namespace Prosim2GSX.State
                     var c = def.DataRefs[j];
                     if (c == null) continue;
                     if (string.IsNullOrWhiteSpace(c.DataRef) || string.IsNullOrWhiteSpace(c.Condition)) continue;
-                    var r = EvaluateCondition(sdk, c.DataRef, c.Condition);
+                    var read = !string.IsNullOrWhiteSpace(c.SteadyDataRef) ? c.SteadyDataRef : c.DataRef;
+                    var r = EvaluateCondition(sdk, read, c.Condition);
                     if (!r.HasValue) continue;
                     anyEvaluable = true;
                     if (!r.Value) { allTrue = false; break; }
@@ -450,8 +453,10 @@ namespace Prosim2GSX.State
                 if (!anyEvaluable) return null;
                 return allTrue;
             }
-            if (string.IsNullOrWhiteSpace(def?.DataRef) || string.IsNullOrWhiteSpace(def?.DataRefCondition)) return null;
-            return EvaluateCondition(sdk, def.DataRef, def.DataRefCondition);
+            if (def == null || string.IsNullOrWhiteSpace(def.DataRefCondition)) return null;
+            var primary = !string.IsNullOrWhiteSpace(def.SteadyDataRef) ? def.SteadyDataRef : def.DataRef;
+            if (string.IsNullOrWhiteSpace(primary)) return null;
+            return EvaluateCondition(sdk, primary, def.DataRefCondition);
         }
 
         // Returns null when the dataref or condition cannot be evaluated; caller

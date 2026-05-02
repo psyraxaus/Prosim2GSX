@@ -21,9 +21,25 @@ namespace Prosim2GSX.UI.Views.Checklists
         public string Label { get; set; }
         public string Value { get; set; }
 
-        // Single-condition form (kept for back-compat).
+        // Primary dataref the item documents. For latched switches, this is
+        // also the value read by the worker. For momentary switches (Prosim
+        // pulses them 0 → 1 → 0 — see "My hardware type" → Momentary in the
+        // Prosim Switch types config), set Momentary=true and provide a
+        // SteadyDataRef pointing at the corresponding indicator LED, gate, or
+        // composite state that actually holds the system's mode/value.
         public string DataRef { get; set; }
         public string DataRefCondition { get; set; }
+
+        // Optional steady-state dataref. When non-empty, the worker reads
+        // SteadyDataRef instead of DataRef but interprets the result against
+        // DataRefCondition. Lets the JSON document "this item is about the
+        // EXT PWR switch" while polling "the EXT PWR ON lamp".
+        public string SteadyDataRef { get; set; }
+
+        // Marks the primary DataRef as a momentary pulse. Used by the
+        // registrar to warn when a momentary item has no SteadyDataRef
+        // configured (otherwise the polling cache will be 0 99% of the time).
+        public bool Momentary { get; set; }
 
         // Compound form: ALL listed conditions must hold for the item to flip.
         // Used for things like "all four fuel pumps on" or "all three IRs in
@@ -52,5 +68,10 @@ namespace Prosim2GSX.UI.Views.Checklists
     {
         public string DataRef { get; set; }
         public string Condition { get; set; }
+
+        // Optional steady-state read for momentary switches (mirrors
+        // ChecklistItem.SteadyDataRef). When non-empty the worker polls
+        // SteadyDataRef but interprets it against Condition.
+        public string SteadyDataRef { get; set; }
     }
 }

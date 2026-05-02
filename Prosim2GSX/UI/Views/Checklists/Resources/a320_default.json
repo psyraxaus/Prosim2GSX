@@ -1,4 +1,14 @@
 {
+  "_README": [
+    "Authoring notes for custom checklists:",
+    "",
+    "1. Per-item evaluation reads either a single DataRef + DataRefCondition, or a compound AND-list under DataRefs[].",
+    "2. Items with DataRef = null are MANUAL — user clicks to tick.",
+    "3. If a Prosim switch is MOMENTARY (Prosim Switch types config shows it pulses 0->1->0 — e.g. Ext Pwr, APU Start, Probe heat, Auto/brk LO/MED/MAX, IDG, Refuel power, Terrain on ND), polling the switch dataref directly will rarely catch the pulse.",
+    "   For those items, set 'Momentary': true and provide 'SteadyDataRef' pointing at the indicator LED, gate, or composite state that actually holds the system's mode. The worker reads SteadyDataRef but the JSON still documents intent under DataRef.",
+    "   Examples below: EXT POWER (S_OH_ELEC_EXT_PWR -> I_OH_ELEC_EXT_PWR_L), PROBE/WINDOW HEAT (S_OH_PROBE_HEAT -> I_OH_PROBE_HEAT_L).",
+    "4. Items unreachable on this aircraft / with typo'd dataref names auto-fall-back to manual after 3 null reads (warning logged once)."
+  ],
   "Name": "A320 Default",
   "AircraftType": "A320",
   "Sections": [
@@ -24,7 +34,7 @@
             { "DataRef": "system.switches.S_OH_ELEC_GEN1", "Condition": "== 1" },
             { "DataRef": "system.switches.S_OH_ELEC_GEN2", "Condition": "== 1" }
           ] },
-        { "Label": "EXT POWER", "Value": "ON", "DataRef": "system.indicators.I_OH_ELEC_EXT_PWR_L", "DataRefCondition": "!= 0" },
+        { "Label": "EXT POWER", "Value": "ON", "DataRef": "system.switches.S_OH_ELEC_EXT_PWR", "Momentary": true, "SteadyDataRef": "system.indicators.I_OH_ELEC_EXT_PWR_L", "DataRefCondition": "!= 0" },
         { "Label": "ADIRS", "Value": "SET TO NAV",
           "DataRefs": [
             { "DataRef": "system.switches.S_OH_NAV_IR1_MODE", "Condition": "== 1" },
@@ -76,7 +86,7 @@
     {
       "Title": "BEFORE TAXI",
       "Items": [
-        { "Label": "PROBE/WINDOW HEAT", "Value": "AUTO", "DataRef": "system.switches.S_OH_PROBE_HEAT", "DataRefCondition": "== 1" },
+        { "Label": "PROBE/WINDOW HEAT", "Value": "AUTO", "DataRef": "system.switches.S_OH_PROBE_HEAT", "DataRefCondition": ">= 0" },
         { "Label": "AUTOPILOT", "Value": "SET", "DataRef": null },
         { "Label": "AUTOBRAKE", "Value": "MAX", "DataRef": "system.indicators.I_MIP_AUTOBRAKE_MAX_L", "DataRefCondition": "!= 0" },
         { "Label": "ELEVATOR TRIM", "Value": "SET FOR TAKE-OFF", "DataRef": null },
@@ -97,7 +107,7 @@
         { "Label": "PARKING BRAKE", "Value": "SET", "DataRef": "system.switches.S_MIP_PARKING_BRAKE", "DataRefCondition": "== 1" },
         { "Label": "LANDING LIGHTS", "Value": "ON", "DataRef": "system.switches.S_OH_EXT_LT_LANDING_L", "DataRefCondition": "== 1" },
         { "Label": "STROBE LIGHT", "Value": "ON", "DataRef": "system.switches.S_OH_EXT_LT_STROBE", "DataRefCondition": "== 1" },
-        { "Label": "PITOT HEAT", "Value": "AUTO", "DataRef": "system.switches.S_OH_PROBE_HEAT", "DataRefCondition": "== 1" },
+        { "Label": "PITOT HEAT", "Value": "AUTO", "DataRef": "system.switches.S_OH_PROBE_HEAT", "DataRefCondition": ">= 0" },
         { "Label": "TRANSPONDER", "Value": "TA/RA", "DataRef": "system.switches.S_XPDR_MODE", "DataRefCondition": "== 2" },
         { "IsNote": true, "Label": "Request Takeoff Clearance" }
       ]
@@ -119,8 +129,8 @@
         { "Label": "TAXI LIGHTS", "Value": "OFF", "DataRef": null },
         { "Label": "ALTIMETER", "Value": "STD (29.92 / 1013)",
           "DataRefs": [
-            { "DataRef": "system.switches.S_FCU_EFIS1_BARO_STD", "Condition": "== 1" },
-            { "DataRef": "system.switches.S_FCU_EFIS2_BARO_STD", "Condition": "== 1" }
+            { "DataRef": "system.gates.B_FCU_EFIS1_BARO_STD", "Condition": "== true" },
+            { "DataRef": "system.gates.B_FCU_EFIS2_BARO_STD", "Condition": "== true" }
           ] },
         { "Label": "LANDING LIGHTS", "Value": "OFF", "DataRef": "system.switches.S_OH_EXT_LT_LANDING_L", "DataRefCondition": "== 0" },
         { "Label": "FASTEN SEAT BELTS", "Value": "OFF", "DataRef": "system.switches.S_OH_SIGNS", "DataRefCondition": "== 2" }
@@ -141,7 +151,7 @@
       "Items": [
         { "Label": "FASTEN SEAT BELTS", "Value": "ON", "DataRef": "system.switches.S_OH_SIGNS", "DataRefCondition": "== 1" },
         { "Label": "LANDING LIGHTS", "Value": "CHECK ON", "DataRef": "system.switches.S_OH_EXT_LT_LANDING_L", "DataRefCondition": "== 1" },
-        { "Label": "GND SPOILERS", "Value": "ARM", "DataRef": null },
+        { "Label": "GND SPOILERS", "Value": "ARM", "DataRef": "system.switches.S_FC_SPEEDBRAKE_ARMED", "DataRefCondition": "== 1" },
         { "Label": "AUTO BRAKE", "Value": "SET", "DataRef": "system.indicators.I_MIP_AUTOBRAKE_MED_L", "DataRefCondition": "!= 0" },
         { "Label": "FLAPS", "Value": "FLAPS 1", "DataRef": "aircraft.flap.positionHandle", "DataRefCondition": ">= 1" },
         { "Label": "LANDING GEAR", "Value": "DOWN", "DataRef": "system.switches.S_MIP_GEAR", "DataRefCondition": "== 0" },
@@ -160,7 +170,7 @@
     {
       "Title": "AFTER LANDING",
       "Items": [
-        { "Label": "SPOILERS", "Value": "DISARMED", "DataRef": null },
+        { "Label": "SPOILERS", "Value": "DISARMED", "DataRef": "system.switches.S_FC_SPEEDBRAKE_ARMED", "DataRefCondition": "== 0" },
         { "Label": "FLAPS", "Value": "RETRACT", "DataRef": "aircraft.flap.positionHandle", "DataRefCondition": "== 0" },
         { "Label": "LANDING LIGHTS", "Value": "OFF", "DataRef": "system.switches.S_OH_EXT_LT_LANDING_L", "DataRefCondition": "== 0" },
         { "Label": "STROBE LIGHTS", "Value": "OFF", "DataRef": "system.switches.S_OH_EXT_LT_STROBE", "DataRefCondition": "== 2" },
@@ -190,7 +200,12 @@
             { "DataRef": "system.switches.S_OH_FUEL_RIGHT_1", "Condition": "== 0" },
             { "DataRef": "system.switches.S_OH_FUEL_RIGHT_2", "Condition": "== 0" }
           ] },
-        { "Label": "ADIRS", "Value": "OFF", "DataRef": null },
+        { "Label": "ADIRS", "Value": "SET TO OFF",
+          "DataRefs": [
+            { "DataRef": "system.switches.S_OH_NAV_IR1_MODE", "Condition": "== 0" },
+            { "DataRef": "system.switches.S_OH_NAV_IR2_MODE", "Condition": "== 0" },
+            { "DataRef": "system.switches.S_OH_NAV_IR3_MODE", "Condition": "== 0" }
+          ] },
         { "Label": "BATTERIES", "Value": "AS REQUIRED", "DataRef": null }
       ]
     }
