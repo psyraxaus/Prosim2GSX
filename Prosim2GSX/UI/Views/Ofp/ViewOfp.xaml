@@ -77,6 +77,13 @@
 
                         <Label Grid.Row="4" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">Distance</Label>
                         <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding AirDistance}" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <Label Grid.Row="4" Grid.Column="2"
+                               Foreground="{DynamicResource CategoryTextBrush}"
+                               ToolTip="CPDLC logon station for the airport SayIntentions currently considers active (departure → arrival as the flight progresses). Enter on the MCDU when requesting clearance.">CPDLC</Label>
+                        <TextBlock Grid.Row="4" Grid.Column="3"
+                                   Text="{Binding CpdlcStation}"
+                                   FontWeight="Bold"
+                                   VerticalAlignment="Center"/>
                     </Grid>
                 </StackPanel>
             </Border>

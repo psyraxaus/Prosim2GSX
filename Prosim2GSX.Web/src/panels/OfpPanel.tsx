@@ -139,6 +139,7 @@ export function OfpPanel() {
             <KV label="Flight" value={ofp.flightNumber || "—"} mono />
             <KV label="Plan RWY Out" value={ofp.departurePlanRwy || "—"} mono />
             <KV label="Plan RWY In" value={ofp.arrivalPlanRwy || "—"} mono />
+            <KV label="CPDLC" value={ofp.cpdlcStation || "—"} mono />
             <KV label="Cruise Alt" value={ofp.cruiseAltitude || "—"} mono />
             <KV label="Block Fuel" value={ofp.blockFuelKg || "—"} mono />
             <KV label="Block Time" value={ofp.blockTimeFormatted || "—"} mono />
