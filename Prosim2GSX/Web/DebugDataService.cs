@@ -19,17 +19,107 @@ namespace Prosim2GSX.Web
     public class DebugDataService
     {
         private readonly AppService _app;
+        private bool _datarefsRegistered;
 
         public DebugDataService(AppService app)
         {
             _app = app;
         }
 
+        // Walk every dataref the Debug tab surfaces and enrol it in the SDK
+        // poll-and-cache machinery. Idempotent — Subscribe and
+        // RegisterPollDataref both no-op on duplicates. Called lazily on the
+        // first GetSnapshot so the SDK has had a chance to connect.
+        private void EnsureDatarefsRegistered()
+        {
+            if (_datarefsRegistered) return;
+            var sdk = _app?.GsxService?.AircraftInterface?.ProsimInterface?.SdkInterface;
+            if (sdk == null) return;
+            foreach (var dataRef in DebugTabDatarefs)
+            {
+                try
+                {
+                    sdk.Subscribe(dataRef, global::ProsimInterface.SdkLvarBridgeService.PollOnlyHandler);
+                    sdk.RegisterPollDataref(dataRef);
+                }
+                catch (Exception ex) { Logger.LogException(ex, $"DebugDataService.Subscribe failed: {dataRef}"); }
+            }
+            _datarefsRegistered = true;
+        }
+
+        // Single source of truth for which datarefs the Debug tab needs to be
+        // polled. Updated alongside the BuildProsim*Datarefs methods below.
+        private static readonly string[] DebugTabDatarefs = new[]
+        {
+            // Switches
+            "system.switches.S_MIP_PARKING_BRAKE",
+            "system.switches.S_MIP_GEAR",
+            "system.switches.S_ENG_MASTER_1",
+            "system.switches.S_ENG_MASTER_2",
+            "system.switches.S_ENG_MODE",
+            "system.switches.S_OH_ELEC_BAT1",
+            "system.switches.S_OH_ELEC_BAT2",
+            "system.switches.S_OH_ELEC_GEN1",
+            "system.switches.S_OH_ELEC_GEN2",
+            "system.switches.S_OH_ELEC_APU_GENERATOR",
+            "system.switches.S_OH_ELEC_EXT_PWR",
+            "system.switches.S_OH_PNEUMATIC_APU_BLEED",
+            "system.switches.S_OH_PNEUMATIC_PACK_1",
+            "system.switches.S_OH_PNEUMATIC_PACK_2",
+            "system.switches.S_OH_PROBE_HEAT",
+            "system.switches.S_OH_EXT_LT_BEACON",
+            "system.switches.S_OH_EXT_LT_STROBE",
+            "system.switches.S_OH_EXT_LT_LANDING_L",
+            "system.switches.S_OH_EXT_LT_LANDING_R",
+            "system.switches.S_OH_EXT_LT_NAV_LOGO",
+            "system.switches.S_OH_EXT_LT_NOSE",
+            "system.switches.S_OH_EXT_LT_WING",
+            "system.switches.S_OH_INT_LT_EMER",
+            "system.switches.S_OH_SIGNS",
+            "system.switches.S_OH_SIGNS_SMOKING",
+            "system.switches.S_XPDR_MODE",
+            "system.switches.S_OH_FUEL_LEFT_1",
+            "system.switches.S_OH_FUEL_LEFT_2",
+            "system.switches.S_OH_FUEL_RIGHT_1",
+            "system.switches.S_OH_FUEL_RIGHT_2",
+            "system.switches.S_OH_FUEL_CENTER_1",
+            "system.switches.S_OH_FUEL_CENTER_2",
+            "system.switches.S_OH_NAV_IR1_MODE",
+            "system.switches.S_OH_NAV_IR2_MODE",
+            "system.switches.S_OH_NAV_IR3_MODE",
+            "system.switches.S_FCU_EFIS1_BARO_STD",
+            "system.switches.S_FCU_EFIS2_BARO_STD",
+            // Gates / indicators
+            "system.gates.B_APU_RUNNING",
+            "system.gates.B_ELEC_POWERUP",
+            "system.gates.B_HYD_PARKING_BRAKE_SET",
+            "system.gates.B_ELEC_BATTERY_SWITCH_1",
+            "system.gates.B_ELEC_EXTERNAL_CONNECT",
+            "system.gates.B_ELEC_BUS_POWER_DC_ESS",
+            "system.indicators.I_MIP_AUTOBRAKE_MAX_L",
+            "system.indicators.I_MIP_AUTOBRAKE_MED_L",
+            "system.indicators.I_MIP_AUTOBRAKE_LO_L",
+            "system.indicators.I_OH_PNEUMATIC_APU_BLEED_U",
+            "system.indicators.I_OH_PNEUMATIC_APU_BLEED_L",
+            "system.indicators.I_OH_ELEC_EXT_PWR_L",
+            "system.indicators.I_OH_ELEC_EXT_PWR_U",
+            // Aircraft state
+            "aircraft.flightControls.throttle.1.lever",
+            "aircraft.flightControls.throttle.2.lever",
+            "aircraft.flap.positionHandle",
+            "aircraft.adiru.1.position_available",
+            "aircraft.adiru.2.position_available",
+            "aircraft.adiru.3.position_available",
+            "aircraft.systems.pneumatic.valve.BLEED_VALVE",
+            "groundservice.groundpower",
+        };
+
         // Outer key = group, inner key = variable name, value = current value
         // formatted as a string. Group order is the insertion order of the
         // outer Dictionary (preserved on .NET).
         public virtual Dictionary<string, Dictionary<string, string>> GetSnapshot()
         {
+            EnsureDatarefsRegistered();
             var snapshot = new Dictionary<string, Dictionary<string, string>>
             {
                 ["Connection"] = BuildConnection(),
@@ -114,6 +204,8 @@ namespace Prosim2GSX.Web
                 ("Autobrake LO (I_MIP_AUTOBRAKE_LO_L)", "system.indicators.I_MIP_AUTOBRAKE_LO_L"),
                 ("APU bleed LED upper", "system.indicators.I_OH_PNEUMATIC_APU_BLEED_U"),
                 ("APU bleed LED lower", "system.indicators.I_OH_PNEUMATIC_APU_BLEED_L"),
+                ("EXT PWR LED ON (I_OH_ELEC_EXT_PWR_L)", "system.indicators.I_OH_ELEC_EXT_PWR_L"),
+                ("EXT PWR LED AVAIL (I_OH_ELEC_EXT_PWR_U)", "system.indicators.I_OH_ELEC_EXT_PWR_U"),
             };
             var dict = new Dictionary<string, string>();
             foreach (var (label, dataRef) in refs)

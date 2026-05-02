@@ -65,6 +65,7 @@ namespace Prosim2GSX.Web.Contracts
         private static bool IsManualItem(global::Prosim2GSX.UI.Views.Checklists.ChecklistItem def)
         {
             if (def == null) return true;
+            if (def.IsManualFallback) return true;
             if (!string.IsNullOrWhiteSpace(def.DataRef)) return false;
             if (def.DataRefs != null && def.DataRefs.Count > 0) return false;
             return true;

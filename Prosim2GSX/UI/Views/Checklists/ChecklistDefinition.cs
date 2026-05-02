@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace Prosim2GSX.UI.Views.Checklists
 {
@@ -31,6 +32,20 @@ namespace Prosim2GSX.UI.Views.Checklists
 
         public bool IsNote { get; set; }
         public bool IsSeparator { get; set; }
+
+        // Runtime-only state. Set when the registrar / worker determines the
+        // dataref is unreachable (typo'd, not present in this aircraft variant,
+        // SDK refused to poll it). When true, the item is treated as manual:
+        // the user can tick / untick it. Never serialised so it doesn't bleed
+        // back into the JSON.
+        [JsonIgnore]
+        public bool IsManualFallback { get; set; }
+
+        // Counter used by the worker to escalate to IsManualFallback after
+        // repeated null-eval results while the SDK is connected. Not part of
+        // the JSON contract.
+        [JsonIgnore]
+        public int NullEvaluationCount { get; set; }
     }
 
     public class ChecklistDataRefCondition

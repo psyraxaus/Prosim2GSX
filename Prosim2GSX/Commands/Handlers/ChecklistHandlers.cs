@@ -91,8 +91,9 @@ namespace Prosim2GSX.Commands.Handlers
             var rt = items[req.ItemIndex];
             if (rt.Definition.IsNote || rt.Definition.IsSeparator)
                 throw new CommandValidationException("Item is not toggleable.");
-            bool isManual = string.IsNullOrWhiteSpace(rt.Definition.DataRef)
-                            && (rt.Definition.DataRefs == null || rt.Definition.DataRefs.Count == 0);
+            bool noDataRefConfigured = string.IsNullOrWhiteSpace(rt.Definition.DataRef)
+                                       && (rt.Definition.DataRefs == null || rt.Definition.DataRefs.Count == 0);
+            bool isManual = noDataRefConfigured || rt.Definition.IsManualFallback;
             bool overrideAllowed = app.Config?.AllowManualChecklistOverride ?? false;
             if (!isManual && !overrideAllowed)
                 throw new CommandValidationException("Dataref-driven items cannot be toggled manually (enable 'Allow Manual Checklist Override' in Integrations to permit).");

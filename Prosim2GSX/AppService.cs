@@ -6,6 +6,7 @@ using CFIT.SimConnectLib.Definitions;
 using Prosim2GSX.AppConfig;
 using Prosim2GSX.Audio;
 using Prosim2GSX.Checklists;
+using Prosim2GSX.UI.Views.Checklists;
 using Prosim2GSX.Commands;
 using Prosim2GSX.GSX;
 using Prosim2GSX.Prosim;
@@ -184,7 +185,21 @@ namespace Prosim2GSX
 
                 var def = ChecklistService.LoadChecklist(name);
                 if (def != null)
+                {
+                    RegisterChecklistDatarefs(def);
                     Checklist.LoadDefinition(def, name);
+                }
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
+        }
+
+        protected virtual void RegisterChecklistDatarefs(ChecklistDefinition def)
+        {
+            try
+            {
+                var sdk = GsxService?.AircraftInterface?.ProsimInterface?.SdkInterface;
+                if (sdk == null) return;
+                ChecklistDatarefRegistrar.EnsureSubscribed(def, sdk);
             }
             catch (Exception ex) { Logger.LogException(ex); }
         }
@@ -206,7 +221,10 @@ namespace Prosim2GSX
                     return;
                 var def = ChecklistService.LoadChecklist(name);
                 if (def != null)
+                {
+                    RegisterChecklistDatarefs(def);
                     Checklist.LoadDefinition(def, name);
+                }
             }
             catch (Exception ex) { Logger.LogException(ex); }
         }

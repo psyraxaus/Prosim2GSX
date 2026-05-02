@@ -339,15 +339,34 @@ namespace Prosim2GSX.State
                     var def = items[i].Definition;
                     if (def == null || def.IsNote || def.IsSeparator) continue;
 
-                    bool? satisfied = EvaluateItem(sdk, def);
+                    bool? satisfied = def.IsManualFallback ? (bool?)null : EvaluateItem(sdk, def);
                     if (!satisfied.HasValue)
                     {
-                        // Manual items (no dataref) — never auto-flip from the
-                        // worker. They participate in the gate as either checked
-                        // (gate stays open) or unchecked (gate closes).
+                        // Either a manual item (no dataref configured), an item
+                        // already promoted to manual-fallback, or a transient
+                        // null read. Track repeated nulls while the SDK is
+                        // connected so we can promote unreachable datarefs to
+                        // manual-fallback instead of leaving the user stuck.
+                        if (!def.IsManualFallback && HasAnyDataRef(def))
+                        {
+                            if (sdk.IsConnected)
+                            {
+                                def.NullEvaluationCount++;
+                                if (def.NullEvaluationCount >= 3)
+                                {
+                                    def.IsManualFallback = true;
+                                    Logger.Warning(
+                                        $"Checklist '{cl.Definition?.Name}' / '{def.Label}': dataref unreachable — falling back to manual tick (user can click to toggle)");
+                                }
+                            }
+                        }
                         if (!items[i].IsChecked) blockFurtherChecks = true;
                         continue;
                     }
+                    // Reset the null-counter once we get a real reading so a
+                    // brief disconnect during evaluation doesn't trip the
+                    // fallback heuristic.
+                    if (def.NullEvaluationCount > 0) def.NullEvaluationCount = 0;
 
                     if (blockFurtherChecks)
                     {
@@ -370,6 +389,14 @@ namespace Prosim2GSX.State
             }
 
             cl.RecomputeCurrentItem();
+        }
+
+        private static bool HasAnyDataRef(ChecklistItem def)
+        {
+            if (def == null) return false;
+            if (!string.IsNullOrWhiteSpace(def.DataRef)) return true;
+            if (def.DataRefs != null && def.DataRefs.Count > 0) return true;
+            return false;
         }
 
         // Evaluate either a single condition (DataRef + DataRefCondition) or

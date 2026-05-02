@@ -158,6 +158,9 @@ namespace Prosim2GSX.UI.Views.Checklists
                     Logger.Warning($"ModelChecklist: failed to load '{name}'");
                     return;
                 }
+                var sdk = AppService?.GsxService?.AircraftInterface?.ProsimInterface?.SdkInterface;
+                if (sdk != null)
+                    ChecklistDatarefRegistrar.EnsureSubscribed(def, sdk);
                 State?.LoadDefinition(def, name);
             }
             catch (Exception ex)
@@ -275,8 +278,9 @@ namespace Prosim2GSX.UI.Views.Checklists
             var def = view.Runtime.Definition;
             if (def.IsNote || def.IsSeparator) return;
 
-            bool isManual = string.IsNullOrWhiteSpace(def.DataRef)
-                            && (def.DataRefs == null || def.DataRefs.Count == 0);
+            bool noDataRefConfigured = string.IsNullOrWhiteSpace(def.DataRef)
+                                       && (def.DataRefs == null || def.DataRefs.Count == 0);
+            bool isManual = noDataRefConfigured || def.IsManualFallback;
             bool overrideAllowed = AppService?.Config?.AllowManualChecklistOverride ?? false;
             if (!isManual && !overrideAllowed) return;
 
