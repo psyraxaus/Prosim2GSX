@@ -181,7 +181,6 @@ namespace Prosim2GSX.Web
                 ["IsTugConnected"] = Try(() => pushback?.IsTugConnected),
                 ["IsPinInserted"] = Try(() => pushback?.IsPinInserted),
                 ["EngineStartConfirmed"] = Try(() => pushback?.EngineStartConfirmed),
-                ["WasPushing"] = Try(() => pushback?.WasPushing),
                 ["TugAttachedOnBoarding"] = Try(() => pushback?.TugAttachedOnBoarding),
                 ["DoorToggle Cargo1"] = ReadLvar(simStore, GsxConstants.VarDoorToggleCargo1),
                 ["DoorToggle Cargo2"] = ReadLvar(simStore, GsxConstants.VarDoorToggleCargo2),

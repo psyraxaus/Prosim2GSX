@@ -21,10 +21,6 @@ namespace Prosim2GSX.GSX.Services
         public virtual bool IsTugConnected => SubPushStatus.GetNumber() == 3 || SubPushStatus.GetNumber() == 4;
         public virtual bool TugAttachedOnBoarding { get; protected set; } = false;
         public virtual bool EngineStartConfirmed { get; protected set; } = false;
-        // Latches once PushStatus reaches the active-push range (≥5). Used to
-        // distinguish "pre-push, tug attached and waiting for direction" from
-        // "post-push, tug attached and waiting for brake/confirm".
-        public virtual bool WasPushing { get; protected set; } = false;
         public virtual ISimResourceSubscription SubBypassPin { get; protected set; }
 
         public event Action<GsxServicePushback> OnBypassPin;
@@ -47,9 +43,6 @@ namespace Prosim2GSX.GSX.Services
             SubBypassPin = RegisterChangeSubscription(GsxConstants.VarBypassPin, NotifyBypassPin);
         }
 
-        protected virtual int LastLoggedPushStatus { get; set; } = -1;
-        protected virtual int LastLoggedVehiclePushbackState { get; set; } = -1;
-
         protected static string MapVehiclePushbackState(int state) => state switch
         {
             8 => "Pushing back",
@@ -65,10 +58,10 @@ namespace Prosim2GSX.GSX.Services
         {
             if (!IsProsimAircraft)
                 return;
-
-            var state = (int)sub.GetNumber();
-            Logger.Information($"Vehicle Pushback State: {LastLoggedVehiclePushbackState} -> {state} ({MapVehiclePushbackState(state)})");
-            LastLoggedVehiclePushbackState = state;
+            // Subscription registered for its side-effects on derived
+            // properties (VehiclePushbackState / Label) — no log emission
+            // needed; the engine-start gate in GsxAutomationController
+            // logs once when it actually fires Confirm good engine start.
         }
 
         protected virtual void OnPushChange(ISimResourceSubscription sub, object data)
@@ -77,18 +70,11 @@ namespace Prosim2GSX.GSX.Services
                 return;
 
             var state = (int)sub.GetNumber();
-            Logger.Information($"Push Status: {LastLoggedPushStatus} -> {state} (WasPushing={WasPushing}, EngineStartConfirmed={EngineStartConfirmed})");
-            LastLoggedPushStatus = state;
             if (!TugAttachedOnBoarding && state > 0 && (Controller.GsxServices[GsxServiceType.Boarding].State == GsxServiceState.Active || Controller.GsxServices[GsxServiceType.Boarding].State == GsxServiceState.Requested))
             {
                 Logger.Information($"Tug attaching during Boarding");
                 TugAttachedOnBoarding = true;
                 Controller.Menu.SuppressMenuRefresh = false;
-            }
-            if (!WasPushing && state >= 5)
-            {
-                WasPushing = true;
-                Logger.Information($"WasPushing latched at PushStatus={state}");
             }
         }
 
@@ -104,7 +90,6 @@ namespace Prosim2GSX.GSX.Services
         {
             TugAttachedOnBoarding = false;
             EngineStartConfirmed = false;
-            WasPushing = false;
             Controller.PushbackDirectionAutoSelected = false;
         }
 
