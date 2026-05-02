@@ -1,0 +1,214 @@
+.panel {
+  padding: 16px 18px;
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.loading {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.empty {
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 8px 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  flex-wrap: wrap;
+}
+
+.activeName {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.toolbarStatus {
+  margin-left: auto;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.info { color: var(--success); font-size: 12px; }
+.error { color: var(--danger); font-size: 12px; }
+
+/* ── Current Aircraft ────────────────────────────────────────────── */
+
+.kv {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 10px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.kvLabel { color: var(--text-secondary); }
+.kvValue { color: var(--text-primary); font-family: var(--font-mono); font-size: 12px; }
+
+/* ── Profile cards ───────────────────────────────────────────────── */
+
+.profileList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card {
+  /* Per-profile card sits inside the Profiles Section card; bg-input
+     gives a slight raised surface that adapts to theme polarity (was
+     bg-secondary which is always-dark and clashed with content-text
+     in light themes). */
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  transition: border-color 120ms ease;
+}
+
+.cardActive {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 1px 4px rgba(33, 150, 243, 0.2);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+
+.name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nameInput {
+  flex: 1 1 auto;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  font-size: 14px;
+  font-weight: 600;
+  outline: none;
+}
+
+.nameInput:focus { border-color: var(--accent); }
+
+.nameInput:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.badges {
+  display: inline-flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.badgeActive {
+  background: rgba(76, 175, 80, 0.18);
+  color: var(--success);
+}
+
+.badgeDefault {
+  background: rgba(168, 176, 200, 0.14);
+  color: var(--text-secondary);
+}
+
+.cardBody {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 24px;
+  margin-bottom: 12px;
+}
+
+.field {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.fieldLabel {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.fieldValue {
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.fieldValueMono {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fieldInput {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  outline: none;
+  width: 100%;
+  min-width: 0;
+}
+
+.fieldInput:focus { border-color: var(--accent); }
+
+.fieldInput:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.cardActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+@media (max-width: 720px) {
+  .cardBody {
+    grid-template-columns: 1fr;
+  }
+  .field {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .kv {
+    grid-template-columns: 1fr;
+  }
+}

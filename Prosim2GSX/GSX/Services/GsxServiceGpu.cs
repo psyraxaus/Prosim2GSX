@@ -1,4 +1,4 @@
-﻿using CFIT.SimConnectLib.SimResources;
+using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.GSX.Menu;
 
 namespace Prosim2GSX.GSX.Services
@@ -13,7 +13,9 @@ namespace Prosim2GSX.GSX.Services
         {
             var sequence = new GsxMenuSequence();
             sequence.Commands.Add(new(8, GsxConstants.MenuGate, true));
-            sequence.Commands.Add(new(1, GsxConstants.MenuAdditionalServices) { WaitReady = true });
+            var additional = new GsxMenuCommand(1, GsxConstants.MenuAdditionalServices) { WaitReady = true };
+            additional.AlternateTitles.Add(GsxConstants.MenuGate);
+            sequence.Commands.Add(additional);
             sequence.Commands.Add(GsxMenuCommand.CreateOperator());
             sequence.Commands.Add(GsxMenuCommand.CreateReset());
 
@@ -22,20 +24,12 @@ namespace Prosim2GSX.GSX.Services
 
         protected override void InitSubscriptions()
         {
-            SubGpuService = SimStore.AddVariable(GsxConstants.VarServiceGpu);
-            SubGpuService.OnReceived += OnStateChange;
+            SubGpuService = RegisterStateSubscription(GsxConstants.VarServiceGpu);
         }
 
         protected override void DoReset()
         {
 
-        }
-
-        public override void FreeResources()
-        {
-            SubGpuService.OnReceived -= OnStateChange;
-
-            SimStore.Remove(GsxConstants.VarServiceGpu);
         }
     }
 }

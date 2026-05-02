@@ -1,0 +1,162 @@
+.panel {
+  padding: 16px 18px;
+  max-width: 960px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+
+.loading {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.section:last-child { grid-column: 1 / -1; }
+
+/* Flight Phase section spans the full width and sits at the top of the panel.
+   Mirrors ViewMonitor.xaml: large centred phase label + 7-column progress bar
+   with the active block highlighted in dodger-blue (#1E90FF) and inactive
+   blocks in light grey (#D3D3D3) — same colours the WPF uses. */
+.phaseSection { grid-column: 1 / -1; }
+
+.phaseBody {
+  padding: 12px 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.phaseLabel {
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
+  color: var(--accent, #1E90FF);
+}
+
+.phaseGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  column-gap: 4px;
+  row-gap: 2px;
+  margin-top: 4px;
+}
+
+.phaseBlock {
+  height: 14px;
+  border-radius: 3px;
+  background: #D3D3D3;
+  margin: 4px 0 0;
+}
+
+.phaseBlockActive {
+  background: #1E90FF;
+}
+
+.phaseBlockLabel {
+  font-size: 9px;
+  text-align: center;
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.sectionTitle {
+  margin: 0;
+  padding: 9px 14px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--category-text);
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+}
+
+.sectionBody {
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.rowLabel { color: var(--text-secondary); }
+.rowValue { color: var(--text-primary); }
+.rowValueMono {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-align: right;
+  grid-column: 2 / -1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.dotOk { background: var(--success); box-shadow: 0 0 4px rgba(76,175,80,0.5); }
+.dotBad { background: var(--danger); box-shadow: 0 0 4px rgba(244,67,54,0.5); }
+
+.pill {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  grid-column: 2 / -1;
+  justify-self: end;
+}
+
+.tone_ok { background: rgba(76,175,80,0.15); color: var(--success); }
+.tone_active { background: rgba(33,150,243,0.18); color: var(--accent); }
+.tone_warn { background: rgba(255,152,0,0.15); color: var(--warning); }
+.tone_neutral { background: rgba(168,176,200,0.12); color: var(--text-secondary); }
+.tone_bad { background: rgba(244,67,54,0.15); color: var(--danger); }
+
+.log {
+  height: 220px;
+  overflow-y: auto;
+  /* bg-input is shifted from sectionBackground so the log scrollbox reads
+     as a recessed surface against the card — works in both light and
+     dark themes without going dark-on-dark. */
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.logLine { padding: 1px 0; }
+.logEmpty { color: var(--text-muted); text-align: center; padding: 24px 0; }
+
+@media (max-width: 720px) {
+  .panel { grid-template-columns: 1fr; }
+  .section:last-child { grid-column: 1; }
+}

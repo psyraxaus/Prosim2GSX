@@ -37,10 +37,10 @@
                         <Ellipse Width="14" Height="14" VerticalAlignment="Center" Fill="{Binding SimSessionColor}"/>
                         <Label Margin="4,0,0,0" VerticalAlignment="Center">SESSION</Label>
                     </StackPanel>
-                    <!-- PROSIM -->
+                    <!-- PROSIM BINARY -->
                     <StackPanel Orientation="Horizontal" Margin="12,4">
                         <Ellipse Width="14" Height="14" VerticalAlignment="Center" Fill="{Binding AppAircraftBinaryColor}"/>
-                        <Label Margin="4,0,0,0" VerticalAlignment="Center">PROSIM</Label>
+                        <Label Margin="4,0,0,0" VerticalAlignment="Center">PROSIM BINARY</Label>
                     </StackPanel>
                 </WrapPanel>
             </Border>
@@ -288,6 +288,16 @@
                             <Ellipse Width="14" Height="14" VerticalAlignment="Center" Fill="{Binding ServiceGpuConnectedColor}"/>
                             <TextBlock Margin="6,0,0,0" VerticalAlignment="Center">GPU</TextBlock>
                         </StackPanel>
+                        <!-- Jetway connected -->
+                        <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
+                            <Ellipse Width="14" Height="14" VerticalAlignment="Center" Fill="{Binding ServiceJetwayConnectedColor}"/>
+                            <TextBlock Margin="6,0,0,0" VerticalAlignment="Center">Jetway Connected</TextBlock>
+                        </StackPanel>
+                        <!-- Stairs connected -->
+                        <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
+                            <Ellipse Width="14" Height="14" VerticalAlignment="Center" Fill="{Binding ServiceStairsConnectedColor}"/>
+                            <TextBlock Margin="6,0,0,0" VerticalAlignment="Center">Stairs Connected</TextBlock>
+                        </StackPanel>
                         <!-- Cleaning -->
                         <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
                             <Ellipse Width="10" Height="10" VerticalAlignment="Center">
@@ -362,9 +372,11 @@
                         </StackPanel>
                     </ItemsControl>
 
-                    <!-- GSX status detail row - 4 across -->
+                    <!-- GSX status detail row - 5 across -->
                     <Grid Margin="4,6,4,0" HorizontalAlignment="Center">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
@@ -381,7 +393,9 @@
                         <TextBlock Grid.Column="4" Text="Pax Total:" FontSize="11" VerticalAlignment="Center" Margin="0,2,6,2" FontWeight="SemiBold"/>
                         <TextBlock Grid.Column="5" Text="{Binding GsxPaxTotal}" FontSize="11" VerticalAlignment="Center" Margin="0,2,12,2"/>
                         <TextBlock Grid.Column="6" Text="Cargo:" FontSize="11" VerticalAlignment="Center" Margin="0,2,6,2" FontWeight="SemiBold"/>
-                        <TextBlock Grid.Column="7" Text="{Binding GsxCargoProgress}" FontSize="11" VerticalAlignment="Center" Margin="0,2,0,2"/>
+                        <TextBlock Grid.Column="7" Text="{Binding GsxCargoProgress}" FontSize="11" VerticalAlignment="Center" Margin="0,2,12,2"/>
+                        <TextBlock Grid.Column="8" Text="Assigned Gate:" FontSize="11" VerticalAlignment="Center" Margin="0,2,6,2" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="9" Text="{Binding AssignedArrivalGate}" FontSize="11" VerticalAlignment="Center" Margin="0,2,0,2"/>
                     </Grid>
                 </StackPanel>
             </Border>

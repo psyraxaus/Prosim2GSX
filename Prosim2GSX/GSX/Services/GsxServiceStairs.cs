@@ -29,21 +29,13 @@ namespace Prosim2GSX.GSX.Services
 
         protected override void InitSubscriptions()
         {
-            SubService = SimStore.AddVariable(GsxConstants.VarServiceStairs);
-            SubOperating = SimStore.AddVariable(GsxConstants.VarServiceStairsOperation);
-            SubService.OnReceived += OnStateChange;
+            SubService = RegisterStateSubscription(GsxConstants.VarServiceStairs);
+            SubOperating = RegisterReadOnlyVariable(GsxConstants.VarServiceStairsOperation);
         }
 
         protected override void DoReset()
         {
 
-        }
-
-        public override void FreeResources()
-        {
-            SubService.OnReceived -= OnStateChange;
-            SimStore.Remove(GsxConstants.VarServiceStairs);
-            SimStore.Remove(GsxConstants.VarServiceStairsOperation);
         }
 
         protected override bool CheckCalled()

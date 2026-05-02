@@ -1,0 +1,151 @@
+/* Colour tokens from KorryPushbackButton.xaml. Local to this component
+   so the cockpit Korry palette doesn't leak into the rest of the EFB
+   styling. */
+.wrap {
+  --korry-body-bg: #111111;
+  --korry-body-border: #333333;
+  --korry-body-border-active: #555555;
+  --korry-separator: #222222;
+  --korry-arrow-inactive: #2A2A2A;
+  --korry-arrow-green: #00DD55;
+  --korry-auto-inactive: #666666;
+  --korry-auto-active: #FFC200;
+  --korry-legend-text-inactive: #333333;
+  --korry-legend-bg-green: #050510;
+  --korry-legend-text-green: #1A8FFF;
+  --korry-legend-bg-amber: #1A1200;
+  --korry-legend-text-amber: #FFC200;
+  --korry-icon-zone-active-green: #051A05;
+  --korry-icon-zone-active-amber: #26200A;
+  --korry-subtitle: #777777;
+
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.body {
+  width: 90px;
+  height: 82px;
+  padding: 0;
+  border: 2px solid var(--korry-body-border);
+  border-radius: 5px;
+  background: var(--korry-body-bg);
+  cursor: pointer;
+  display: grid;
+  grid-template-rows: 54px 1px 1fr;
+  overflow: hidden;
+  transition: transform 60ms ease, border-color 120ms ease;
+  appearance: none;
+}
+
+.body:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.body:active:not(:disabled) {
+  /* Press transform mirrors the WPF PressTransform Y translation. */
+  transform: translateY(2px);
+}
+
+.body:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.active {
+  border-color: var(--korry-body-border-active);
+}
+
+/* ── Icon zone ─────────────────────────────────────────────────────── */
+
+.iconZone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--korry-body-bg);
+  transition: background 120ms ease;
+}
+
+.green.active .iconZone {
+  background: var(--korry-icon-zone-active-green);
+}
+
+.amber.active .iconZone {
+  background: var(--korry-icon-zone-active-amber);
+}
+
+.arrow {
+  width: 56px;
+  height: 44px;
+  display: block;
+}
+
+/* Default arrow palette is the inactive grey for tail (green) buttons.
+   Straight (amber) uses the lighter "auto" inactive grey. */
+.green .arrowStroke { stroke: var(--korry-arrow-inactive); }
+.green .arrowFill   { fill:   var(--korry-arrow-inactive); }
+.amber .arrowStroke { stroke: var(--korry-auto-inactive); }
+.amber .arrowFill   { fill:   var(--korry-auto-inactive); }
+
+.green.active .arrowStroke { stroke: var(--korry-arrow-green); }
+.green.active .arrowFill   { fill:   var(--korry-arrow-green); }
+.amber.active .arrowStroke { stroke: var(--korry-auto-active); }
+.amber.active .arrowFill   { fill:   var(--korry-auto-active); }
+
+/* ── Separator + legend strip ──────────────────────────────────────── */
+
+.separator {
+  background: var(--korry-separator);
+  height: 1px;
+}
+
+.legendStrip {
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 3px 6px;
+}
+
+.legendText {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Consolas", monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--korry-legend-text-inactive);
+  border-radius: 2px;
+  padding: 1px 0;
+  background: transparent;
+  text-shadow: none;
+  transition: background 120ms ease, color 120ms ease, text-shadow 120ms ease;
+}
+
+.green.active .legendText {
+  background: var(--korry-legend-bg-green);
+  color: var(--korry-legend-text-green);
+  text-shadow: 0 0 6px rgba(26, 143, 255, 0.6);
+}
+
+.amber.active .legendText {
+  background: var(--korry-legend-bg-amber);
+  color: var(--korry-legend-text-amber);
+  text-shadow: 0 0 6px rgba(255, 194, 0, 0.5);
+}
+
+/* ── Subtitle (outside the body) ───────────────────────────────────── */
+
+.subtitle {
+  margin-top: 4px;
+  font-family: "Consolas", monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--korry-subtitle);
+  text-align: center;
+  white-space: nowrap;
+}

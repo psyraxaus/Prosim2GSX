@@ -5,8 +5,15 @@ using CFIT.AppTools;
 using CFIT.SimConnectLib.Definitions;
 using Prosim2GSX.AppConfig;
 using Prosim2GSX.Audio;
+using Prosim2GSX.Checklists;
+using Prosim2GSX.UI.Views.Checklists;
+using Prosim2GSX.Commands;
 using Prosim2GSX.GSX;
 using Prosim2GSX.Prosim;
+using Prosim2GSX.SayIntentions;
+using Prosim2GSX.Services;
+using Prosim2GSX.State;
+using Prosim2GSX.Web;
 using System;
 using System.IO;
 using System.Threading;
@@ -28,11 +35,61 @@ namespace Prosim2GSX
         public virtual ProsimSdkService ProsimService { get; protected set; }
         public virtual GsxController GsxService { get; protected set; }
         public virtual AudioController AudioService { get; protected set; }
+        public virtual ISayIntentionsService SayIntentionsService { get; protected set; } = new SayIntentionsService();
+        public virtual IChecklistService ChecklistService { get; protected set; } = new ChecklistService();
         public virtual AppResetRequest ResetRequested {  get; set; } = AppResetRequest.None;
         public virtual bool IsSessionInitializing { get; protected set; } = false;
         public virtual bool IsSessionInitialized { get; protected set; } = false;
         public virtual bool SessionStopRequested { get; protected set; } = false;
         public virtual bool IsProsimAircraft => SimConnect.AircraftString.Contains(Config.ProsimAircraftString, StringComparison.InvariantCultureIgnoreCase);
+
+        // Long-lived observable state stores. Populated by services/workers and
+        // observed by both the WPF Models and the future web/WebSocket layer.
+        // Constructed eagerly so they outlive any individual tab/view-model.
+        public virtual FlightStatusState FlightStatus { get; } = new();
+        public virtual GsxState Gsx { get; } = new();
+        public virtual AudioState Audio { get; } = new();
+        public virtual OfpState Ofp { get; } = new();
+        public virtual ChecklistState Checklist { get; } = new();
+        // Settings is an alias for the existing Config singleton — Config already
+        // implements INotifyPropertyChanged and persists itself, so it serves as
+        // the AppSettingsState surface unchanged.
+        public virtual Config Settings => Config;
+
+        // Long-lived workers that populate the stores independent of any tab.
+        // Started after CreateServiceControllers so the controllers exist when
+        // the first tick fires; stopped in FreeResources during app shutdown.
+        protected virtual StateUpdateWorker StateUpdateWorker { get; set; }
+        protected virtual MessageLogDrainWorker MessageLogDrainWorker { get; set; }
+
+        // Embedded Kestrel host for the LAN browser interface. Constructed
+        // unconditionally so it can react to Config.WebServerEnabled changes
+        // at runtime; only Start()s when Config.WebServerEnabled is true.
+        public virtual WebHostService WebHost { get; protected set; }
+
+        // WebSocket fan-out handler for live state push. Owned by AppService
+        // (peer to WebHost) so subscriptions to the stores are stable across
+        // host Stop/Start cycles. Constructed even when the web server is
+        // disabled — broadcasts are no-ops with zero connections, the cost is
+        // a few delegate invocations per state tick.
+        public virtual StateWebSocketHandler WebSocketHandler { get; protected set; }
+
+        // Centralised named-command dispatcher. REST controllers (Phase 8B+)
+        // and — eventually — WPF RelayCommands invoke operations through this
+        // registry instead of directly poking services. Handlers register at
+        // startup via CommandsBootstrap.RegisterAll.
+        public virtual CommandRegistry Commands { get; protected set; }
+
+        // Read-only diagnostic snapshot service. Surface is gated by
+        // Config.ShowDebugTab at the WPF and web boundaries; the service is
+        // constructed unconditionally so flipping the flag at runtime works
+        // without any restart.
+        public virtual DebugDataService DebugData { get; protected set; }
+
+        // Watches AutomationState transitions and auto-fires the arrival-gate
+        // Send-Now flow when the aircraft enters Flight. Backend service so
+        // both WPF and web benefit identically.
+        public virtual OfpAutoSendService OfpAutoSend { get; protected set; }
 
         public AppService(Config config) : base(config)
         {
@@ -72,6 +129,104 @@ namespace Prosim2GSX
                 GsxService = null;
                 AudioService = null;
             }
+
+            // Start the long-lived workers regardless of SDK availability — the
+            // log drain still surfaces messages in degraded mode, and the state
+            // poller is null-safe so it simply leaves store fields at defaults
+            // until controllers come up.
+            StateUpdateWorker = new StateUpdateWorker(this);
+            MessageLogDrainWorker = new MessageLogDrainWorker(FlightStatus, Config);
+            StateUpdateWorker.Start();
+            MessageLogDrainWorker.Start();
+
+            // Web host follows Config.WebServerEnabled — constructed always so
+            // it can react to runtime toggles, only Start()s when enabled.
+            WebHost = new WebHostService(this);
+            WebSocketHandler = new StateWebSocketHandler(this);
+            WebSocketHandler.AttachToWebHost(WebHost);
+            if (Config.WebServerEnabled)
+                Task.Run(WebHost.Start);
+
+            // Command registry + bootstrap. Empty in Phase 8.0a; subsequent
+            // commits populate handler bundles for OFP, Aircraft Profiles,
+            // and (later) the existing Audio/Gsx/AppSettings ApplyTo paths.
+            Commands = new CommandRegistry();
+            CommandsBootstrap.RegisterAll(this, Commands);
+
+            // Debug snapshot service. Reads-only; safe to construct in
+            // SDK-degraded mode because every dereference inside is null-safe.
+            DebugData = new DebugDataService(this);
+
+            // Backend auto-send for arrival parking. Attach() is a no-op when
+            // GsxService is null (degraded mode) so safe to call here.
+            OfpAutoSend = new OfpAutoSendService(this);
+            OfpAutoSend.Attach();
+
+            // Eagerly load the checklist definition into ChecklistState so the
+            // web UI can render even before the WPF Checklists tab is opened.
+            // Previously this was lazy (ModelChecklist.Start), which left the
+            // store empty when the user only ever used the browser.
+            LoadInitialChecklist();
+            if (GsxService != null)
+                GsxService.ProfileChanged += OnAircraftProfileChanged;
+        }
+
+        protected virtual void LoadInitialChecklist()
+        {
+            try
+            {
+                if (Checklist == null || ChecklistService == null) return;
+                var available = ChecklistService.GetAvailableChecklists() ?? new System.Collections.Generic.List<string>();
+                Checklist.AvailableChecklists = new System.Collections.Generic.List<string>(available);
+
+                var name = GsxService?.AircraftProfile?.ChecklistName;
+                if (string.IsNullOrWhiteSpace(name))
+                    name = ChecklistService.DefaultChecklistName;
+
+                var def = ChecklistService.LoadChecklist(name);
+                if (def != null)
+                {
+                    RegisterChecklistDatarefs(def);
+                    Checklist.LoadDefinition(def, name);
+                }
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
+        }
+
+        protected virtual void RegisterChecklistDatarefs(ChecklistDefinition def)
+        {
+            try
+            {
+                var sdk = GsxService?.AircraftInterface?.ProsimInterface?.SdkInterface;
+                if (sdk == null) return;
+                ChecklistDatarefRegistrar.EnsureSubscribed(def, sdk);
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
+        }
+
+        protected virtual void OnAircraftProfileChanged(AppConfig.AircraftProfile profile)
+        {
+            // When the active profile changes (auto-match on aircraft load,
+            // user explicit switch, etc.) reload the checklist that profile
+            // points at — only if the new profile actually carries a name we
+            // haven't already loaded, otherwise leave the in-progress state
+            // alone.
+            try
+            {
+                if (Checklist == null || ChecklistService == null) return;
+                var name = profile?.ChecklistName;
+                if (string.IsNullOrWhiteSpace(name))
+                    name = ChecklistService.DefaultChecklistName;
+                if (string.Equals(Checklist.CurrentChecklistName, name, StringComparison.OrdinalIgnoreCase))
+                    return;
+                var def = ChecklistService.LoadChecklist(name);
+                if (def != null)
+                {
+                    RegisterChecklistDatarefs(def);
+                    Checklist.LoadDefinition(def, name);
+                }
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
         }
 
         protected override Task InitReceivers()
@@ -207,6 +362,12 @@ namespace Prosim2GSX
             base.FreeResources();
             ReceiverStore.Remove<MsgSessionReady>().OnMessage -= OnSessionReady;
             ReceiverStore.Remove<MsgSessionEnded>().OnMessage -= OnSessionEnded;
+
+            try { StateUpdateWorker?.Stop(); } catch { }
+            try { MessageLogDrainWorker?.Stop(); } catch { }
+            try { WebHost?.Stop(); } catch { }
+            try { OfpAutoSend?.Detach(); } catch { }
+
             return Task.CompletedTask;
         }
     }

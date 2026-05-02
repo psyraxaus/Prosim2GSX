@@ -1,0 +1,42 @@
+.section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+
+.header {
+  padding: 10px 14px;
+  /* bg-card so the section header reads as part of the card surface
+     in both light and dark themes. bg-secondary is the always-dark
+     tab-bar colour and pairing it with content-text would be unreadable
+     in light themes. */
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  /* Brand-coloured emphasis matching the WPF CategoryHeader, which binds
+     to {DynamicResource CategoryTextBrush}. */
+  color: var(--category-text);
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.body {
+  padding: 8px 14px 12px;
+  display: flex;
+  flex-direction: column;
+}

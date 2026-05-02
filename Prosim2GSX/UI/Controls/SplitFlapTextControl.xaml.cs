@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
@@ -8,6 +9,7 @@ namespace Prosim2GSX.UI
     public partial class SplitFlapTextControl : UserControl
     {
         private SplitFlapCharacterControl[] _cells;
+        private readonly List<DispatcherTimer> _activeTimers = new();
 
         public static readonly DependencyProperty TextProperty =
             DependencyProperty.Register(nameof(Text), typeof(string), typeof(SplitFlapTextControl),
@@ -43,6 +45,12 @@ namespace Prosim2GSX.UI
         {
             InitializeComponent();
             BuildCells();
+            Unloaded += OnUnloaded;
+        }
+
+        private void OnUnloaded(object sender, RoutedEventArgs e)
+        {
+            CancelActiveTimers();
         }
 
         private static void OnCharacterCountChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -68,14 +76,24 @@ namespace Prosim2GSX.UI
                 CharacterPanel.Children.Add(_cells[i]);
             }
 
-            // Apply current text if any
             if (!string.IsNullOrEmpty(Text))
                 UpdateText(Text);
+        }
+
+        private void CancelActiveTimers()
+        {
+            for (int i = 0; i < _activeTimers.Count; i++)
+            {
+                try { _activeTimers[i].Stop(); } catch { }
+            }
+            _activeTimers.Clear();
         }
 
         private void UpdateText(string newText)
         {
             if (_cells == null) return;
+
+            CancelActiveTimers();
 
             string padded = (newText ?? "").PadRight(CharacterCount);
             bool animate = AppService.Instance?.Config?.SolariAnimationEnabled ?? true;
@@ -97,11 +115,17 @@ namespace Prosim2GSX.UI
                     {
                         Interval = TimeSpan.FromMilliseconds(delay)
                     };
-                    timer.Tick += (s, e) =>
+                    EventHandler tickHandler = null;
+                    tickHandler = (s, e) =>
                     {
                         timer.Stop();
-                        _cells[cellIndex].TargetCharacter = targetChar;
+                        timer.Tick -= tickHandler;
+                        _activeTimers.Remove(timer);
+                        if (_cells != null && cellIndex < _cells.Length)
+                            _cells[cellIndex].TargetCharacter = targetChar;
                     };
+                    timer.Tick += tickHandler;
+                    _activeTimers.Add(timer);
                     timer.Start();
                 }
             }

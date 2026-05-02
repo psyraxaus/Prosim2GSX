@@ -1,61 +1,60 @@
-﻿using CFIT.AppFramework.UI.ViewModels;
-using CFIT.AppLogger;
-using CFIT.AppTools;
-using CFIT.SimConnectLib;
+using CFIT.AppFramework.UI.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Prosim2GSX.Aircraft;
 using Prosim2GSX.AppConfig;
-using Prosim2GSX.Audio;
 using Prosim2GSX.GSX;
 using Prosim2GSX.GSX.Menu;
 using Prosim2GSX.GSX.Services;
+using Prosim2GSX.State;
 using ProsimInterface;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Media;
-using System.Threading.Tasks;
 using System.Windows.Threading;
 
 namespace Prosim2GSX.UI.Views.Monitor
 {
+    // Adapter view-model over the long-lived FlightStatusState / GsxState stores.
+    // The Monitor tab's bindings are unchanged; the actual polling and state
+    // mutation now lives in StateUpdateWorker / MessageLogDrainWorker on
+    // AppService, so the web layer (and any other consumer) sees the same data.
+    //
+    // Colour brushes are computed projections of the underlying booleans, which
+    // is why they live on the Model rather than the store: the WPF UI is the
+    // only consumer that wants SolidColorBrush — the web layer will read the
+    // booleans and apply its own theme.
     public partial class ModelMonitor(AppService source) : ViewModelBase<AppService>(source)
     {
-        protected virtual DispatcherTimer UpdateTimer { get; set; }
-        protected virtual bool ForceRefresh { get; set; } = false;
         protected static SolidColorBrush ColorValid { get; } = new(Colors.Green);
         protected static SolidColorBrush ColorInvalid { get; } = new(Colors.Red);
         protected static SolidColorBrush ColorGray { get; } = new(Color.FromArgb(0xFF, 0xD3, 0xD3, 0xD3));
-        protected virtual Config Config => this.Source.Config;
-        protected virtual SimConnectController SimConnectController => this.Source.SimService.Controller;
-        protected virtual SimConnectManager SimConnect => this.Source.SimConnect;
-        protected virtual GsxController GsxController => this.Source.GsxService;
-        protected virtual AudioController AudioController => this.Source.AudioService;
-        public virtual ObservableCollection<string> MessageLog { get; } = [];
-        protected virtual GsxAutomationController AutomationController => GsxController?.AutomationController;
-        protected virtual AircraftInterface AircraftInterface => GsxController?.AircraftInterface;
-        protected virtual ConcurrentDictionary<GsxServiceType, GsxService> GsxServices => GsxController?.GsxServices;
-        protected virtual GsxServiceBoarding GsxServiceBoard => GsxServices[GsxServiceType.Boarding] as GsxServiceBoarding;
-        protected virtual GsxServiceDeboarding GsxServiceDeboard => GsxServices[GsxServiceType.Deboarding] as GsxServiceDeboarding;
-        protected virtual GsxServicePushback GsxServicePushBack => GsxServices[GsxServiceType.Pushback] as GsxServicePushback;
 
-        // Solari board blink timer (~600ms per side, full cycle ~1.2s)
+        protected virtual Config Config => this.Source.Config;
+        protected virtual FlightStatusState FlightStatus => this.Source.FlightStatus;
+        protected virtual GsxState Gsx => this.Source.Gsx;
+
+        // Solari board blink timer (~600ms per side, full cycle ~1.2s). View-only
+        // animation state — does not belong on the long-lived state stores.
         protected virtual DispatcherTimer SolariTimer { get; set; }
 
         [ObservableProperty]
         protected bool _SolariToggle = false;
 
+        // Visible-log mirror: store keeps up to 500 messages for durability /
+        // web replay; the Monitor tab continues to render only the last ~9
+        // visual lines, so we maintain a separate trimmed collection here.
+        public virtual ObservableCollection<string> MessageLog { get; } = [];
+
+        // Approximate character width of Consolas 10pt at the log panel width (~760px available).
+        private const int LogCharsPerLine = 115;
+        private const int LogMaxVisualLines = 9;
+
         protected override void InitializeModel()
         {
-            UpdateTimer = new DispatcherTimer()
-            {
-                Interval = TimeSpan.FromMilliseconds(AppService.Instance.Config.UiRefreshInterval),
-            };
-            UpdateTimer.Tick += OnUpdate;
-
             SolariTimer = new DispatcherTimer()
             {
                 Interval = TimeSpan.FromMilliseconds(600),
@@ -63,17 +62,34 @@ namespace Prosim2GSX.UI.Views.Monitor
             SolariTimer.Tick += (s, e) => SolariToggle = !SolariToggle;
         }
 
+        private bool _started;
+
         public virtual void Start()
         {
-            ForceRefresh = true;
-            UpdateTimer.Start();
+            // AppWindow can call Start() twice on initial load (Loaded BeginInvoke +
+            // OnVisibleChanged), so keep this idempotent — otherwise duplicate
+            // CollectionChanged subscriptions cause every log message to appear twice.
+            if (_started) return;
+            _started = true;
+
+            SyncMessageLogFromStore();
+            FlightStatus.PropertyChanged += OnFlightStatusStateChanged;
+            Gsx.PropertyChanged += OnGsxStateChanged;
+            FlightStatus.MessageLog.CollectionChanged += OnStoreMessageLogChanged;
             SolariTimer.Start();
+            // Force a one-shot refresh so all bindings re-read from the stores.
+            NotifyPropertyChanged(string.Empty);
         }
 
         public virtual void Stop()
         {
-            UpdateTimer?.Stop();
+            if (!_started) return;
+            _started = false;
+
             SolariTimer?.Stop();
+            FlightStatus.PropertyChanged -= OnFlightStatusStateChanged;
+            Gsx.PropertyChanged -= OnGsxStateChanged;
+            FlightStatus.MessageLog.CollectionChanged -= OnStoreMessageLogChanged;
         }
 
         [RelayCommand]
@@ -82,343 +98,182 @@ namespace Prosim2GSX.UI.Views.Monitor
             try { Process.Start(new ProcessStartInfo(Path.Join(Config.Definition.ProductPath, Config.Definition.ProductLogPath)) { UseShellExecute = true }); } catch { }
         }
 
-        protected virtual void UpdateBoolState(string propertyValue, string propertyColor, bool value, bool reverseColor = false)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(propertyValue) || (object)value == null)
-                    return;
+        // ── Sim / aircraft / connection passthroughs ─────────────────────────
 
-                if (this.GetPropertyValue<bool>(propertyValue) != value || ForceRefresh)
-                {
-                    this.SetPropertyValue<bool>(propertyValue, value);
-                    UpdateColor(propertyColor, value, reverseColor);
-                }
+        public bool SimRunning => FlightStatus.SimRunning;
+        public SolidColorBrush SimRunningColor => FlightStatus.SimRunning ? ColorValid : ColorInvalid;
+
+        public bool SimConnected => FlightStatus.SimConnected;
+        public SolidColorBrush SimConnectedColor => FlightStatus.SimConnected ? ColorValid : ColorInvalid;
+
+        public bool SimSession => FlightStatus.SimSession;
+        public SolidColorBrush SimSessionColor => FlightStatus.SimSession ? ColorValid : ColorInvalid;
+
+        // SimPaused/SimWalkaround use reverse colour mapping: true == bad.
+        public bool SimPaused => FlightStatus.SimPaused;
+        public SolidColorBrush SimPausedColor => FlightStatus.SimPaused ? ColorInvalid : ColorValid;
+
+        public bool SimWalkaround => FlightStatus.SimWalkaround;
+        public SolidColorBrush SimWalkaroundColor => FlightStatus.SimWalkaround ? ColorInvalid : ColorValid;
+
+        public long CameraState => FlightStatus.CameraState;
+        public string SimVersion => FlightStatus.SimVersion;
+        public string AircraftString => FlightStatus.AircraftString;
+
+        // ── GSX passthroughs ─────────────────────────────────────────────────
+
+        public bool GsxRunning => Gsx.GsxRunning;
+        public SolidColorBrush GsxRunningColor => Gsx.GsxRunning ? ColorValid : ColorInvalid;
+
+        public string GsxStarted => Gsx.GsxStarted;
+        public SolidColorBrush GsxStartedColor => Gsx.GsxStartedValid ? ColorValid : ColorInvalid;
+
+        public GsxMenuState GsxMenu => Gsx.GsxMenu;
+        public int GsxPaxTarget => Gsx.GsxPaxTarget;
+        public string GsxPaxTotal => Gsx.GsxPaxTotal;
+        public string GsxCargoProgress => Gsx.GsxCargoProgress;
+
+        public GsxServiceState ServiceReposition => Gsx.ServiceReposition;
+        public GsxServiceState ServiceRefuel => Gsx.ServiceRefuel;
+        public GsxServiceState ServiceCatering => Gsx.ServiceCatering;
+        public GsxServiceState ServiceLavatory => Gsx.ServiceLavatory;
+        public GsxServiceState ServiceWater => Gsx.ServiceWater;
+        public GsxServiceState ServiceCleaning => Gsx.ServiceCleaning;
+
+        // GPU indicator: gray when the current automation phase isn't relevant
+        // (Preparation/Departure/Arrival/TurnAround), otherwise red/green.
+        public bool ServiceGpuConnected => Gsx.ServiceGpuConnected;
+        public SolidColorBrush ServiceGpuConnectedColor =>
+            !Gsx.ServiceGpuPhaseRelevant ? ColorGray
+            : Gsx.ServiceGpuConnected ? ColorValid : ColorInvalid;
+
+        public GsxServiceState ServiceBoarding => Gsx.ServiceBoarding;
+        public GsxServiceState ServiceDeboarding => Gsx.ServiceDeboarding;
+        public string ServicePushback => Gsx.ServicePushback;
+        public GsxServiceState ServiceJetway => Gsx.ServiceJetway;
+        public bool ServiceJetwayConnected => Gsx.ServiceJetwayConnected;
+        public SolidColorBrush ServiceJetwayConnectedColor =>
+            Gsx.ServiceJetwayConnected ? ColorValid : ColorGray;
+        public GsxServiceState ServiceStairs => Gsx.ServiceStairs;
+        public bool ServiceStairsConnected => Gsx.ServiceStairsConnected;
+        public SolidColorBrush ServiceStairsConnectedColor =>
+            Gsx.ServiceStairsConnected ? ColorValid : ColorGray;
+
+        // ── App-subsystem passthroughs ───────────────────────────────────────
+
+        public bool AppGsxController => FlightStatus.AppGsxController;
+        public SolidColorBrush AppGsxControllerColor => FlightStatus.AppGsxController ? ColorValid : ColorInvalid;
+
+        public bool AppAircraftBinary => FlightStatus.AppAircraftBinary;
+        public SolidColorBrush AppAircraftBinaryColor => FlightStatus.AppAircraftBinary ? ColorValid : ColorInvalid;
+
+        public bool AppAircraftInterface => FlightStatus.AppAircraftInterface;
+        public SolidColorBrush AppAircraftInterfaceColor => FlightStatus.AppAircraftInterface ? ColorValid : ColorInvalid;
+
+        public bool AppProsimSdkConnected => FlightStatus.AppProsimSdkConnected;
+        public SolidColorBrush AppProsimSdkConnectedColor => FlightStatus.AppProsimSdkConnected ? ColorValid : ColorInvalid;
+
+        public bool AppAutomationController => FlightStatus.AppAutomationController;
+        public SolidColorBrush AppAutomationControllerColor => FlightStatus.AppAutomationController ? ColorValid : ColorInvalid;
+
+        public bool AppAudioController => FlightStatus.AppAudioController;
+        public SolidColorBrush AppAudioControllerColor => FlightStatus.AppAudioController ? ColorValid : ColorInvalid;
+
+        public AutomationState AppAutomationState => Gsx.AppAutomationState;
+        public string AppAutomationDepartureServices => Gsx.AppAutomationDepartureServices;
+
+        public string AssignedArrivalGate => Gsx.AssignedArrivalGate;
+
+        public bool AppOnGround => FlightStatus.AppOnGround;
+        public bool AppEnginesRunning => FlightStatus.AppEnginesRunning;
+        public bool AppInMotion => FlightStatus.AppInMotion;
+        public string AppProfile => FlightStatus.AppProfile;
+        public string AppAircraft => FlightStatus.AppAircraft;
+
+        // ── Store change handlers ────────────────────────────────────────────
+
+        protected virtual void OnFlightStatusStateChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            var name = e?.PropertyName ?? "";
+            // The Model property has the same name as the store property, so the
+            // bare re-raise covers the value binding.
+            NotifyPropertyChanged(name);
+
+            // For state fields that drive a derived colour brush, raise the
+            // colour property too so the indicator updates atomically.
+            switch (name)
+            {
+                case nameof(FlightStatusState.SimRunning):              NotifyPropertyChanged(nameof(SimRunningColor)); break;
+                case nameof(FlightStatusState.SimConnected):            NotifyPropertyChanged(nameof(SimConnectedColor)); break;
+                case nameof(FlightStatusState.SimSession):              NotifyPropertyChanged(nameof(SimSessionColor)); break;
+                case nameof(FlightStatusState.SimPaused):               NotifyPropertyChanged(nameof(SimPausedColor)); break;
+                case nameof(FlightStatusState.SimWalkaround):           NotifyPropertyChanged(nameof(SimWalkaroundColor)); break;
+                case nameof(FlightStatusState.AppGsxController):        NotifyPropertyChanged(nameof(AppGsxControllerColor)); break;
+                case nameof(FlightStatusState.AppAircraftBinary):       NotifyPropertyChanged(nameof(AppAircraftBinaryColor)); break;
+                case nameof(FlightStatusState.AppAircraftInterface):    NotifyPropertyChanged(nameof(AppAircraftInterfaceColor)); break;
+                case nameof(FlightStatusState.AppProsimSdkConnected):   NotifyPropertyChanged(nameof(AppProsimSdkConnectedColor)); break;
+                case nameof(FlightStatusState.AppAutomationController): NotifyPropertyChanged(nameof(AppAutomationControllerColor)); break;
+                case nameof(FlightStatusState.AppAudioController):      NotifyPropertyChanged(nameof(AppAudioControllerColor)); break;
             }
-            catch { }
         }
 
-        protected virtual void UpdateColor(string propertyColor, bool state, bool reverseColor = false)
+        protected virtual void OnGsxStateChanged(object? sender, PropertyChangedEventArgs e)
         {
-            try
-            {
-                if (reverseColor)
-                    this.SetPropertyValue<SolidColorBrush>(propertyColor, state ? ColorInvalid : ColorValid);
-                else
-                    this.SetPropertyValue<SolidColorBrush>(propertyColor, state ? ColorValid : ColorInvalid);
-            }
-            catch { }
-        }
+            var name = e?.PropertyName ?? "";
+            NotifyPropertyChanged(name);
 
-        protected virtual void UpdateState<T>(string propertyValue, T value)
-        {
-            try
+            switch (name)
             {
-                if (string.IsNullOrEmpty(propertyValue) || (object)value == null)
-                    return;
-
-                if (!this.GetPropertyValue<T>(propertyValue)?.Equals(value) == true || ForceRefresh)
-                    this.SetPropertyValue<T>(propertyValue, value);
-            }
-            catch { }
-        }
-
-        private volatile bool _isUpdating = false;
-
-        protected virtual async void OnUpdate(object? sender, EventArgs e)
-        {
-            if (_isUpdating) return;
-            _isUpdating = true;
-            try
-            {
-                // Run blocking CFIT framework calls (SimConnectController, GsxController.CheckBinaries, etc.)
-                // on a background thread so the UI thread is never stalled waiting for WaitSimLoop locks.
-                await Task.Run(() =>
-                {
-                    try { UpdateSim(); } catch (Exception ex) { Logger.LogException(ex); }
-                    try { UpdateGsx(); } catch { }
-                    try { UpdateApp(); } catch { }
-                });
-                // UpdateLog modifies ObservableCollection — must stay on the UI thread.
-                try { UpdateLog(); } catch { }
-                ForceRefresh = false;
-            }
-            finally
-            {
-                _isUpdating = false;
+                case nameof(GsxState.GsxRunning):             NotifyPropertyChanged(nameof(GsxRunningColor)); break;
+                case nameof(GsxState.GsxStartedValid):        NotifyPropertyChanged(nameof(GsxStartedColor)); break;
+                case nameof(GsxState.ServiceGpuConnected):
+                case nameof(GsxState.ServiceGpuPhaseRelevant):
+                    NotifyPropertyChanged(nameof(ServiceGpuConnectedColor));
+                    break;
+                case nameof(GsxState.ServiceJetwayConnected):
+                    NotifyPropertyChanged(nameof(ServiceJetwayConnectedColor));
+                    break;
+                case nameof(GsxState.ServiceStairsConnected):
+                    NotifyPropertyChanged(nameof(ServiceStairsConnectedColor));
+                    break;
             }
         }
 
-        protected virtual void UpdateSim()
+        // ── Message log mirror ───────────────────────────────────────────────
+
+        protected virtual void OnStoreMessageLogChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
-            UpdateBoolState(nameof(SimRunning), nameof(SimRunningColor), SimConnectController.IsSimRunning);
-            UpdateBoolState(nameof(SimConnected), nameof(SimConnectedColor), SimConnect.IsSimConnected);
-            UpdateBoolState(nameof(SimSession), nameof(SimSessionColor), SimConnect.IsSessionRunning && !SimConnect.IsSessionStopped);
-
-            UpdateBoolState(nameof(SimPaused), nameof(SimPausedColor), SimConnect.IsPaused, true);
-            UpdateBoolState(nameof(SimWalkaround), nameof(SimWalkaroundColor), GsxController?.IsWalkaround ?? false, true);
-            UpdateState<long>(nameof(CameraState), SimConnect.CameraState);
-
-            UpdateState<string>(nameof(SimVersion), SimConnect.SimVersionString);
-
-            UpdateState<string>(nameof(AircraftString), SimConnect.AircraftString);
-        }
-
-        [ObservableProperty]
-        protected bool _SimRunning = false;
-        [ObservableProperty]
-        protected SolidColorBrush _SimRunningColor = ColorInvalid;
-
-        [ObservableProperty]
-        protected bool _SimConnected = false;
-        [ObservableProperty]
-        protected SolidColorBrush _SimConnectedColor = ColorInvalid;
-
-        [ObservableProperty]
-        protected bool _SimSession = false;
-        [ObservableProperty]
-        protected SolidColorBrush _SimSessionColor = ColorInvalid;
-
-        [ObservableProperty]
-        protected bool _SimPaused = false;
-        [ObservableProperty]
-        protected SolidColorBrush _SimPausedColor = ColorInvalid;
-
-        [ObservableProperty]
-        protected bool _SimWalkaround = false;
-        [ObservableProperty]
-        protected SolidColorBrush _SimWalkaroundColor = ColorInvalid;
-
-        [ObservableProperty]
-        protected long _CameraState = 0;
-
-        [ObservableProperty]
-        protected string _SimVersion = "";
-
-        [ObservableProperty]
-        protected string _AircraftString = "";
-
-        protected virtual void UpdateGsx()
-        {
-            UpdateBoolState(nameof(GsxRunning), nameof(GsxRunningColor), GsxController.CheckBinaries());
-            UpdateState<string>(nameof(GsxStarted), $"{GsxController?.CouatlLastStarted ?? 0} | {GsxController?.CouatlLastProgress ?? 100}");
-            UpdateColor(nameof(GsxStartedColor), GsxController.CouatlVarsValid);
-            UpdateState<GsxMenuState>(nameof(GsxMenu), GsxController.Menu.MenuState);
-            UpdateState<int>(nameof(GsxPaxTarget), GsxServiceBoard?.SubPaxTarget?.GetValue<int>() ?? 0);
-            UpdateState<string>(nameof(GsxPaxTotal), $"{GsxServiceBoard?.SubPaxTotal?.GetValue<int>() ?? 0} | {GsxServiceDeboard?.SubPaxTotal?.GetValue<int>() ?? 0}");
-            UpdateState<string>(nameof(GsxCargoProgress), $"{GsxServiceBoard?.SubCargoPercent?.GetValue<int>() ?? 0} | {GsxServiceDeboard?.SubCargoPercent?.GetValue<int>() ?? 0}");
-
-            UpdateState<GsxServiceState>(nameof(ServiceReposition), GsxServices[GsxServiceType.Reposition].State);
-            UpdateState<GsxServiceState>(nameof(ServiceRefuel), LatchCompleted(GsxServices[GsxServiceType.Refuel]));
-            UpdateState<GsxServiceState>(nameof(ServiceCatering), LatchCompleted(GsxServices[GsxServiceType.Catering]));
-            UpdateState<GsxServiceState>(nameof(ServiceLavatory), LatchCompleted(GsxServices[GsxServiceType.Lavatory]));
-            UpdateState<GsxServiceState>(nameof(ServiceWater), LatchCompleted(GsxServices[GsxServiceType.Water]));
-            UpdateState<GsxServiceState>(nameof(ServiceCleaning), LatchCompleted(GsxServices[GsxServiceType.Cleaning]));
-            UpdateGpuIndicator();
-
-            UpdateState<GsxServiceState>(nameof(ServiceBoarding), LatchCompleted(GsxServices[GsxServiceType.Boarding]));
-            UpdateState<GsxServiceState>(nameof(ServiceDeboarding), GsxServices[GsxServiceType.Deboarding].State);
-            UpdateState<string>(nameof(ServicePushback), $"{GsxServicePushBack.State} ({GsxServicePushBack.PushStatus})");
-            UpdateState<GsxServiceState>(nameof(ServiceJetway), GsxServices[GsxServiceType.Jetway].State);
-            UpdateState<GsxServiceState>(nameof(ServiceStairs), GsxServices[GsxServiceType.Stairs].State);
-        }
-
-        /// <summary>
-        /// Returns Completed if the service was completed and the current phase is Departure or PushBack,
-        /// preventing GSX LVAR resets from reverting the indicator back to grey.
-        /// </summary>
-        protected virtual GsxServiceState LatchCompleted(GsxService service)
-        {
-            var phase = AutomationController?.State ?? AutomationState.SessionStart;
-            if (service.WasCompleted && (phase == AutomationState.Departure || phase == AutomationState.PushBack))
-                return GsxServiceState.Completed;
-
-            return service.State;
-        }
-
-        /// <summary>
-        /// GPU indicator: green when connected, red when not connected, grey when phase is not relevant.
-        /// Relevant phases: Preparation, Departure, Arrival, TurnAround.
-        /// </summary>
-        protected virtual void UpdateGpuIndicator()
-        {
-            var phase = AutomationController?.State ?? AutomationState.SessionStart;
-            bool relevant = phase == AutomationState.Preparation
-                         || phase == AutomationState.Departure
-                         || phase == AutomationState.Arrival
-                         || phase == AutomationState.TurnAround;
-
-            if (!relevant)
-            {
-                if (ServiceGpuConnectedColor != ColorGray || ForceRefresh)
-                    ServiceGpuConnectedColor = ColorGray;
+            // Only react to Adds — the store also emits Remove events when it
+            // trims to its 500-cap, but the visible log on the Monitor tab has
+            // its own (smaller) visual-line trim and shouldn't follow store evictions.
+            if (e.Action != NotifyCollectionChangedAction.Add || e.NewItems == null)
                 return;
-            }
 
-            UpdateBoolState(nameof(ServiceGpuConnected), nameof(ServiceGpuConnectedColor), AircraftInterface?.EquipmentGpu ?? false);
+            foreach (var item in e.NewItems)
+            {
+                if (item is string msg)
+                    MessageLog.Add(msg);
+            }
+            TrimToVisualLines();
+            NotifyPropertyChanged(nameof(MessageLog));
         }
 
-        [ObservableProperty]
-        protected bool _GsxRunning = false;
-        [ObservableProperty]
-        protected SolidColorBrush _GsxRunningColor = ColorInvalid;
-
-        [ObservableProperty]
-        protected string _GsxStarted = "";
-        [ObservableProperty]
-        protected SolidColorBrush _GsxStartedColor = ColorInvalid;
-
-        [ObservableProperty]
-        protected GsxMenuState _GsxMenu = GsxMenuState.UNKNOWN;
-
-        [ObservableProperty]
-        protected int _GsxPaxTarget = 0;
-
-        [ObservableProperty]
-        protected string _GsxPaxTotal = "0 | 0";
-
-        [ObservableProperty]
-        protected string _GsxCargoProgress = "0 | 0";
-
-        [ObservableProperty]
-        protected GsxServiceState _ServiceReposition = GsxServiceState.Unknown;
-
-        [ObservableProperty]
-        protected GsxServiceState _ServiceRefuel = GsxServiceState.Unknown;
-
-        [ObservableProperty]
-        protected GsxServiceState _ServiceCatering = GsxServiceState.Unknown;
-
-        [ObservableProperty]
-        protected GsxServiceState _ServiceLavatory = GsxServiceState.Unknown;
-
-        [ObservableProperty]
-        protected GsxServiceState _ServiceWater = GsxServiceState.Unknown;
-
-        [ObservableProperty]
-        protected GsxServiceState _ServiceCleaning = GsxServiceState.Unknown;
-
-        [ObservableProperty]
-        protected bool _ServiceGpuConnected = false;
-        [ObservableProperty]
-        protected SolidColorBrush _ServiceGpuConnectedColor = ColorGray;
-
-        [ObservableProperty]
-        protected GsxServiceState _ServiceBoarding = GsxServiceState.Unknown;
-
-        [ObservableProperty]
-        protected GsxServiceState _ServiceDeboarding = GsxServiceState.Unknown;
-
-        [ObservableProperty]
-        protected string _ServicePushback = $"{GsxServiceState.Unknown} (0)";
-
-        [ObservableProperty]
-        protected GsxServiceState _ServiceJetway = GsxServiceState.Unknown;
-
-        [ObservableProperty]
-        protected GsxServiceState _ServiceStairs = GsxServiceState.Unknown;
-
-        protected virtual void UpdateApp()
+        protected virtual void SyncMessageLogFromStore()
         {
-            UpdateBoolState(nameof(AppGsxController), nameof(AppGsxControllerColor), GsxController.IsActive);
-            UpdateBoolState(nameof(AppAircraftBinary), nameof(AppAircraftBinaryColor), GsxController.AircraftBinary);
-            UpdateBoolState(nameof(AppAircraftInterface), nameof(AppAircraftInterfaceColor), AircraftInterface.IsLoaded);
-            // ProSim binary connection (CONNECTION STATUS indicator)
-            UpdateBoolState(nameof(AppProsimConnected), nameof(AppProsimConnectedColor), this.Source.ProsimService?.IsConnected ?? false);
-            // ProSim SDK interface connection (APP STATUS indicator)
-            UpdateBoolState(nameof(AppProsimSdkConnected), nameof(AppProsimSdkConnectedColor), AircraftInterface?.ProsimInterface?.SdkInterface?.IsConnected ?? false);
-            UpdateBoolState(nameof(AppAutomationController), nameof(AppAutomationControllerColor), AutomationController.IsStarted);
-            UpdateBoolState(nameof(AppAudioController), nameof(AppAudioControllerColor), AudioController.IsActive);
-
-            UpdateState<AutomationState>(nameof(AppAutomationState), AutomationController?.State ?? AutomationState.SessionStart);
-            UpdateState<string>(nameof(AppAutomationDepartureServices), $"{AutomationController?.ServiceCountCompleted ?? 0} / {AutomationController?.ServiceCountRunning ?? 0} / {AutomationController?.ServiceCountTotal ?? 0}" ?? "0 / 0 / 0");
-
-            try
-            {
-                UpdateState<bool>(nameof(AppOnGround), AutomationController?.IsOnGround ?? true);
-                UpdateState<bool>(nameof(AppEnginesRunning), AircraftInterface?.EnginesRunning ?? false);
-                UpdateState<bool>(nameof(AppInMotion), AircraftInterface?.GroundSpeed > Config.SpeedTresholdTaxiOut);
-            }
-            catch { }
-
-            UpdateState<string>(nameof(AppProfile), GsxController?.AircraftProfile?.ToString() ?? "");
-            UpdateState<string>(nameof(AppAircraft), $"{AircraftInterface?.Airline ?? ""} / {AircraftInterface?.Title ?? ""} / {AircraftInterface?.Registration ?? ""}");
+            // Populate from the store on Start so reopening the Monitor tab shows
+            // recent history (the previous implementation showed only what was in
+            // CFIT Logger.Messages at that moment — the store buffer is larger).
+            MessageLog.Clear();
+            foreach (var msg in FlightStatus.MessageLog)
+                MessageLog.Add(msg);
+            TrimToVisualLines();
+            NotifyPropertyChanged(nameof(MessageLog));
         }
 
-        [ObservableProperty]
-        protected bool _AppGsxController = false;
-        [ObservableProperty]
-        protected SolidColorBrush _AppGsxControllerColor = ColorInvalid;
-
-        [ObservableProperty]
-        protected bool _AppAircraftBinary = false;
-        [ObservableProperty]
-        protected SolidColorBrush _AppAircraftBinaryColor = ColorInvalid;
-
-        [ObservableProperty]
-        protected bool _AppAircraftInterface = false;
-        [ObservableProperty]
-        protected SolidColorBrush _AppAircraftInterfaceColor = ColorInvalid;
-
-        [ObservableProperty]
-        protected bool _AppAutomationController = false;
-        [ObservableProperty]
-        protected SolidColorBrush _AppAutomationControllerColor = ColorInvalid;
-
-        [ObservableProperty]
-        protected bool _AppAudioController = false;
-
-        [ObservableProperty]
-        protected bool _AppProsimConnected = false;
-        [ObservableProperty]
-        protected SolidColorBrush _AppProsimConnectedColor = ColorInvalid;
-
-        [ObservableProperty]
-        protected bool _AppProsimSdkConnected = false;
-        [ObservableProperty]
-        protected SolidColorBrush _AppProsimSdkConnectedColor = ColorInvalid;
-
-        [ObservableProperty]
-        protected SolidColorBrush _AppAudioControllerColor = ColorInvalid;
-
-        [ObservableProperty]
-        protected AutomationState _AppAutomationState = AutomationState.SessionStart;
-
-        [ObservableProperty]
-        protected string _AppAutomationDepartureServices = "0 / 0";
-
-        [ObservableProperty]
-        protected bool _AppOnGround = true;
-
-        [ObservableProperty]
-        protected bool _AppEnginesRunning = false;
-
-        [ObservableProperty]
-        protected bool _AppInMotion = false;
-
-        [ObservableProperty]
-        protected string _AppProfile = "";
-
-        [ObservableProperty]
-        protected string _AppAircraft = "Airline / Title / Registration";
-
-        // Approximate character width of Consolas 10pt at the log panel width (~760px available).
-        private const int LogCharsPerLine = 115;
-        private const int LogMaxVisualLines = 9;
-
-        protected virtual void UpdateLog()
+        private void TrimToVisualLines()
         {
-            if (Logger.Messages.IsEmpty)
-                NotifyPropertyChanged(nameof(MessageLog));
-
-            while (!Logger.Messages.IsEmpty)
-            {
-                MessageLog.Add(Logger.Messages.Dequeue());
-
-                // Trim from the front until estimated visual lines (accounting for wrapping) fit.
-                while (MessageLog.Count > 0 && LogVisualLineCount() > LogMaxVisualLines)
-                    MessageLog.RemoveAt(0);
-            }
+            while (MessageLog.Count > 0 && LogVisualLineCount() > LogMaxVisualLines)
+                MessageLog.RemoveAt(0);
         }
 
         private int LogVisualLineCount()

@@ -36,6 +36,11 @@
         public static string VarServiceDeparture { get; } = "L:FSDT_GSX_DEPARTURE_STATE";
         public static string VarServiceGpu { get; } = "L:FSDT_GSX_GPU_STATE";
         public static string VarPusbackStatus { get; } = "L:FSDT_GSX_PUSHBACK_STATUS";
+        // Per-vehicle pushback state (GSX Pro v3.9.4+). Discrete documented values:
+        // 8=Push, 11=WaitForEnginesStopped, 12=WaitForConfirmation (the "good engine
+        // start?" prompt), 13=Detach, 14=ClearToStart. More reliable than the coarse
+        // VarPusbackStatus for detecting the confirmation gate.
+        public static string VarVehiclePushbackState { get; } = "L:FSDT_GSX_VEHICLE_PUSHBACK_STATE";
         public static string VarBypassPin { get; } = "L:FSDT_GSX_BYPASS_PIN";
         public static string VarServiceDeice { get; } = "L:FSDT_GSX_DEICING_STATE";
         public static string VarServiceLavatory { get; } = "L:FSDT_GSX_LAVATORY_STATE";
@@ -55,6 +60,15 @@
         public static string VarDoorToggleService1 { get; } = "L:FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE";
         public static string VarDoorToggleService2 { get; } = "L:FSDT_GSX_AIRCRAFT_SERVICE_2_TOGGLE";
 
+        // SetGate readback — three confirmation LVARs GSX writes after a gate
+        // assignment lands. Polled in StateUpdateWorker to surface the active
+        // gate as OfpState/GsxState.AssignedArrivalGate. SetGate_Suffix == -1
+        // is the unassigned sentinel; SetGate_Name carries the letter via an
+        // integer enum (12=A..37=Z, 10=GATE no-letter, 0=NONE).
+        public static string VarSetGateName { get; } = "L:FSDT_GSX_SetGate_Name";
+        public static string VarSetGateNumber { get; } = "L:FSDT_GSX_SetGate_Number";
+        public static string VarSetGateSuffix { get; } = "L:FSDT_GSX_SetGate_Suffix";
+
         //Menu
         public static string GsxChoice { get; } = "[GSX choice]";
         public static string MenuGate { get; } = "Activate Services at";
@@ -68,6 +82,7 @@
         public static string MenuPushbackDirection { get; } = "Select pushback direction";
         public static string MenuPushbackChange { get; } = "Change Direction";
         public static string MenuDeiceOnPush { get; } = "Ice warning: do you request the de-icing treatment";
+        public static string MenuDeiceType { get; } = "Select de-icing type";
         public static string MenuPushbackConfirm { get; } = "Interrupt pushback";
         public static string MenuPushbackRequest { get; } = "Do you want to request"; 
         public static string MenuFollowMe { get; } = "Request FollowMe";

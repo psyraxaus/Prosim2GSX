@@ -1,0 +1,26 @@
+.panel {
+  /* Extra bottom-padding so DirtyBar doesn't cover the last section when
+     it slides in. */
+  padding: 16px 18px 80px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.loading {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.tokenActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.hint {
+  color: var(--text-muted);
+  font-size: 11px;
+}

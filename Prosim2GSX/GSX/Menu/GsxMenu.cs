@@ -78,8 +78,10 @@ namespace Prosim2GSX.GSX.Menu
 
                 MenuCallbacks.Add(GsxConstants.MenuTugAttach, OnTugQuestion);
                 MenuCallbacks.Add(GsxConstants.MenuPushbackRequest, OnPushQuestion);
+                MenuCallbacks.Add(GsxConstants.MenuPushbackDirection, OnPushbackDirection);
                 MenuCallbacks.Add(GsxConstants.MenuFollowMe, OnFollowMeQuestion);
                 MenuCallbacks.Add(GsxConstants.MenuDeiceOnPush, OnDeiceQuestion);
+                MenuCallbacks.Add(GsxConstants.MenuDeiceType, OnDeiceTypeSelect);
                 MenuCallbacks.Add(GsxConstants.MenuParkingChange, OnParking);
                 MenuCallbacks.Add(GsxConstants.MenuParkingSelect, OnParking);
                 MenuCallbacks.Add(GsxConstants.MenuBoardCrew, OnBoardCrew);
@@ -116,6 +118,91 @@ namespace Prosim2GSX.GSX.Menu
             await Select(1, false, false, 2);
         }
 
+        protected virtual async Task OnPushbackDirection(GsxMenu menu)
+        {
+            var preference = Controller.PushbackPreference;
+
+            if (!Config.PushbackPreferenceReapplyOnChange && Controller.PushbackDirectionAutoSelected)
+            {
+                Logger.Debug($"Pushback direction menu reopened; preference already applied this cycle, skipping");
+                return;
+            }
+
+            string searchToken = preference switch
+            {
+                PushbackPreference.TailLeft => "Tail Left",
+                PushbackPreference.TailRight => "Tail Right",
+                PushbackPreference.Straight => "Straight pushback",
+                _ => null,
+            };
+            if (searchToken == null)
+                return;
+
+            int index = FindPushbackLineByText(searchToken);
+            string strategy = "text";
+
+            if (index < 0 && preference != PushbackPreference.Straight)
+            {
+                index = FindPushbackLineByFixedIndex(preference);
+                strategy = "fixed-index";
+            }
+
+            if (index < 0)
+            {
+                Logger.Information($"Pushback direction menu: could not auto-pick '{searchToken}' (text{(preference != PushbackPreference.Straight ? " and fixed-index" : "")} failed). Menu lines:");
+                for (int i = 0; i < MenuLines.Count; i++)
+                    Logger.Information($"  [{i + 1}] {MenuLines[i]}");
+                Logger.Information("Leaving menu open for manual selection.");
+                return;
+            }
+
+            Logger.Information($"Auto-selecting pushback direction (preference={preference}, strategy={strategy}, item {index + 1}: '{MenuLines[index]}')");
+            await Select(index + 1, false, false);
+            Controller.PushbackDirectionAutoSelected = true;
+        }
+
+        protected virtual int FindPushbackLineByText(string tailToken)
+        {
+            for (int i = 0; i < MenuLines.Count; i++)
+            {
+                if (MenuLines[i] != null && MenuLines[i].Contains(tailToken, StringComparison.InvariantCultureIgnoreCase))
+                    return i;
+            }
+            return -1;
+        }
+
+        protected virtual int FindPushbackLineByFixedIndex(PushbackPreference preference)
+        {
+            int targetIndex = preference == PushbackPreference.TailLeft ? 0 : 1;
+            if (MenuLines.Count <= targetIndex)
+                return -1;
+
+            string line = MenuLines[targetIndex];
+            if (string.IsNullOrWhiteSpace(line) || IsPushbackMetaLine(line))
+                return -1;
+
+            if (MenuLines.Count > 1 && IsPushbackMetaLine(MenuLines[0]) || (MenuLines.Count > 1 && IsPushbackMetaLine(MenuLines[1])))
+                return -1;
+
+            return targetIndex;
+        }
+
+        protected static readonly string[] PushbackMetaPrefixes =
+        {
+            "Straight", "QuickEdit", "Customize", "GSX", "Restart", "SimBrief"
+        };
+
+        protected static bool IsPushbackMetaLine(string line)
+        {
+            if (string.IsNullOrWhiteSpace(line)) return true;
+            foreach (var prefix in PushbackMetaPrefixes)
+            {
+                if (line.StartsWith(prefix, StringComparison.InvariantCultureIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
+
         protected virtual async Task OnTugQuestion(GsxMenu menu)
         {
             Logger.Debug($"Tug Question active");
@@ -147,8 +234,63 @@ namespace Prosim2GSX.GSX.Menu
         protected virtual async Task OnDeiceQuestion(GsxMenu menu)
         {
             Logger.Debug($"DeIce Question active");
+
+            if (Config.AutoDeiceEnabled && !DeIceQuestionAnswered)
+            {
+                Logger.Information($"Auto-deice enabled: answering Yes (item 1) to de-icing request");
+                await Select(1, false, false);
+                return;
+            }
+
             if (AircraftProfile.KeepDirectionMenuOpen && DeIceQuestionAnswered)
                 await Select(2);
+        }
+
+        protected static readonly System.Collections.Generic.Dictionary<AutoDeiceFluid, (string Type, string Concentration)> DeiceFluidTokens = new()
+        {
+            { AutoDeiceFluid.TypeI100,  ("Type I",   "100") },
+            { AutoDeiceFluid.TypeI75,   ("Type I",   "75")  },
+            { AutoDeiceFluid.TypeII100, ("Type II",  "100") },
+            { AutoDeiceFluid.TypeII75,  ("Type II",  "75")  },
+            { AutoDeiceFluid.TypeIV100, ("Type IV",  "100") },
+            { AutoDeiceFluid.TypeIV75,  ("Type IV",  "75")  },
+        };
+
+        protected virtual async Task OnDeiceTypeSelect(GsxMenu menu)
+        {
+            Logger.Information($"DeIce Type Select menu active - AutoDeiceEnabled={Config.AutoDeiceEnabled}, AutoDeiceFluid={Config.AutoDeiceFluid}, MenuTitle='{MenuTitle}', Lines={MenuLineCount}");
+
+            if (!Config.AutoDeiceEnabled)
+                return;
+
+            var (typeToken, concToken) = DeiceFluidTokens.TryGetValue(Config.AutoDeiceFluid, out var tokens)
+                ? tokens
+                : ("Type IV", "100");
+
+            int index = -1;
+            for (int i = 0; i < MenuLines.Count; i++)
+            {
+                var line = MenuLines[i];
+                if (line == null) continue;
+                if (line.Contains(typeToken, StringComparison.InvariantCultureIgnoreCase)
+                    && line.Contains(concToken, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    index = i;
+                    break;
+                }
+            }
+
+            if (index < 0)
+            {
+                Logger.Information($"Auto-deice: could not find '{typeToken}' + '{concToken}' in de-icing type menu. Menu lines:");
+                for (int i = 0; i < MenuLines.Count; i++)
+                    Logger.Information($"  [{i + 1}] {MenuLines[i]}");
+                Logger.Information("Leaving menu open for manual selection.");
+                return;
+            }
+
+            Logger.Information($"Auto-deice: selecting fluid '{typeToken} {concToken}%' (item {index + 1}: '{MenuLines[index]}')");
+            await Select(index + 1, false, false);
         }
 
         protected virtual async Task OnParking(GsxMenu menu)
@@ -277,6 +419,13 @@ namespace Prosim2GSX.GSX.Menu
                 await TaskTools.RunLogged(() => MenuTitleChanged?.Invoke(MenuTitle), RequestToken);
                 if (IsGateMenu)
                     FollowMeAnswered = false;
+
+                if (DeIceQuestionAnswered && Config.AutoDeiceEnabled && !MatchTitle(GsxConstants.MenuDeiceType))
+                {
+                    Logger.Information($"Auto-deice diag: title changed after YES, did NOT match '{GsxConstants.MenuDeiceType}'. Title='{MenuTitle}', Lines={MenuLineCount}:");
+                    for (int i = 0; i < MenuLines.Count; i++)
+                        Logger.Information($"  [{i + 1}] {MenuLines[i]}");
+                }
             }
 
             if (IsOperatorMenu && AircraftProfile.OperatorAutoSelect)
@@ -389,13 +538,16 @@ namespace Prosim2GSX.GSX.Menu
             WasOperatorSelected = false;
 
             int counter = 0;
+            bool justHidden = false;
             foreach (var command in sequence.Commands)
             {
                 if ((!Controller.IsGsxRunning && !sequence.IgnoreGsxState) || RequestToken.IsCancellationRequested)
                     break;
 
-                if (await RunCommand(command) == true)
+                if (await RunCommand(command, justHidden) == true)
                     counter++;
+
+                justHidden = command.OpenMenu && !command.NoHide;
             }
             result = counter == sequence.Commands.Count;
             if (result)
@@ -407,7 +559,7 @@ namespace Prosim2GSX.GSX.Menu
             return result;
         }
 
-        protected virtual async Task<bool> RunCommand(GsxMenuCommand command)
+        protected virtual async Task<bool> RunCommand(GsxMenuCommand command, bool priorHidMenu = false)
         {
             bool result = false;
             Logger.Verbose($"Run Cmd Type: {command.Type}");
@@ -425,13 +577,22 @@ namespace Prosim2GSX.GSX.Menu
                         return result;
                 }
             }
-            else if (command.WaitReady && MenuState != GsxMenuState.READY)
+            else if (command.WaitReady && (priorHidMenu || MenuState != GsxMenuState.READY))
             {
-                Logger.Verbose($"wait rdy");
-                await MsgMenuReady.ReceiveAsync(true, Config.MenuOpenTimeout, RequestToken);
+                Logger.Verbose($"wait rdy (priorHid={priorHidMenu})");
+                var ready = await MsgMenuReady.ReceiveAsync(true, Config.MenuOpenTimeout, RequestToken);
+                if (priorHidMenu)
+                {
+                    if (ready == null)
+                    {
+                        Logger.Warning($"Menu Command aborted - expected submenu did not open after previous hide (MenuTitle: '{MenuTitle}')");
+                        return result;
+                    }
+                    await Task.Delay(Config.MenuCheckInterval, RequestToken);
+                }
             }
 
-            if (command.HasTitle && !MatchTitle(command.Title))
+            if (command.HasTitle && !command.MatchesAny(MatchTitle))
             {
                 Logger.Warning($"Menu Command skipped - Title did not match: '{MenuTitle}' does not start with '{command.Title}'");
                 return result;

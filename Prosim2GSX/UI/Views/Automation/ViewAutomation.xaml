@@ -21,16 +21,23 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Left EFB navigation sidebar -->
-        <Border Grid.Column="0" Background="#FF1A2F4A">
+        <!-- Left EFB navigation sidebar.
+             Colours come from the active theme via DynamicResource so the
+             rail tints with the rest of the app (matching the web GUI's
+             behaviour, where the rail uses theme variables). -->
+        <Border Grid.Column="0" Background="{DynamicResource TabBarBackground}">
             <DockPanel>
 
                 <!-- Profile header -->
-                <Border DockPanel.Dock="Top" Background="#FF122439" Padding="12,10">
+                <Border DockPanel.Dock="Top" Background="{DynamicResource HeaderBackground}" Padding="12,10">
                     <StackPanel>
-                        <TextBlock Text="AUTOMATION" Foreground="#99FFFFFF" FontSize="9" FontWeight="Bold"/>
+                        <TextBlock Text="GSX SETTINGS"
+                                   Foreground="{DynamicResource HeaderText}"
+                                   Opacity="0.6"
+                                   FontSize="9" FontWeight="Bold"/>
                         <TextBlock Text="{Binding ProfileName}"
-                                   Foreground="White" FontSize="13" FontWeight="Bold"
+                                   Foreground="{DynamicResource HeaderText}"
+                                   FontSize="13" FontWeight="Bold"
                                    Margin="0,3,0,0"
                                    TextTrimming="CharacterEllipsis"
                                    ToolTip="{Binding ProfileName}"/>
@@ -55,14 +62,14 @@
                                 <Setter.Value>
                                     <ControlTemplate TargetType="ListViewItem">
                                         <Border x:Name="ItemBorder" Background="Transparent"
-                                                BorderBrush="#FF1E90FF" BorderThickness="0">
+                                                BorderBrush="{DynamicResource PrimaryColorBrush}" BorderThickness="0">
                                             <ContentPresenter Margin="16,10"/>
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="ItemBorder" Property="Background" Value="#FF1E90FF"/>
+                                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource PrimaryColorBrush}"/>
                                                 <Setter TargetName="ItemBorder" Property="BorderThickness" Value="3,0,0,0"/>
-                                                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="White"/>
+                                                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource HeaderText}"/>
                                             </Trigger>
                                             <MultiTrigger>
                                                 <MultiTrigger.Conditions>
@@ -80,7 +87,7 @@
                     <ListView.ItemTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding Value}"
-                                       Foreground="White"
+                                       Foreground="{DynamicResource HeaderText}"
                                        FontSize="12"
                                        FontWeight="DemiBold"/>
                         </DataTemplate>

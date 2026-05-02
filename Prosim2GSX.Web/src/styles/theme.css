@@ -1,0 +1,32 @@
+/* EFB-inspired palette mirroring the WPF desktop app's aesthetic.
+   Fixed colours for now — theming hooks come in a future phase if the
+   user wants the WPF themes (Light/Dark/Delta/Finnair/etc.) to
+   round-trip into the web UI. */
+
+:root {
+  --bg-primary: #1a2035;
+  --bg-secondary: #1f2540;
+  --bg-card: #232a47;
+  --bg-card-hover: #2a3357;
+  --border: #2a3357;
+  --border-strong: #3b4773;
+
+  --text-primary: #ffffff;
+  --text-secondary: #a8b0c8;
+  --text-muted: #6b7390;
+
+  --accent: #2196f3;
+  --accent-hover: #1976d2;
+  --accent-muted: #1565c0;
+
+  --success: #4caf50;
+  --warning: #ff9800;
+  --danger: #f44336;
+
+  --font-mono: "Consolas", "Courier New", "Liberation Mono", monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+}

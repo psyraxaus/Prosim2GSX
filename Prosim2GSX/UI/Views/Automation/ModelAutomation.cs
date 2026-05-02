@@ -1,4 +1,5 @@
 ﻿using Prosim2GSX.AppConfig;
+using Prosim2GSX.GSX;
 using Prosim2GSX.GSX.Services;
 using ProsimInterface;
 using System;
@@ -91,7 +92,6 @@ namespace Prosim2GSX.UI.Views.Automation
 
         //Gate & Doors
         public virtual bool DoorStairHandling { get => Source.DoorStairHandling; set => SetModelValue<bool>(value); }
-        public virtual bool DoorStairIncludeL2 { get => Source.DoorStairIncludeL2; set => SetModelValue<bool>(value); }
         public virtual bool DoorCargoHandling { get => Source.DoorCargoHandling; set => SetModelValue<bool>(value); }
         public virtual bool DoorCateringHandling { get => Source.DoorCateringHandling; set => SetModelValue<bool>(value); }
         public virtual bool DoorOpenBoardActive { get => Source.DoorOpenBoardActive; set => SetModelValue<bool>(value); }
@@ -134,7 +134,9 @@ namespace Prosim2GSX.UI.Views.Automation
         //GSX Services
         public virtual bool CallReposition { get => Source.CallReposition; set => SetModelValue<bool>(value); }
         public virtual bool CallDeboardOnArrival { get => Source.CallDeboardOnArrival; set => SetModelValue<bool>(value); }
-        public virtual bool RunDepartureOnArrival { get => Source.RunDepartureOnArrival; set => SetModelValue<bool>(value); }
+        public virtual bool RunDepartureDuringDeboarding { get => Source.RunDepartureDuringDeboarding; set => SetModelValue<bool>(value); }
+        public virtual bool ChimeOnParked { get => Source.ChimeOnParked; set => SetModelValue<bool>(value); }
+        public virtual bool ChimeOnDeboardComplete { get => Source.ChimeOnDeboardComplete; set => SetModelValue<bool>(value); }
         public virtual ModelDepartureServices DepartureServices { get; }
         public virtual Dictionary<GsxServiceActivation, string> TextServiceActivations => ServiceConfig.TextServiceActivations;
         public virtual Dictionary<GsxServiceConstraint, string> TextServiceConstraints => ServiceConfig.TextServiceConstraints;
@@ -165,6 +167,15 @@ namespace Prosim2GSX.UI.Views.Automation
         public virtual int AttachTugDuringBoarding { get => Source.AttachTugDuringBoarding; set => SetModelValue<int>(value); }
         public virtual int CallPushbackWhenTugAttached { get => Source.CallPushbackWhenTugAttached; set => SetModelValue<int>(value); }
         public virtual bool CallPushbackOnBeacon { get => Source.CallPushbackOnBeacon; set => SetModelValue<bool>(value); }
+
+        // Beacon-orchestrated departure sequence
+        public virtual bool SequenceOnBeacon { get => Source.SequenceOnBeacon; set => SetModelValue<bool>(value); }
+        public virtual int SeqDoorsCloseDelayMin { get => Source.SeqDoorsCloseDelayMin; set => SetModelValue<int>(value); }
+        public virtual int SeqDoorsCloseDelayMax { get => Source.SeqDoorsCloseDelayMax; set => SetModelValue<int>(value); }
+        public virtual int SeqJetwayRetractDelayMin { get => Source.SeqJetwayRetractDelayMin; set => SetModelValue<int>(value); }
+        public virtual int SeqJetwayRetractDelayMax { get => Source.SeqJetwayRetractDelayMax; set => SetModelValue<int>(value); }
+        public virtual int SeqGpuDisconnectDelayMin { get => Source.SeqGpuDisconnectDelayMin; set => SetModelValue<int>(value); }
+        public virtual int SeqGpuDisconnectDelayMax { get => Source.SeqGpuDisconnectDelayMax; set => SetModelValue<int>(value); }
 
         //Operator Selection
         public virtual bool OperatorAutoSelect { get => Source.OperatorAutoSelect; set => SetModelValue<bool>(value); }
@@ -205,5 +216,38 @@ namespace Prosim2GSX.UI.Views.Automation
         public virtual double ChancePerSeat { get => Source.ChancePerSeat * 100.0; set => SetModelValue<double>(value / 100.0); }
 
         public virtual bool IsKgs => Config.DisplayUnitCurrent == DisplayUnit.KG;
+
+        // Auto-deice (app-wide Config settings, not per-aircraft)
+        public virtual bool AutoDeiceEnabled
+        {
+            get => Config?.AutoDeiceEnabled ?? false;
+            set
+            {
+                if (Config == null || Config.AutoDeiceEnabled == value) return;
+                Config.AutoDeiceEnabled = value;
+                Config.SaveConfiguration();
+                NotifyPropertyChanged(nameof(AutoDeiceEnabled));
+            }
+        }
+        public virtual AutoDeiceFluid AutoDeiceFluid
+        {
+            get => Config?.AutoDeiceFluid ?? AutoDeiceFluid.TypeIV100;
+            set
+            {
+                if (Config == null || Config.AutoDeiceFluid == value) return;
+                Config.AutoDeiceFluid = value;
+                Config.SaveConfiguration();
+                NotifyPropertyChanged(nameof(AutoDeiceFluid));
+            }
+        }
+        public virtual Dictionary<AutoDeiceFluid, string> AutoDeiceFluidOptions { get; } = new()
+        {
+            { AutoDeiceFluid.TypeI100,  "Type I @ 100%" },
+            { AutoDeiceFluid.TypeI75,   "Type I @ 75%"  },
+            { AutoDeiceFluid.TypeII100, "Type II @ 100%" },
+            { AutoDeiceFluid.TypeII75,  "Type II @ 75%"  },
+            { AutoDeiceFluid.TypeIV100, "Type IV @ 100%" },
+            { AutoDeiceFluid.TypeIV75,  "Type IV @ 75%"  },
+        };
     }
 }

@@ -50,6 +50,27 @@
                 </StackPanel>
             </Border>
 
+            <!-- INTEGRATIONS -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="INTEGRATIONS"/>
+            <Border Style="{StaticResource SectionCardBorder}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Use SayIntentions.AI for ATIS/weather and gate assignment. Requires SayIntentions installed and api_key in flight.json.">Use SayIntentions:</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="0" IsChecked="{Binding UseSayIntentions}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Use SayIntentions.AI for ATIS/weather and gate assignment. Requires SayIntentions installed and api_key in flight.json."/>
+
+                    <TextBlock Grid.Column="0" Grid.Row="1" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="When enabled, allow manual click on dataref-bound checklist items to override their automatic state. Off = real-aircraft behaviour (only manual items are clickable).">Allow Manual Checklist Override:</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="1" IsChecked="{Binding AllowManualChecklistOverride}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="When enabled, allow manual click on dataref-bound checklist items to override their automatic state. Off = real-aircraft behaviour (only manual items are clickable)."/>
+                </Grid>
+            </Border>
+
             <!-- GENERAL SETTINGS -->
             <TextBlock Style="{StaticResource CategoryHeader}" Text="GENERAL SETTINGS"/>
             <Border Style="{StaticResource SectionCardBorder}">
@@ -104,7 +125,6 @@
                     <StackPanel Grid.Column="1" Grid.Row="7" Style="{StaticResource SettingItemPanel}" Margin="0,6,6,6" ToolTip="If and when the Cabin Ding Sound should be played to announce certain Situations.">
                         <CheckBox IsChecked="{Binding DingOnStartup}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Play the Sound when Reposition was executed and Jetway/Stairs are connected or connecting.">Ding on Startup</CheckBox>
                         <CheckBox IsChecked="{Binding DingOnFinal}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Play the Sound when the Final Loadsheet was transmitted.">Ding on Final LS</CheckBox>
-                        <CheckBox IsChecked="{Binding DingOnTurnaround}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Play the Sound when the Automation Phase switched to Turnaround.">Ding on Turnaround</CheckBox>
                     </StackPanel>
 
                     <TextBlock Grid.Column="0" Grid.Row="8" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Enable the animated split-flap character cycling effect in the header bar displays.">Solari Animation:</TextBlock>
@@ -231,6 +251,94 @@
                             <Image Source="../../Icons/remove.png" Style="{StaticResource ImgSquareSmall}"/>
                         </Button>
                     </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- WEB INTERFACE -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="WEB INTERFACE"/>
+            <Border Style="{StaticResource SectionCardBorder}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Run a local web server so a browser on the LAN can mirror this UI.">Enable Web Server:</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="0" IsChecked="{Binding WebServerEnabled}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Run a local web server so a browser on the LAN can mirror this UI."/>
+
+                    <TextBlock Grid.Column="0" Grid.Row="1" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="TCP port the web server listens on.">Port:</TextBlock>
+                    <StackPanel Grid.Column="1" Grid.Row="1" Style="{StaticResource SettingItemPanel}" Orientation="Horizontal" ToolTip="TCP port the web server listens on.">
+                        <TextBox Text="{Binding WebServerPort, UpdateSourceTrigger=LostFocus}" Style="{StaticResource TextBoxCentered}" MinWidth="80"/>
+                    </StackPanel>
+
+                    <TextBlock Grid.Column="0" Grid.Row="2" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="When enabled, bind to all interfaces (0.0.0.0) so other devices on the LAN can connect. Off = loopback only.">Expose to LAN:</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="2" IsChecked="{Binding WebServerBindAll}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="When enabled, bind to all interfaces (0.0.0.0) so other devices on the LAN can connect. Off = loopback only."/>
+
+                    <TextBlock Grid.Column="0" Grid.Row="3" Margin="6" VerticalAlignment="Top" Style="{StaticResource TextBlockDefault}" ToolTip="Bearer token required by every web request. Regenerate to invalidate existing clients.">Auth Token:</TextBlock>
+                    <StackPanel Grid.Column="1" Grid.Row="3" Margin="6" Orientation="Horizontal">
+                        <TextBox Text="{Binding WebServerAuthToken, Mode=OneWay}" IsReadOnly="True" Style="{StaticResource TextBoxLeft}" MinWidth="240" MaxWidth="320" FontFamily="Consolas"/>
+                        <Button Content="Regenerate"
+                                Command="{Binding RegenerateWebTokenCommand}"
+                                Background="{DynamicResource SecondaryColor}"
+                                Foreground="{DynamicResource HeaderText}"
+                                BorderThickness="0"
+                                Margin="8,0,0,0" Padding="10,5"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- QUICK ACCESS (URL + QR code for onboarding from a phone) -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="QUICK ACCESS"/>
+            <Border Style="{StaticResource SectionCardBorder}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="LAN address used in the QR code. Best guess auto-selected; pick another if you have multiple NICs (VPN, Hyper-V virtual switch, etc.). Only used when 'Expose to LAN' is on; loopback otherwise.">LAN Address:</TextBlock>
+                    <StackPanel Grid.Column="1" Grid.Row="0" Style="{StaticResource SettingItemPanel}" Orientation="Horizontal">
+                        <ComboBox ItemsSource="{Binding AvailableIpAddresses}"
+                                  SelectedItem="{Binding SelectedIpAddress}"
+                                  IsEnabled="{Binding WebServerBindAll}"
+                                  MinWidth="180" MaxWidth="240"/>
+                        <Button Content="Refresh"
+                                Command="{Binding RefreshIpAddressesCommand}"
+                                Background="{DynamicResource SecondaryColor}"
+                                Foreground="{DynamicResource HeaderText}"
+                                BorderThickness="0"
+                                Margin="8,0,0,0" Padding="10,5"
+                                ToolTip="Re-enumerate network interfaces (e.g. after switching WiFi networks)."/>
+                    </StackPanel>
+
+                    <TextBlock Grid.Column="0" Grid.Row="1" Margin="6" VerticalAlignment="Top" Style="{StaticResource TextBlockDefault}" ToolTip="The URL encoded in the QR code below. The token in the URL hash fragment is moved into localStorage and stripped from the address bar by the React app on first paint.">Connection URL:</TextBlock>
+                    <TextBox Grid.Column="1" Grid.Row="1"
+                             Text="{Binding WebServerUrl, Mode=OneWay}"
+                             IsReadOnly="True"
+                             Style="{StaticResource TextBoxLeft}"
+                             FontFamily="Consolas"
+                             Margin="6"
+                             TextWrapping="Wrap"/>
+
+                    <TextBlock Grid.Column="0" Grid.Row="2" Margin="6" VerticalAlignment="Top" Style="{StaticResource TextBlockDefault}" ToolTip="Scan with a camera or QR app on your phone or tablet on the same LAN. Auth token is included in the URL hash fragment and never sent to the server.">QR Code:</TextBlock>
+                    <Image Grid.Column="1" Grid.Row="2"
+                           Source="{Binding WebServerQrImage}"
+                           Width="200" Height="200"
+                           HorizontalAlignment="Left"
+                           Margin="6"
+                           RenderOptions.BitmapScalingMode="NearestNeighbor"
+                           Stretch="Uniform"/>
                 </Grid>
             </Border>
 

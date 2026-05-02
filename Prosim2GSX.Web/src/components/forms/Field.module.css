@@ -1,0 +1,98 @@
+.field {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: normal;
+}
+
+.control {
+  min-width: 0;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.numberRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.numberInput,
+.textInput,
+.select {
+  /* bg-input is shifted from sectionBackground (lighter for dark themes,
+     darker for light themes) so inputs read as raised surfaces against
+     the card behind them — same trick the WPF ThemeManager uses when
+     deriving InputBackground. */
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  font-size: 13px;
+  outline: none;
+  font-family: var(--font-mono);
+  min-width: 100px;
+}
+
+.numberInput {
+  max-width: 120px;
+}
+
+.textInput {
+  width: 100%;
+  max-width: 360px;
+}
+
+.select {
+  width: 100%;
+  max-width: 240px;
+  font-family: var(--font-sans);
+}
+
+.numberInput:focus,
+.textInput:focus,
+.select:focus {
+  border-color: var(--accent);
+}
+
+.numberInput:disabled,
+.textInput:disabled,
+.select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.monospace { font-family: var(--font-mono); }
+
+.suffix {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+@media (max-width: 540px) {
+  .field {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}

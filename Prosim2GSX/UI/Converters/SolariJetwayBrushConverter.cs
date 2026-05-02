@@ -10,9 +10,11 @@ namespace Prosim2GSX.UI.Converters
     /// <summary>
     /// Multi-value converter for Jetway/Stairs single-indicator display.
     /// Bindings: [0] = GsxServiceState, [1] = AutomationState.
-    /// Grey when phase is not relevant (TaxiOut, Flight, TaxiIn, PushBack).
+    /// Grey when phase is not relevant (TaxiOut, Flight, TaxiIn).
     /// Requested (operating/moving) = amber, Active (connected) = green,
     /// Callable/Unknown = grey, NotAvailable/Bypassed = red.
+    /// PushBack is included as relevant because the bridge/stairs are
+    /// physically still attached until the departure sequence retracts them.
     /// </summary>
     public class SolariJetwayBrushConverter : IMultiValueConverter
     {
@@ -31,6 +33,7 @@ namespace Prosim2GSX.UI.Converters
             {
                 bool relevant = phase == AutomationState.Preparation
                              || phase == AutomationState.Departure
+                             || phase == AutomationState.PushBack
                              || phase == AutomationState.Arrival
                              || phase == AutomationState.TurnAround;
 

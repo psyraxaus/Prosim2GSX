@@ -31,9 +31,19 @@
                     <TextBlock>Call Deboard on <Underline>Arrival</Underline> (after Engines &amp; Beacon off)</TextBlock>
                 </CheckBox>
 
-                <CheckBox IsChecked="{Binding RunDepartureOnArrival}" Style="{StaticResource CheckBoxSettingItem}"
+                <CheckBox IsChecked="{Binding RunDepartureDuringDeboarding}" Style="{StaticResource CheckBoxSettingItem}"
                           ToolTip="When the Deboarding Service becomes active, importing a new Flightplan (different OFP ID) will start the Departure Services.&#x0a;The Departure Services will be called as configured - as long as the next Service is not Boarding!&#x0a;The Deboard Service will not be considered as previous Service.">
                     <TextBlock>Start <Underline>Departure</Underline> Services while <Underline>Deboarding</Underline> is active</TextBlock>
+                </CheckBox>
+
+                <CheckBox IsChecked="{Binding ChimeOnParked}" Style="{StaticResource CheckBoxSettingItem}"
+                          ToolTip="Play cabin chime when the aircraft is parked (TaxiIn → Arrival transition).">
+                    <TextBlock>Cabin chime on <Underline>Parked</Underline></TextBlock>
+                </CheckBox>
+
+                <CheckBox IsChecked="{Binding ChimeOnDeboardComplete}" Style="{StaticResource CheckBoxSettingItem}"
+                          ToolTip="Play cabin chime when Deboarding completes (Arrival → Turnaround / Departure transition).">
+                    <TextBlock>Cabin chime on <Underline>Deboard Complete</Underline></TextBlock>
                 </CheckBox>
 
                 <Grid Margin="0,6,0,0">
@@ -163,6 +173,26 @@
             </StackPanel>
         </Border>
 
+        <!-- DE-ICING -->
+        <TextBlock Style="{StaticResource CategoryHeader}" Text="DE-ICING" Margin="0,0,0,4"/>
+        <Border Style="{StaticResource SectionCardBorder}">
+            <StackPanel>
+                <CheckBox IsChecked="{Binding AutoDeiceEnabled}" Style="{StaticResource CheckBoxSettingItem}"
+                          ToolTip="Automatically answer Yes to the GSX de-icing request and select the configured fluid + concentration. When disabled, the de-icing menu is left open for manual selection.">
+                    <TextBlock>Automatically respond <Underline>Yes</Underline> to GSX de-icing request</TextBlock>
+                </CheckBox>
+                <StackPanel Style="{StaticResource SettingItemPanel}" IsEnabled="{Binding AutoDeiceEnabled}"
+                            ToolTip="Fluid type and concentration to auto-select after answering Yes. Matched against the GSX de-icing type menu by text (e.g. 'Type IV' + '100').">
+                    <TextBlock Style="{StaticResource TextBlockDefault}" Margin="0,0,6,0">Fluid:</TextBlock>
+                    <ComboBox Style="{StaticResource ComboBoxDefault}"
+                              SelectedValue="{Binding AutoDeiceFluid}"
+                              ItemsSource="{Binding AutoDeiceFluidOptions}"
+                              SelectedValuePath="Key"
+                              DisplayMemberPath="Value"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
         <!-- PUSHBACK & TUG -->
         <TextBlock Style="{StaticResource CategoryHeader}" Text="PUSHBACK &amp; TUG" Margin="0,0,0,4"/>
         <Border Style="{StaticResource SectionCardBorder}">
@@ -179,9 +209,47 @@
                 </StackPanel>
 
                 <CheckBox IsChecked="{Binding CallPushbackOnBeacon}" Style="{StaticResource CheckBoxSettingItem}"
-                          ToolTip="Automatically call Pushback when the Beacon is turned on (AND Brake set &amp; Power disconnected).">
+                          ToolTip="Automatically call Pushback when the Beacon is turned on (AND Brake set &amp; Power disconnected). With SequenceOnBeacon enabled, this controls whether pushback is auto-called at the end of the sequence or waits for INT/RAD.">
                     <TextBlock>Call for Pushback when <Underline>Beacon</Underline> is turned on</TextBlock>
                 </CheckBox>
+
+                <CheckBox IsChecked="{Binding SequenceOnBeacon}" Style="{StaticResource CheckBoxSettingItem}"
+                          ToolTip="Use the beacon-orchestrated departure sequence: beacon on + APU running + Final LS → close doors → retract jetway → disconnect GPU → ready for pushback. Overrides CloseDoorsOnFinal and RemoveJetwayStairsOnFinal when enabled. INT/RAD skips the delay of the current step.">
+                    <TextBlock>Use <Underline>Beacon-orchestrated</Underline> departure sequence</TextBlock>
+                </CheckBox>
+
+                <Grid Margin="20,4,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,4,10,4" VerticalAlignment="Center">Doors close delay (s):</TextBlock>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="0,4,4,4" VerticalAlignment="Center">min</TextBlock>
+                    <TextBox  Grid.Row="0" Grid.Column="2" Width="40" Margin="0,4,10,4" Text="{Binding SeqDoorsCloseDelayMin}"/>
+                    <TextBlock Grid.Row="0" Grid.Column="3" Margin="0,4,4,4" VerticalAlignment="Center">max</TextBlock>
+                    <TextBox  Grid.Row="0" Grid.Column="4" Width="40" Margin="0,4,0,4" Text="{Binding SeqDoorsCloseDelayMax}"/>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,4,10,4" VerticalAlignment="Center">Jetway retract delay (s):</TextBlock>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,4,4,4" VerticalAlignment="Center">min</TextBlock>
+                    <TextBox  Grid.Row="1" Grid.Column="2" Width="40" Margin="0,4,10,4" Text="{Binding SeqJetwayRetractDelayMin}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="3" Margin="0,4,4,4" VerticalAlignment="Center">max</TextBlock>
+                    <TextBox  Grid.Row="1" Grid.Column="4" Width="40" Margin="0,4,0,4" Text="{Binding SeqJetwayRetractDelayMax}"/>
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,4,10,4" VerticalAlignment="Center">GPU disconnect delay (s):</TextBlock>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,4,4,4" VerticalAlignment="Center">min</TextBlock>
+                    <TextBox  Grid.Row="2" Grid.Column="2" Width="40" Margin="0,4,10,4" Text="{Binding SeqGpuDisconnectDelayMin}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="3" Margin="0,4,4,4" VerticalAlignment="Center">max</TextBlock>
+                    <TextBox  Grid.Row="2" Grid.Column="4" Width="40" Margin="0,4,0,4" Text="{Binding SeqGpuDisconnectDelayMax}"/>
+                </Grid>
             </StackPanel>
         </Border>
 

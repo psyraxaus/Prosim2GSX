@@ -297,6 +297,16 @@ namespace Prosim2GSX.Prosim
         }
 
         /// <summary>
+        /// Get whether BOTH engines are running. Use this for gates that must
+        /// not fire on a single-engine start (e.g. GSX's "good engine start"
+        /// confirmation).
+        /// </summary>
+        public virtual bool GetAllEnginesRunning()
+        {
+            return AircraftInterface?.GetAllEnginesRunning() ?? false;
+        }
+
+        /// <summary>
         /// Get current fuel amount
         /// </summary>
         public virtual double GetFuelCurrent()

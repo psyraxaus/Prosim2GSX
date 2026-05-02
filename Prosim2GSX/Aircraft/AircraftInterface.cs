@@ -28,13 +28,46 @@ namespace Prosim2GSX.Aircraft
         protected virtual ISimResourceSubscription SubAirline { get; set; }
         protected virtual ISimResourceSubscription SubTitle { get; set; }
         protected virtual ISimResourceSubscription SubLivery { get; set; }
-        protected virtual ISimResourceSubscription SubSpeed { get; set; }
         protected virtual ISimResourceSubscription SubZuluTime { get; set; }
 
-        public virtual string Airline => SubAirline?.GetString();
+        // Prefer the ICAO airline code from the loaded Simbrief OFP (e.g. "FIN")
+        // because the Prosim aircraft livery hard-codes the MSFS SimVar to
+        // "ProSim". Fall back to the SimVar only when no OFP is loaded yet.
+        public virtual string Airline
+        {
+            get
+            {
+                var ofpAirline = LastSimbriefOfp?.General?.IcaoAirline;
+                if (!string.IsNullOrWhiteSpace(ofpAirline)) return ofpAirline;
+                return SubAirline?.GetString();
+            }
+        }
         public virtual string Title => !string.IsNullOrWhiteSpace(SubLivery?.GetString()) ? SubLivery.GetString() : SubTitle?.GetString() ?? "";
         public virtual string Registration => ProsimInterface.Registration;
         public virtual bool IsFlightPlanLoaded => ProsimInterface.IsFlightPlanLoaded;
+        public virtual string FmsOrigin => ProsimInterface?.FmsOrigin ?? "";
+        public virtual string FmsDestination => ProsimInterface?.FmsDestination ?? "";
+        public virtual SimbriefResponse LastSimbriefOfp => ProsimInterface?.LastSimbriefOfp;
+
+        public event Action OnFlightPlanChanged;
+        protected virtual bool LastIsFlightPlanLoaded { get; set; } = false;
+        protected virtual string LastFmsOriginSeen { get; set; } = "";
+        protected virtual string LastFmsDestinationSeen { get; set; } = "";
+
+        public virtual void CheckFlightPlanChange()
+        {
+            var loaded = IsFlightPlanLoaded;
+            var origin = FmsOrigin;
+            var destination = FmsDestination;
+            if (loaded != LastIsFlightPlanLoaded || origin != LastFmsOriginSeen || destination != LastFmsDestinationSeen)
+            {
+                LastIsFlightPlanLoaded = loaded;
+                LastFmsOriginSeen = origin;
+                LastFmsDestinationSeen = destination;
+                try { OnFlightPlanChanged?.Invoke(); }
+                catch (Exception ex) { Logger.LogException(ex); }
+            }
+        }
         public virtual bool IsLoaded => ProsimInterface.IsLoaded;
         public virtual bool IsRefueling => ProsimInterface.IsRefueling;
         public virtual DisplayUnit UnitAircraft => ProsimInterface.UnitAircraft;
@@ -45,11 +78,18 @@ namespace Prosim2GSX.Aircraft
         public virtual double FuelCurrent => ProsimInterface.FuelCurrent;
         public virtual double FuelTarget => ProsimInterface.FuelTarget;
         public virtual bool SmartButtonRequest => ProsimInterface.SmartButtonRequest;
-        public virtual int GroundSpeed => (int)SubSpeed.GetNumber();
+        public virtual int GroundSpeed => (int)ProsimInterface.GetGroundSpeed();
+        public virtual bool IsOnGround => ProsimInterface.GetOnGround();
         public virtual bool EquipmentGpu => ProsimInterface.GetGpuState();
         public virtual bool EquipmentPca => ProsimInterface.GetPcaState();
         public virtual bool EquipmentChocks => ProsimInterface.GetChocksState();
         public virtual bool EnginesRunning => ProsimInterface.GetEnginesRunning();
+        // BOTH engines running. Use only where a gate must not trigger on a
+        // single-engine start (the GSX "good engine start" confirmation is
+        // the canonical case — the tug only honours it once both engines
+        // are up). All other state-machine transitions keep the existing
+        // EnginesRunning ("any engine") semantics.
+        public virtual bool AllEnginesRunning => ProsimInterface.GetAllEnginesRunning();
         public virtual bool IsFinalReceived => ProsimInterface.GetFinalReceived();
         public virtual bool IsExternalPowerConnected => ProsimInterface.GetExternalPowerConnected();
         public virtual bool IsApuRunning => ProsimInterface.IsApuRunning;
@@ -80,11 +120,8 @@ namespace Prosim2GSX.Aircraft
                 SubTitle = SimStore.AddVariable("TITLE", SimUnitType.String);
                 if (Sys.GetProcessRunning(Config.BinaryMsfs2024))
                     SubLivery = SimStore.AddVariable("LIVERY NAME", SimUnitType.String);
-                SubSpeed = SimStore.AddVariable("GPS GROUND SPEED", SimUnitType.Knots);
                 SubZuluTime = SimStore.AddVariable("ZULU TIME", SimUnitType.Seconds);
 
-                SimStore.AddVariable(ProsimConstants.VarAcpIntCallCpt, SimUnitType.Number);
-                SimStore.AddVariable(ProsimConstants.VarAcpIntCallFo, SimUnitType.Number);
                 SimStore.AddVariable(ProsimConstants.VarOhSigns, SimUnitType.Number);
                 SimStore.AddVariable(ProsimConstants.VarOhPneumaticPack1, SimUnitType.Number);
                 SimStore.AddVariable(ProsimConstants.VarOhPneumaticPack2, SimUnitType.Number);
@@ -131,8 +168,6 @@ namespace Prosim2GSX.Aircraft
 
             Controller.MsgCouatlStarted.OnMessage -= OnCouatlStarted;
 
-            SimStore.Remove(ProsimConstants.VarAcpIntCallCpt);
-            SimStore.Remove(ProsimConstants.VarAcpIntCallFo);
             SimStore.Remove(ProsimConstants.VarOhSigns);
             SimStore.Remove(ProsimConstants.VarOhPneumaticPack1);
             SimStore.Remove(ProsimConstants.VarOhPneumaticPack2);
@@ -141,7 +176,6 @@ namespace Prosim2GSX.Aircraft
             SimStore.Remove("TITLE");
             if (Sys.GetProcessRunning(Config.BinaryMsfs2024))
                 SimStore.Remove("LIVERY NAME");
-            SimStore.Remove("GPS GROUND SPEED");
             SimStore.Remove("ZULU TIME");
         }
 
@@ -342,20 +376,7 @@ namespace Prosim2GSX.Aircraft
 
         public virtual async Task FlashMechCall()
         {
-            Logger.Debug($"Flash Mech Indicator");
-            int seconds = 10;
-            double value;
-
-            for (int i = 0; i <= seconds; i++)
-            {
-                value = seconds % 2 == 0 ? 1 : 0;
-                await SimStore[ProsimConstants.VarAcpIntCallCpt].WriteValue(value);
-                await SimStore[ProsimConstants.VarAcpIntCallFo].WriteValue(value);
-                await Task.Delay(1000, Controller.Token);
-            }
-
-            await SimStore[ProsimConstants.VarAcpIntCallCpt].WriteValue(0);
-            await SimStore[ProsimConstants.VarAcpIntCallFo].WriteValue(0);
+            await ProsimInterface.TriggerMechCall();
         }
     }
 }

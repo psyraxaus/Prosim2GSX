@@ -1,4 +1,8 @@
-﻿namespace Prosim2GSX.GSX.Menu
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace Prosim2GSX.GSX.Menu
 {
     public enum GsxMenuCommandType
     {
@@ -13,6 +17,8 @@
         public int Number { get; } = number;
         public string Title { get; } = title;
         public bool HasTitle => !string.IsNullOrWhiteSpace(Title);
+        public List<string> AlternateTitles { get; } = [];
+        public bool MatchesAny(Func<string, bool> match) => match(Title) || AlternateTitles.Any(match);
         public bool OpenMenu { get; set; } = open;
         public bool NoHide { get; set; } = false;
         public bool WaitReady { get; set; } = open;

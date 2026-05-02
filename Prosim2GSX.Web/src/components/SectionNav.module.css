@@ -1,0 +1,59 @@
+.nav {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  min-width: 200px;
+  max-width: 240px;
+}
+
+.item {
+  appearance: none;
+  background: transparent;
+  border: none;
+  /* Rail sits on bg-secondary (always-dark across all shipped themes,
+     mirroring the WPF GSX sidebar #FF1A2F4A), so item text uses the
+     dedicated on-dark colour rather than the theme's contentText —
+     contentText goes dark in light themes and would disappear here. */
+  color: var(--text-on-dark-muted);
+  text-align: left;
+  padding: 16px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.item:hover {
+  color: var(--text-on-dark);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.item.active {
+  color: var(--text-on-dark);
+  background: var(--accent);
+}
+
+@media (max-width: 720px) {
+  /* Pill bar at top on narrow viewports — matches the answer to question 5
+     in the Phase 8 design decisions ("a) horizontal pill bar at top"). */
+  .nav {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-bottom: 1px solid var(--border);
+    min-width: 0;
+    max-width: none;
+    scrollbar-width: thin;
+  }
+  .item {
+    flex: 0 0 auto;
+    border-bottom: 2px solid transparent;
+    padding: 10px 14px;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+  .item.active {
+    border-bottom-color: var(--text-primary);
+  }
+}

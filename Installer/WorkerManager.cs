@@ -24,6 +24,10 @@ namespace Installer
                 WorkerQueues[key].Enqueue(worker);
             }
             WorkerQueues[key].Enqueue(new WorkerInstallUpdate(Config));
+            WorkerQueues[key].Enqueue(new WorkerGSXProfiles(Config));
+            // Handler script lives outside the user-facing "overwrite profiles"
+            // toggle: it's a Prosim2GSX runtime file, refreshed every install.
+            WorkerQueues[key].Enqueue(new WorkerGSXHandler(Config));
             WorkerQueues[key].Enqueue(new WorkerAutoStart<Config>(Config));
             if (Config?.GetOption<bool>(ConfigBase.OptionDesktopLink) == true)
                 WorkerQueues[key].Enqueue(new WorkerDesktopLinkCreate<Config>(Config));

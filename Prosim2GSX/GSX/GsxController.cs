@@ -22,7 +22,10 @@ namespace Prosim2GSX.GSX
 {
     public class GsxController : ServiceController<Prosim2GSX, AppService, Config, Definition>, IGsxController
     {
-        protected bool _lock = false;
+        // Serialises concurrent OnCouatlVariable callbacks. Replaces a prior
+        // CPU-spinning busy-wait that could starve the very thread expected to
+        // release the flag under load.
+        private readonly object _couatlLock = new();
         public virtual CancellationToken RequestToken => AppService.Instance.RequestToken;
         public virtual SimConnectManager SimConnectManager => Prosim2GSX.Instance.AppService.SimConnect;
         public virtual SimConnectController SimController => Prosim2GSX.Instance.AppService.SimService.Controller;
@@ -30,6 +33,7 @@ namespace Prosim2GSX.GSX
         public virtual bool IsMsfs2024 => SimConnectManager.GetSimVersion() == SimVersion.MSFS2024;
         public virtual string PathInstallation { get; }
         public virtual GsxMenu Menu { get; }
+        public virtual GsxParkingSelector ParkingSelector { get; }
         protected virtual DateTime NextMenuStartupCheck { get; set; } = DateTime.MinValue;
         public virtual AircraftInterface AircraftInterface { get; }
         public virtual Flightplan Flightplan { get; } = new Flightplan();
@@ -38,6 +42,36 @@ namespace Prosim2GSX.GSX
         public virtual AircraftProfile AircraftProfile { get; protected set; } = null;
         public event Action<AircraftProfile> ProfileChanged;
         public virtual IAircraftProfile IAircraftProfile => AircraftProfile;
+        // PushbackPreference now fires PushbackPreferenceChanged on transition
+        // so the WPF OFP tab and the future web WS layer can react to mutations
+        // from any caller (Phase 8B will subscribe the WS broadcast handler).
+        // Backing field + setter rather than auto-property because the auto
+        // form gives no INPC hook.
+        private PushbackPreference _pushbackPreference = PushbackPreference.Straight;
+        public virtual PushbackPreference PushbackPreference
+        {
+            get => _pushbackPreference;
+            set
+            {
+                if (_pushbackPreference == value) return;
+                _pushbackPreference = value;
+                // Persist on the active profile so the choice survives app
+                // restart and is identical across WPF and Web. Both UIs write
+                // through this setter, so saving here is the single point.
+                try
+                {
+                    if (AircraftProfile != null)
+                    {
+                        AircraftProfile.PushbackPreference = value;
+                        Config?.SaveConfiguration();
+                    }
+                }
+                catch (Exception ex) { Logger.LogException(ex); }
+                try { PushbackPreferenceChanged?.Invoke(value); } catch { }
+            }
+        }
+        public event Action<PushbackPreference> PushbackPreferenceChanged;
+        public virtual bool PushbackDirectionAutoSelected { get; set; } = false;
         public virtual GsxAutomationController AutomationController { get; }
         public virtual MessageReceiver<MsgGsxCouatlStarted> MsgCouatlStarted { get; protected set; }
         public virtual MessageReceiver<MsgGsxCouatlStopped> MsgCouatlStopped { get; protected set; }
@@ -56,11 +90,11 @@ namespace Prosim2GSX.GSX
         public virtual bool IsAutomationStarted => AutomationController?.IsStarted == true;
         public virtual AutomationState AutomationState => AutomationController?.State ?? AutomationState.SessionStart;
         public virtual bool IsGsxRunning => IsProcessRunning && CouatlVarsValid;
-        public virtual bool IsOnGround => SimStore["SIM ON GROUND"]?.GetNumber() == 1;
+        public virtual bool IsOnGround => AircraftInterface?.IsOnGround ?? true;
         public virtual bool FirstGroundCheck { get; protected set; } = true;
         public virtual bool IsAirStart { get; protected set; } = false;
         public virtual bool CanAutomationRun => Menu.FirstReadyReceived || IsAirStart || AircraftInterface?.EnginesRunning == true;
-        protected virtual int GroundCounter { get; set; } = 0;
+        public virtual int GroundCounter { get; protected set; } = 0;
         public virtual bool IsPaused => SimConnectManager.IsPaused;
         public virtual bool IsWalkaround => CheckWalkAround();
         public virtual bool SkippedWalkAround { get; protected set; } = false;
@@ -77,6 +111,7 @@ namespace Prosim2GSX.GSX
         {
             PathInstallation = Sys.GetRegistryValue<string>(GsxConstants.RegPath, GsxConstants.RegValue, null) ?? GsxConstants.PathDefault;
             Menu = new(this);
+            ParkingSelector = new(this);
             AircraftInterface = new(this);
             AutomationController = new(this);
             SetAircraftProfile("default");
@@ -88,7 +123,13 @@ namespace Prosim2GSX.GSX
             {
                 AircraftProfile = Config.AircraftProfiles.First(p => p.Name == name);
                 Logger.Debug($"Using Profile {AircraftProfile}");
+                // Hydrate the in-memory pushback preference from the profile so
+                // restarts pick up where the user left off. Bypass the public
+                // setter — we don't want to re-save during profile load.
+                if (AircraftProfile != null)
+                    _pushbackPreference = AircraftProfile.PushbackPreference;
                 ProfileChanged?.Invoke(AircraftProfile);
+                try { PushbackPreferenceChanged?.Invoke(_pushbackPreference); } catch { }
             }
         }
 
@@ -123,7 +164,6 @@ namespace Prosim2GSX.GSX
             SimStore.AddVariable(GsxConstants.VarCouatlStartProg6).OnReceived += OnCouatlVariable;
             SimStore.AddVariable(GsxConstants.VarCouatlStartProg7).OnReceived += OnCouatlVariable;
 
-            SimStore.AddVariable("SIM ON GROUND", SimUnitType.Bool);
             if (IsMsfs2024)
             {
                 SimStore.AddVariable("IS AIRCRAFT", SimUnitType.Number);
@@ -145,6 +185,12 @@ namespace Prosim2GSX.GSX
             SimStore.AddVariable(GsxConstants.VarSetCustFuel);
             SimStore.AddVariable(GsxConstants.VarSetAutoMode);
 
+            // SetGate readback — polled by StateUpdateWorker into
+            // OfpState/GsxState.AssignedArrivalGate. No callback needed.
+            SimStore.AddVariable(GsxConstants.VarSetGateName);
+            SimStore.AddVariable(GsxConstants.VarSetGateNumber);
+            SimStore.AddVariable(GsxConstants.VarSetGateSuffix);
+
             InitGsxServices();
             Menu.Init();
             AircraftInterface.Init();
@@ -154,47 +200,46 @@ namespace Prosim2GSX.GSX
 
         protected virtual void OnCouatlVariable(ISimResourceSubscription sub, object data)
         {
-            while (_lock && !Token.IsCancellationRequested) { }
-            _lock = true;
+            if (Token.IsCancellationRequested)
+                return;
 
-            try
+            lock (_couatlLock)
             {
-                CouatlLastStarted = (int)(SimStore[GsxConstants.VarCouatlStarted]?.GetNumber() ?? 0);
-                CouatlLastProgress = (int)Math.Max(
-                    Math.Max(SimStore[GsxConstants.VarCouatlStartProg5]?.GetNumber() ?? 100, SimStore[GsxConstants.VarCouatlStartProg6]?.GetNumber() ?? 100),
-                    SimStore[GsxConstants.VarCouatlStartProg7]?.GetNumber() ?? 100
-                    );
-                if (CouatlLastStarted == 1 && CouatlLastProgress == 0)
+                try
                 {
-                    if (!CouatlVarsValid)
+                    CouatlLastStarted = (int)(SimStore[GsxConstants.VarCouatlStarted]?.GetNumber() ?? 0);
+                    CouatlLastProgress = (int)Math.Max(
+                        Math.Max(SimStore[GsxConstants.VarCouatlStartProg5]?.GetNumber() ?? 100, SimStore[GsxConstants.VarCouatlStartProg6]?.GetNumber() ?? 100),
+                        SimStore[GsxConstants.VarCouatlStartProg7]?.GetNumber() ?? 100
+                        );
+                    if (CouatlLastStarted == 1 && CouatlLastProgress == 0)
                     {
-                        Logger.Debug($"Couatl Variables valid!");
-                        CouatlVarsValid = true;
-                        CouatlInvalidCount = 0;
-                        MessageService.Send(MessageGsx.Create<MsgGsxCouatlStarted>(this, true));
+                        if (!CouatlVarsValid)
+                        {
+                            Logger.Debug($"Couatl Variables valid!");
+                            CouatlVarsValid = true;
+                            CouatlInvalidCount = 0;
+                            MessageService.Send(MessageGsx.Create<MsgGsxCouatlStarted>(this, true));
+                        }
                     }
-                }
-                else
-                {
-                    if (CouatlVarsValid)
+                    else
                     {
-                        Logger.Debug($"Couatl Variables NOT valid! (started: {CouatlLastStarted} / progress: {CouatlLastProgress})");
-                        MessageService.Send(MessageGsx.Create<MsgGsxCouatlStopped>(this, true));
-                        CouatlVarsValid = false;
-                        CouatlConfigSet = false;
+                        if (CouatlVarsValid)
+                        {
+                            Logger.Debug($"Couatl Variables NOT valid! (started: {CouatlLastStarted} / progress: {CouatlLastProgress})");
+                            MessageService.Send(MessageGsx.Create<MsgGsxCouatlStopped>(this, true));
+                            CouatlVarsValid = false;
+                            CouatlConfigSet = false;
+                        }
                     }
-                }
 
-                CouatlVarsReceived = true;
+                    CouatlVarsReceived = true;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogException(ex);
+                }
             }
-            catch (Exception ex)
-            {
-                Logger.LogException(ex);
-            }
-            finally
-            {
-                _lock = false;
-            }            
         }
 
         protected virtual void CheckGround()
@@ -210,6 +255,7 @@ namespace Prosim2GSX.GSX
             else if (AutomationController.IsOnGround != IsOnGround && !IsWalkaround)
             {
                 GroundCounter++;
+                Logger.Debug($"Ground state mismatch: raw={IsOnGround}, committed={AutomationController.IsOnGround}, counter={GroundCounter}/{Config.GroundTicks}");
                 if (GroundCounter > Config.GroundTicks)
                 {
                     GroundCounter = 0;
@@ -218,7 +264,10 @@ namespace Prosim2GSX.GSX
                 }
             }
             else if (AutomationController.IsOnGround == IsOnGround && GroundCounter > 0)
+            {
+                Logger.Debug($"Ground flicker reset: raw={IsOnGround} matched committed, counter was {GroundCounter}");
                 GroundCounter = 0;
+            }
         }
 
         protected override async Task DoRun()
@@ -267,14 +316,36 @@ namespace Prosim2GSX.GSX
                 Logger.Debug($"GsxService active (VarsReceived: {CouatlVarsReceived} | FirstReady: {Menu.FirstReadyReceived})");
                 IsActive = true;
                 Logger.Information($"GsxController active - waiting for Menu to be ready");
+                bool lastVarsReceived = !CouatlVarsReceived;
+                bool lastFirstReady = !Menu.FirstReadyReceived;
+                bool lastVarsValid = !CouatlVarsValid;
+                bool lastGsxRunning = !IsGsxRunning;
                 while (SimConnectManager.IsSessionRunning && IsExecutionAllowed && !RequestToken.IsCancellationRequested)
                 {
-                    if (Config.LogLevel == LogLevel.Verbose)
+                    if (Config.LogLevel == LogLevel.Verbose &&
+                        (CouatlVarsReceived != lastVarsReceived
+                         || Menu.FirstReadyReceived != lastFirstReady
+                         || CouatlVarsValid != lastVarsValid
+                         || IsGsxRunning != lastGsxRunning))
+                    {
                         Logger.Verbose($"Controller Tick - VarsReceived: {CouatlVarsReceived} | FirstReady: {Menu.FirstReadyReceived} | VarsValid: {CouatlVarsValid} | IsGsxRunning: {IsGsxRunning}");
+                        lastVarsReceived = CouatlVarsReceived;
+                        lastFirstReady = Menu.FirstReadyReceived;
+                        lastVarsValid = CouatlVarsValid;
+                        lastGsxRunning = IsGsxRunning;
+                    }
                     CheckGround();
+
+                    if (IsGsxRunning)
+                    {
+                        foreach (var svc in GsxServices.Values)
+                            svc.ReconcileState();
+                    }
 
                     if (!CouatlVarsReceived && IsProcessRunning)
                         OnCouatlVariable(null, null);
+
+                    AircraftInterface.CheckFlightPlanChange();
 
                     if (!SkippedWalkAround && !WalkAroundSkipActive)
                     {
@@ -452,6 +523,11 @@ namespace Prosim2GSX.GSX
             SimStore[GsxConstants.VarSetAutoMode].WriteValue(-1);
         }
 
+        public virtual async Task<bool> SetArrivalParkingAsync(string gate)
+        {
+            return await ParkingSelector.ApplyAsync(gate);
+        }
+
         public virtual async Task ReloadSimbrief()
         {
             var sequence = new GsxMenuSequence();
@@ -516,6 +592,10 @@ namespace Prosim2GSX.GSX
             SimStore.Remove(GsxConstants.VarDoorToggleService1);
             SimStore.Remove(GsxConstants.VarDoorToggleService2);
 
+            SimStore.Remove(GsxConstants.VarSetGateName);
+            SimStore.Remove(GsxConstants.VarSetGateNumber);
+            SimStore.Remove(GsxConstants.VarSetGateSuffix);
+
             SimStore[GsxConstants.VarCouatlStarted].OnReceived -= OnCouatlVariable;
             SimStore[GsxConstants.VarCouatlStartProg5].OnReceived -= OnCouatlVariable;
             SimStore[GsxConstants.VarCouatlStartProg6].OnReceived -= OnCouatlVariable;
@@ -525,7 +605,6 @@ namespace Prosim2GSX.GSX
             SimStore.Remove(GsxConstants.VarCouatlStartProg6);
             SimStore.Remove(GsxConstants.VarCouatlStartProg7);
 
-            SimStore.Remove("SIM ON GROUND");
             if (IsMsfs2024)
             {
                 SimStore.Remove("IS AIRCRAFT");

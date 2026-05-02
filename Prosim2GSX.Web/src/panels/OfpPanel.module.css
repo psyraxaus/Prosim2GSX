@@ -1,0 +1,253 @@
+.panel {
+  padding: 16px 18px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.loading {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.empty {
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 8px 0;
+}
+
+.error {
+  background: rgba(244, 67, 54, 0.12);
+  color: var(--danger);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+
+/* ── Flight info grid ───────────────────────────────────────────── */
+
+.kvGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 18px;
+}
+
+.kv {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.kvLabel {
+  color: var(--text-secondary);
+}
+
+.kvValue {
+  color: var(--text-primary);
+}
+
+.kvValueMono {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+@media (max-width: 540px) {
+  .kvGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Gate form ──────────────────────────────────────────────────── */
+
+.gateForm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.gateInput {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  outline: none;
+  width: 110px;
+  text-transform: uppercase;
+}
+
+.gateInput:focus {
+  border-color: var(--accent);
+}
+
+.gateInput:disabled {
+  opacity: 0.5;
+}
+
+.pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 4px 10px;
+  background: rgba(255, 152, 0, 0.12);
+  border-radius: var(--radius-sm);
+}
+
+.pendingLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--warning);
+}
+
+.pendingValue {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.assigned {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  margin-left: 8px;
+  padding: 4px 10px;
+  background: rgba(76, 175, 80, 0.12);
+  border-radius: var(--radius-sm);
+}
+
+.assignedLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--success, #4CAF50);
+}
+
+.assignedValue {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.statusLine {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  gap: 10px;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.statusLabel {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.statusValue {
+  color: var(--text-secondary);
+}
+
+/* ── Pushback Korry button group ─────────────────────────────────
+   Layout for the three KorryPushbackButton instances. The buttons
+   themselves bring their own cockpit styling (KorryPushbackButton
+   .module.css); this just lays them out centred with breathing room
+   matching the WPF UniformGrid Rows="1" Columns="3" arrangement. */
+
+.korryGroup {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding: 8px 0;
+}
+
+/* ── Weather ────────────────────────────────────────────────────── */
+
+.weatherToolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.weatherStatus {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.weatherGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.weatherCard {
+  /* Sub-card sitting inside a Section card — bg-input gives a slightly
+     raised surface that adapts to the active theme (works on both
+     dark and light section cards). */
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+
+.weatherTitle {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+}
+
+.weatherRow {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 12px;
+}
+
+.weatherLabel {
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.weatherValue {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.weatherBlock {
+  margin-top: 8px;
+}
+
+.weatherValueBlock {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+@media (max-width: 720px) {
+  .weatherGrid {
+    grid-template-columns: 1fr;
+  }
+}

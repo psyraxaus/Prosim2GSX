@@ -12,6 +12,7 @@
     <localconv:SolariJetwayBrushConverter x:Key="SolariJetwayBrushConverter"/>
     <localconv:SolariPushbackBrushConverter x:Key="SolariPushbackBrushConverter"/>
     <localconv:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+    <localconv:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibilityConverter"/>
 
     <Style TargetType="{x:Type ContentPresenter}">
         <Setter Property="RecognizesAccessKey" Value="False" />
@@ -410,6 +411,7 @@
         <Setter Property="Foreground" Value="{DynamicResource HeaderText}"/>
     </Style>
 
+
     <!-- Modern EFB Tab Control -->
     <Style x:Key="EfbTabControl" TargetType="TabControl">
         <Setter Property="Margin" Value="0"/>
@@ -491,5 +493,20 @@
             </Setter.Value>
         </Setter>
     </Style>
+
+    <!-- Checklist (ECAM-style) brushes. ECAM colours are intentionally fixed
+         across themes — they emulate the real A350/A380 cockpit checklist
+         display (black background, green checked, cyan pending). Defining
+         them as DynamicResources still gives an airline-specific theme the
+         option to recolour later if desired. -->
+    <SolidColorBrush x:Key="ChecklistBackgroundBrush" Color="#FF000000"/>
+    <SolidColorBrush x:Key="ChecklistHeaderBackgroundBrush" Color="#FF001830"/>
+    <SolidColorBrush x:Key="ChecklistCheckedForeground" Color="#FF00CC44"/>
+    <SolidColorBrush x:Key="ChecklistPendingForeground" Color="#FF00CCCC"/>
+    <SolidColorBrush x:Key="ChecklistCurrentHighlightBorder" Color="#FF00CCCC"/>
+    <SolidColorBrush x:Key="ChecklistNoteForeground" Color="#FF00CCCC"/>
+    <SolidColorBrush x:Key="ChecklistSeparatorBrush" Color="#FF00CCCC"/>
+    <SolidColorBrush x:Key="ChecklistButtonBackground" Color="#FF1A1A2E"/>
+    <SolidColorBrush x:Key="ChecklistButtonForeground" Color="#FF00CCCC"/>
 
 </ResourceDictionary>

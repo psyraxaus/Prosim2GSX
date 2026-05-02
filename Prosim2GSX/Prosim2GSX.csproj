@@ -14,7 +14,7 @@
   
   <PropertyGroup>
     <SourceRevisionId>build$([System.DateTime]::UtcNow.ToString("yyyy.MM.dd.HHmm"))</SourceRevisionId>
-    <Version>0.6.2</Version>
+    <Version>0.7.0</Version>
     <Title>$(AssemblyName)</Title>
     <Authors>Fragtality, Psyraxaus</Authors>
     <Company>Fragtality, Protovision</Company>
@@ -64,8 +64,13 @@
   <ItemGroup>
     <EmbeddedResource Include="UI\Icons\AppIcon.ico" />
     <EmbeddedResource Include="UI\Icons\AppIconUpdate.ico" />
+    <EmbeddedResource Include="UI\Views\Checklists\Resources\a320_default.json" />
   </ItemGroup>
   
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
   <ItemGroup>
   <PackageReference Include="CFIT.AppFramework" Version="2025.347.9.1720" />
   <PackageReference Include="CFIT.AppLogger" Version="2025.347.9.1580" />
@@ -73,13 +78,15 @@
   <PackageReference Include="CFIT.SimConnectLib" Version="2025.347.9.1780" />
   <PackageReference Include="CoreAudio" Version="1.40.0" />
   <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+  <PackageReference Include="QRCoder" Version="1.6.0" />
 	<PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
 	<PackageReference Include="System.Private.Uri" Version="4.3.2" />
+	<PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.7" />
 	<PackageReference Include="System.ServiceModel.Duplex" Version="6.0.0" />
-	<PackageReference Include="System.ServiceModel.Http" Version="8.1.2" />
-	<PackageReference Include="System.ServiceModel.NetFramingBase" Version="8.1.2" />
-	<PackageReference Include="System.ServiceModel.NetTcp" Version="8.1.2" />
-	<PackageReference Include="System.ServiceModel.Primitives" Version="8.1.2" />
+	<PackageReference Include="System.ServiceModel.Http" Version="10.0.652802" />
+	<PackageReference Include="System.ServiceModel.NetFramingBase" Version="10.0.652802" />
+	<PackageReference Include="System.ServiceModel.NetTcp" Version="10.0.652802" />
+	<PackageReference Include="System.ServiceModel.Primitives" Version="10.0.652802" />
   </ItemGroup>
 
   <ItemGroup>
@@ -125,8 +132,76 @@
     </None>
   </ItemGroup>
 
+  <!-- React app build output (Phase 7). Empty until the Vite build runs;
+       the glob resolves to nothing and the build still succeeds. -->
+  <ItemGroup>
+    <Content Include="wwwroot\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <Exec Command="powershell.exe -ExecutionPolicy Unrestricted -file &quot;$(ProjectDir)..\NuPreBuild.ps1&quot; $(SolutionDir) $(ProjectDir) &quot;Prosim2GSX&quot; &quot;CFIT.AppLogger&quot; &quot;CFIT.AppTools&quot; &quot;CFIT.SimConnectLib&quot; &quot;CFIT.AppFramework&quot;" />
+  </Target>
+
+  <!-- Build the React (Vite) frontend in Release builds only.
+       - npm install is intentionally NOT run here (user audits package-lock.json
+         manually before installing — see project memory phase7_design_decisions).
+       - Fail-soft when Node is not found at all (Debug builds, CI without Node):
+         logs a warning and continues so the WPF project remains buildable
+         without a JS toolchain.
+       - Fail-hard when Node IS found but `npm run build` returns non-zero:
+         the WPF build fails, surfacing TypeScript / Vite errors immediately.
+       - Skipped entirely if node_modules/ is missing: emits a clear message
+         pointing at the manual `npm install` step.
+
+       Node discovery falls back through common install locations if PATH
+       lookup fails — covers the common case where Node is installed via
+       the official MSI but Visual Studio cached an older PATH (or only
+       user-PATH was updated). -->
+  <Target Name="BuildWebFrontend" BeforeTargets="PreBuildEvent" Condition="'$(Configuration)' == 'Release'">
+    <PropertyGroup>
+      <WebProjectDir>$(MSBuildProjectDirectory)\..\Prosim2GSX.Web</WebProjectDir>
+    </PropertyGroup>
+
+    <!-- 1. Probe PATH. -->
+    <Exec Command="where npm.cmd"
+          ContinueOnError="true"
+          EchoOff="true"
+          IgnoreStandardErrorWarningFormat="true"
+          StandardOutputImportance="low"
+          StandardErrorImportance="low">
+      <Output TaskParameter="ExitCode" PropertyName="_NpmOnPathExitCode" />
+    </Exec>
+
+    <!-- 2. If PATH lookup failed, search common install locations. -->
+    <PropertyGroup Condition="'$(_NpmOnPathExitCode)' != '0'">
+      <_NpmFallbackDir Condition="Exists('$(ProgramFiles)\nodejs\npm.cmd')">$(ProgramFiles)\nodejs</_NpmFallbackDir>
+      <_NpmFallbackDir Condition="'$(_NpmFallbackDir)' == '' AND Exists('$(ProgramW6432)\nodejs\npm.cmd')">$(ProgramW6432)\nodejs</_NpmFallbackDir>
+      <_NpmFallbackDir Condition="'$(_NpmFallbackDir)' == '' AND Exists('$(LOCALAPPDATA)\Programs\nodejs\npm.cmd')">$(LOCALAPPDATA)\Programs\nodejs</_NpmFallbackDir>
+    </PropertyGroup>
+
+    <!-- 3. Resolve the actual command we'll Exec. -->
+    <PropertyGroup>
+      <_NpmCommand Condition="'$(_NpmOnPathExitCode)' == '0'">npm run build</_NpmCommand>
+      <_NpmCommand Condition="'$(_NpmOnPathExitCode)' != '0' AND '$(_NpmFallbackDir)' != ''">"$(_NpmFallbackDir)\npm.cmd" run build</_NpmCommand>
+    </PropertyGroup>
+
+    <Message Importance="high"
+             Text="Web frontend: Node/npm not found on PATH or in common install locations (C:\Program Files\nodejs, %25LOCALAPPDATA%25\Programs\nodejs). Install Node from https://nodejs.org and restart Visual Studio, or run `npm install &amp;&amp; npm run build` in $(WebProjectDir) manually."
+             Condition="'$(_NpmCommand)' == ''" />
+
+    <Message Importance="high"
+             Text="Web frontend: Prosim2GSX.Web/node_modules missing; skipping `npm run build`. Run `npm install` in $(WebProjectDir) once before publishing."
+             Condition="'$(_NpmCommand)' != '' AND !Exists('$(WebProjectDir)\node_modules')" />
+
+    <Message Importance="high"
+             Text="Web frontend: building React bundle ($(_NpmCommand))..."
+             Condition="'$(_NpmCommand)' != '' AND Exists('$(WebProjectDir)\node_modules') AND Exists('$(WebProjectDir)\package.json')" />
+
+    <Exec Command="$(_NpmCommand)"
+          WorkingDirectory="$(WebProjectDir)"
+          Condition="'$(_NpmCommand)' != '' AND Exists('$(WebProjectDir)\node_modules') AND Exists('$(WebProjectDir)\package.json')" />
   </Target>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">

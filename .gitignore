@@ -367,3 +367,6 @@ FodyWeavers.xsd
 
 # Claude
 .claude
+
+# vscode
+.vscode

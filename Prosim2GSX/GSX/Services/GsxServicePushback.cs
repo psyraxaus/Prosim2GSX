@@ -1,4 +1,4 @@
-﻿using CFIT.AppLogger;
+using CFIT.AppLogger;
 using CFIT.AppTools;
 using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.GSX.Menu;
@@ -12,11 +12,15 @@ namespace Prosim2GSX.GSX.Services
         public override GsxServiceType Type => GsxServiceType.Pushback;
         public virtual ISimResourceSubscription SubDepartService { get; protected set; }
         public virtual ISimResourceSubscription SubPushStatus { get; protected set; }
+        public virtual ISimResourceSubscription SubVehiclePushbackState { get; protected set; }
         protected override ISimResourceSubscription SubStateVar => SubDepartService;
         public virtual bool IsPinInserted => SubBypassPin.GetNumber() == 1;
         public virtual int PushStatus => (int)SubPushStatus.GetNumber();
+        public virtual int VehiclePushbackState => (int)SubVehiclePushbackState.GetNumber();
+        public virtual string VehiclePushbackStateLabel => MapVehiclePushbackState(VehiclePushbackState);
         public virtual bool IsTugConnected => SubPushStatus.GetNumber() == 3 || SubPushStatus.GetNumber() == 4;
         public virtual bool TugAttachedOnBoarding { get; protected set; } = false;
+        public virtual bool EngineStartConfirmed { get; protected set; } = false;
         public virtual ISimResourceSubscription SubBypassPin { get; protected set; }
 
         public event Action<GsxServicePushback> OnBypassPin;
@@ -33,13 +37,31 @@ namespace Prosim2GSX.GSX.Services
 
         protected override void InitSubscriptions()
         {
-            SubDepartService = SimStore.AddVariable(GsxConstants.VarServiceDeparture);
-            SubDepartService.OnReceived += OnStateChange;
-            SubPushStatus = SimStore.AddVariable(GsxConstants.VarPusbackStatus);
-            SubPushStatus.OnReceived += OnPushChange;
+            SubDepartService = RegisterStateSubscription(GsxConstants.VarServiceDeparture);
+            SubPushStatus = RegisterChangeSubscription(GsxConstants.VarPusbackStatus, OnPushChange);
+            SubVehiclePushbackState = RegisterChangeSubscription(GsxConstants.VarVehiclePushbackState, OnVehiclePushbackStateChange);
+            SubBypassPin = RegisterChangeSubscription(GsxConstants.VarBypassPin, NotifyBypassPin);
+        }
 
-            SubBypassPin = SimStore.AddVariable(GsxConstants.VarBypassPin);
-            SubBypassPin.OnReceived += NotifyBypassPin;
+        protected static string MapVehiclePushbackState(int state) => state switch
+        {
+            8 => "Pushing back",
+            11 => "Waiting for engine shutdown",
+            12 => "Awaiting engine start confirmation",
+            13 => "Disconnecting",
+            14 => "Clear to start",
+            0 => "Idle",
+            _ => $"State {state}",
+        };
+
+        protected virtual void OnVehiclePushbackStateChange(ISimResourceSubscription sub, object data)
+        {
+            if (!IsProsimAircraft)
+                return;
+            // Subscription registered for its side-effects on derived
+            // properties (VehiclePushbackState / Label) — no log emission
+            // needed; the engine-start gate in GsxAutomationController
+            // logs once when it actually fires Confirm good engine start.
         }
 
         protected virtual void OnPushChange(ISimResourceSubscription sub, object data)
@@ -47,8 +69,7 @@ namespace Prosim2GSX.GSX.Services
             if (!IsProsimAircraft)
                 return;
 
-            var state = sub.GetNumber();
-            Logger.Debug($"Push Status Change: {state}");
+            var state = (int)sub.GetNumber();
             if (!TugAttachedOnBoarding && state > 0 && (Controller.GsxServices[GsxServiceType.Boarding].State == GsxServiceState.Active || Controller.GsxServices[GsxServiceType.Boarding].State == GsxServiceState.Requested))
             {
                 Logger.Information($"Tug attaching during Boarding");
@@ -68,17 +89,8 @@ namespace Prosim2GSX.GSX.Services
         protected override void DoReset()
         {
             TugAttachedOnBoarding = false;
-        }
-
-        public override void FreeResources()
-        {
-            SubDepartService.OnReceived -= OnStateChange;
-            SubBypassPin.OnReceived -= NotifyBypassPin;
-            SubPushStatus.OnReceived -= OnPushChange;
-
-            SimStore.Remove(GsxConstants.VarServiceDeparture);
-            SimStore.Remove(GsxConstants.VarBypassPin);
-            SimStore.Remove(GsxConstants.VarPusbackStatus);
+            EngineStartConfirmed = false;
+            Controller.PushbackDirectionAutoSelected = false;
         }
 
         public override async Task Call()
@@ -101,6 +113,28 @@ namespace Prosim2GSX.GSX.Services
 
             var sequence = new GsxMenuSequence();
             sequence.Commands.Add(new(selection, GsxConstants.MenuPushbackInterrupt, true));
+            sequence.Commands.Add(GsxMenuCommand.CreateDummy());
+            await Controller.Menu.RunSequence(sequence);
+        }
+
+        // Sends "Interrupt pushback" → "Confirm good engine start" (menu position 1)
+        // after the physical push has completed and the crew set the parking brake.
+        // GSX shows this option on the Interrupt menu once it's waiting for engine
+        // confirmation; selecting it lets the tug detach safely.
+        // Caller is responsible for gating on push state, brakes, and engines —
+        // this method only de-duplicates and ensures the tug is still attached.
+        public virtual async Task ConfirmEngineStart()
+        {
+            if (EngineStartConfirmed)
+                return;
+            if (PushStatus == 0)
+                return;
+
+            Logger.Information($"Confirm good engine start ({PushStatus})");
+            EngineStartConfirmed = true;
+
+            var sequence = new GsxMenuSequence();
+            sequence.Commands.Add(new(1, GsxConstants.MenuPushbackInterrupt, true));
             sequence.Commands.Add(GsxMenuCommand.CreateDummy());
             await Controller.Menu.RunSequence(sequence);
         }

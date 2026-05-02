@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.Input;
 using Prosim2GSX.AppConfig;
 using Prosim2GSX.Themes;
+using Prosim2GSX.Web;
 using ProsimInterface;
 using System;
 using System.Collections.Generic;
@@ -10,6 +11,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace Prosim2GSX.UI.Views.Settings
@@ -57,6 +59,18 @@ namespace Prosim2GSX.UI.Views.Settings
             if ((e?.PropertyName == nameof(Config.DisplayUnitCurrent) || e?.PropertyName == nameof(Config.DisplayUnitCurrentString))
                 && !UnitUpdateTimer.IsEnabled)
                 UnitUpdateTimer.Start();
+            if (e?.PropertyName == nameof(Config.WebServerAuthToken))
+            {
+                NotifyPropertyChanged(nameof(WebServerAuthToken));
+                NotifyPropertyChanged(nameof(WebServerUrl));
+                NotifyPropertyChanged(nameof(WebServerQrImage));
+            }
+            if (e?.PropertyName == nameof(Config.WebServerPort)
+                || e?.PropertyName == nameof(Config.WebServerBindAll))
+            {
+                NotifyPropertyChanged(nameof(WebServerUrl));
+                NotifyPropertyChanged(nameof(WebServerQrImage));
+            }
         }
 
         protected virtual void UnitUpdateTimer_Tick(object? sender, EventArgs e)
@@ -80,7 +94,6 @@ namespace Prosim2GSX.UI.Views.Settings
         public virtual bool FuelRoundUp100 { get => Source.FuelRoundUp100; set => SetModelValue<bool>(value); }
         public virtual bool DingOnStartup { get => Source.DingOnStartup; set => SetModelValue<bool>(value); }
         public virtual bool DingOnFinal { get => Source.DingOnFinal; set => SetModelValue<bool>(value); }
-        public virtual bool DingOnTurnaround { get => Source.DingOnTurnaround; set => SetModelValue<bool>(value); }
         public virtual int CargoPercentChangePerSec { get => Source.CargoPercentChangePerSec; set => SetModelValue<int>(value); }
         public virtual int DoorCargoDelay { get => Source.DoorCargoDelay; set => SetModelValue<int>(value); }
         public virtual int DoorCargoOpenDelay { get => Source.DoorCargoOpenDelay; set => SetModelValue<int>(value); }
@@ -93,9 +106,127 @@ namespace Prosim2GSX.UI.Views.Settings
         public virtual int GsxMenuStartupMaxFail { get => Source.GsxMenuStartupMaxFail; set => SetModelValue<int>(value); }
         public virtual bool RunGsxService { get => Source.RunGsxService; set => SetModelValue<bool>(value); }
         public virtual bool RunAudioService { get => Source.RunAudioService; set => SetModelValue<bool>(value); }
+        public virtual bool UseSayIntentions { get => Source.UseSayIntentions; set => SetModelValue<bool>(value); }
+        public virtual bool AllowManualChecklistOverride { get => Source.AllowManualChecklistOverride; set => SetModelValue<bool>(value); }
         public virtual bool OpenAppWindowOnStart { get => Source.OpenAppWindowOnStart; set => SetModelValue<bool>(value); }
         public virtual string ProSimSdkPath { get => Source.ProSimSdkPath; set => SetModelValue<string>(value); }
         public virtual bool SolariAnimationEnabled { get => Source.SolariAnimationEnabled; set => SetModelValue<bool>(value); }
+
+        // ── Web interface (hot-toggled; WebHostService observes Config) ──────
+        //
+        // Config's INPC is not raised by the auto-property setters that
+        // SetModelValue / SetSourceValue write through (Config only fires
+        // PropertyChanged from its own NotifyPropertyChanged, which is
+        // currently only used for DisplayUnitCurrent). For the WebHostService
+        // subscription to react to runtime changes, each setter explicitly
+        // raises Source.NotifyPropertyChanged after the write — otherwise the
+        // hot-toggle silently does nothing until the next app launch.
+
+        public virtual bool WebServerEnabled
+        {
+            get => Source.WebServerEnabled;
+            set
+            {
+                SetModelValue<bool>(value);
+                Source.NotifyPropertyChanged(nameof(Source.WebServerEnabled));
+            }
+        }
+
+        public virtual int WebServerPort
+        {
+            get => Source.WebServerPort;
+            set
+            {
+                SetModelValue<int>(value);
+                Source.NotifyPropertyChanged(nameof(Source.WebServerPort));
+            }
+        }
+
+        public virtual bool WebServerBindAll
+        {
+            get => Source.WebServerBindAll;
+            set
+            {
+                SetModelValue<bool>(value);
+                Source.NotifyPropertyChanged(nameof(Source.WebServerBindAll));
+            }
+        }
+
+        // Token is read-only on the bound surface — regeneration goes through
+        // the dedicated command so the host can also kick existing clients.
+        public virtual string WebServerAuthToken => Source.WebServerAuthToken ?? "";
+
+        [RelayCommand]
+        private void RegenerateWebToken()
+        {
+            try
+            {
+                AppService.Instance?.WebHost?.RegenerateToken();
+                NotifyPropertyChanged(nameof(WebServerAuthToken));
+                NotifyPropertyChanged(nameof(WebServerUrl));
+                NotifyPropertyChanged(nameof(WebServerQrImage));
+            }
+            catch { }
+        }
+
+        // ── QR-code panel ────────────────────────────────────────────────────
+        // LAN-IP discovery + connection URL + QR image for onboarding from a
+        // phone. URL hash fragment (#token=...) carries the auth token; the
+        // React app's bootstrapAuth moves it from the hash into localStorage
+        // and then history.replaceState's it out of the address bar so the
+        // token never leaves client-side memory after the first paint.
+
+        private List<string> _availableIpAddresses;
+        private string _selectedIpAddress;
+
+        public virtual List<string> AvailableIpAddresses
+            => _availableIpAddresses ??= IpHelper.GetLanIPv4Addresses();
+
+        public virtual string SelectedIpAddress
+        {
+            get => _selectedIpAddress ??= IpHelper.BestGuessLanIp();
+            set
+            {
+                if (_selectedIpAddress == value) return;
+                _selectedIpAddress = value;
+                NotifyPropertyChanged(nameof(SelectedIpAddress));
+                NotifyPropertyChanged(nameof(WebServerUrl));
+                NotifyPropertyChanged(nameof(WebServerQrImage));
+            }
+        }
+
+        public virtual string WebServerUrl
+        {
+            get
+            {
+                var host = Source.WebServerBindAll ? SelectedIpAddress : "127.0.0.1";
+                var port = Source.WebServerPort;
+                var token = Source.WebServerAuthToken;
+                if (string.IsNullOrEmpty(token))
+                    return $"http://{host}:{port}/";
+                return $"http://{host}:{port}/#token={token}";
+            }
+        }
+
+        public virtual ImageSource WebServerQrImage => QrHelper.Generate(WebServerUrl);
+
+        [RelayCommand]
+        private void RefreshIpAddresses()
+        {
+            _availableIpAddresses = IpHelper.GetLanIPv4Addresses();
+            NotifyPropertyChanged(nameof(AvailableIpAddresses));
+
+            // If the previously-selected IP isn't in the refreshed list any
+            // more (NIC unplugged, switched network), reset to the new best
+            // guess so the dropdown isn't pointing at a stale entry.
+            if (!_availableIpAddresses.Contains(_selectedIpAddress))
+            {
+                _selectedIpAddress = IpHelper.BestGuessLanIp();
+                NotifyPropertyChanged(nameof(SelectedIpAddress));
+                NotifyPropertyChanged(nameof(WebServerUrl));
+                NotifyPropertyChanged(nameof(WebServerQrImage));
+            }
+        }
 
         // ── Theme selection ────────────────────────────────────────────────
 
@@ -122,6 +253,10 @@ namespace Prosim2GSX.UI.Views.Settings
                 NotifyPropertyChanged(nameof(SelectedThemeIndex));
                 NotifyPropertyChanged(nameof(SelectedThemeName));
                 ThemeManager.Instance.ApplyTheme(_selectedThemeName);
+                // Tell Config subscribers that the persisted theme name has
+                // changed so the WS handler broadcasts on the "appSettings"
+                // channel and any open web clients re-apply their CSS variables.
+                Source.NotifyPropertyChanged(nameof(Source.CurrentTheme));
             }
         }
 

@@ -30,6 +30,17 @@ namespace Prosim2GSX.GSX
     //    TurnAround = 8,
     //}
 
+    public enum DepartureSequenceStep
+    {
+        Idle,              // Pre-beacon, nothing to do
+        WaitingForApu,     // Beacon on, APU not running — hard block
+        DoorsStep,         // Timing delay, then close doors
+        JetwayStep,        // Timing delay, then retract jetway/stairs
+        GpuStep,            // Timing delay, then disconnect GPU (clears PCA + chocks)
+        ReadyForPush,      // Ground clear; waiting for CallPushbackOnBeacon or INT/RAD
+        PushbackCalled     // Pushback invoked — sequence done
+    }
+
     public class GsxAutomationController(GsxController controller)
     {
         protected virtual GsxController Controller { get; } = controller;
@@ -81,7 +92,28 @@ namespace Prosim2GSX.GSX
         public virtual bool CabinDinged { get; protected set; } = false;
         public virtual string FlightPlanId => Aircraft.ProsimInterface.FlightPlanId;
         public virtual string OfpArrivalId { get; protected set; } = "0";
-        public virtual bool RunDepartureOnArrival { get; protected set; } = false;
+
+        // Arrival hardening state
+        protected virtual int ArrivalStableTicks { get; set; } = 0;
+        protected virtual DateTime ArrivalEnteredAt { get; set; } = DateTime.MinValue;
+        protected virtual DateTime ArrivalStallLastWarning { get; set; } = DateTime.MinValue;
+        protected virtual CancellationTokenSource ChockCts { get; set; }
+
+        // Periodic Flight-state summary log cadence
+        protected virtual DateTime LastFlightSummaryAt { get; set; } = DateTime.MinValue;
+        // TaxiIn arrival-condition diagnostics
+        protected virtual DateTime LastTaxiInSummaryAt { get; set; } = DateTime.MinValue;
+        protected virtual bool LastStableParked { get; set; } = false;
+
+        // Beacon-orchestrated departure sequence state
+        protected virtual DepartureSequenceStep SequenceStep { get; set; } = DepartureSequenceStep.Idle;
+        protected virtual int SeqStepTicksElapsed { get; set; } = 0;
+        protected virtual int SeqStepTicksRequired { get; set; } = 0;
+        protected virtual DateTime ApuWaitStartedAt { get; set; } = DateTime.MinValue;
+        protected virtual DateTime ApuStallLastWarning { get; set; } = DateTime.MinValue;
+
+        public virtual bool IsNewOfpLoaded =>
+            !string.IsNullOrEmpty(FlightPlanId) && FlightPlanId != "0" && OfpArrivalId != FlightPlanId;
 
         public event Action<AutomationState> OnStateChange;
 
@@ -125,7 +157,14 @@ namespace Prosim2GSX.GSX
             ServiceCountTotal = 0;
 
             DepartureServicesCompleted = false;
-            RunDepartureOnArrival = false;
+            CancelChockTask();
+            ArrivalStableTicks = 0;
+            ArrivalEnteredAt = DateTime.MinValue;
+            ArrivalStallLastWarning = DateTime.MinValue;
+            LastFlightSummaryAt = DateTime.MinValue;
+            LastTaxiInSummaryAt = DateTime.MinValue;
+            LastStableParked = false;
+            ResetDepartureSequence();
             DepartureServicesCalled?.Clear();
             if (Profile?.DepartureServices != null)
             {
@@ -153,7 +192,14 @@ namespace Prosim2GSX.GSX
             OfpArrivalId = "0";
 
             DepartureServicesCompleted = false;
-            RunDepartureOnArrival = false;
+            CancelChockTask();
+            ArrivalStableTicks = 0;
+            ArrivalEnteredAt = DateTime.MinValue;
+            ArrivalStallLastWarning = DateTime.MinValue;
+            LastFlightSummaryAt = DateTime.MinValue;
+            LastTaxiInSummaryAt = DateTime.MinValue;
+            LastStableParked = false;
+            ResetDepartureSequence();
             DepartureServicesCalled.Clear();
             DepartureServicesEnumerator = Profile.DepartureServices.GetEnumerator();
             DepartureServicesEnumerator.MoveNext();
@@ -171,9 +217,14 @@ namespace Prosim2GSX.GSX
                     activation.ActivationCount = 0;
                 Logger.Information($"Automation Service started");
 
+                bool lastServicesValid = !ServicesValid;
                 while (RunFlag && Controller.IsActive && !Token.IsCancellationRequested && !RequestToken.IsCancellationRequested)
                 {
-                    Logger.Verbose($"Automation Tick - State: {State} | ServicesValid: {ServicesValid}");
+                    if (State != LastState || ServicesValid != lastServicesValid)
+                    {
+                        Logger.Verbose($"Automation Tick - State: {State} | ServicesValid: {ServicesValid}");
+                        lastServicesValid = ServicesValid;
+                    }
                     if (Controller.IsGsxRunning && Controller.CanAutomationRun)
                     {
                         await EvaluateState();
@@ -305,6 +356,15 @@ namespace Prosim2GSX.GSX
             //Flight => TaxiIn
             else if (State == AutomationState.Flight)
             {
+                if (Config.FlightPhaseLogIntervalSec > 0
+                    && (DateTime.UtcNow - LastFlightSummaryAt).TotalSeconds >= Config.FlightPhaseLogIntervalSec)
+                {
+                    Logger.Debug(
+                        $"Flight phase: onGround={Controller.IsOnGround}, groundSpeed={Aircraft.GroundSpeed:F1}kt, "
+                      + $"engines={Aircraft.EnginesRunning}, groundCounter={Controller.GroundCounter}/{Config.GroundTicks}");
+                    LastFlightSummaryAt = DateTime.UtcNow;
+                }
+
                 if (IsOnGround && Aircraft.GroundSpeed < Config.SpeedTresholdTaxiIn)
                 {
                     if (Config.RestartGsxOnTaxiIn)
@@ -315,30 +375,77 @@ namespace Prosim2GSX.GSX
                     StateChange(AutomationState.TaxiIn);
                 }
             }
-            //TaxiIn => Arrival
+            //TaxiIn => Arrival (with hold window — requires stable parked state for ArrivalHoldTicks)
             else if (State == AutomationState.TaxiIn)
             {
-                if (!Aircraft.EnginesRunning && Aircraft.IsBrakeSet && !Aircraft.LightBeacon)
+                bool engOff = !Aircraft.EnginesRunning;
+                bool brake = Aircraft.IsBrakeSet;
+                bool beaconOff = !Aircraft.LightBeacon;
+                double gs = Aircraft.GroundSpeed;
+                // Ground speed: tolerate hardware-cockpit jitter at standstill
+                // (Prosim's RefGroundSpeed can sit at 1-2 kt fully stopped).
+                bool gsLow = gs < 2.0;
+
+                bool stableParked = engOff && brake && beaconOff && gsLow;
+
+                // Diagnostics: log on transition + throttled summary while waiting.
+                if (stableParked && !LastStableParked)
                 {
-                    await Controller.Menu.OpenHide();
-                    OfpArrivalId = FlightPlanId;
-                    StateChange(AutomationState.Arrival);
-                    await ServiceDeboard.SetPaxTarget(Aircraft.GetPaxDeboarding());
+                    Logger.Debug($"TaxiIn arrival countdown started — engines={!engOff}, brake={brake}, beacon={!beaconOff}, gs={gs:F1}kt (need ArrivalHoldTicks={Config.ArrivalHoldTicks})");
+                    LastTaxiInSummaryAt = DateTime.UtcNow;
+                }
+                else if (!stableParked && LastStableParked)
+                {
+                    Logger.Debug($"TaxiIn arrival countdown reset — engines={!engOff}, brake={brake}, beacon={!beaconOff}, gs={gs:F1}kt");
+                    LastTaxiInSummaryAt = DateTime.UtcNow;
+                }
+                else if (!stableParked && (DateTime.UtcNow - LastTaxiInSummaryAt).TotalSeconds >= 60)
+                {
+                    Logger.Debug($"TaxiIn waiting for parked state — engines={!engOff}, brake={brake}, beacon={!beaconOff}, gs={gs:F1}kt");
+                    LastTaxiInSummaryAt = DateTime.UtcNow;
+                }
+                LastStableParked = stableParked;
+
+                if (stableParked)
+                {
+                    ArrivalStableTicks++;
+                    if (ArrivalStableTicks >= Config.ArrivalHoldTicks)
+                    {
+                        await Controller.Menu.OpenHide();
+                        OfpArrivalId = FlightPlanId;
+                        ArrivalEnteredAt = DateTime.UtcNow;
+                        ArrivalStallLastWarning = DateTime.MinValue;
+                        StateChange(AutomationState.Arrival);
+                        await ServiceDeboard.SetPaxTarget(Aircraft.GetPaxDeboarding());
+                        if (Profile.ChimeOnParked)
+                            _ = Aircraft.DingCabin();
+                    }
+                }
+                else
+                {
+                    ArrivalStableTicks = 0;
                 }
             }
-            //Arrival => Turnaround (or Departure)
+            //Arrival => Turnaround (or Departure) — branch chosen at transition time based on OFP state
             else if (State == AutomationState.Arrival)
             {
                 if (ServiceDeboard.IsCompleted)
                 {
-                    if (!RunDepartureOnArrival)
-                        await SetTurnaround();
-                    else
-                    {
-                        await Aircraft.UnloadOfp(false);
-                        Controller.Menu.SuppressMenuRefresh = false;
-                        await SkipTurn(AutomationState.Departure);
-                    }
+                    await TransitionOutOfArrival();
+                }
+                else if (SmartButtonRequest && !ServiceDeboard.IsRunning)
+                {
+                    Logger.Information($"Automation: Force Arrival→next by INT/RAD (Deboard not running)");
+                    await TransitionOutOfArrival();
+                }
+                else if (Config.ArrivalStallTimeoutSec > 0
+                      && ArrivalEnteredAt != DateTime.MinValue
+                      && (DateTime.UtcNow - ArrivalEnteredAt).TotalSeconds > Config.ArrivalStallTimeoutSec
+                      && (DateTime.UtcNow - ArrivalStallLastWarning).TotalSeconds > 60)
+                {
+                    int minutes = (int)(DateTime.UtcNow - ArrivalEnteredAt).TotalMinutes;
+                    Logger.Warning($"Arrival state has been active for {minutes} min with Deboarding incomplete. Press INT/RAD to force progression.");
+                    ArrivalStallLastWarning = DateTime.UtcNow;
                 }
             }
             //Turnaround => Departure
@@ -370,9 +477,182 @@ namespace Prosim2GSX.GSX
         {
             await Aircraft.UnloadOfp();
             StateChange(AutomationState.TurnAround);
-            if (Config.DingOnTurnaround)
+            if (Profile.ChimeOnDeboardComplete)
                 await Aircraft.DingCabin();
             Controller.Menu.SuppressMenuRefresh = false;
+        }
+
+        protected virtual async Task TransitionOutOfArrival()
+        {
+            CancelChockTask();
+            if (IsNewOfpLoaded)
+            {
+                Logger.Information($"Automation: New OFP detected ({OfpArrivalId} → {FlightPlanId}) — soft unload and skip to Departure");
+                await Aircraft.UnloadOfp(false);
+                Controller.Menu.SuppressMenuRefresh = false;
+                if (Profile.ChimeOnDeboardComplete)
+                    await Aircraft.DingCabin();
+                await SkipTurn(AutomationState.Departure);
+            }
+            else
+            {
+                await SetTurnaround();
+            }
+        }
+
+        protected virtual void CancelChockTask()
+        {
+            try
+            {
+                ChockCts?.Cancel();
+                ChockCts?.Dispose();
+            }
+            catch { /* best effort */ }
+            ChockCts = null;
+        }
+
+        /// <summary>
+        /// Beacon-orchestrated departure sequence. Runs each tick while State == PushBack and
+        /// Profile.SequenceOnBeacon is enabled. Steps: WaitingForApu → DoorsStep → JetwayStep →
+        /// GpuStep → ReadyForPush → PushbackCalled. Pauses if beacon goes off mid-sequence.
+        /// </summary>
+        protected virtual async Task RunDepartureSequence()
+        {
+            switch (SequenceStep)
+            {
+                case DepartureSequenceStep.Idle:
+                    if (Aircraft.LightBeacon)
+                    {
+                        Logger.Information($"Departure sequence: beacon on — waiting for APU");
+                        SequenceStep = DepartureSequenceStep.WaitingForApu;
+                        ApuWaitStartedAt = DateTime.UtcNow;
+                        ApuStallLastWarning = DateTime.MinValue;
+                    }
+                    break;
+
+                case DepartureSequenceStep.WaitingForApu:
+                    if (!Aircraft.LightBeacon)
+                        break;  // pause
+
+                    if (Aircraft.IsApuRunning && Aircraft.IsFinalReceived)
+                    {
+                        Logger.Information($"Departure sequence: APU running + Final LS received — starting DoorsStep");
+                        StartStep(DepartureSequenceStep.DoorsStep, Profile.SeqDoorsCloseDelayMin, Profile.SeqDoorsCloseDelayMax);
+                    }
+                    else if (Config.SequenceApuStallTimeoutSec > 0
+                          && ApuWaitStartedAt != DateTime.MinValue
+                          && (DateTime.UtcNow - ApuWaitStartedAt).TotalSeconds > Config.SequenceApuStallTimeoutSec
+                          && (DateTime.UtcNow - ApuStallLastWarning).TotalSeconds > 60)
+                    {
+                        int minutes = (int)(DateTime.UtcNow - ApuWaitStartedAt).TotalMinutes;
+                        string reason = !Aircraft.IsApuRunning ? "APU not running" : "Final LS not received";
+                        Logger.Warning($"Departure sequence: waiting {minutes} min — {reason}");
+                        ApuStallLastWarning = DateTime.UtcNow;
+                    }
+                    break;
+
+                case DepartureSequenceStep.DoorsStep:
+                    if (!SequenceCanAdvance())
+                        break;  // pause — beacon off or APU stopped
+
+                    SeqStepTicksElapsed++;
+                    if (SeqStepTicksElapsed >= SeqStepTicksRequired || SmartButtonRequest)
+                    {
+                        Logger.Information(SmartButtonRequest
+                            ? "Departure sequence: DoorsStep advanced by INT/RAD — closing doors"
+                            : "Departure sequence: DoorsStep delay complete — closing doors");
+                        if (Aircraft.HasOpenDoors && !Aircraft.ProsimInterface.CargoDoorsMoving())
+                            await Aircraft.CloseAllDoors();
+                        StartStep(DepartureSequenceStep.JetwayStep, Profile.SeqJetwayRetractDelayMin, Profile.SeqJetwayRetractDelayMax);
+                    }
+                    break;
+
+                case DepartureSequenceStep.JetwayStep:
+                    if (!SequenceCanAdvance())
+                        break;
+
+                    SeqStepTicksElapsed++;
+                    if (SeqStepTicksElapsed >= SeqStepTicksRequired || SmartButtonRequest)
+                    {
+                        Logger.Information(SmartButtonRequest
+                            ? "Departure sequence: JetwayStep advanced by INT/RAD — retracting jetway/stairs"
+                            : "Departure sequence: JetwayStep delay complete — retracting jetway/stairs");
+                        if (IsGateConnected && !JetwayStairRemoved)
+                        {
+                            await ServiceJetway.Remove();
+                            await ServiceStairs.Remove();
+                            JetwayStairRemoved = true;
+                        }
+                        StartStep(DepartureSequenceStep.GpuStep, Profile.SeqGpuDisconnectDelayMin, Profile.SeqGpuDisconnectDelayMax);
+                    }
+                    break;
+
+                case DepartureSequenceStep.GpuStep:
+                    if (!SequenceCanAdvance())
+                        break;
+
+                    SeqStepTicksElapsed++;
+                    if (SeqStepTicksElapsed >= SeqStepTicksRequired || SmartButtonRequest)
+                    {
+                        Logger.Information(SmartButtonRequest
+                            ? "Departure sequence: GpuStep advanced by INT/RAD — clearing ground equipment"
+                            : "Departure sequence: GpuStep delay complete — clearing ground equipment");
+                        if (GroundEquipmentPlaced)
+                        {
+                            await SetGroundEquip(false);
+                            GroundEquipmentPlaced = false;
+                        }
+                        Logger.Information($"Departure sequence: ReadyForPush");
+                        SequenceStep = DepartureSequenceStep.ReadyForPush;
+                    }
+                    break;
+
+                case DepartureSequenceStep.ReadyForPush:
+                    if (!Aircraft.LightBeacon)
+                        break;  // pause — wait for beacon back on
+
+                    if (!ServicePushBack.IsCalled
+                        && ServicePushBack.State < GsxServiceState.Requested
+                        && !ServicePushBack.WasActive
+                        && (Profile.CallPushbackOnBeacon || SmartButtonRequest))
+                    {
+                        Logger.Information(SmartButtonRequest
+                            ? "Departure sequence: Call Pushback by INT/RAD"
+                            : "Departure sequence: Call Pushback (sequence complete)");
+                        await ServicePushBack.Call();
+                        SequenceStep = DepartureSequenceStep.PushbackCalled;
+                    }
+                    break;
+
+                case DepartureSequenceStep.PushbackCalled:
+                    // Existing pushback flow takes over from here.
+                    break;
+            }
+        }
+
+        protected virtual bool SequenceCanAdvance()
+        {
+            return Aircraft.LightBeacon && Aircraft.IsApuRunning;
+        }
+
+        protected virtual void StartStep(DepartureSequenceStep step, int minSec, int maxSec)
+        {
+            SequenceStep = step;
+            SeqStepTicksElapsed = 0;
+            int lo = Math.Max(1, minSec);
+            int hi = Math.Max(lo + 1, maxSec);
+            int delaySec = Random.Shared.Next(lo, hi);
+            SeqStepTicksRequired = Math.Max(1, (delaySec * 1000) / Config.StateMachineInterval);
+            Logger.Debug($"Departure sequence: entered {step} (delay {delaySec}s / {SeqStepTicksRequired} ticks)");
+        }
+
+        protected virtual void ResetDepartureSequence()
+        {
+            SequenceStep = DepartureSequenceStep.Idle;
+            SeqStepTicksElapsed = 0;
+            SeqStepTicksRequired = 0;
+            ApuWaitStartedAt = DateTime.MinValue;
+            ApuStallLastWarning = DateTime.MinValue;
         }
 
         protected virtual async Task SkipTurn(AutomationState state)
@@ -386,6 +666,8 @@ namespace Prosim2GSX.GSX
         protected virtual void StateChange(AutomationState newState)
         {
             Logger.Information($"State Change: {State} => {newState}");
+            if (State == AutomationState.PushBack && newState != AutomationState.PushBack)
+                ResetDepartureSequence();
             State = newState;
             TaskTools.RunLogged(() => OnStateChange?.Invoke(State), RequestToken);
         }
@@ -405,7 +687,7 @@ namespace Prosim2GSX.GSX
                         Logger.Information($"GSX Restart on last Departure Service detected - skip to Pushback");
                         StateChange(AutomationState.PushBack);
                     }
-                    else if (DepartureServicesCalled.Any(s => s.Type == GsxServiceType.Refuel && s.WasActive && !s.WasCompleted) && !RunDepartureOnArrival)
+                    else if (DepartureServicesCalled.Any(s => s.Type == GsxServiceType.Refuel && s.WasActive && !s.WasCompleted))
                     {
                         Logger.Information($"GSX Restart during Departure Service detected - completing Refuel");
                         Controller.GsxServices[GsxServiceType.Refuel].ForceComplete();
@@ -657,14 +939,14 @@ namespace Prosim2GSX.GSX
             bool cateringCompleted = State == AutomationState.PushBack || DepartureServicesCalled.Any(s => s.Type == GsxServiceType.Catering && (s.IsCompleted || s.IsSkipped)) || Profile.DepartureServices.Any(kv => kv.Value.ServiceType == GsxServiceType.Catering && kv.Value.ServiceActivation == GsxServiceActivation.Skip);
             bool cleanCompleted = State == AutomationState.PushBack || DepartureServicesCalled.Any(s => s.Type == GsxServiceType.Cleaning && (s.IsCompleted || s.IsSkipped)) || Profile.DepartureServices.Any(kv => kv.Value.ServiceType == GsxServiceType.Cleaning && kv.Value.ServiceActivation == GsxServiceActivation.Skip);
 
-            if (boardCompleted && cateringCompleted && cleanCompleted && Aircraft.HasOpenDoors && !Aircraft.ProsimInterface.CargoDoorsMoving() && Aircraft.IsFinalReceived && Profile.CloseDoorsOnFinal)
+            if (boardCompleted && cateringCompleted && cleanCompleted && Aircraft.HasOpenDoors && !Aircraft.ProsimInterface.CargoDoorsMoving() && Aircraft.IsFinalReceived && Profile.CloseDoorsOnFinal && !Profile.SequenceOnBeacon)
             {
                 Logger.Information($"Automation: Close Doors on Final Loadsheet");
                 await Aircraft.CloseAllDoors();
                 await Task.Delay(Config.StateMachineInterval * 2, RequestToken);
             }
 
-            if (boardCompleted && cleanCompleted && !JetwayStairRemoved && IsGateConnected && Aircraft.IsFinalReceived && Profile.RemoveJetwayStairsOnFinal)
+            if (boardCompleted && cleanCompleted && !JetwayStairRemoved && IsGateConnected && Aircraft.IsFinalReceived && Profile.RemoveJetwayStairsOnFinal && !Profile.SequenceOnBeacon)
             {
                 Logger.Information($"Automation: Remove Jetway/Stairs on Final Loadsheet");
                 await ServiceJetway.Remove();
@@ -684,44 +966,51 @@ namespace Prosim2GSX.GSX
                 await Aircraft.SetPca(false);
             }
 
-            if (Profile.GradualGroundEquipRemoval)
+            if (Profile.SequenceOnBeacon)
             {
-                if (Aircraft.EquipmentGpu && !Aircraft.IsExternalPowerConnected)
-                {
-                    Logger.Information($"Automation: Removing GPU on External Power disconnect");
-                    await Aircraft.SetGroundPower(false);
-                }
-
-                if (Aircraft.EquipmentChocks && Aircraft.IsBrakeSet && !Aircraft.EquipmentGpu)
-                {
-                    Logger.Information($"Automation: Removing Chocks on Parking Brake set");
-                    await Aircraft.SetChocks(false);
-                }
+                await RunDepartureSequence();
             }
-
-            if (!Aircraft.IsExternalPowerConnected && Aircraft.IsBrakeSet && Aircraft.LightBeacon && !Aircraft.EnginesRunning)
+            else
             {
-                if (Profile.ClearGroundEquipOnBeacon && GroundEquipmentPlaced)
+                if (Profile.GradualGroundEquipRemoval)
                 {
-                    Logger.Information($"Automation: Remove Ground Equipment on Beacon");
-                    await SetGroundEquip(false);
-                    GroundEquipmentPlaced = false;
-                    await Task.Delay(Config.StateMachineInterval * 2, RequestToken);
+                    if (Aircraft.EquipmentGpu && !Aircraft.IsExternalPowerConnected)
+                    {
+                        Logger.Information($"Automation: Removing GPU on External Power disconnect");
+                        await Aircraft.SetGroundPower(false);
+                    }
+
+                    if (Aircraft.EquipmentChocks && Aircraft.IsBrakeSet && !Aircraft.EquipmentGpu)
+                    {
+                        Logger.Information($"Automation: Removing Chocks on Parking Brake set");
+                        await Aircraft.SetChocks(false);
+                    }
                 }
-                
-                if (Profile.CallPushbackOnBeacon && !ServicePushBack.IsCalled && ServicePushBack.State < GsxServiceState.Requested && !ServicePushBack.WasActive)
+
+                if (!Aircraft.IsExternalPowerConnected && Aircraft.IsBrakeSet && Aircraft.LightBeacon && !Aircraft.EnginesRunning)
                 {
-                    Logger.Information($"Automation: Call Pushback (Beacon / Prepared for Push)");
-                    await ServicePushBack.Call();
-                    await Task.Delay(Config.StateMachineInterval * 2, RequestToken);
-                }
-                else if (IsGateConnected && Profile.ClearGroundEquipOnBeacon)
-                {
-                    Logger.Information($"Automation: Remove Jetway/Stairs on Beacon");
-                    await ServiceJetway.Remove();
-                    await ServiceStairs.Remove();
-                    JetwayStairRemoved = true;
-                    await Task.Delay(Config.StateMachineInterval * 2, RequestToken);
+                    if (Profile.ClearGroundEquipOnBeacon && GroundEquipmentPlaced)
+                    {
+                        Logger.Information($"Automation: Remove Ground Equipment on Beacon");
+                        await SetGroundEquip(false);
+                        GroundEquipmentPlaced = false;
+                        await Task.Delay(Config.StateMachineInterval * 2, RequestToken);
+                    }
+
+                    if (Profile.CallPushbackOnBeacon && !ServicePushBack.IsCalled && ServicePushBack.State < GsxServiceState.Requested && !ServicePushBack.WasActive)
+                    {
+                        Logger.Information($"Automation: Call Pushback (Beacon / Prepared for Push)");
+                        await ServicePushBack.Call();
+                        await Task.Delay(Config.StateMachineInterval * 2, RequestToken);
+                    }
+                    else if (IsGateConnected && Profile.ClearGroundEquipOnBeacon)
+                    {
+                        Logger.Information($"Automation: Remove Jetway/Stairs on Beacon");
+                        await ServiceJetway.Remove();
+                        await ServiceStairs.Remove();
+                        JetwayStairRemoved = true;
+                        await Task.Delay(Config.StateMachineInterval * 2, RequestToken);
+                    }
                 }
             }
             
@@ -797,10 +1086,28 @@ namespace Prosim2GSX.GSX
                 }
             }
 
+            // GSX exposes the "good engine start" prompt via VEHICLE_PUSHBACK_STATE == 12
+            // (WaitForConfirmation) — the explicit signal that the tug has stopped and is
+            // waiting for crew to confirm engine start on the Interrupt menu. Auto-confirm
+            // once brakes are set and both engines are running.
+            if (ServicePushBack.VehiclePushbackState == 12
+                && Aircraft.IsBrakeSet
+                && Aircraft.AllEnginesRunning
+                && !ServicePushBack.EngineStartConfirmed)
+            {
+                Logger.Information($"Automation: VehiclePushbackState=12 + brakes set + both engines running — sending Confirm good engine start");
+                await ServicePushBack.ConfirmEngineStart();
+                await Task.Delay(Config.StateMachineInterval, RequestToken);
+            }
+
             if (SmartButtonRequest)
             {
                 Logger.Debug($"INT/RAD on Push ({ServicePushBack.PushStatus})");
-                if (!ServicePushBack.IsCalled || (ServicePushBack.IsTugConnected && Controller.Menu.MenuState == GsxMenuState.TIMEOUT))
+                // When SequenceOnBeacon is active, RunDepartureSequence already consumes INT/RAD
+                // for step-skip / ReadyForPush → Call. Guard the "call push" branch to avoid
+                // a double-call; the "end push" branch (PushStatus 5–8) remains always available.
+                if (!Profile.SequenceOnBeacon
+                    && (!ServicePushBack.IsCalled || (ServicePushBack.IsTugConnected && Controller.Menu.MenuState == GsxMenuState.TIMEOUT)))
                 {
                     await ServicePushBack.Call();
                     if (GroundEquipmentPlaced)
@@ -833,19 +1140,33 @@ namespace Prosim2GSX.GSX
 
         protected virtual async Task RunArrival()
         {
+            // Chock placement: random delay, re-verify state at completion so we don't chock a
+            // re-started or moving aircraft (goaround, reposition). Task is cancelled on leaving Arrival.
             if (ChockDelay == 0)
             {
                 ChockDelay = new Random().Next(Profile.ChockDelayMin, Profile.ChockDelayMax);
                 Logger.Information($"Automation: Placing Chocks on Arrival (ETA {ChockDelay}s)");
-                _ = Task.Delay(ChockDelay * 1000).ContinueWith((_) => Aircraft.SetChocks(true));
-                _ = Task.Delay(60000, RequestToken).ContinueWith(async (_) =>
+                ChockCts = CancellationTokenSource.CreateLinkedTokenSource(RequestToken);
+                var ct = ChockCts.Token;
+                _ = Task.Run(async () =>
                 {
-                    if (!Aircraft.EquipmentGpu)
+                    try
                     {
-                        Logger.Warning($"Failback: Setting GPU after Deboard was called");
-                        await Aircraft.SetGroundPower(true, true);
+                        await Task.Delay(ChockDelay * 1000, ct);
+                        if (!Aircraft.EnginesRunning
+                            && Aircraft.IsBrakeSet
+                            && !Aircraft.LightBeacon
+                            && Aircraft.GroundSpeed < 1)
+                        {
+                            await Aircraft.SetChocks(true);
+                        }
+                        else
+                        {
+                            Logger.Warning($"Chock placement aborted — parked state no longer stable");
+                        }
                     }
-                });
+                    catch (TaskCanceledException) { /* left Arrival — drop */ }
+                }, ct);
             }
 
             if (Aircraft.EquipmentChocks && !ChockFlashed)
@@ -854,38 +1175,33 @@ namespace Prosim2GSX.GSX
                 ChockFlashed = true;
             }
 
-            if (!Aircraft.EquipmentGpu && (IsGateConnected || ServiceDeboard.IsActive))
+            // GPU placement: only when conditions support it. No forced writes — respect ProsimInterface safety.
+            if (!Aircraft.EquipmentGpu
+                && (IsGateConnected || ServiceDeboard.IsActive)
+                && Aircraft.EquipmentChocks
+                && !Aircraft.EnginesRunning
+                && !Aircraft.IsExternalPowerConnected)
             {
                 Logger.Information($"Automation: Placing GPU on Arrival");
                 await Aircraft.SetGroundPower(true);
                 await Task.Delay(1000, RequestToken);
             }
 
-            if (!Aircraft.EquipmentPca && Profile.ConnectPca > 0 && (IsGateConnected || ServiceDeboard.IsActive))
+            if (!Aircraft.EquipmentPca
+                && Profile.ConnectPca > 0
+                && (IsGateConnected || ServiceDeboard.IsActive)
+                && (Profile.ConnectPca == 1 || ServiceJetway.State != GsxServiceState.NotAvailable))
             {
-                if (Profile.ConnectPca == 1 || (Profile.ConnectPca == 2 && ServiceJetway.State != GsxServiceState.NotAvailable))
-                {
-                    Logger.Information($"Automation: Placing PCA on Arrival");
-                    await Aircraft.SetPca(true);
-                    await Task.Delay(1000, RequestToken);
-                }
-                else if (Aircraft.EquipmentPca && Profile.PcaOverride)
-                {
-                    Logger.Information($"Automation: Disconnecting PCA (not configured)");
-                    await Aircraft.SetPca(false);
-                    await Task.Delay(1000, RequestToken);
-                }
+                Logger.Information($"Automation: Placing PCA on Arrival");
+                await Aircraft.SetPca(true);
+                await Task.Delay(1000, RequestToken);
             }
 
-            GroundEquipmentPlaced = Aircraft.EquipmentGpu && Aircraft.EquipmentChocks;
+            GroundEquipmentPlaced = Aircraft.EquipmentGpu && Aircraft.EquipmentChocks && Aircraft.EquipmentPca;
 
-            if (!ServiceDeboard.IsCalled &&
-                (Profile.CallDeboardOnArrival || (!Profile.CallDeboardOnArrival && SmartButtonRequest)))
+            if (!ServiceDeboard.IsCalled && (Profile.CallDeboardOnArrival || SmartButtonRequest))
             {
-                if (SmartButtonRequest)
-                    Logger.Information("Call Deboard by INT/RAD");
-                else
-                    Logger.Information("Automation: Call Deboard on Arrival");
+                Logger.Information(SmartButtonRequest ? "Call Deboard by INT/RAD" : "Automation: Call Deboard on Arrival");
                 await ServiceDeboard.Call();
             }
             else if (!ServiceDeboard.IsCalled && !IsGateConnected && Profile.CallJetwayStairsOnArrival)
@@ -903,13 +1219,11 @@ namespace Prosim2GSX.GSX
                 }
             }
 
-            if (Profile.RunDepartureOnArrival && !RunDepartureOnArrival && ServiceDeboard.IsActive && OfpArrivalId != FlightPlanId)
-            {
-                Logger.Information("Automation: Run Departure Services during Arrival");
-                RunDepartureOnArrival = true;
-            }
-
-            if (RunDepartureOnArrival && DepartureServicesCurrent.ServiceType != GsxServiceType.Boarding)
+            // Concurrent departure services during deboarding, only if a new OFP has actually landed.
+            if (Profile.RunDepartureDuringDeboarding
+                && ServiceDeboard.IsActive
+                && IsNewOfpLoaded
+                && DepartureServicesCurrent.ServiceType != GsxServiceType.Boarding)
             {
                 await RunDeparture();
             }

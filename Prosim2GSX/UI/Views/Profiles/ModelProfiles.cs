@@ -152,7 +152,6 @@ namespace Prosim2GSX.UI.Views.Profiles
             {ProfileMatchType.Default, "Default" },
             {ProfileMatchType.Airline, "Airline" },
             {ProfileMatchType.Title, "Title" },
-            {ProfileMatchType.Registration, "Registration" },
         };
 
         public virtual bool IsSelectionNonDefault()

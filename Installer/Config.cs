@@ -20,6 +20,8 @@ namespace Installer
         public static readonly string StateRemoveMobiAllowed = "RemoveMobiAllowed";
         public static readonly string OptionProSimSdkPath = "ProSimSdkPath";
         public static readonly string StateProSimSdkAutoDetected = "ProSimSdkAutoDetected";
+        public static readonly string OptionOverwriteGSXProfiles = "OverwriteGSXProfiles";
+        public static readonly string StateGSXProfilesExist = "GSXProfilesExist";
 
         private static readonly string ProSimSdkFileName = "ProSimSDK.dll";
 
@@ -43,6 +45,10 @@ namespace Installer
                 SetOption(StateRemoveMobiAllowed, false);
             else
                 SetOption(StateRemoveMobiAllowed, true);
+
+            //GSX Profiles
+            SetOption(OptionOverwriteGSXProfiles, false);
+            SetOption(StateGSXProfilesExist, GSXProfilesExist());
 
             // ProSim SDK Path - try auto-detect, then check existing config
             string detectedPath = DetectProSimSdkPath();
@@ -236,6 +242,27 @@ namespace Installer
             }
 
             return null;
+        }
+
+        public static bool GSXProfilesExist()
+        {
+            try
+            {
+                string airplanesDir = Path.Combine(Sys.FolderAppDataRoaming(), "Virtuali", "Airplanes");
+                string[] profileNames = { "prosim-a322-cfm", "prosim-a322-iae", "Prosim-a322-neo" };
+
+                foreach (string profile in profileNames)
+                {
+                    if (Directory.Exists(Path.Combine(airplanesDir, profile)))
+                        return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+
+            return false;
         }
 
         public static bool MobiInstalled()

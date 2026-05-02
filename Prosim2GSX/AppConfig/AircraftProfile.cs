@@ -11,7 +11,6 @@ namespace Prosim2GSX.AppConfig
         Default = 0,
         Airline = 1,
         Title = 2,
-        Registration = 3,
     }
 
     public class AircraftProfile : IAircraftProfile
@@ -25,6 +24,7 @@ namespace Prosim2GSX.AppConfig
             Name = profile.Name;
             MatchType = profile.MatchType;
             MatchString = profile.MatchString;
+            ChecklistName = profile.ChecklistName;
         }
 
         public override string ToString()
@@ -35,13 +35,17 @@ namespace Prosim2GSX.AppConfig
                 return $"{Name}: {MatchType}";
         }
 
+        // Per-profile checklist file (filename without .json extension). Null
+        // means "use the service's default" (a320_default). Selection is
+        // surfaced and edited from the CHECKLISTS tab.
+        public virtual string ChecklistName { get; set; } = null;
+
         //Settings
         public virtual bool PlaceProsimStairsWalkaround { get; set; } = true;
         public virtual bool ConnectGpuWithApuRunning { get; set; } = true;
         public virtual int ConnectPca { get; set; } = 2; // 0 => false | 1 => true | 2 => only on jetway stand
         public virtual bool PcaOverride { get; set; } = true;
         public virtual bool DoorStairHandling { get; set; } = true;
-        public virtual bool DoorStairIncludeL2 { get; set; } = false;
         public virtual bool DoorCargoHandling { get; set; } = true;
         public virtual bool DoorCateringHandling { get; set; } = true;
         public virtual bool DoorOpenBoardActive { get; set; } = true;
@@ -76,10 +80,26 @@ namespace Prosim2GSX.AppConfig
         public virtual bool CloseDoorsOnFinal { get; set; } = true;
         public virtual bool RemoveJetwayStairsOnFinal { get; set; } = true;
         public virtual bool CallPushbackOnBeacon { get; set; } = false;
+
+        // Pushback direction preference persisted per profile so it survives
+        // app restarts and roundtrips between WPF/Web. Mirrors GSX's own
+        // direction labels via the PushbackPreference enum on GsxController.
+        public virtual GSX.PushbackPreference PushbackPreference { get; set; } = GSX.PushbackPreference.Straight;
         public virtual bool ClearGroundEquipOnBeacon { get; set; } = true;
         public virtual bool GradualGroundEquipRemoval { get; set; } = false;
+
+        // Beacon-orchestrated departure sequence
+        public virtual bool SequenceOnBeacon { get; set; } = true;
+        public virtual int SeqDoorsCloseDelayMin { get; set; } = 15;
+        public virtual int SeqDoorsCloseDelayMax { get; set; } = 30;
+        public virtual int SeqJetwayRetractDelayMin { get; set; } = 15;
+        public virtual int SeqJetwayRetractDelayMax { get; set; } = 30;
+        public virtual int SeqGpuDisconnectDelayMin { get; set; } = 10;
+        public virtual int SeqGpuDisconnectDelayMax { get; set; } = 20;
         public virtual bool CallDeboardOnArrival { get; set; } = true;
-        public virtual bool RunDepartureOnArrival { get; set; } = false;
+        public virtual bool RunDepartureDuringDeboarding { get; set; } = false;
+        public virtual bool ChimeOnParked { get; set; } = true;
+        public virtual bool ChimeOnDeboardComplete { get; set; } = true;
         public virtual bool AnswerCabinCallGround { get; set; } = true;
         public virtual int DelayCabinCallGround { get; set; } = 4000;
         public virtual bool AnswerCabinCallAir { get; set; } = true;
