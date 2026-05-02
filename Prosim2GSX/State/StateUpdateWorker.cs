@@ -333,11 +333,24 @@ namespace Prosim2GSX.State
                 // non-note/non-separator item is already checked. Conversely,
                 // if an item's condition goes false, every subsequent item is
                 // un-checked (the "retreat" behaviour of a real ECAM checklist).
+                //
+                // Past-progress freeze: once an item is checked AND any later
+                // actionable item in the section is also checked, the user has
+                // moved past it; we stop re-evaluating it so that procedural
+                // toggles (e.g. STARTUP "APU START" → later "APU OFF", or
+                // "MODE SELECTOR IGN/START" → "NORM") don't cause the early
+                // item to un-tick when its dataref naturally reverts.
                 bool blockFurtherChecks = false;
                 for (int i = 0; i < items.Count; i++)
                 {
                     var def = items[i].Definition;
                     if (def == null || def.IsNote || def.IsSeparator) continue;
+
+                    if (items[i].IsChecked && IsAnyLaterActionableChecked(items, i))
+                    {
+                        // Frozen — leave checked, gate stays open for items below.
+                        continue;
+                    }
 
                     bool? satisfied = def.IsManualFallback ? (bool?)null : EvaluateItem(sdk, def);
                     if (!satisfied.HasValue)
@@ -396,6 +409,22 @@ namespace Prosim2GSX.State
             if (def == null) return false;
             if (!string.IsNullOrWhiteSpace(def.DataRef)) return true;
             if (def.DataRefs != null && def.DataRefs.Count > 0) return true;
+            return false;
+        }
+
+        // Returns true when at least one actionable (non-note, non-separator)
+        // item AFTER index i in the same section is currently checked. Used
+        // by the past-progress freeze to decide whether an early item should
+        // still respond to dataref reverts.
+        private static bool IsAnyLaterActionableChecked(
+            System.Collections.Generic.IList<ChecklistItemRuntime> items, int i)
+        {
+            for (int j = i + 1; j < items.Count; j++)
+            {
+                var later = items[j].Definition;
+                if (later == null || later.IsNote || later.IsSeparator) continue;
+                if (items[j].IsChecked) return true;
+            }
             return false;
         }
 
