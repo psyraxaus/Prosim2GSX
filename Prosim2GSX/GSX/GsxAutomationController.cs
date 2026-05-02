@@ -1100,10 +1100,10 @@ namespace Prosim2GSX.GSX
 
             if (ServicePushBack.VehiclePushbackState == 12
                 && Aircraft.IsBrakeSet
-                && Aircraft.EnginesRunning
+                && Aircraft.AllEnginesRunning
                 && !ServicePushBack.EngineStartConfirmed)
             {
-                Logger.Information($"Automation: VehiclePushbackState=12 + brakes set + engines running — sending Confirm good engine start");
+                Logger.Information($"Automation: VehiclePushbackState=12 + brakes set + both engines running — sending Confirm good engine start");
                 await ServicePushBack.ConfirmEngineStart();
                 await Task.Delay(Config.StateMachineInterval, RequestToken);
             }

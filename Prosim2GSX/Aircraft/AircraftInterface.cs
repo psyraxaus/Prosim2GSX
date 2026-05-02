@@ -73,6 +73,12 @@ namespace Prosim2GSX.Aircraft
         public virtual bool EquipmentPca => ProsimInterface.GetPcaState();
         public virtual bool EquipmentChocks => ProsimInterface.GetChocksState();
         public virtual bool EnginesRunning => ProsimInterface.GetEnginesRunning();
+        // BOTH engines running. Use only where a gate must not trigger on a
+        // single-engine start (the GSX "good engine start" confirmation is
+        // the canonical case — the tug only honours it once both engines
+        // are up). All other state-machine transitions keep the existing
+        // EnginesRunning ("any engine") semantics.
+        public virtual bool AllEnginesRunning => ProsimInterface.GetAllEnginesRunning();
         public virtual bool IsFinalReceived => ProsimInterface.GetFinalReceived();
         public virtual bool IsExternalPowerConnected => ProsimInterface.GetExternalPowerConnected();
         public virtual bool IsApuRunning => ProsimInterface.IsApuRunning;
