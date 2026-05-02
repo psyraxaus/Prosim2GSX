@@ -13,13 +13,18 @@
 
 export type ConnectionStatus = "connecting" | "open" | "reconnecting" | "closed";
 
-export type WsChannel = "flightStatus" | "gsx" | "audio" | "appSettings" | "ofp";
+export type WsChannel = "flightStatus" | "gsx" | "audio" | "appSettings" | "ofp" | "checklists";
 
-export type StateChannel = "flightStatus" | "audio" | "gsxSettings" | "appSettings" | "ofp";
+export type StateChannel = "flightStatus" | "audio" | "gsxSettings" | "appSettings" | "ofp" | "checklists";
 
 export interface PatchEnvelope {
   channel: WsChannel;
   patch: Record<string, unknown>;
+}
+
+export interface SnapshotEnvelope {
+  channel: WsChannel;
+  snapshot: Record<string, unknown>;
 }
 
 export interface LogAddedEnvelope {
@@ -27,7 +32,7 @@ export interface LogAddedEnvelope {
   logAdded: string;
 }
 
-export type WsEnvelope = PatchEnvelope | LogAddedEnvelope;
+export type WsEnvelope = PatchEnvelope | SnapshotEnvelope | LogAddedEnvelope;
 
 // ──────────────────────────────────────────────────────────────────────────
 // Enums (string-literal unions matching C# enum value names)
@@ -582,4 +587,50 @@ export interface ThemeFile {
   name: string;
   description: string;
   colors: ThemeColors;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Checklists
+// ──────────────────────────────────────────────────────────────────────────
+
+export interface ChecklistItemDto {
+  label: string;
+  value: string;
+  dataRef: string;
+  isNote: boolean;
+  isSeparator: boolean;
+  isManual: boolean;
+  isChecked: boolean;
+}
+
+export interface ChecklistSectionDto {
+  title: string;
+  items: ChecklistItemDto[];
+}
+
+export interface ChecklistDto {
+  currentChecklistName: string;
+  availableChecklists: string[];
+  aircraftType: string;
+  name: string;
+  currentSectionIndex: number;
+  currentItemIndex: number;
+  sections: ChecklistSectionDto[];
+}
+
+export interface SelectChecklistRequest {
+  name: string;
+}
+
+export interface SelectSectionRequest {
+  sectionIndex: number;
+}
+
+export interface ToggleItemRequest {
+  sectionIndex: number;
+  itemIndex: number;
+}
+
+export interface ResetSectionRequest {
+  sectionIndex: number;
 }

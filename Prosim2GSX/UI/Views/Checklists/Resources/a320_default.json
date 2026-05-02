@@ -1,0 +1,153 @@
+{
+  "Name": "A320 Default",
+  "AircraftType": "A320",
+  "Sections": [
+    {
+      "Title": "PRE START",
+      "Items": [
+        { "Label": "PARKING BRAKE", "Value": "SET", "DataRef": "system.switches.S_MIP_PARKING_BRAKE", "DataRefCondition": "== 1" },
+        { "Label": "CHOCKS", "Value": "REMOVED", "DataRef": null },
+        { "Label": "GPU", "Value": "CONNECTED", "DataRef": "system.switches.S_OH_ELEC_EXT_PWR", "DataRefCondition": "== 1" },
+        { "Label": "THROTTLE", "Value": "THRUST LEVERS IDLE", "DataRef": null },
+        { "Label": "ENGINE MASTERS", "Value": "OFF", "DataRef": "system.switches.S_ENG_MASTER_1", "DataRefCondition": "== 0" },
+        { "Label": "BATTERIES", "Value": "ON", "DataRef": "system.gates.B_ELEC_BATTERY_SWITCH_1", "DataRefCondition": "== true" },
+        { "Label": "GENERATOR SWITCHES", "Value": "ON", "DataRef": "system.switches.S_OH_ELEC_GEN1", "DataRefCondition": "== 1" },
+        { "Label": "EXT POWER", "Value": "ON", "DataRef": "system.switches.S_OH_ELEC_EXT_PWR", "DataRefCondition": "== 1" },
+        { "Label": "ADIRS", "Value": "SET TO NAV", "DataRef": "aircraft.adiru.1.position_available", "DataRefCondition": "== true" },
+        { "Label": "NAV LIGHTS", "Value": "ON", "DataRef": "system.switches.S_OH_EXT_LT_NAV_LOGO", "DataRefCondition": "!= 0" },
+        { "Label": "LANDING GEAR LEVER", "Value": "CHECK DOWN", "DataRef": "system.switches.S_MIP_GEAR", "DataRefCondition": "== 0" },
+        { "Label": "FLAPS", "Value": "UP", "DataRef": "aircraft.flap.positionHandle", "DataRefCondition": "== 0" },
+        { "Label": "SPOILER", "Value": "RETRACTED", "DataRef": null },
+        { "Label": "FUEL QUANTITY", "Value": "CHECK", "DataRef": null },
+        { "Label": "FASTEN SEAT BELTS", "Value": "ON", "DataRef": "system.switches.S_OH_SIGNS", "DataRefCondition": "== 1" },
+        { "Label": "NO SMOKING SIGNS", "Value": "ON", "DataRef": "system.switches.S_OH_SIGNS_SMOKING", "DataRefCondition": "!= 2" },
+        { "IsNote": true, "Label": "Check Weather (ATIS, Flight Services)" },
+        { "Label": "TRANSPONDER", "Value": "SET, STANDBY", "DataRef": "system.switches.S_XPDR_MODE", "DataRefCondition": "== 0" },
+        { "Label": "BEACON LIGHTS", "Value": "ON", "DataRef": "system.switches.S_OH_EXT_LT_BEACON", "DataRefCondition": "== 1" },
+        { "Label": "EMERGENCY LIGHTS", "Value": "ARM", "DataRef": "system.switches.S_OH_INT_LT_EMER", "DataRefCondition": "== 1" },
+        { "Label": "DEPARTURE BRIEFING", "Value": "COMPLETE", "DataRef": null },
+        { "Label": "DOORS", "Value": "CLOSED", "DataRef": null }
+      ]
+    },
+    {
+      "Title": "STARTUP",
+      "Items": [
+        { "Label": "APU", "Value": "START", "DataRef": "system.gates.B_APU_RUNNING", "DataRefCondition": "== true" },
+        { "Label": "APU BLEED", "Value": "RUN (WHEN AVAILABLE)", "DataRef": "aircraft.systems.pneumatic.valve.BLEED_VALVE", "DataRefCondition": "== true" },
+        { "Label": "APU GEN", "Value": "ON / CHECK VOLTS", "DataRef": "system.switches.S_OH_ELEC_APU_GENERATOR", "DataRefCondition": "== 1" },
+        { "IsNote": true, "Label": "Request Pushback - Initiate Pushback" },
+        { "Label": "THRUST LEVERS", "Value": "IDLE", "DataRef": null },
+        { "Label": "FUEL PUMP SWITCHES", "Value": "ON", "DataRef": "system.switches.S_OH_FUEL_LEFT_1", "DataRefCondition": "== 1" },
+        { "Label": "MODE SELECTOR", "Value": "IGN / START", "DataRef": "system.switches.S_ENG_MODE", "DataRefCondition": "== 2" },
+        { "Label": "ENGINE MASTER 1", "Value": "START", "DataRef": "system.switches.S_ENG_MASTER_1", "DataRefCondition": "== 1" },
+        { "Label": "ENGINE MASTER 2", "Value": "START", "DataRef": "system.switches.S_ENG_MASTER_2", "DataRefCondition": "== 1" },
+        { "Label": "HYDRAULIC PUMP SWITCHES", "Value": "ON", "DataRef": null },
+        { "Label": "APU", "Value": "OFF", "DataRef": "system.gates.B_APU_RUNNING", "DataRefCondition": "== false" },
+        { "Label": "MODE SELECTOR", "Value": "NORM", "DataRef": "system.switches.S_ENG_MODE", "DataRefCondition": "== 1" }
+      ]
+    },
+    {
+      "Title": "BEFORE TAXI",
+      "Items": [
+        { "Label": "PROBE/WINDOW HEAT", "Value": "AUTO", "DataRef": "system.switches.S_OH_PROBE_HEAT", "DataRefCondition": "== 1" },
+        { "Label": "AUTOPILOT", "Value": "SET", "DataRef": null },
+        { "Label": "AUTOBRAKE", "Value": "MAX", "DataRef": "system.indicators.I_MIP_AUTOBRAKE_MAX_U", "DataRefCondition": "!= 0" },
+        { "Label": "ELEVATOR TRIM", "Value": "SET FOR TAKE-OFF", "DataRef": null },
+        { "Label": "FLIGHT CONTROLS", "Value": "FREE AND CORRECT", "DataRef": null },
+        { "IsNote": true, "Label": "Request Taxi Clearance" }
+      ]
+    },
+    {
+      "Title": "TAXI",
+      "Items": [
+        { "Label": "PARKING BRAKE", "Value": "RELEASE", "DataRef": "system.switches.S_MIP_PARKING_BRAKE", "DataRefCondition": "== 0" },
+        { "Label": "T/O MEMO", "Value": "GREEN", "DataRef": null }
+      ]
+    },
+    {
+      "Title": "BEFORE TAKE-OFF",
+      "Items": [
+        { "Label": "PARKING BRAKE", "Value": "SET", "DataRef": "system.switches.S_MIP_PARKING_BRAKE", "DataRefCondition": "== 1" },
+        { "Label": "LANDING LIGHTS", "Value": "ON", "DataRef": "system.switches.S_OH_EXT_LT_LANDING_L", "DataRefCondition": "== 1" },
+        { "Label": "STROBE LIGHT", "Value": "ON", "DataRef": "system.switches.S_OH_EXT_LT_STROBE", "DataRefCondition": "== 1" },
+        { "Label": "PITOT HEAT", "Value": "AUTO", "DataRef": "system.switches.S_OH_PROBE_HEAT", "DataRefCondition": "== 1" },
+        { "Label": "TRANSPONDER", "Value": "TA/RA", "DataRef": "system.switches.S_XPDR_MODE", "DataRefCondition": "== 2" },
+        { "IsNote": true, "Label": "Request Takeoff Clearance" }
+      ]
+    },
+    {
+      "Title": "TAKE-OFF",
+      "Items": [
+        { "Label": "TAKEOFF THRUST", "Value": "FULL OR TO/GA", "DataRef": null },
+        { "Label": "BRAKES", "Value": "RELEASE", "DataRef": "system.switches.S_MIP_PARKING_BRAKE", "DataRefCondition": "== 0" },
+        { "Label": "POSITIVE RATE OF CLIMB", "Value": "GEAR UP", "DataRef": "system.switches.S_MIP_GEAR", "DataRefCondition": "== 1" },
+        { "Label": "PASSING F SPEED", "Value": "FLAPS 0", "DataRef": "aircraft.flap.positionHandle", "DataRefCondition": "== 0" },
+        { "Label": "SPOILERS", "Value": "DISARM", "DataRef": null },
+        { "Label": "LANDING LIGHTS", "Value": "AS REQUIRED", "DataRef": null }
+      ]
+    },
+    {
+      "Title": "CLIMB-OUT",
+      "Items": [
+        { "Label": "TAXI LIGHTS", "Value": "OFF", "DataRef": null },
+        { "Label": "ALTIMETER", "Value": "STD (29.92 / 1013)", "DataRef": null },
+        { "Label": "LANDING LIGHTS", "Value": "OFF", "DataRef": "system.switches.S_OH_EXT_LT_LANDING_L", "DataRefCondition": "== 0" },
+        { "Label": "FASTEN SEAT BELTS", "Value": "OFF", "DataRef": "system.switches.S_OH_SIGNS", "DataRefCondition": "== 2" }
+      ]
+    },
+    {
+      "Title": "CRUISE",
+      "Items": [
+        { "Label": "ENGINE & INSTRUMENTS", "Value": "MONITOR", "DataRef": null },
+        { "Label": "FUEL QUANTITY", "Value": "CHECK", "DataRef": null },
+        { "Label": "AUTOPILOT", "Value": "CHECK & SET", "DataRef": null },
+        { "Label": "ALTIMETER", "Value": "CHECK", "DataRef": null },
+        { "Label": "TRANSPONDER", "Value": "TA/RA", "DataRef": "system.switches.S_XPDR_MODE", "DataRefCondition": "== 2" }
+      ]
+    },
+    {
+      "Title": "APPROACH",
+      "Items": [
+        { "Label": "FASTEN SEAT BELTS", "Value": "ON", "DataRef": "system.switches.S_OH_SIGNS", "DataRefCondition": "== 1" },
+        { "Label": "LANDING LIGHTS", "Value": "CHECK ON", "DataRef": "system.switches.S_OH_EXT_LT_LANDING_L", "DataRefCondition": "== 1" },
+        { "Label": "GND SPOILERS", "Value": "ARM", "DataRef": null },
+        { "Label": "AUTO BRAKE", "Value": "SET", "DataRef": "system.indicators.I_MIP_AUTOBRAKE_MED_U", "DataRefCondition": "!= 0" },
+        { "Label": "FLAPS", "Value": "FLAPS 1", "DataRef": "aircraft.flap.positionHandle", "DataRefCondition": ">= 1" },
+        { "Label": "LANDING GEAR", "Value": "DOWN", "DataRef": "system.switches.S_MIP_GEAR", "DataRefCondition": "== 0" },
+        { "Label": "FLAPS", "Value": "FULL", "DataRef": "aircraft.flap.positionHandle", "DataRefCondition": "== 5" }
+      ]
+    },
+    {
+      "Title": "LANDING",
+      "Items": [
+        { "Label": "LANDING GEAR", "Value": "CHECK DOWN", "DataRef": "system.switches.S_MIP_GEAR", "DataRefCondition": "== 0" },
+        { "Label": "LANDING MEMO", "Value": "NO BLUE", "DataRef": null },
+        { "Label": "LANDING SPEED", "Value": "MANAGED", "DataRef": null },
+        { "Label": "SPOILERS", "Value": "VERIFY EXTENDED", "DataRef": null }
+      ]
+    },
+    {
+      "Title": "AFTER LANDING",
+      "Items": [
+        { "Label": "SPOILERS", "Value": "DISARMED", "DataRef": null },
+        { "Label": "FLAPS", "Value": "RETRACT", "DataRef": "aircraft.flap.positionHandle", "DataRefCondition": "== 0" },
+        { "Label": "LANDING LIGHTS", "Value": "OFF", "DataRef": "system.switches.S_OH_EXT_LT_LANDING_L", "DataRefCondition": "== 0" },
+        { "Label": "STROBE LIGHTS", "Value": "OFF", "DataRef": "system.switches.S_OH_EXT_LT_STROBE", "DataRefCondition": "== 2" },
+        { "Label": "APU", "Value": "START", "DataRef": "system.gates.B_APU_RUNNING", "DataRefCondition": "== true" },
+        { "Label": "TRANSPONDER", "Value": "OFF", "DataRef": "system.switches.S_XPDR_MODE", "DataRefCondition": "== 0" }
+      ]
+    },
+    {
+      "Title": "PARKING / SHUTDOWN",
+      "Items": [
+        { "Label": "PARKING BRAKES", "Value": "SET", "DataRef": "system.switches.S_MIP_PARKING_BRAKE", "DataRefCondition": "== 1" },
+        { "Label": "THRUST LEVERS", "Value": "IDLE", "DataRef": null },
+        { "Label": "ENGINE MASTER 1 & 2", "Value": "OFF", "DataRef": "system.switches.S_ENG_MASTER_1", "DataRefCondition": "== 0" },
+        { "Label": "BEACON", "Value": "OFF", "DataRef": "system.switches.S_OH_EXT_LT_BEACON", "DataRefCondition": "== 0" },
+        { "Label": "FUEL PUMPS", "Value": "ALL OFF", "DataRef": "system.switches.S_OH_FUEL_LEFT_1", "DataRefCondition": "== 0" },
+        { "Label": "ADIRS", "Value": "OFF", "DataRef": null },
+        { "Label": "BATTERIES", "Value": "AS REQUIRED", "DataRef": null }
+      ]
+    }
+  ]
+}

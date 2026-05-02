@@ -1,6 +1,7 @@
 using CFIT.AppLogger;
 using CFIT.AppTools;
 using Prosim2GSX.UI.Views.Audio;
+using Prosim2GSX.UI.Views.Checklists;
 using Prosim2GSX.UI.Views.Debug;
 using Prosim2GSX.UI.Views.Monitor;
 using Prosim2GSX.UI.Views.Profiles;
@@ -86,9 +87,10 @@ namespace Prosim2GSX.UI
             {
                 MainTabControl.Items[0] = CreateTabItem("FLIGHT STATUS", new ViewMonitor());
                 MainTabControl.Items[1] = CreateTabItem("OFP", new Views.Ofp.ViewOfp());
-                MainTabControl.Items[2] = CreateTabItem("GSX SETTINGS", new Views.Automation.ViewAutomation());
-                MainTabControl.Items[3] = CreateTabItem("AIRCRAFT PROFILES", new ViewProfiles());
-                MainTabControl.Items[4] = CreateTabItem("AUDIO SETTINGS", new ViewAudio());
+                MainTabControl.Items[2] = CreateTabItem("CHECKLISTS", new ViewChecklist());
+                MainTabControl.Items[3] = CreateTabItem("GSX SETTINGS", new Views.Automation.ViewAutomation());
+                MainTabControl.Items[4] = CreateTabItem("AIRCRAFT PROFILES", new ViewProfiles());
+                MainTabControl.Items[5] = CreateTabItem("AUDIO SETTINGS", new ViewAudio());
             }
             else
             {
@@ -96,15 +98,16 @@ namespace Prosim2GSX.UI
                 var placeholder = CreateDegradedPlaceholder();
                 MainTabControl.Items[0] = CreateTabItem("FLIGHT STATUS", placeholder);
                 MainTabControl.Items[1] = CreateTabItem("OFP", CreateDegradedPlaceholder());
-                MainTabControl.Items[2] = CreateTabItem("GSX SETTINGS", CreateDegradedPlaceholder());
-                MainTabControl.Items[3] = CreateTabItem("AIRCRAFT PROFILES", CreateDegradedPlaceholder());
-                MainTabControl.Items[4] = CreateTabItem("AUDIO SETTINGS", CreateDegradedPlaceholder());
+                MainTabControl.Items[2] = CreateTabItem("CHECKLISTS", CreateDegradedPlaceholder());
+                MainTabControl.Items[3] = CreateTabItem("GSX SETTINGS", CreateDegradedPlaceholder());
+                MainTabControl.Items[4] = CreateTabItem("AIRCRAFT PROFILES", CreateDegradedPlaceholder());
+                MainTabControl.Items[5] = CreateTabItem("AUDIO SETTINGS", CreateDegradedPlaceholder());
             }
 
             // Settings tab is always available (needed to configure SDK path)
-            MainTabControl.Items[5] = CreateTabItem("APP SETTINGS", new ViewSettings());
+            MainTabControl.Items[6] = CreateTabItem("APP SETTINGS", new ViewSettings());
 
-            // Optional Debug tab — appended at index 6 only when AppConfig
+            // Optional Debug tab — appended at index 7 only when AppConfig
             // ShowDebugTab is true. Kept out of the XAML so the visual tree
             // never even constructs the view in normal end-user installs.
             if (Prosim2GSX.Instance.AppService?.Config?.ShowDebugTab == true)
@@ -114,7 +117,7 @@ namespace Prosim2GSX.UI
 
             // Set index and previousTabIndex before subscribing so SelectionChanged
             // does not fire Start() while the window is still in its layout pass.
-            int defaultTab = sdkAvailable ? 0 : 5; // Go straight to Settings in degraded mode
+            int defaultTab = sdkAvailable ? 0 : 6; // Go straight to Settings in degraded mode
             MainTabControl.SelectedIndex = defaultTab;
             _previousTabIndex = defaultTab;
             MainTabControl.SelectionChanged += OnTabSelectionChanged;

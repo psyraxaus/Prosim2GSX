@@ -23,6 +23,7 @@ export interface AppState {
   gsxSettings: Record<string, unknown> | null;
   appSettings: Record<string, unknown> | null;
   ofp: Record<string, unknown> | null;
+  checklists: Record<string, unknown> | null;
   connection: ConnectionStatus;
 }
 
@@ -38,6 +39,7 @@ const initialState: AppState = {
   gsxSettings: null,
   appSettings: null,
   ofp: null,
+  checklists: null,
   connection: "closed",
 };
 

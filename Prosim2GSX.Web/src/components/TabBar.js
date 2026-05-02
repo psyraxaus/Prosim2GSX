@@ -1,10 +1,11 @@
 import { jsx as _jsx } from "react/jsx-runtime";
 import styles from "./TabBar.module.css";
-// Order locked in project memory phase8_design_decisions:
-// Flight Status → OFP → GSX Settings → Aircraft Profiles → Audio Settings → App Settings.
+// Order matches the WPF AppWindow tabs:
+// Flight Status → OFP → Checklists → GSX Settings → Aircraft Profiles → Audio Settings → App Settings.
 const TABS = [
     { key: "flightStatus", label: "Flight Status" },
     { key: "ofp", label: "OFP" },
+    { key: "checklists", label: "Checklists" },
     { key: "gsxSettings", label: "GSX Settings" },
     { key: "aircraftProfiles", label: "Aircraft Profiles" },
     { key: "audioSettings", label: "Audio Settings" },

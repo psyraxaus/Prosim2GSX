@@ -14,6 +14,7 @@ const initialState = {
     gsxSettings: null,
     appSettings: null,
     ofp: null,
+    checklists: null,
     connection: "closed",
 };
 function reducer(state, action) {

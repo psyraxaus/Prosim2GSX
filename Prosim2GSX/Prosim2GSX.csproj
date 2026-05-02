@@ -64,6 +64,7 @@
   <ItemGroup>
     <EmbeddedResource Include="UI\Icons\AppIcon.ico" />
     <EmbeddedResource Include="UI\Icons\AppIconUpdate.ico" />
+    <EmbeddedResource Include="UI\Views\Checklists\Resources\a320_default.json" />
   </ItemGroup>
   
   <ItemGroup>

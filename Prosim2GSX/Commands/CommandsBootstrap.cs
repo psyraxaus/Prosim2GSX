@@ -13,6 +13,7 @@ namespace Prosim2GSX.Commands
         {
             OfpHandlers.Register(app, registry);
             ProfileHandlers.Register(app, registry);
+            ChecklistHandlers.Register(app, registry);
         }
     }
 }

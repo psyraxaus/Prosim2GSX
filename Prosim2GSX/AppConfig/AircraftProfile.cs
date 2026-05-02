@@ -25,6 +25,7 @@ namespace Prosim2GSX.AppConfig
             Name = profile.Name;
             MatchType = profile.MatchType;
             MatchString = profile.MatchString;
+            ChecklistName = profile.ChecklistName;
         }
 
         public override string ToString()
@@ -34,6 +35,11 @@ namespace Prosim2GSX.AppConfig
             else
                 return $"{Name}: {MatchType}";
         }
+
+        // Per-profile checklist file (filename without .json extension). Null
+        // means "use the service's default" (a320_default). Selection is
+        // surfaced and edited from the CHECKLISTS tab.
+        public virtual string ChecklistName { get; set; } = null;
 
         //Settings
         public virtual bool PlaceProsimStairsWalkaround { get; set; } = true;

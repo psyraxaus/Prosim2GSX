@@ -66,6 +66,7 @@ namespace Prosim2GSX.State
                     try { UpdateSim(); } catch (Exception ex) { Logger.LogException(ex); }
                     try { UpdateGsx(); } catch { }
                     try { UpdateApp(); } catch { }
+                    try { UpdateChecklist(); } catch (Exception ex) { Logger.LogException(ex); }
                 });
             }
             finally
@@ -267,6 +268,132 @@ namespace Prosim2GSX.State
                 fs.UtcDate = DateTime.UtcNow.ToString("dd MMM").ToUpper();
             }
             catch { }
+        }
+
+        // Auto-reset state machine. Fires a full reset of the loaded checklist
+        // when a flight cycle completes: engines were running while on-ground
+        // (pre-departure or post-landing), then engines stop. The takeoff
+        // transition (on-ground -> airborne) auto-clears PRE-START/STARTUP/TAXI
+        // so those sections are not stale when the user lands.
+        private bool _wasOnGround = true;
+        private bool _wasEnginesRunning = false;
+
+        protected virtual void UpdateChecklist()
+        {
+            var cl = _app?.Checklist;
+            var fs = _app?.FlightStatus;
+            var ai = _app?.GsxService?.AircraftInterface;
+            if (cl == null || fs == null) return;
+
+            // Auto-reset edges. Compare the current store values (already
+            // written by UpdateApp this tick) to the previous snapshot.
+            var nowOnGround = fs.AppOnGround;
+            var nowEnginesRunning = fs.AppEnginesRunning;
+
+            // Takeoff: on-ground -> airborne. Clear pre-flight sections so the
+            // user lands with a clean approach/landing flow.
+            if (_wasOnGround && !nowOnGround)
+            {
+                cl.ResetSections("PRE START", "STARTUP", "BEFORE TAXI", "TAXI", "BEFORE TAKE-OFF", "TAKE-OFF");
+            }
+
+            // Shutdown: on-ground AND engines just transitioned running -> off.
+            // Full reset of all sections (fresh flight cycle next time).
+            if (nowOnGround && _wasEnginesRunning && !nowEnginesRunning)
+            {
+                cl.ResetAll();
+            }
+
+            _wasOnGround = nowOnGround;
+            _wasEnginesRunning = nowEnginesRunning;
+
+            // Dataref-driven item evaluation. Walk the current checklist's items;
+            // for each item that has a dataref, read it via the SDK and update
+            // IsChecked. Manual items are NEVER touched here — they only flip via
+            // user click, RESET, or the auto-reset edges above.
+            if (cl.Definition?.Sections == null) return;
+            var sdk = ai?.ProsimInterface?.SdkInterface;
+            if (sdk == null || !sdk.IsConnected) return;
+
+            for (int s = 0; s < cl.Definition.Sections.Count; s++)
+            {
+                if (!cl.ItemsBySection.TryGetValue(s, out var items)) continue;
+                for (int i = 0; i < items.Count; i++)
+                {
+                    var def = items[i].Definition;
+                    if (def.IsNote || def.IsSeparator) continue;
+                    if (string.IsNullOrWhiteSpace(def.DataRef)) continue;
+                    if (string.IsNullOrWhiteSpace(def.DataRefCondition)) continue;
+
+                    bool? satisfied = EvaluateCondition(sdk, def.DataRef, def.DataRefCondition);
+                    if (!satisfied.HasValue) continue;
+                    if (items[i].IsChecked != satisfied.Value)
+                        items[i].IsChecked = satisfied.Value;
+                }
+            }
+
+            cl.RecomputeCurrentItem();
+        }
+
+        // Returns null when the dataref or condition cannot be evaluated; caller
+        // leaves the existing IsChecked alone in that case.
+        protected virtual bool? EvaluateCondition(global::ProsimInterface.ProsimSdkInterface sdk, string dataRef, string condition)
+        {
+            try
+            {
+                var raw = (condition ?? "").Trim();
+                string op;
+                string operand;
+                // Two-char operators must be checked first.
+                if (raw.StartsWith("==")) { op = "=="; operand = raw.Substring(2).Trim(); }
+                else if (raw.StartsWith("!=")) { op = "!="; operand = raw.Substring(2).Trim(); }
+                else if (raw.StartsWith(">=")) { op = ">="; operand = raw.Substring(2).Trim(); }
+                else if (raw.StartsWith("<=")) { op = "<="; operand = raw.Substring(2).Trim(); }
+                else if (raw.StartsWith(">")) { op = ">"; operand = raw.Substring(1).Trim(); }
+                else if (raw.StartsWith("<")) { op = "<"; operand = raw.Substring(1).Trim(); }
+                else return null;
+
+                var value = sdk.ReadDataRef(dataRef);
+                if (value == null) return null;
+
+                if (operand.Equals("true", StringComparison.OrdinalIgnoreCase) || operand.Equals("false", StringComparison.OrdinalIgnoreCase))
+                {
+                    bool target = operand.Equals("true", StringComparison.OrdinalIgnoreCase);
+                    bool actual = sdk.GetBool(dataRef);
+                    return op == "==" ? actual == target : op == "!=" ? actual != target : (bool?)null;
+                }
+
+                // Numeric branch. Doubles get a small tolerance for ==/!=; ints/bytes are exact.
+                if (!double.TryParse(operand, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double targetD))
+                    return null;
+
+                double actualD;
+                bool isFloat = false;
+                if (value is bool bv) { actualD = bv ? 1 : 0; }
+                else if (value is byte by) { actualD = by; }
+                else if (value is int iv) { actualD = iv; }
+                else if (value is long lv) { actualD = lv; }
+                else if (value is double dv) { actualD = dv; isFloat = true; }
+                else if (value is float fv) { actualD = fv; isFloat = true; }
+                else
+                {
+                    try { actualD = Convert.ToDouble(value, System.Globalization.CultureInfo.InvariantCulture); }
+                    catch { return null; }
+                }
+
+                const double eps = 0.01;
+                return op switch
+                {
+                    "==" => isFloat ? Math.Abs(actualD - targetD) < eps : actualD == targetD,
+                    "!=" => isFloat ? Math.Abs(actualD - targetD) >= eps : actualD != targetD,
+                    ">" => actualD > targetD,
+                    ">=" => actualD >= targetD,
+                    "<" => actualD < targetD,
+                    "<=" => actualD <= targetD,
+                    _ => (bool?)null,
+                };
+            }
+            catch { return null; }
         }
     }
 }

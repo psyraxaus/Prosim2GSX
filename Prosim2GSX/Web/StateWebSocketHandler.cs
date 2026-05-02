@@ -2,6 +2,7 @@ using CFIT.AppLogger;
 using Prosim2GSX.AppConfig;
 using Prosim2GSX.GSX;
 using Prosim2GSX.State;
+using Prosim2GSX.UI.Views.Checklists;
 using Prosim2GSX.Web.Contracts;
 using Prosim2GSX.Web.Contracts.Commands;
 using System;
@@ -59,6 +60,8 @@ namespace Prosim2GSX.Web
             _app.Audio.PropertyChanged += OnAudioChanged;
             _app.Config.PropertyChanged += OnConfigChanged;
             _app.Ofp.PropertyChanged += OnOfpChanged;
+            _app.Checklist.PropertyChanged += OnChecklistChanged;
+            HookChecklistItems(_app.Checklist);
             _app.FlightStatus.MessageLog.CollectionChanged += OnMessageLogChanged;
 
             // GsxService is null in degraded mode (no SDK). Subscribe only when
@@ -250,6 +253,65 @@ namespace Prosim2GSX.Web
                 {
                     channel = "ofp",
                     patch = new Dictionary<string, object> { [camel] = value },
+                };
+                BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+        }
+
+        // ── Checklists channel ───────────────────────────────────────────────
+        // The checklist wire surface is whole-snapshot per change. Per-item
+        // IsChecked changes happen on individual ChecklistItemRuntime objects
+        // (not on the store itself), so the simplest correct fan-out is to
+        // re-serialise the full ChecklistDto whenever ANY relevant change
+        // fires. Definitions are short (~80 items max) and changes are
+        // human-paced (clicks + occasional dataref edges) so the bandwidth
+        // cost is negligible compared to the simplicity of the contract.
+
+        private readonly HashSet<ChecklistItemRuntime> _hookedItems = new();
+
+        private void OnChecklistChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (sender is ChecklistState cl && e?.PropertyName == nameof(ChecklistState.Definition))
+                HookChecklistItems(cl);
+            BroadcastChecklistSnapshot();
+        }
+
+        private void OnChecklistItemChanged(object sender, PropertyChangedEventArgs e)
+            => BroadcastChecklistSnapshot();
+
+        private void HookChecklistItems(ChecklistState cl)
+        {
+            if (cl == null) return;
+            // Detach from any previously-hooked runtimes (LoadDefinition
+            // replaces them all wholesale).
+            foreach (var r in _hookedItems)
+                r.PropertyChanged -= OnChecklistItemChanged;
+            _hookedItems.Clear();
+
+            foreach (var kvp in cl.ItemsBySection)
+            {
+                foreach (var rt in kvp.Value)
+                {
+                    rt.PropertyChanged += OnChecklistItemChanged;
+                    _hookedItems.Add(rt);
+                }
+            }
+        }
+
+        private void BroadcastChecklistSnapshot()
+        {
+            if (_connections.IsEmpty) return;
+            try
+            {
+                var dto = ChecklistDto.From(_app);
+                var envelope = new
+                {
+                    channel = "checklists",
+                    snapshot = dto,
                 };
                 BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default));
             }

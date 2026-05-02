@@ -12,6 +12,7 @@ import { AudioSettingsPanel } from "./panels/AudioSettingsPanel";
 import { AppSettingsPanel } from "./panels/AppSettingsPanel";
 import { GsxSettingsPanel } from "./panels/GsxSettingsPanel";
 import { OfpPanel } from "./panels/OfpPanel";
+import { ChecklistsPanel } from "./panels/ChecklistsPanel";
 import { AircraftProfilesPanel } from "./panels/AircraftProfilesPanel";
 import { AppSettingsDto } from "./types";
 import styles from "./App.module.css";
@@ -81,6 +82,7 @@ function AppShell() {
       <main className={styles.main}>
         {tab === "flightStatus" && <FlightStatusPanel />}
         {tab === "ofp" && <OfpPanel />}
+        {tab === "checklists" && <ChecklistsPanel />}
         {tab === "gsxSettings" && <GsxSettingsPanel />}
         {tab === "aircraftProfiles" && <AircraftProfilesPanel />}
         {tab === "audioSettings" && <AudioSettingsPanel />}

@@ -13,6 +13,7 @@ import { AudioSettingsPanel } from "./panels/AudioSettingsPanel";
 import { AppSettingsPanel } from "./panels/AppSettingsPanel";
 import { GsxSettingsPanel } from "./panels/GsxSettingsPanel";
 import { OfpPanel } from "./panels/OfpPanel";
+import { ChecklistsPanel } from "./panels/ChecklistsPanel";
 import { AircraftProfilesPanel } from "./panels/AircraftProfilesPanel";
 import styles from "./App.module.css";
 export function App() {
@@ -62,5 +63,5 @@ function AppShell() {
     const themeName = state.appSettings?.currentTheme ?? null;
     useTheme(themeName);
     const [tab, setTab] = useState("flightStatus");
-    return (_jsxs("div", { className: styles.app, children: [_jsx(Header, {}), _jsx(TabBar, { active: tab, onSelect: setTab }), _jsxs("main", { className: styles.main, children: [tab === "flightStatus" && _jsx(FlightStatusPanel, {}), tab === "ofp" && _jsx(OfpPanel, {}), tab === "gsxSettings" && _jsx(GsxSettingsPanel, {}), tab === "aircraftProfiles" && _jsx(AircraftProfilesPanel, {}), tab === "audioSettings" && _jsx(AudioSettingsPanel, {}), tab === "appSettings" && _jsx(AppSettingsPanel, {})] })] }));
+    return (_jsxs("div", { className: styles.app, children: [_jsx(Header, {}), _jsx(TabBar, { active: tab, onSelect: setTab }), _jsxs("main", { className: styles.main, children: [tab === "flightStatus" && _jsx(FlightStatusPanel, {}), tab === "ofp" && _jsx(OfpPanel, {}), tab === "checklists" && _jsx(ChecklistsPanel, {}), tab === "gsxSettings" && _jsx(GsxSettingsPanel, {}), tab === "aircraftProfiles" && _jsx(AircraftProfilesPanel, {}), tab === "audioSettings" && _jsx(AudioSettingsPanel, {}), tab === "appSettings" && _jsx(AppSettingsPanel, {})] })] }));
 }

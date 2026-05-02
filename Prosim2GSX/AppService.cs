@@ -5,6 +5,7 @@ using CFIT.AppTools;
 using CFIT.SimConnectLib.Definitions;
 using Prosim2GSX.AppConfig;
 using Prosim2GSX.Audio;
+using Prosim2GSX.Checklists;
 using Prosim2GSX.Commands;
 using Prosim2GSX.GSX;
 using Prosim2GSX.Prosim;
@@ -33,6 +34,7 @@ namespace Prosim2GSX
         public virtual GsxController GsxService { get; protected set; }
         public virtual AudioController AudioService { get; protected set; }
         public virtual ISayIntentionsService SayIntentionsService { get; protected set; } = new SayIntentionsService();
+        public virtual IChecklistService ChecklistService { get; protected set; } = new ChecklistService();
         public virtual AppResetRequest ResetRequested {  get; set; } = AppResetRequest.None;
         public virtual bool IsSessionInitializing { get; protected set; } = false;
         public virtual bool IsSessionInitialized { get; protected set; } = false;
@@ -46,6 +48,7 @@ namespace Prosim2GSX
         public virtual GsxState Gsx { get; } = new();
         public virtual AudioState Audio { get; } = new();
         public virtual OfpState Ofp { get; } = new();
+        public virtual ChecklistState Checklist { get; } = new();
         // Settings is an alias for the existing Config singleton — Config already
         // implements INotifyPropertyChanged and persists itself, so it serves as
         // the AppSettingsState surface unchanged.

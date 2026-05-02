@@ -54,7 +54,23 @@ export function useWebSocket(dispatch: Dispatch<AppAction>) {
             dispatch({ type: "logAdded", msg: env.logAdded });
             return;
           }
-          if (env.channel && env.patch) {
+          if ("snapshot" in env && env.channel) {
+            // Snapshot envelopes only land on channels that are also valid
+            // StateChannels (currently "checklists"). Narrow with a runtime
+            // check rather than expanding StateChannel to include "gsx",
+            // which is a patch-only channel that nests under flightStatus.
+            if (
+              env.channel === "flightStatus" ||
+              env.channel === "audio" ||
+              env.channel === "appSettings" ||
+              env.channel === "ofp" ||
+              env.channel === "checklists"
+            ) {
+              dispatch({ type: "set", channel: env.channel, state: env.snapshot });
+            }
+            return;
+          }
+          if ("patch" in env && env.channel && env.patch) {
             dispatch({ type: "patch", channel: env.channel, patch: env.patch });
           }
         } catch {
