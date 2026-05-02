@@ -185,7 +185,7 @@ export function OfpPanel() {
             spellCheck={false}
           />
           <PrimaryButton
-            onClick={() => {}}
+            type="submit"
             disabled={!ofp.isOfpLoaded || !arrivalGateInput.trim() || busy === "confirm"}
           >
             {busy === "confirm" ? "Confirming…" : "Confirm"}
