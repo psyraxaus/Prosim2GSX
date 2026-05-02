@@ -26,5 +26,11 @@ namespace Prosim2GSX.SayIntentions
         bool IsActive { get; }
         Task<SayIntentionsAssignResult> AssignGateAsync(string airportIcao, string gate);
         Task<IReadOnlyList<SayIntentionsAirportWx>> GetWeatherAsync(IEnumerable<string> icaos);
+        // Returns the CPDLC logon address (e.g. "EFIN") for whatever airport
+        // SayIntentions currently considers active (GPS + flight plan); empty
+        // string when SayIntentions is inactive, the response has no CPDLC
+        // entry, or the call fails. Endpoint takes no airport parameter — it
+        // tracks departure → arrival on its own as the flight progresses.
+        Task<string> GetCpdlcStationAsync();
     }
 }

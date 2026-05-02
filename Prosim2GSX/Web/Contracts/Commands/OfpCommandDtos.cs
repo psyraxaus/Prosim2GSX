@@ -1,5 +1,6 @@
 using Prosim2GSX.GSX;
 using Prosim2GSX.SayIntentions;
+using System;
 
 namespace Prosim2GSX.Web.Contracts.Commands
 {
@@ -35,6 +36,8 @@ namespace Prosim2GSX.Web.Contracts.Commands
         public WeatherDto ArrivalWeather { get; set; }
         public string WeatherStatus { get; set; } = "";
         public bool IsRefreshingWeather { get; set; }
+        public string CpdlcStation { get; set; } = "";
+        public DateTimeOffset? WeatherFetchedAt { get; set; }
     }
 
     // Wire shape for SayIntentionsAirportWx — exposes only the fields the

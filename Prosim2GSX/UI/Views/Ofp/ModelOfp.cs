@@ -6,10 +6,12 @@ using Prosim2GSX.AppConfig;
 using Prosim2GSX.GSX;
 using Prosim2GSX.SayIntentions;
 using Prosim2GSX.State;
+using Prosim2GSX.Web.Contracts.Commands;
 using ProsimInterface;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -50,19 +52,52 @@ namespace Prosim2GSX.UI.Views.Ofp
 
         protected virtual void OnOfpStateChanged(object sender, PropertyChangedEventArgs e)
         {
-            if (e?.PropertyName != nameof(State.OfpState.AssignedArrivalGate)) return;
+            // Route OfpState property changes onto the corresponding view-model
+            // properties so the WPF tab's bindings stay in sync. AssignedArrivalGate
+            // and the weather fields all live on OfpState (the long-lived store)
+            // so the view-model is purely a notification adapter for them.
             var dispatcher = Application.Current?.Dispatcher;
-            if (dispatcher != null && !dispatcher.CheckAccess())
-                dispatcher.BeginInvoke(new Action(() =>
+            Action notify = e?.PropertyName switch
+            {
+                nameof(State.OfpState.AssignedArrivalGate) => () =>
                 {
                     NotifyPropertyChanged(nameof(AssignedArrivalGate));
                     NotifyPropertyChanged(nameof(HasAssignedArrivalGate));
-                }));
+                },
+                nameof(State.OfpState.DepartureWeather) => () =>
+                {
+                    NotifyPropertyChanged(nameof(DepartureWeather));
+                    NotifyPropertyChanged(nameof(HasDepartureWeather));
+                    NotifyPropertyChanged(nameof(HasNoDepartureWeather));
+                },
+                nameof(State.OfpState.ArrivalWeather) => () =>
+                {
+                    NotifyPropertyChanged(nameof(ArrivalWeather));
+                    NotifyPropertyChanged(nameof(HasArrivalWeather));
+                    NotifyPropertyChanged(nameof(HasNoArrivalWeather));
+                },
+                nameof(State.OfpState.WeatherStatus) => () =>
+                {
+                    NotifyPropertyChanged(nameof(WeatherStatus));
+                    NotifyPropertyChanged(nameof(HasWeatherStatus));
+                },
+                nameof(State.OfpState.IsRefreshingWeather) => () =>
+                {
+                    NotifyPropertyChanged(nameof(IsRefreshingWeather));
+                    RefreshWeatherCommand.NotifyCanExecuteChanged();
+                },
+                nameof(State.OfpState.CpdlcStation) => () =>
+                {
+                    NotifyPropertyChanged(nameof(CpdlcStation));
+                    NotifyPropertyChanged(nameof(HasCpdlcStation));
+                },
+                _ => null,
+            };
+            if (notify == null) return;
+            if (dispatcher != null && !dispatcher.CheckAccess())
+                dispatcher.BeginInvoke(notify);
             else
-            {
-                NotifyPropertyChanged(nameof(AssignedArrivalGate));
-                NotifyPropertyChanged(nameof(HasAssignedArrivalGate));
-            }
+                notify();
         }
 
         protected virtual void OnPushbackPreferenceChanged(PushbackPreference _)
@@ -338,110 +373,39 @@ namespace Prosim2GSX.UI.Views.Ofp
 
         private bool CanSendNow() => HasPendingArrivalGate;
 
-        // Weather (ATIS / METAR / wind / runway)
-        protected SayIntentionsAirportWx _departureWeather;
-        protected SayIntentionsAirportWx _arrivalWeather;
-
-        public virtual SayIntentionsAirportWx DepartureWeather
-        {
-            get => _departureWeather;
-            protected set
-            {
-                _departureWeather = value;
-                NotifyPropertyChanged(nameof(DepartureWeather));
-                NotifyPropertyChanged(nameof(HasDepartureWeather));
-                NotifyPropertyChanged(nameof(HasNoDepartureWeather));
-            }
-        }
-        public virtual SayIntentionsAirportWx ArrivalWeather
-        {
-            get => _arrivalWeather;
-            protected set
-            {
-                _arrivalWeather = value;
-                NotifyPropertyChanged(nameof(ArrivalWeather));
-                NotifyPropertyChanged(nameof(HasArrivalWeather));
-                NotifyPropertyChanged(nameof(HasNoArrivalWeather));
-            }
-        }
+        // Weather (ATIS / METAR / wind / runway) and CPDLC station all
+        // live on OfpState — view-model is a pure notification adapter.
+        // The OfpHandlers.RefreshWeather command owns the cache + debounce
+        // policy, so both the WPF tab and the web panel share the same
+        // SayIntentions rate-limiting.
+        public virtual SayIntentionsAirportWx DepartureWeather => OfpState?.DepartureWeather;
+        public virtual SayIntentionsAirportWx ArrivalWeather => OfpState?.ArrivalWeather;
         public virtual bool HasDepartureWeather => DepartureWeather != null;
         public virtual bool HasNoDepartureWeather => DepartureWeather == null;
         public virtual bool HasArrivalWeather => ArrivalWeather != null;
         public virtual bool HasNoArrivalWeather => ArrivalWeather == null;
 
-        protected string _weatherStatus = "";
-        public virtual string WeatherStatus
-        {
-            get => _weatherStatus;
-            set
-            {
-                if (_weatherStatus == value) return;
-                _weatherStatus = value ?? "";
-                NotifyPropertyChanged(nameof(WeatherStatus));
-                NotifyPropertyChanged(nameof(HasWeatherStatus));
-            }
-        }
+        public virtual string WeatherStatus => OfpState?.WeatherStatus ?? "";
         public virtual bool HasWeatherStatus => !string.IsNullOrWhiteSpace(WeatherStatus);
 
-        protected bool _isRefreshingWeather;
-        public virtual bool IsRefreshingWeather
-        {
-            get => _isRefreshingWeather;
-            protected set
-            {
-                _isRefreshingWeather = value;
-                NotifyPropertyChanged(nameof(IsRefreshingWeather));
-                RefreshWeatherCommand.NotifyCanExecuteChanged();
-            }
-        }
+        public virtual bool IsRefreshingWeather => OfpState?.IsRefreshingWeather ?? false;
+
+        public virtual string CpdlcStation => OfpState?.CpdlcStation ?? "";
+        public virtual bool HasCpdlcStation => !string.IsNullOrWhiteSpace(CpdlcStation);
 
         [RelayCommand(CanExecute = nameof(CanRefreshWeather))]
         private async Task RefreshWeatherAsync()
         {
             if (IsRefreshingWeather) return;
 
-            if (SayIntentions?.IsActive != true)
-            {
-                WeatherStatus = "SayIntentions not active. Enable in App Settings and ensure flight.json is present.";
-                DepartureWeather = null;
-                ArrivalWeather = null;
-                return;
-            }
-
-            var icaos = new List<string>();
-            if (!string.IsNullOrWhiteSpace(DepartureIcao)) icaos.Add(DepartureIcao);
-            if (!string.IsNullOrWhiteSpace(ArrivalIcao) && ArrivalIcao != DepartureIcao) icaos.Add(ArrivalIcao);
-            if (icaos.Count == 0)
-            {
-                WeatherStatus = "No ICAOs available — load an OFP first.";
-                return;
-            }
-
-            IsRefreshingWeather = true;
-            WeatherStatus = "";
             try
             {
-                var results = await SayIntentions.GetWeatherAsync(icaos);
-                SayIntentionsAirportWx dep = null, arr = null;
-                foreach (var wx in results)
-                {
-                    if (string.Equals(wx.Airport, DepartureIcao, StringComparison.OrdinalIgnoreCase)) dep = wx;
-                    else if (string.Equals(wx.Airport, ArrivalIcao, StringComparison.OrdinalIgnoreCase)) arr = wx;
-                }
-                DepartureWeather = dep;
-                ArrivalWeather = arr;
-
-                if (dep == null && arr == null)
-                    WeatherStatus = "Weather request returned no data.";
+                await AppService.Commands.ExecuteAsync<RefreshWeatherRequest, WeatherSnapshotDto>(
+                    "ofp.refreshWeather", new RefreshWeatherRequest(), CancellationToken.None);
             }
             catch (Exception ex)
             {
                 Logger.LogException(ex);
-                WeatherStatus = $"Weather request failed: {ex.Message}";
-            }
-            finally
-            {
-                IsRefreshingWeather = false;
             }
         }
 

@@ -42,6 +42,12 @@ namespace Prosim2GSX.Web.Contracts
         public WeatherDto ArrivalWeather { get; set; }
         public string WeatherStatus { get; set; } = "";
         public bool IsRefreshingWeather { get; set; }
+        // CPDLC logon address from SayIntentions getCurrentFrequencies
+        // (single airport — endpoint tracks dep→arr automatically).
+        public string CpdlcStation { get; set; } = "";
+        // Last successful weather/CPDLC fetch — clients consult this to
+        // decide whether to skip an auto-refresh on tab activation.
+        public DateTimeOffset? WeatherFetchedAt { get; set; }
 
         // Pushback preference (in-memory on GsxController)
         public PushbackPreference PushbackPreference { get; set; } = PushbackPreference.Straight;
@@ -86,6 +92,8 @@ namespace Prosim2GSX.Web.Contracts
                 ArrivalWeather = WeatherDto.From(ofpState?.ArrivalWeather),
                 WeatherStatus = ofpState?.WeatherStatus ?? "",
                 IsRefreshingWeather = ofpState?.IsRefreshingWeather ?? false,
+                CpdlcStation = ofpState?.CpdlcStation ?? "",
+                WeatherFetchedAt = ofpState?.WeatherFetchedAt,
 
                 PushbackPreference = gsx?.PushbackPreference ?? PushbackPreference.Straight,
                 UseSayIntentions = config?.UseSayIntentions == true,

@@ -191,6 +191,57 @@ namespace Prosim2GSX.SayIntentions
             }
         }
 
+        public virtual async Task<string> GetCpdlcStationAsync()
+        {
+            var apiKey = ReadApiKey();
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                Logger.Debug("SayIntentions: not active (no api_key) — skipping getCurrentFrequencies");
+                return "";
+            }
+
+            try
+            {
+                var url = $"/sapi/getCurrentFrequencies?api_key={Uri.EscapeDataString(apiKey)}";
+                using var response = await HttpClient.GetAsync(url, Token);
+                var body = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    Logger.Warning($"SayIntentions: getCurrentFrequencies HTTP {(int)response.StatusCode} — body: {body}");
+                    return "";
+                }
+
+                var json = JsonNode.Parse(body);
+                var frequencies = json?["frequencies"] as JsonArray;
+                if (frequencies == null)
+                {
+                    Logger.Warning($"SayIntentions: getCurrentFrequencies response missing frequencies array — body: {body}");
+                    return "";
+                }
+
+                foreach (var node in frequencies)
+                {
+                    if (node == null) continue;
+                    var station = node["station"]?.GetValue<string>();
+                    if (string.Equals(station, "CPDLC", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var freq = node["freq"]?.GetValue<string>() ?? "";
+                        Logger.Debug($"SayIntentions: getCurrentFrequencies CPDLC station = '{freq}'");
+                        return freq;
+                    }
+                }
+
+                Logger.Debug("SayIntentions: getCurrentFrequencies returned no CPDLC entry");
+                return "";
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"SayIntentions: getCurrentFrequencies failed ({ex.GetType().Name}: {ex.Message})");
+                return "";
+            }
+        }
+
         protected static int? TryGetInt(JsonNode node)
         {
             if (node == null) return null;

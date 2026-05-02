@@ -474,6 +474,8 @@ export interface OfpDto {
   arrivalWeather: WeatherDto | null;
   weatherStatus: string;
   isRefreshingWeather: boolean;
+  cpdlcStation: string;
+  weatherFetchedAt: string | null;
 
   pushbackPreference: PushbackPreference;
   useSayIntentions: boolean;
@@ -503,6 +505,8 @@ export interface WeatherSnapshotDto {
   arrivalWeather: WeatherDto | null;
   weatherStatus: string;
   isRefreshingWeather: boolean;
+  cpdlcStation: string;
+  weatherFetchedAt: string | null;
 }
 
 export const PUSHBACK_OPTIONS: { value: PushbackPreference; label: string }[] = [

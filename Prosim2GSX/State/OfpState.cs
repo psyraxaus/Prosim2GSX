@@ -1,5 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using Prosim2GSX.SayIntentions;
+using System;
+using System.Threading;
 
 namespace Prosim2GSX.State
 {
@@ -39,5 +41,19 @@ namespace Prosim2GSX.State
         [ObservableProperty] private SayIntentionsAirportWx _ArrivalWeather;
         [ObservableProperty] private string _WeatherStatus = "";
         [ObservableProperty] private bool _IsRefreshingWeather;
+
+        // CPDLC station from SayIntentions getCurrentFrequencies. Single
+        // value because the endpoint reports whatever airport SayIntentions
+        // currently considers active (departure → arrival on its own).
+        [ObservableProperty] private string _CpdlcStation = "";
+
+        // Refresh-cache metadata. Not [ObservableProperty] — pure server-
+        // side bookkeeping; the React/WPF panels only ever read the
+        // observable fields above.
+        public DateTimeOffset? WeatherFetchedAt { get; set; }
+        public DateTimeOffset? LastForcedRefreshAt { get; set; }
+        // Single in-flight guard for refresh — second concurrent caller
+        // waits then exits via the !isStale short-circuit.
+        public SemaphoreSlim RefreshGate { get; } = new SemaphoreSlim(1, 1);
     }
 }

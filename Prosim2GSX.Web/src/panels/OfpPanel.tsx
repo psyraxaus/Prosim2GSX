@@ -55,10 +55,20 @@ export function OfpPanel() {
   }
 
   useEffect(() => {
-    // Both fire on mount; mount = tab activation because App.tsx
-    // conditionally renders this component when active === "ofp".
-    loadOfp();
-    refreshWeather();
+    // Mount fires on tab activation (App.tsx conditionally renders this
+    // panel when active === "ofp"). loadOfp is cheap (local GET, no
+    // external API). The auto-refresh is gated on cache age — if the
+    // server already has weather/CPDLC fetched within the TTL window,
+    // skip the round-trip entirely. Server would short-circuit anyway,
+    // but this avoids spamming /api/ofp/refresh-weather across N clients
+    // re-mounting on every tab flip.
+    (async () => {
+      await loadOfp();
+      const fetched = (state.ofp as unknown as OfpDto | null)?.weatherFetchedAt;
+      const ttlMs = 10 * 60 * 1000;
+      const fresh = fetched ? (Date.now() - new Date(fetched).getTime()) < ttlMs : false;
+      if (!fresh) refreshWeather();
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

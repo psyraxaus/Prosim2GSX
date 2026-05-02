@@ -134,6 +134,19 @@ namespace Prosim2GSX.Commands.Handlers
 
         // ── refreshWeather ──────────────────────────────────────────────────
 
+        // Cache + debounce policy for the SayIntentions weather + CPDLC
+        // pulls. Stops the WPF tab-flip and multi-browser-client patterns
+        // from "smashing" the API:
+        //   - TTL: cache entries ≤10 min old are served as-is.
+        //   - Debounce: a forced refresh within 30s of the last successful
+        //     fetch returns cache (with a friendly status). Protects against
+        //     button-spam and concurrent client refreshes.
+        //   - Dedupe: RefreshGate (SemaphoreSlim 1) means a second concurrent
+        //     caller waits, then exits on the !isStale short-circuit and gets
+        //     the first call's result for free.
+        private static readonly TimeSpan WeatherCacheTtl = TimeSpan.FromMinutes(10);
+        private static readonly TimeSpan WeatherRefreshDebounce = TimeSpan.FromSeconds(30);
+
         private static async Task<WeatherSnapshotDto> RefreshWeather(AppService app, CancellationToken _)
         {
             var ofp = app.Ofp;
@@ -143,49 +156,87 @@ namespace Prosim2GSX.Commands.Handlers
                 ofp.WeatherStatus = "SayIntentions not active. Enable in App Settings and ensure flight.json is present.";
                 ofp.DepartureWeather = null;
                 ofp.ArrivalWeather = null;
+                ofp.CpdlcStation = "";
                 return BuildWeatherSnapshot(ofp);
             }
 
-            var depIcao = ResolveDepartureIcao(app);
-            var arrIcao = ResolveArrivalIcao(app);
-            var icaos = new List<string>();
-            if (!string.IsNullOrWhiteSpace(depIcao)) icaos.Add(depIcao);
-            if (!string.IsNullOrWhiteSpace(arrIcao) && arrIcao != depIcao) icaos.Add(arrIcao);
-
-            if (icaos.Count == 0)
-            {
-                ofp.WeatherStatus = "No ICAOs available — load an OFP first.";
-                return BuildWeatherSnapshot(ofp);
-            }
-
-            ofp.IsRefreshingWeather = true;
-            ofp.WeatherStatus = "";
+            await ofp.RefreshGate.WaitAsync();
             try
             {
-                var results = await app.SayIntentionsService.GetWeatherAsync(icaos);
-                SayIntentionsAirportWx dep = null, arr = null;
-                foreach (var wx in results)
-                {
-                    if (string.Equals(wx.Airport, depIcao, StringComparison.OrdinalIgnoreCase)) dep = wx;
-                    else if (string.Equals(wx.Airport, arrIcao, StringComparison.OrdinalIgnoreCase)) arr = wx;
-                }
-                ofp.DepartureWeather = dep;
-                ofp.ArrivalWeather = arr;
+                var now = DateTimeOffset.UtcNow;
+                var hasCache = ofp.WeatherFetchedAt.HasValue;
+                var isStale = !hasCache || (now - ofp.WeatherFetchedAt.Value) > WeatherCacheTtl;
+                var sinceLastForced = ofp.LastForcedRefreshAt.HasValue
+                    ? now - ofp.LastForcedRefreshAt.Value
+                    : TimeSpan.MaxValue;
+                var isDebounced = sinceLastForced < WeatherRefreshDebounce;
 
-                if (dep == null && arr == null)
-                    ofp.WeatherStatus = "Weather request returned no data.";
-            }
-            catch (Exception ex)
-            {
-                Logger.LogException(ex);
-                ofp.WeatherStatus = $"Weather request failed: {ex.Message}";
+                // Cache fresh → serve as-is, no HTTP.
+                if (!isStale)
+                    return BuildWeatherSnapshot(ofp);
+
+                // Stale but user clicked refresh too soon → do not re-fetch.
+                if (isDebounced)
+                {
+                    ofp.WeatherStatus = $"Refresh limited — last update <{(int)WeatherRefreshDebounce.TotalSeconds}s ago.";
+                    return BuildWeatherSnapshot(ofp);
+                }
+
+                var depIcao = ResolveDepartureIcao(app);
+                var arrIcao = ResolveArrivalIcao(app);
+                var icaos = new List<string>();
+                if (!string.IsNullOrWhiteSpace(depIcao)) icaos.Add(depIcao);
+                if (!string.IsNullOrWhiteSpace(arrIcao) && arrIcao != depIcao) icaos.Add(arrIcao);
+
+                if (icaos.Count == 0)
+                {
+                    ofp.WeatherStatus = "No ICAOs available — load an OFP first.";
+                    return BuildWeatherSnapshot(ofp);
+                }
+
+                ofp.IsRefreshingWeather = true;
+                ofp.WeatherStatus = "";
+                try
+                {
+                    // Fire weather + CPDLC in parallel — both are independent
+                    // SayIntentions calls and share the same TTL window.
+                    var weatherTask = app.SayIntentionsService.GetWeatherAsync(icaos);
+                    var cpdlcTask = app.SayIntentionsService.GetCpdlcStationAsync();
+                    await Task.WhenAll(weatherTask, cpdlcTask);
+
+                    var results = weatherTask.Result;
+                    SayIntentionsAirportWx dep = null, arr = null;
+                    foreach (var wx in results)
+                    {
+                        if (string.Equals(wx.Airport, depIcao, StringComparison.OrdinalIgnoreCase)) dep = wx;
+                        else if (string.Equals(wx.Airport, arrIcao, StringComparison.OrdinalIgnoreCase)) arr = wx;
+                    }
+                    ofp.DepartureWeather = dep;
+                    ofp.ArrivalWeather = arr;
+                    ofp.CpdlcStation = cpdlcTask.Result ?? "";
+
+                    if (dep == null && arr == null)
+                        ofp.WeatherStatus = "Weather request returned no data.";
+
+                    ofp.WeatherFetchedAt = now;
+                    ofp.LastForcedRefreshAt = now;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogException(ex);
+                    ofp.WeatherStatus = $"Weather request failed: {ex.Message}";
+                }
+                finally
+                {
+                    ofp.IsRefreshingWeather = false;
+                }
+
+                return BuildWeatherSnapshot(ofp);
             }
             finally
             {
-                ofp.IsRefreshingWeather = false;
+                ofp.RefreshGate.Release();
             }
-
-            return BuildWeatherSnapshot(ofp);
         }
 
         // ── setPushbackPreference ───────────────────────────────────────────
@@ -230,6 +281,8 @@ namespace Prosim2GSX.Commands.Handlers
             ArrivalWeather = WeatherDto.From(ofp.ArrivalWeather),
             WeatherStatus = ofp.WeatherStatus,
             IsRefreshingWeather = ofp.IsRefreshingWeather,
+            CpdlcStation = ofp.CpdlcStation ?? "",
+            WeatherFetchedAt = ofp.WeatherFetchedAt,
         };
     }
 }
