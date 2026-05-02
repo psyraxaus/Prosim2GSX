@@ -14,7 +14,7 @@
   
   <PropertyGroup>
     <SourceRevisionId>build$([System.DateTime]::UtcNow.ToString("yyyy.MM.dd.HHmm"))</SourceRevisionId>
-    <Version>0.6.6</Version>
+    <Version>0.7.0</Version>
     <Title>$(AssemblyName)</Title>
     <Authors>Fragtality, Psyraxaus</Authors>
     <Company>Fragtality, Protovision</Company>

@@ -287,11 +287,10 @@ Behaviour notes:
 The Idea behind Aircraft Profiles is to have *different Automation Settings* for *different Operators* without having the Need to change the Settings manually every time.<br/>
 The *Profile Name* is only for display Purposes, it doesn't have a functional Impact. The *Match Type* defines on what Aircraft Information the *Match String* will be compared to. The Match String can contain multiple Values separated by a Pipe `|` - for Example `Condor|CFG` for a Match String for the Airline.<br/>
 When the Session starts and the Connection to the ProSim EFB was successful, Prosim2GSX will automatically switch to the Profile with the best Match:
-1) The Aircraft Registration (as reported by the EFB) is matching exactly (case insensitive)
-2) The Aircraft Title or Livery (as reported by the Sim) contains the Match String (case insensitive)
-3) The Aircraft Airline (as reported by the Sim) starts with the Match String (case insensitive) - only applies to 2020! Use Title/Livery to match an Airline on 2024.
+1) The Aircraft Title or Livery (as reported by the Sim) contains the Match String (case insensitive)
+2) The Aircraft Airline (as reported by the loaded SimBrief OFP, falling back to the SimVar `ATC AIRLINE`) starts with the Match String (case insensitive) — using the OFP source means the displayed airline will be the **ICAO code** (e.g. `FIN` for Finnair) once an OFP is loaded, rather than the generic `ProSim` string the Prosim livery hard-codes into the SimVar.
 
-If there a multiple Results, only the first one will be used. If you want to switch to another Profile, do so before the Departure Phase (OFP was imported).<br/>
+If there are multiple Results, only the first one will be used. If you want to switch to another Profile, do so before the Departure Phase (OFP was imported).<br/>
 The **default Profile** can not be deleted and there can only ever be one Profile using the 'Default' Match Type.
 
 <br/><br/>
@@ -319,8 +318,40 @@ These global Settings affect all Profiles and basic App Features. In most cases 
 You might want to change the Weight Unit used in the UI, but you don't need to match that to SimBrief or the Airplane - it's just for displaying Purposes.<br/>
 Depending on your Preferences, you might want to check the Settings to round the planned Block Fuel or skipping Walkaround.<br/>
 If you only want to use Prosim2GSX for Volume-Control, uncheck 'Run GSX Controller' - in all other Cases leave it on!<br/>
-Tick **Use SayIntentions** to enable the SayIntentions ATC and weather integration on the OFP tab — see Section 2.3.2 for details.<br/>
+The **Integrations** card at the top groups the optional add-on toggles:
+- **Use SayIntentions** — enables the SayIntentions ATC and weather integration on the OFP tab (see Section 2.3.2 for details).
+- **Allow Manual Checklist Override** — when ticked, the user can click any actionable Checklist item to toggle it, including dataref-bound ones. Off by default — follows real ECAM behaviour where checks track aircraft state automatically (see Section 2.3.6).
+
 The **Web Interface** card on this tab (Enable Web Server, Port, Expose to LAN, Auth Token + Regenerate, LAN Address, Connection URL, QR Code) is documented separately in Section 3 — that section walks through enabling the embedded web server and onboarding a phone or tablet via QR code.
+
+<br/><br/>
+
+#### 2.3.6 - Checklists
+
+Interactive ECAM-style A320 checklists, automatically driven from ProSim datarefs. The tab mirrors the cockpit ECAM C/L page: items tick **green** when the associated cockpit switch / system state matches the procedure, and the **C/L COMPLETE** button glows green once every item in the active section has been confirmed.
+
+<img src="img/Checklists Tab - In Progress.png" width="600"/>
+
+**Sequential gating + retreat + past-progress freeze.** The evaluation engine walks the items top-to-bottom every tick:
+- An item only flips checked when its dataref condition holds *and* every prior actionable item in the section is already checked — no skipping ahead.
+- If a switch reverts while you're still on the leading edge of the checklist, the item un-ticks and so do any items below it. Catches accidental switch reverts during preparation.
+- **Past-progress freeze**: once an item is checked *and* you've moved past it (any later item in the same section is also checked), it freezes at "checked" and stops re-evaluating. This is what lets procedural toggles like *STARTUP / APU START → APU OFF* or *MODE SELECTOR IGN/START → NORM* work without the early item un-ticking when its dataref naturally reverts later in the procedure.
+
+When every actionable item in the active section is satisfied, the **C/L COMPLETE** button paints full ECAM-green to signal the section is ready to advance:
+
+<img src="img/Checklists Tab - Complete.png" width="600"/>
+
+**Auto-reset edges.** Take-off (on-ground → airborne) clears PRE-START, STARTUP, BEFORE TAXI, TAXI, BEFORE TAKE-OFF, and TAKE-OFF so the next flight starts with a clean approach/landing flow. Engine shutdown on the ground does a full reset.
+
+**Per-profile selection.** Each Aircraft Profile carries an optional *Checklist Name* — the dropdown at the top of the tab lets you pick from any JSON file under `%LocalAppData%\Prosim2GSX\Checklists\`. The default `a320_default.json` is shipped as an embedded resource and copied to that folder on first run so you can edit it directly or drop in airline-specific variants. The **C/L MENU** footer button focuses the section dropdown so you can jump between sections at any time:
+
+<img src="img/Checklists Tab - Sections.png" width="600"/>
+
+**Manual fallback for unreachable datarefs.** If a JSON references a dataref that isn't available on this aircraft variant (or has a typo), the engine retries up to three ticks then falls back to manual ticking for that item — a single warning is logged with the section and label. The checklist never blocks; you can always click the item by hand to progress.
+
+**Authoring custom checklists.** Drop additional `*.json` files into `%LocalAppData%\Prosim2GSX\Checklists\`. Every dataref a checklist references is auto-subscribed and polled at 250 ms when the file loads — no code change required. The schema is documented in the `_README` block at the top of `a320_default.json`. Most cockpit switches can be polled directly, but a handful are **momentary** in ProSim (Ext Pwr, APU Start, Auto/brk LO/MED/MAX, IDG, Refuel power, Terrain on ND, etc.) — they pulse `0 → 1 → 0` and the polling cache reads `0` almost all the time. For those, set `"Momentary": true` and add a `"SteadyDataRef"` field pointing at the indicator LED, gate, or composite state that actually holds the system's mode (the `_README` lists the convention and the default JSON shows the pattern in action for EXT POWER).
+
+The Checklists tab is also fully replicated in the [Web Interface](#3---web-interface-lan-browser) — same evaluation, same green-state, same JSON files served live to any browser/tablet on the LAN.
 
 <br/><br/>
 
@@ -444,7 +475,7 @@ The web UI is responsive and is intended to be used on small screens.
 
 ### 3.4 - What's in the Web UI
 
-Six tabs, mirroring the WPF UI in the same order:
+Seven tabs, mirroring the WPF UI in the same order:
 
 1. **Flight Status** — split-flap header (FLT NO / UTC / DATE), Sim/GSX/App state indicators, flight-phase progress bar, message log tail.
 2. **OFP** — full parity with the WPF OFP tab: route details, three Korry pushback-direction buttons, arrival gate Confirm / Send Now, ATIS / METAR.
@@ -452,6 +483,7 @@ Six tabs, mirroring the WPF UI in the same order:
 4. **Aircraft Profiles** — full CRUD against the Profiles list, including the active-profile selector.
 5. **Audio Settings** — *known limitation:* the panel structure ships and renders correctly, but the underlying audio mapping/control flow is being reworked. Treat this tab as read-only / preview only for now and use the WPF Audio Settings tab to make changes.
 6. **App Settings** — global app settings (excluding the Web Interface card itself, which is WPF-only by design so you can never lock yourself out).
+7. **Checklists** — full parity with the WPF Checklists tab: per-profile checklist file, ECAM-style green-when-complete C/L COMPLETE button, sequential gating + retreat + past-progress freeze, manual-tick fallback for unreachable datarefs (see Section 2.3.6 for the engine semantics and authoring guide).
 
 ### 3.5 - Limits
 
