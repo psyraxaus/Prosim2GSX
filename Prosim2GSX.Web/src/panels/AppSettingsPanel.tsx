@@ -111,6 +111,13 @@ export function AppSettingsPanel() {
           onChange={(v) => update("currentTheme", v)} />
       </Section>
 
+      <Section title="Integrations">
+        <BoolField label="Use SayIntentions" value={draft.useSayIntentions}
+          onChange={(v) => update("useSayIntentions", v)} />
+        <BoolField label="Allow Manual Checklist Override" value={draft.allowManualChecklistOverride}
+          onChange={(v) => update("allowManualChecklistOverride", v)} />
+      </Section>
+
       <Section title="Display">
         <SelectField label="UI Unit Source" value={draft.displayUnitSource}
           options={DISPLAY_UNIT_SOURCE_OPTIONS}
@@ -165,8 +172,6 @@ export function AppSettingsPanel() {
           onChange={(v) => update("runGsxService", v)} />
         <BoolField label="Run Audio Service" value={draft.runAudioService}
           onChange={(v) => update("runAudioService", v)} />
-        <BoolField label="Use SayIntentions" value={draft.useSayIntentions}
-          onChange={(v) => update("useSayIntentions", v)} />
       </Section>
 
       <Section title="ProSim SDK">

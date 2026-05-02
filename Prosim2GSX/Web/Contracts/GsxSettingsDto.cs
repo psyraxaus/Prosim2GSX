@@ -23,7 +23,6 @@ namespace Prosim2GSX.Web.Contracts
 
         // Doors / gate
         public bool DoorStairHandling { get; set; }
-        public bool DoorStairIncludeL2 { get; set; }
         public bool DoorCargoHandling { get; set; }
         public bool DoorCateringHandling { get; set; }
         public bool DoorOpenBoardActive { get; set; }
@@ -115,7 +114,6 @@ namespace Prosim2GSX.Web.Contracts
                 ProfileName = profile.Name,
 
                 DoorStairHandling = profile.DoorStairHandling,
-                DoorStairIncludeL2 = profile.DoorStairIncludeL2,
                 DoorCargoHandling = profile.DoorCargoHandling,
                 DoorCateringHandling = profile.DoorCateringHandling,
                 DoorOpenBoardActive = profile.DoorOpenBoardActive,
@@ -199,7 +197,6 @@ namespace Prosim2GSX.Web.Contracts
             // Profile name is read-only on the wire — ignore any inbound value.
 
             profile.DoorStairHandling = DoorStairHandling;
-            profile.DoorStairIncludeL2 = DoorStairIncludeL2;
             profile.DoorCargoHandling = DoorCargoHandling;
             profile.DoorCateringHandling = DoorCateringHandling;
             profile.DoorOpenBoardActive = DoorOpenBoardActive;
@@ -257,7 +254,10 @@ namespace Prosim2GSX.Web.Contracts
             profile.SeqGpuDisconnectDelayMax = SeqGpuDisconnectDelayMax;
 
             profile.OperatorAutoSelect = OperatorAutoSelect;
-            profile.OperatorPreferences = OperatorPreferences?.ToList() ?? new();
+            var incomingOps = OperatorPreferences?.ToList() ?? new();
+            CFIT.AppLogger.Logger.Information(
+                $"GsxSettingsDto.ApplyTo: profile='{profile.Name}' OperatorPreferences inbound count={incomingOps.Count} (was {(profile.OperatorPreferences?.Count ?? 0)})");
+            profile.OperatorPreferences = incomingOps;
             profile.CompanyHubs = CompanyHubs?.ToList() ?? new();
 
             profile.SkipWalkAround = SkipWalkAround;
@@ -282,6 +282,8 @@ namespace Prosim2GSX.Web.Contracts
             config.AutoDeiceFluid = AutoDeiceFluid;
 
             config.SaveConfiguration();
+            CFIT.AppLogger.Logger.Information(
+                $"GsxSettingsDto.ApplyTo: SaveConfiguration() complete for profile='{profile.Name}' (OperatorPreferences count={profile.OperatorPreferences?.Count ?? 0})");
 
             // Re-fire ProfileChanged so the WPF ModelAutomation re-binds all
             // its fields against the freshly-mutated profile. AircraftProfile

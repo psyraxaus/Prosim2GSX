@@ -92,7 +92,6 @@ namespace Prosim2GSX.UI.Views.Automation
 
         //Gate & Doors
         public virtual bool DoorStairHandling { get => Source.DoorStairHandling; set => SetModelValue<bool>(value); }
-        public virtual bool DoorStairIncludeL2 { get => Source.DoorStairIncludeL2; set => SetModelValue<bool>(value); }
         public virtual bool DoorCargoHandling { get => Source.DoorCargoHandling; set => SetModelValue<bool>(value); }
         public virtual bool DoorCateringHandling { get => Source.DoorCateringHandling; set => SetModelValue<bool>(value); }
         public virtual bool DoorOpenBoardActive { get => Source.DoorOpenBoardActive; set => SetModelValue<bool>(value); }

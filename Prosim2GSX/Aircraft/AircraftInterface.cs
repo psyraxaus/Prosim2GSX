@@ -30,7 +30,18 @@ namespace Prosim2GSX.Aircraft
         protected virtual ISimResourceSubscription SubLivery { get; set; }
         protected virtual ISimResourceSubscription SubZuluTime { get; set; }
 
-        public virtual string Airline => SubAirline?.GetString();
+        // Prefer the ICAO airline code from the loaded Simbrief OFP (e.g. "FIN")
+        // because the Prosim aircraft livery hard-codes the MSFS SimVar to
+        // "ProSim". Fall back to the SimVar only when no OFP is loaded yet.
+        public virtual string Airline
+        {
+            get
+            {
+                var ofpAirline = LastSimbriefOfp?.General?.IcaoAirline;
+                if (!string.IsNullOrWhiteSpace(ofpAirline)) return ofpAirline;
+                return SubAirline?.GetString();
+            }
+        }
         public virtual string Title => !string.IsNullOrWhiteSpace(SubLivery?.GetString()) ? SubLivery.GetString() : SubTitle?.GetString() ?? "";
         public virtual string Registration => ProsimInterface.Registration;
         public virtual bool IsFlightPlanLoaded => ProsimInterface.IsFlightPlanLoaded;

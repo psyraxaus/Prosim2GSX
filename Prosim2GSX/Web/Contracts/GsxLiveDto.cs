@@ -37,7 +37,9 @@ namespace Prosim2GSX.Web.Contracts
         public bool BypassPinInserted { get; set; }
         public bool EngineStartConfirmed { get; set; }
         public GsxServiceState ServiceJetway { get; set; }
+        public bool ServiceJetwayConnected { get; set; }
         public GsxServiceState ServiceStairs { get; set; }
+        public bool ServiceStairsConnected { get; set; }
 
         public AutomationState AppAutomationState { get; set; } = AutomationState.SessionStart;
         public string AppAutomationDepartureServices { get; set; } = "0 / 0";
@@ -69,7 +71,9 @@ namespace Prosim2GSX.Web.Contracts
             BypassPinInserted = s.BypassPinInserted,
             EngineStartConfirmed = s.EngineStartConfirmed,
             ServiceJetway = s.ServiceJetway,
+            ServiceJetwayConnected = s.ServiceJetwayConnected,
             ServiceStairs = s.ServiceStairs,
+            ServiceStairsConnected = s.ServiceStairsConnected,
             AppAutomationState = s.AppAutomationState,
             AppAutomationDepartureServices = s.AppAutomationDepartureServices,
             AssignedArrivalGate = s.AssignedArrivalGate,

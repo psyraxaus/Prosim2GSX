@@ -45,7 +45,9 @@ namespace Prosim2GSX.State
         [ObservableProperty] private bool _BypassPinInserted;
         [ObservableProperty] private bool _EngineStartConfirmed;
         [ObservableProperty] private GsxServiceState _ServiceJetway = GsxServiceState.Unknown;
+        [ObservableProperty] private bool _ServiceJetwayConnected;
         [ObservableProperty] private GsxServiceState _ServiceStairs = GsxServiceState.Unknown;
+        [ObservableProperty] private bool _ServiceStairsConnected;
 
         [ObservableProperty] private AutomationState _AppAutomationState = AutomationState.SessionStart;
         [ObservableProperty] private string _AppAutomationDepartureServices = "0 / 0";

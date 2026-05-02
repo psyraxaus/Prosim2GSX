@@ -11,7 +11,6 @@ namespace Prosim2GSX.AppConfig
         Default = 0,
         Airline = 1,
         Title = 2,
-        Registration = 3,
     }
 
     public class AircraftProfile : IAircraftProfile
@@ -47,7 +46,6 @@ namespace Prosim2GSX.AppConfig
         public virtual int ConnectPca { get; set; } = 2; // 0 => false | 1 => true | 2 => only on jetway stand
         public virtual bool PcaOverride { get; set; } = true;
         public virtual bool DoorStairHandling { get; set; } = true;
-        public virtual bool DoorStairIncludeL2 { get; set; } = false;
         public virtual bool DoorCargoHandling { get; set; } = true;
         public virtual bool DoorCateringHandling { get; set; } = true;
         public virtual bool DoorOpenBoardActive { get; set; } = true;
@@ -82,6 +80,11 @@ namespace Prosim2GSX.AppConfig
         public virtual bool CloseDoorsOnFinal { get; set; } = true;
         public virtual bool RemoveJetwayStairsOnFinal { get; set; } = true;
         public virtual bool CallPushbackOnBeacon { get; set; } = false;
+
+        // Pushback direction preference persisted per profile so it survives
+        // app restarts and roundtrips between WPF/Web. Mirrors GSX's own
+        // direction labels via the PushbackPreference enum on GsxController.
+        public virtual GSX.PushbackPreference PushbackPreference { get; set; } = GSX.PushbackPreference.Straight;
         public virtual bool ClearGroundEquipOnBeacon { get; set; } = true;
         public virtual bool GradualGroundEquipRemoval { get; set; } = false;
 

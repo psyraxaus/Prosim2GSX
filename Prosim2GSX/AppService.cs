@@ -10,6 +10,7 @@ using Prosim2GSX.Commands;
 using Prosim2GSX.GSX;
 using Prosim2GSX.Prosim;
 using Prosim2GSX.SayIntentions;
+using Prosim2GSX.Services;
 using Prosim2GSX.State;
 using Prosim2GSX.Web;
 using System;
@@ -84,6 +85,11 @@ namespace Prosim2GSX
         // without any restart.
         public virtual DebugDataService DebugData { get; protected set; }
 
+        // Watches AutomationState transitions and auto-fires the arrival-gate
+        // Send-Now flow when the aircraft enters Flight. Backend service so
+        // both WPF and web benefit identically.
+        public virtual OfpAutoSendService OfpAutoSend { get; protected set; }
+
         public AppService(Config config) : base(config)
         {
             RefreshToken();
@@ -149,6 +155,60 @@ namespace Prosim2GSX
             // Debug snapshot service. Reads-only; safe to construct in
             // SDK-degraded mode because every dereference inside is null-safe.
             DebugData = new DebugDataService(this);
+
+            // Backend auto-send for arrival parking. Attach() is a no-op when
+            // GsxService is null (degraded mode) so safe to call here.
+            OfpAutoSend = new OfpAutoSendService(this);
+            OfpAutoSend.Attach();
+
+            // Eagerly load the checklist definition into ChecklistState so the
+            // web UI can render even before the WPF Checklists tab is opened.
+            // Previously this was lazy (ModelChecklist.Start), which left the
+            // store empty when the user only ever used the browser.
+            LoadInitialChecklist();
+            if (GsxService != null)
+                GsxService.ProfileChanged += OnAircraftProfileChanged;
+        }
+
+        protected virtual void LoadInitialChecklist()
+        {
+            try
+            {
+                if (Checklist == null || ChecklistService == null) return;
+                var available = ChecklistService.GetAvailableChecklists() ?? new System.Collections.Generic.List<string>();
+                Checklist.AvailableChecklists = new System.Collections.Generic.List<string>(available);
+
+                var name = GsxService?.AircraftProfile?.ChecklistName;
+                if (string.IsNullOrWhiteSpace(name))
+                    name = ChecklistService.DefaultChecklistName;
+
+                var def = ChecklistService.LoadChecklist(name);
+                if (def != null)
+                    Checklist.LoadDefinition(def, name);
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
+        }
+
+        protected virtual void OnAircraftProfileChanged(AppConfig.AircraftProfile profile)
+        {
+            // When the active profile changes (auto-match on aircraft load,
+            // user explicit switch, etc.) reload the checklist that profile
+            // points at — only if the new profile actually carries a name we
+            // haven't already loaded, otherwise leave the in-progress state
+            // alone.
+            try
+            {
+                if (Checklist == null || ChecklistService == null) return;
+                var name = profile?.ChecklistName;
+                if (string.IsNullOrWhiteSpace(name))
+                    name = ChecklistService.DefaultChecklistName;
+                if (string.Equals(Checklist.CurrentChecklistName, name, StringComparison.OrdinalIgnoreCase))
+                    return;
+                var def = ChecklistService.LoadChecklist(name);
+                if (def != null)
+                    Checklist.LoadDefinition(def, name);
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
         }
 
         protected override Task InitReceivers()
@@ -288,6 +348,7 @@ namespace Prosim2GSX
             try { StateUpdateWorker?.Stop(); } catch { }
             try { MessageLogDrainWorker?.Stop(); } catch { }
             try { WebHost?.Stop(); } catch { }
+            try { OfpAutoSend?.Detach(); } catch { }
 
             return Task.CompletedTask;
         }

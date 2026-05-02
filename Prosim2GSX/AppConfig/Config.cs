@@ -52,6 +52,12 @@ namespace Prosim2GSX.AppConfig
         public virtual GSX.AutoDeiceFluid AutoDeiceFluid { get; set; } = GSX.AutoDeiceFluid.TypeIV100;
         public virtual bool RunAudioService { get; set; } = true;
         public virtual bool UseSayIntentions { get; set; } = false;
+
+        // When true, the user can manually tick / untick any checklist item,
+        // including dataref-bound ones. Off by default — follows the real
+        // ECAM behaviour where checks track aircraft state. Lives in the new
+        // Integrations card alongside UseSayIntentions.
+        public virtual bool AllowManualChecklistOverride { get; set; } = false;
         public virtual string AudioDebugFile { get; set; } = "log\\AudioDebug.txt";
         public virtual DataFlow AudioDeviceFlow { get; set; } = DataFlow.Render;
         public virtual DeviceState AudioDeviceState { get; set; } = DeviceState.Active;
@@ -285,6 +291,20 @@ namespace Prosim2GSX.AppConfig
                     }
                 }
             }
+
+            // v24: ProfileMatchType.Registration retired (the Prosim
+            // registration dataref is unreliable on this aircraft variant).
+            // Convert any persisted Registration-typed profile to Title so it
+            // still matches predictably against the cockpit livery string.
+            if (ConfigVersion < 24 && buildConfigVersion >= 24)
+            {
+                foreach (var profile in AircraftProfiles)
+                {
+                    // Enum value 3 was Registration; the enum has been pruned.
+                    if ((int)profile.MatchType == 3)
+                        profile.MatchType = ProfileMatchType.Title;
+                }
+            }
         }
 
         public virtual void SetFuelFob(string registration, double fuel)
@@ -309,21 +329,6 @@ namespace Prosim2GSX.AppConfig
         {
             if (aircraft.IsLoaded)
             {
-                foreach (var profile in AircraftProfiles)
-                {
-                    if (profile.MatchType != ProfileMatchType.Registration)
-                        continue;
-                    var strings = profile.MatchString.Split('|');
-                    foreach (var s in strings)
-                    {
-                        if (aircraft.Registration.Equals(s, StringComparison.InvariantCultureIgnoreCase))
-                        {
-                            Logger.Information($"Loading Profile '{profile.Name}' (matched on Registration - '{aircraft.Registration}' equals '{s}')");
-                            return profile;
-                        }
-                    }
-                }
-
                 foreach (var profile in AircraftProfiles)
                 {
                     if (profile.MatchType != ProfileMatchType.Title)

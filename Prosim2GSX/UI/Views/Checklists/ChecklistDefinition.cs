@@ -19,9 +19,23 @@ namespace Prosim2GSX.UI.Views.Checklists
     {
         public string Label { get; set; }
         public string Value { get; set; }
+
+        // Single-condition form (kept for back-compat).
         public string DataRef { get; set; }
         public string DataRefCondition { get; set; }
+
+        // Compound form: ALL listed conditions must hold for the item to flip.
+        // Used for things like "all four fuel pumps on" or "all three IRs in
+        // NAV". Null/empty means "use the single-condition fields above".
+        public List<ChecklistDataRefCondition> DataRefs { get; set; }
+
         public bool IsNote { get; set; }
         public bool IsSeparator { get; set; }
+    }
+
+    public class ChecklistDataRefCondition
+    {
+        public string DataRef { get; set; }
+        public string Condition { get; set; }
     }
 }

@@ -153,6 +153,7 @@ export function ChecklistsPanel() {
             key={i}
             item={it}
             isCurrent={i === dto.currentItemIndex}
+            allowOverride={dto.allowManualOverride}
             onClick={() => toggleItem(i)}
           />
         ))}
@@ -177,7 +178,13 @@ export function ChecklistsPanel() {
         <button type="button" className={styles.button} disabled>
           MSG LIST
         </button>
-        <button type="button" className={styles.button} onClick={complete}>
+        <button
+          type="button"
+          className={
+            styles.button + (dto.isSectionComplete ? " " + styles.buttonComplete : "")
+          }
+          onClick={complete}
+        >
           C/L COMPLETE
         </button>
       </div>
@@ -188,19 +195,25 @@ export function ChecklistsPanel() {
 interface RowProps {
   item: ChecklistItemDto;
   isCurrent: boolean;
+  allowOverride: boolean;
   onClick: () => void;
 }
 
-function ChecklistRow({ item, isCurrent, onClick }: RowProps) {
+function ChecklistRow({ item, isCurrent, allowOverride, onClick }: RowProps) {
   if (item.isSeparator) {
     return <hr className={styles.separator} />;
   }
   if (item.isNote) {
     return <div className={styles.note}>{item.label}</div>;
   }
+  const clickable = item.isManual || allowOverride;
   if (item.isChecked) {
     return (
-      <div className={`${styles.itemRow} ${styles.checked}`}>
+      <div
+        className={`${styles.itemRow} ${styles.checked} ${clickable ? styles.clickable : ""}`}
+        onClick={clickable ? onClick : undefined}
+        role={clickable ? "button" : undefined}
+      >
         <span className={styles.itemCheck}>✓</span>
         <span>{item.label}</span>
         <span className={styles.itemDots}>....................................................................................................</span>
@@ -211,9 +224,9 @@ function ChecklistRow({ item, isCurrent, onClick }: RowProps) {
   if (isCurrent) {
     return (
       <div
-        className={`${styles.itemRow} ${styles.pending} ${styles.current} ${item.isManual ? styles.clickable : ""}`}
-        onClick={item.isManual ? onClick : undefined}
-        role={item.isManual ? "button" : undefined}
+        className={`${styles.itemRow} ${styles.pending} ${styles.current} ${clickable ? styles.clickable : ""}`}
+        onClick={clickable ? onClick : undefined}
+        role={clickable ? "button" : undefined}
       >
         <span className={styles.itemCheck}>□</span>
         <span>{item.label}</span>

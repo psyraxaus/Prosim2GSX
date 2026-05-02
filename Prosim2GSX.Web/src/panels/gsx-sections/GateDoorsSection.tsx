@@ -11,8 +11,6 @@ export function GateDoorsSection({ draft, update }: GsxSectionProps) {
       <Section title="Doors">
         <BoolField label="Door Stair Handling" value={draft.doorStairHandling}
           onChange={(v) => update("doorStairHandling", v)} />
-        <BoolField label="Include L2 Door" value={draft.doorStairIncludeL2}
-          onChange={(v) => update("doorStairIncludeL2", v)} />
         <BoolField label="Door Cargo Handling" value={draft.doorCargoHandling}
           onChange={(v) => update("doorCargoHandling", v)} />
         <BoolField label="Door Catering Handling" value={draft.doorCateringHandling}

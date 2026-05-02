@@ -82,7 +82,9 @@ export function FlightStatusPanel() {
         <ServiceRow label="Deboarding" state={fs.gsx.serviceDeboarding} />
         <ServiceRow label="Pushback" state={parsePushbackState(fs.gsx.servicePushback)} />
         <ServiceRow label="Jetway" state={fs.gsx.serviceJetway} />
+        <ConnectedRow label="Jetway Connected" connected={fs.gsx.serviceJetwayConnected} />
         <ServiceRow label="Stairs" state={fs.gsx.serviceStairs} />
+        <ConnectedRow label="Stairs Connected" connected={fs.gsx.serviceStairsConnected} />
       </Section>
 
       <Section title="Log">
@@ -175,6 +177,18 @@ function GpuRow({ connected, relevant }: { connected: boolean; relevant: boolean
       <span className={styles.rowLabel}>GPU</span>
       <span className={`${styles.pill} ${styles[`tone_${tone}`]}`}>
         {!relevant ? "—" : connected ? "Connected" : "Disconnected"}
+      </span>
+    </div>
+  );
+}
+
+function ConnectedRow({ label, connected }: { label: string; connected: boolean }) {
+  const tone = connected ? "ok" : "neutral";
+  return (
+    <div className={styles.row}>
+      <span className={styles.rowLabel}>{label}</span>
+      <span className={`${styles.pill} ${styles[`tone_${tone}`]}`}>
+        {connected ? "Connected" : "—"}
       </span>
     </div>
   );

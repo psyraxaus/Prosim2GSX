@@ -133,6 +133,37 @@
                                                  CurrentTemplate="{StaticResource ChecklistRowCurrent}"
                                                  PendingTemplate="{StaticResource ChecklistRowPending}"/>
 
+            <!-- Wrapper template: a single ContentPresenter whose ContentTemplate
+                 swaps via DataTriggers as IsChecked / IsCurrentItem flip. The
+                 ItemTemplateSelector above is only consulted at item-container
+                 creation, so it does not respond to live state changes; this
+                 indirection lets per-tick state flips repaint the row. -->
+            <DataTemplate x:Key="ChecklistRowSwitcher">
+                <ContentPresenter x:Name="RowPresenter"
+                                  Content="{Binding}"
+                                  ContentTemplate="{StaticResource ChecklistRowPending}"/>
+                <DataTemplate.Triggers>
+                    <DataTrigger Binding="{Binding IsSeparator}" Value="True">
+                        <Setter TargetName="RowPresenter" Property="ContentTemplate" Value="{StaticResource ChecklistRowSeparator}"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding IsNote}" Value="True">
+                        <Setter TargetName="RowPresenter" Property="ContentTemplate" Value="{StaticResource ChecklistRowNote}"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding IsChecked}" Value="True">
+                        <Setter TargetName="RowPresenter" Property="ContentTemplate" Value="{StaticResource ChecklistRowChecked}"/>
+                    </DataTrigger>
+                    <MultiDataTrigger>
+                        <MultiDataTrigger.Conditions>
+                            <Condition Binding="{Binding IsChecked}" Value="False"/>
+                            <Condition Binding="{Binding IsCurrentItem}" Value="True"/>
+                            <Condition Binding="{Binding IsNote}" Value="False"/>
+                            <Condition Binding="{Binding IsSeparator}" Value="False"/>
+                        </MultiDataTrigger.Conditions>
+                        <Setter TargetName="RowPresenter" Property="ContentTemplate" Value="{StaticResource ChecklistRowCurrent}"/>
+                    </MultiDataTrigger>
+                </DataTemplate.Triggers>
+            </DataTemplate>
+
             <Style x:Key="ChecklistButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="{DynamicResource ChecklistButtonBackground}"/>
                 <Setter Property="Foreground" Value="{DynamicResource ChecklistButtonForeground}"/>
@@ -145,6 +176,18 @@
                 <Setter Property="Margin" Value="4,0,4,0"/>
                 <Setter Property="MinWidth" Value="110"/>
                 <Setter Property="Cursor" Value="Hand"/>
+            </Style>
+
+            <!-- C/L COMPLETE button: turns full ECAM-green when every item in
+                 the active section is checked, signalling the user can advance. -->
+            <Style x:Key="ChecklistCompleteButtonStyle" TargetType="Button" BasedOn="{StaticResource ChecklistButtonStyle}">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsSectionComplete}" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource ChecklistCheckedForeground}"/>
+                        <Setter Property="Foreground" Value="Black"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource ChecklistCheckedForeground}"/>
+                    </DataTrigger>
+                </Style.Triggers>
             </Style>
         </ResourceDictionary>
     </UserControl.Resources>
@@ -197,7 +240,7 @@
         <Border Grid.Row="2" Background="{DynamicResource ChecklistBackgroundBrush}" Padding="4,8,4,8">
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <ItemsControl ItemsSource="{Binding CurrentItems}"
-                              ItemTemplateSelector="{StaticResource ChecklistItemTemplateSelector}"/>
+                              ItemTemplate="{StaticResource ChecklistRowSwitcher}"/>
             </ScrollViewer>
         </Border>
 
@@ -213,7 +256,7 @@
                 <Button Style="{StaticResource ChecklistButtonStyle}"
                         Content="MSG LIST"
                         IsEnabled="False"/>
-                <Button Style="{StaticResource ChecklistButtonStyle}"
+                <Button Style="{StaticResource ChecklistCompleteButtonStyle}"
                         Content="C/L COMPLETE"
                         Command="{Binding CompleteCommand}"/>
             </StackPanel>

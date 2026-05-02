@@ -1,6 +1,7 @@
 using CFIT.AppLogger;
 using Prosim2GSX.GSX;
 using Prosim2GSX.GSX.Services;
+using Prosim2GSX.UI.Views.Checklists;
 using ProsimInterface;
 using System;
 using System.Threading.Tasks;
@@ -133,8 +134,16 @@ namespace Prosim2GSX.State
                 gsx.BypassPinInserted = pushback.IsPinInserted;
                 gsx.EngineStartConfirmed = pushback.EngineStartConfirmed;
             }
-            if (services.TryGetValue(GsxServiceType.Jetway, out s)) gsx.ServiceJetway = s.State;
-            if (services.TryGetValue(GsxServiceType.Stairs, out s)) gsx.ServiceStairs = s.State;
+            if (services.TryGetValue(GsxServiceType.Jetway, out s))
+            {
+                gsx.ServiceJetway = s.State;
+                gsx.ServiceJetwayConnected = (s as global::Prosim2GSX.GSX.Services.GsxServiceJetway)?.IsConnected ?? false;
+            }
+            if (services.TryGetValue(GsxServiceType.Stairs, out s))
+            {
+                gsx.ServiceStairs = s.State;
+                gsx.ServiceStairsConnected = (s as global::Prosim2GSX.GSX.Services.GsxServiceStairs)?.IsConnected ?? false;
+            }
 
             UpdateAssignedGate();
         }
@@ -318,21 +327,75 @@ namespace Prosim2GSX.State
             for (int s = 0; s < cl.Definition.Sections.Count; s++)
             {
                 if (!cl.ItemsBySection.TryGetValue(s, out var items)) continue;
+
+                // Sequential gating: walk top-to-bottom. An item only flips
+                // checked when (a) its condition holds AND (b) every prior
+                // non-note/non-separator item is already checked. Conversely,
+                // if an item's condition goes false, every subsequent item is
+                // un-checked (the "retreat" behaviour of a real ECAM checklist).
+                bool blockFurtherChecks = false;
                 for (int i = 0; i < items.Count; i++)
                 {
                     var def = items[i].Definition;
-                    if (def.IsNote || def.IsSeparator) continue;
-                    if (string.IsNullOrWhiteSpace(def.DataRef)) continue;
-                    if (string.IsNullOrWhiteSpace(def.DataRefCondition)) continue;
+                    if (def == null || def.IsNote || def.IsSeparator) continue;
 
-                    bool? satisfied = EvaluateCondition(sdk, def.DataRef, def.DataRefCondition);
-                    if (!satisfied.HasValue) continue;
-                    if (items[i].IsChecked != satisfied.Value)
-                        items[i].IsChecked = satisfied.Value;
+                    bool? satisfied = EvaluateItem(sdk, def);
+                    if (!satisfied.HasValue)
+                    {
+                        // Manual items (no dataref) — never auto-flip from the
+                        // worker. They participate in the gate as either checked
+                        // (gate stays open) or unchecked (gate closes).
+                        if (!items[i].IsChecked) blockFurtherChecks = true;
+                        continue;
+                    }
+
+                    if (blockFurtherChecks)
+                    {
+                        // A prior item is unsatisfied — anything below should
+                        // remain (or revert to) unchecked.
+                        if (items[i].IsChecked) items[i].IsChecked = false;
+                        continue;
+                    }
+
+                    if (satisfied.Value)
+                    {
+                        if (!items[i].IsChecked) items[i].IsChecked = true;
+                    }
+                    else
+                    {
+                        if (items[i].IsChecked) items[i].IsChecked = false;
+                        blockFurtherChecks = true;
+                    }
                 }
             }
 
             cl.RecomputeCurrentItem();
+        }
+
+        // Evaluate either a single condition (DataRef + DataRefCondition) or
+        // a compound AND-list (DataRefs[]). Returns null for manual items so
+        // the caller knows to leave them alone.
+        protected virtual bool? EvaluateItem(global::ProsimInterface.ProsimSdkInterface sdk, ChecklistItem def)
+        {
+            if (def?.DataRefs != null && def.DataRefs.Count > 0)
+            {
+                bool allTrue = true;
+                bool anyEvaluable = false;
+                for (int j = 0; j < def.DataRefs.Count; j++)
+                {
+                    var c = def.DataRefs[j];
+                    if (c == null) continue;
+                    if (string.IsNullOrWhiteSpace(c.DataRef) || string.IsNullOrWhiteSpace(c.Condition)) continue;
+                    var r = EvaluateCondition(sdk, c.DataRef, c.Condition);
+                    if (!r.HasValue) continue;
+                    anyEvaluable = true;
+                    if (!r.Value) { allTrue = false; break; }
+                }
+                if (!anyEvaluable) return null;
+                return allTrue;
+            }
+            if (string.IsNullOrWhiteSpace(def?.DataRef) || string.IsNullOrWhiteSpace(def?.DataRefCondition)) return null;
+            return EvaluateCondition(sdk, def.DataRef, def.DataRefCondition);
         }
 
         // Returns null when the dataref or condition cannot be evaluated; caller

@@ -89,11 +89,13 @@ namespace Prosim2GSX.Commands.Handlers
             if (req.ItemIndex < 0 || req.ItemIndex >= items.Count)
                 throw new CommandValidationException("Item index out of range.");
             var rt = items[req.ItemIndex];
-            // Manual items only — dataref-driven items flip via the worker.
             if (rt.Definition.IsNote || rt.Definition.IsSeparator)
                 throw new CommandValidationException("Item is not toggleable.");
-            if (!string.IsNullOrWhiteSpace(rt.Definition.DataRef))
-                throw new CommandValidationException("Dataref-driven items cannot be toggled manually.");
+            bool isManual = string.IsNullOrWhiteSpace(rt.Definition.DataRef)
+                            && (rt.Definition.DataRefs == null || rt.Definition.DataRefs.Count == 0);
+            bool overrideAllowed = app.Config?.AllowManualChecklistOverride ?? false;
+            if (!isManual && !overrideAllowed)
+                throw new CommandValidationException("Dataref-driven items cannot be toggled manually (enable 'Allow Manual Checklist Override' in Integrations to permit).");
             rt.IsChecked = !rt.IsChecked;
             s.RecomputeCurrentItem();
             return Task.FromResult(new ChecklistCommandResponse { Snapshot = ChecklistDto.From(app) });

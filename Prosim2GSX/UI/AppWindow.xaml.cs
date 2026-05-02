@@ -162,7 +162,7 @@ namespace Prosim2GSX.UI
                 uint user = GetGuiResources(proc.Handle, GR_USEROBJECTS);
                 uint gdi = GetGuiResources(proc.Handle, GR_GDIOBJECTS);
                 int handles = proc.HandleCount;
-                Logger.Information($"Resource heartbeat: USER={user}, GDI={gdi}, Handles={handles}");
+                Logger.Debug($"Resource heartbeat: USER={user}, GDI={gdi}, Handles={handles}");
             }
             catch (Exception ex) when (!_resourceHeartbeatErrorReported)
             {

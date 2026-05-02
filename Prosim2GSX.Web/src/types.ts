@@ -112,7 +112,7 @@ export type AutoDeiceFluid =
 
 export type PushbackPreference = "Straight" | "TailLeft" | "TailRight";
 
-export type ProfileMatchType = "Default" | "Airline" | "Title" | "Registration";
+export type ProfileMatchType = "Default" | "Airline" | "Title";
 
 // ──────────────────────────────────────────────────────────────────────────
 // FlightStatusDto + GsxLiveDto (read-only — Monitor tab)
@@ -141,7 +141,9 @@ export interface GsxLiveDto {
   serviceDeboarding: GsxServiceState;
   servicePushback: string;
   serviceJetway: GsxServiceState;
+  serviceJetwayConnected: boolean;
   serviceStairs: GsxServiceState;
+  serviceStairsConnected: boolean;
 
   appAutomationState: AutomationState;
   appAutomationDepartureServices: string;
@@ -196,7 +198,6 @@ export interface GsxSettingsDto {
   profileName: string;
 
   doorStairHandling: boolean;
-  doorStairIncludeL2: boolean;
   doorCargoHandling: boolean;
   doorCateringHandling: boolean;
   doorOpenBoardActive: boolean;
@@ -319,6 +320,7 @@ export interface AppSettingsDto {
   runGsxService: boolean;
   runAudioService: boolean;
   useSayIntentions: boolean;
+  allowManualChecklistOverride: boolean;
   openAppWindowOnStart: boolean;
 
   proSimSdkPath: string;
@@ -537,7 +539,7 @@ export interface ProfilesListDto {
   profiles: ProfileSummaryDto[];
   currentAirline: string;
   currentTitle: string;
-  currentRegistration: string;
+  currentProfile: string;
 }
 
 export interface SetActiveProfileRequest { name: string; }
@@ -554,7 +556,6 @@ export const PROFILE_MATCH_TYPE_OPTIONS: { value: ProfileMatchType; label: strin
   { value: "Default", label: "Default (fallback)" },
   { value: "Airline", label: "Airline (starts with)" },
   { value: "Title", label: "Title / Livery (contains)" },
-  { value: "Registration", label: "Registration (equals)" },
 ];
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -615,6 +616,8 @@ export interface ChecklistDto {
   name: string;
   currentSectionIndex: number;
   currentItemIndex: number;
+  isSectionComplete: boolean;
+  allowManualOverride: boolean;
   sections: ChecklistSectionDto[];
 }
 

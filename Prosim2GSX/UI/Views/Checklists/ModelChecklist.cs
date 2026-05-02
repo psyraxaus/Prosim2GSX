@@ -8,16 +8,12 @@ using Prosim2GSX.GSX;
 using Prosim2GSX.State;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows;
 
 namespace Prosim2GSX.UI.Views.Checklists
 {
-    // Adapter view-model over the long-lived ChecklistState store. The store
-    // owns the actual definition + per-item runtime; this Model surfaces the
-    // pieces the WPF tab binds to, plus commands for RESET / C/L COMPLETE /
-    // ITEM CLICK. The web layer subscribes directly to ChecklistState — this
-    // class is WPF-only.
     public partial class ModelChecklist : ViewModelBase<AppService>, IView
     {
         protected virtual AppService AppService => Source;
@@ -63,22 +59,31 @@ namespace Prosim2GSX.UI.Views.Checklists
                 if (idx < 0 || idx == State.CurrentSectionIndex) return;
                 State.CurrentSectionIndex = idx;
                 State.RecomputeCurrentItem();
+                RebuildCurrentItems();
                 NotifyPropertyChanged(nameof(CurrentSection));
-                NotifyPropertyChanged(nameof(CurrentItems));
+                NotifyPropertyChanged(nameof(IsSectionComplete));
             }
         }
 
-        public virtual List<ChecklistItemView> CurrentItems
+        // Stable collection bound by the WPF ItemsControl. We MUTATE this in
+        // place (rather than recreating a fresh List on every read) so per-item
+        // INPC propagates correctly and the visual tree is reused. Rebuilding
+        // the source wholesale was the root cause of "click off / on to refresh".
+        public ObservableCollection<ChecklistItemView> CurrentItems { get; } = new();
+
+        public virtual bool IsSectionComplete
         {
             get
             {
-                var list = new List<ChecklistItemView>();
-                if (State == null) return list;
-                if (!State.ItemsBySection.TryGetValue(State.CurrentSectionIndex, out var items)) return list;
-                int currentIdx = State.CurrentItemIndex;
+                if (State == null) return false;
+                if (!State.ItemsBySection.TryGetValue(State.CurrentSectionIndex, out var items)) return false;
                 for (int i = 0; i < items.Count; i++)
-                    list.Add(new ChecklistItemView(items[i], i == currentIdx));
-                return list;
+                {
+                    var def = items[i].Definition;
+                    if (def == null || def.IsNote || def.IsSeparator) continue;
+                    if (!items[i].IsChecked) return false;
+                }
+                return items.Count > 0;
             }
         }
 
@@ -131,17 +136,16 @@ namespace Prosim2GSX.UI.Views.Checklists
                 Logger.LogException(ex);
             }
 
+            RebuildCurrentItems();
             NotifyPropertyChanged(nameof(AvailableChecklists));
             NotifyPropertyChanged(nameof(CurrentChecklistName));
             NotifyPropertyChanged(nameof(Sections));
             NotifyPropertyChanged(nameof(CurrentSection));
-            NotifyPropertyChanged(nameof(CurrentItems));
+            NotifyPropertyChanged(nameof(IsSectionComplete));
         }
 
         public virtual void Stop()
         {
-            // Keep subscriptions alive — the store is long-lived and the tab
-            // can be re-entered. Mirroring ModelMonitor's pattern.
         }
 
         protected virtual void LoadChecklistByName(string name)
@@ -171,14 +175,20 @@ namespace Prosim2GSX.UI.Views.Checklists
                 {
                     NotifyPropertyChanged(nameof(Sections));
                     NotifyPropertyChanged(nameof(CurrentSection));
-                    NotifyPropertyChanged(nameof(CurrentItems));
+                    RebuildCurrentItems();
+                    NotifyPropertyChanged(nameof(IsSectionComplete));
                 },
                 nameof(ChecklistState.CurrentSectionIndex) => () =>
                 {
                     NotifyPropertyChanged(nameof(CurrentSection));
-                    NotifyPropertyChanged(nameof(CurrentItems));
+                    RebuildCurrentItems();
+                    NotifyPropertyChanged(nameof(IsSectionComplete));
                 },
-                nameof(ChecklistState.CurrentItemIndex) => () => NotifyPropertyChanged(nameof(CurrentItems)),
+                nameof(ChecklistState.CurrentItemIndex) => () =>
+                {
+                    UpdateCurrentItemFlags();
+                    NotifyPropertyChanged(nameof(IsSectionComplete));
+                },
                 nameof(ChecklistState.AvailableChecklists) => () => NotifyPropertyChanged(nameof(AvailableChecklists)),
                 nameof(ChecklistState.CurrentChecklistName) => () => NotifyPropertyChanged(nameof(CurrentChecklistName)),
                 _ => null,
@@ -190,10 +200,55 @@ namespace Prosim2GSX.UI.Views.Checklists
                 notify();
         }
 
+        // Per-item runtime change (e.g., IsChecked flip from worker). Forwards
+        // to IsSectionComplete recompute and lets the per-item view notify the
+        // template selector via its own INPC.
+        protected virtual void OnItemRuntimeChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e?.PropertyName == nameof(ChecklistItemRuntime.IsChecked))
+            {
+                var dispatcher = Application.Current?.Dispatcher;
+                Action notify = () => NotifyPropertyChanged(nameof(IsSectionComplete));
+                if (dispatcher != null && !dispatcher.CheckAccess())
+                    dispatcher.BeginInvoke(notify);
+                else
+                    notify();
+            }
+        }
+
+        private void DetachItemHandlers()
+        {
+            for (int i = 0; i < CurrentItems.Count; i++)
+                CurrentItems[i].Detach(OnItemRuntimeChanged);
+            CurrentItems.Clear();
+        }
+
+        private void RebuildCurrentItems()
+        {
+            DetachItemHandlers();
+            if (State == null) return;
+            if (!State.ItemsBySection.TryGetValue(State.CurrentSectionIndex, out var items)) return;
+            int currentIdx = State.CurrentItemIndex;
+            for (int i = 0; i < items.Count; i++)
+            {
+                var view = new ChecklistItemView(items[i], i == currentIdx);
+                view.Attach(OnItemRuntimeChanged);
+                CurrentItems.Add(view);
+            }
+        }
+
+        private void UpdateCurrentItemFlags()
+        {
+            if (State == null) return;
+            int currentIdx = State.CurrentItemIndex;
+            for (int i = 0; i < CurrentItems.Count; i++)
+                CurrentItems[i].IsCurrentItem = (i == currentIdx);
+        }
+
         protected virtual void OnReset()
         {
             State?.ResetSection(State.CurrentSectionIndex);
-            NotifyPropertyChanged(nameof(CurrentItems));
+            NotifyPropertyChanged(nameof(IsSectionComplete));
         }
 
         protected virtual void OnComplete()
@@ -205,37 +260,46 @@ namespace Prosim2GSX.UI.Views.Checklists
                 if (it.Definition.IsNote || it.Definition.IsSeparator) continue;
                 if (!it.IsChecked) it.IsChecked = true;
             }
-            // Advance to next section if available.
             if (State.Definition?.Sections != null && State.CurrentSectionIndex < State.Definition.Sections.Count - 1)
             {
                 State.CurrentSectionIndex++;
                 State.RecomputeCurrentItem();
             }
             NotifyPropertyChanged(nameof(CurrentSection));
-            NotifyPropertyChanged(nameof(CurrentItems));
+            NotifyPropertyChanged(nameof(IsSectionComplete));
         }
 
         protected virtual void OnItemClick(ChecklistItemView view)
         {
             if (view?.Runtime == null) return;
             var def = view.Runtime.Definition;
-            // Manual items only — dataref-driven items flip via the worker.
             if (def.IsNote || def.IsSeparator) return;
-            if (!string.IsNullOrWhiteSpace(def.DataRef)) return;
+
+            bool isManual = string.IsNullOrWhiteSpace(def.DataRef)
+                            && (def.DataRefs == null || def.DataRefs.Count == 0);
+            bool overrideAllowed = AppService?.Config?.AllowManualChecklistOverride ?? false;
+            if (!isManual && !overrideAllowed) return;
 
             view.Runtime.IsChecked = !view.Runtime.IsChecked;
             State?.RecomputeCurrentItem();
-            NotifyPropertyChanged(nameof(CurrentItems));
+            NotifyPropertyChanged(nameof(IsSectionComplete));
         }
     }
 
-    // Lightweight projection of a ChecklistItemRuntime + "is current pointer"
-    // flag, used as the DataTemplateSelector input. Recreated per CurrentItems
-    // read so the IsCurrentItem flag stays in sync without per-item INPC.
-    public class ChecklistItemView
+    // INPC projection of (runtime + isCurrent flag). Subscribes to runtime
+    // PropertyChanged so IsChecked flips in the underlying store propagate to
+    // the WPF binding without rebuilding the parent collection.
+    public class ChecklistItemView : ObservableObject
     {
         public ChecklistItemRuntime Runtime { get; }
-        public bool IsCurrentItem { get; }
+
+        private bool _isCurrentItem;
+        public bool IsCurrentItem
+        {
+            get => _isCurrentItem;
+            set => SetProperty(ref _isCurrentItem, value);
+        }
+
         public ChecklistItem Definition => Runtime?.Definition;
         public bool IsChecked => Runtime?.IsChecked ?? false;
         public bool IsNote => Runtime?.Definition?.IsNote ?? false;
@@ -247,7 +311,33 @@ namespace Prosim2GSX.UI.Views.Checklists
         public ChecklistItemView(ChecklistItemRuntime runtime, bool isCurrent)
         {
             Runtime = runtime;
-            IsCurrentItem = isCurrent;
+            _isCurrentItem = isCurrent;
+            if (Runtime != null)
+                Runtime.PropertyChanged += OnRuntimeChanged;
+        }
+
+        public void Attach(PropertyChangedEventHandler externalHandler)
+        {
+            if (Runtime == null || externalHandler == null) return;
+            Runtime.PropertyChanged += externalHandler;
+        }
+
+        public void Detach(PropertyChangedEventHandler externalHandler)
+        {
+            if (Runtime != null)
+            {
+                Runtime.PropertyChanged -= OnRuntimeChanged;
+                if (externalHandler != null)
+                    Runtime.PropertyChanged -= externalHandler;
+            }
+        }
+
+        private void OnRuntimeChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e?.PropertyName == nameof(ChecklistItemRuntime.IsChecked))
+            {
+                OnPropertyChanged(nameof(IsChecked));
+            }
         }
     }
 }

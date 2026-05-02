@@ -50,6 +50,27 @@
                 </StackPanel>
             </Border>
 
+            <!-- INTEGRATIONS -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="INTEGRATIONS"/>
+            <Border Style="{StaticResource SectionCardBorder}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Use SayIntentions.AI for ATIS/weather and gate assignment. Requires SayIntentions installed and api_key in flight.json.">Use SayIntentions:</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="0" IsChecked="{Binding UseSayIntentions}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Use SayIntentions.AI for ATIS/weather and gate assignment. Requires SayIntentions installed and api_key in flight.json."/>
+
+                    <TextBlock Grid.Column="0" Grid.Row="1" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="When enabled, allow manual click on dataref-bound checklist items to override their automatic state. Off = real-aircraft behaviour (only manual items are clickable).">Allow Manual Checklist Override:</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="1" IsChecked="{Binding AllowManualChecklistOverride}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="When enabled, allow manual click on dataref-bound checklist items to override their automatic state. Off = real-aircraft behaviour (only manual items are clickable)."/>
+                </Grid>
+            </Border>
+
             <!-- GENERAL SETTINGS -->
             <TextBlock Style="{StaticResource CategoryHeader}" Text="GENERAL SETTINGS"/>
             <Border Style="{StaticResource SectionCardBorder}">
@@ -59,7 +80,6 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
@@ -109,9 +129,6 @@
 
                     <TextBlock Grid.Column="0" Grid.Row="8" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Enable the animated split-flap character cycling effect in the header bar displays.">Solari Animation:</TextBlock>
                     <CheckBox Grid.Column="1" Grid.Row="8" IsChecked="{Binding SolariAnimationEnabled}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Enable the animated split-flap character cycling effect in the header bar displays."/>
-
-                    <TextBlock Grid.Column="0" Grid.Row="9" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Use SayIntentions.AI for ATIS/weather and gate assignment. Requires SayIntentions installed and api_key in flight.json.">Use SayIntentions:</TextBlock>
-                    <CheckBox Grid.Column="1" Grid.Row="9" IsChecked="{Binding UseSayIntentions}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Use SayIntentions.AI for ATIS/weather and gate assignment. Requires SayIntentions installed and api_key in flight.json."/>
                 </Grid>
             </Border>
 

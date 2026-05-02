@@ -151,7 +151,13 @@ namespace Prosim2GSX.UI.Views.Monitor
         public GsxServiceState ServiceDeboarding => Gsx.ServiceDeboarding;
         public string ServicePushback => Gsx.ServicePushback;
         public GsxServiceState ServiceJetway => Gsx.ServiceJetway;
+        public bool ServiceJetwayConnected => Gsx.ServiceJetwayConnected;
+        public SolidColorBrush ServiceJetwayConnectedColor =>
+            Gsx.ServiceJetwayConnected ? ColorValid : ColorGray;
         public GsxServiceState ServiceStairs => Gsx.ServiceStairs;
+        public bool ServiceStairsConnected => Gsx.ServiceStairsConnected;
+        public SolidColorBrush ServiceStairsConnectedColor =>
+            Gsx.ServiceStairsConnected ? ColorValid : ColorGray;
 
         // ── App-subsystem passthroughs ───────────────────────────────────────
 
@@ -223,6 +229,12 @@ namespace Prosim2GSX.UI.Views.Monitor
                 case nameof(GsxState.ServiceGpuConnected):
                 case nameof(GsxState.ServiceGpuPhaseRelevant):
                     NotifyPropertyChanged(nameof(ServiceGpuConnectedColor));
+                    break;
+                case nameof(GsxState.ServiceJetwayConnected):
+                    NotifyPropertyChanged(nameof(ServiceJetwayConnectedColor));
+                    break;
+                case nameof(GsxState.ServiceStairsConnected):
+                    NotifyPropertyChanged(nameof(ServiceStairsConnectedColor));
                     break;
             }
         }

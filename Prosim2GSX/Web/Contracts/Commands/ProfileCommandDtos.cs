@@ -70,16 +70,28 @@ namespace Prosim2GSX.Web.Contracts.Commands
         public string ActiveName { get; set; } = "";
         public List<ProfileSummaryDto> Profiles { get; set; } = new();
 
+        // "Current Aircraft" card on the web Profiles panel mirrors the WPF
+        // surface: airline (ICAO from OFP) + title/livery + active profile.
+        // Registration removed 2026-05-02 — the dataref is unreliable on this
+        // aircraft variant, so registration-based matching was retired too.
+        public string CurrentAirline { get; set; } = "";
+        public string CurrentTitle { get; set; } = "";
+        public string CurrentProfile { get; set; } = "";
+
         public static ProfilesListDto From(AppService app)
         {
             var active = app?.GsxService?.AircraftProfile?.Name ?? "";
             var list = (app?.Config?.AircraftProfiles ?? new List<AircraftProfile>())
                 .Select(p => ProfileSummaryDto.From(p, active))
                 .ToList();
+            var aircraft = app?.GsxService?.AircraftInterface;
             return new ProfilesListDto
             {
                 ActiveName = active,
                 Profiles = list,
+                CurrentAirline = aircraft?.Airline ?? "",
+                CurrentTitle = aircraft?.Title ?? "",
+                CurrentProfile = app?.GsxService?.AircraftProfile?.ToString() ?? "",
             };
         }
     }

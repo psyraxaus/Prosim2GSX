@@ -30,6 +30,7 @@
   "AutoDeiceFluid": 4,
   "RunAudioService": true,
   "UseSayIntentions": false,
+  "AllowManualChecklistOverride": false,
   "AudioDebugFile": "log\\AudioDebug.txt",
   "AudioDeviceFlow": 0,
   "AudioDeviceState": 1,
@@ -169,7 +170,6 @@
       "ConnectPca": 2,
       "PcaOverride": true,
       "DoorStairHandling": true,
-      "DoorStairIncludeL2": false,
       "DoorCargoHandling": true,
       "DoorCateringHandling": true,
       "DoorOpenBoardActive": true,
@@ -204,6 +204,7 @@
       "CloseDoorsOnFinal": true,
       "RemoveJetwayStairsOnFinal": true,
       "CallPushbackOnBeacon": false,
+      "PushbackPreference": 0,
       "ClearGroundEquipOnBeacon": true,
       "GradualGroundEquipRemoval": false,
       "SequenceOnBeacon": true,
@@ -261,7 +262,7 @@
       }
     }
   ],
-  "ConfigVersion": 23,
+  "ConfigVersion": 24,
   "LogInterval": 3,
   "SizeLimit": 10485760,
   "LogCount": 3,

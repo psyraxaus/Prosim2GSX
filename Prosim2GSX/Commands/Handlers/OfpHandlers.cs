@@ -67,6 +67,14 @@ namespace Prosim2GSX.Commands.Handlers
 
         // ── sendNow ─────────────────────────────────────────────────────────
 
+        // Public so the OfpAutoSendService (and any other internal caller)
+        // can fire the same gate-assignment workflow as the manual "Send Now"
+        // button. The handler indirection still goes through the registry,
+        // this overload just lets us bypass the dispatcher marshal when we
+        // already know the call site is on a safe thread.
+        internal static Task<GateAssignmentDto> SendNowAsync(AppService app)
+            => SendNow(app, CancellationToken.None);
+
         private static async Task<GateAssignmentDto> SendNow(AppService app, CancellationToken _)
         {
             var ofp = app.Ofp;

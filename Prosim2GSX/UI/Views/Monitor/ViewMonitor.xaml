@@ -288,6 +288,16 @@
                             <Ellipse Width="14" Height="14" VerticalAlignment="Center" Fill="{Binding ServiceGpuConnectedColor}"/>
                             <TextBlock Margin="6,0,0,0" VerticalAlignment="Center">GPU</TextBlock>
                         </StackPanel>
+                        <!-- Jetway connected -->
+                        <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
+                            <Ellipse Width="14" Height="14" VerticalAlignment="Center" Fill="{Binding ServiceJetwayConnectedColor}"/>
+                            <TextBlock Margin="6,0,0,0" VerticalAlignment="Center">Jetway Connected</TextBlock>
+                        </StackPanel>
+                        <!-- Stairs connected -->
+                        <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
+                            <Ellipse Width="14" Height="14" VerticalAlignment="Center" Fill="{Binding ServiceStairsConnectedColor}"/>
+                            <TextBlock Margin="6,0,0,0" VerticalAlignment="Center">Stairs Connected</TextBlock>
+                        </StackPanel>
                         <!-- Cleaning -->
                         <StackPanel Orientation="Horizontal" Width="140" Margin="0,3">
                             <Ellipse Width="10" Height="10" VerticalAlignment="Center">

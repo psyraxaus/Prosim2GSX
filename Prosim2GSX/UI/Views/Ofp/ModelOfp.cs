@@ -153,15 +153,10 @@ namespace Prosim2GSX.UI.Views.Ofp
 
         protected virtual void OnAutomationStateChanged(AutomationState state)
         {
-            if (state != AutomationState.Flight) return;
-            if (string.IsNullOrWhiteSpace(PendingArrivalGate) || _autoFired) return;
-
-            _autoFired = true;
-            var dispatcher = Application.Current?.Dispatcher;
-            if (dispatcher != null && !dispatcher.CheckAccess())
-                dispatcher.BeginInvoke(new Action(() => _ = SendNowAsync()));
-            else
-                _ = SendNowAsync();
+            // Auto-fire on phase=Flight is now handled by OfpAutoSendService
+            // (backend) so the WPF tab does not need to listen for this any
+            // more. Hook retained as a no-op to keep the subscription
+            // wiring above harmless if the service is added back later.
         }
 
         // OFP state

@@ -165,7 +165,7 @@ export function AircraftProfilesPanel() {
   }
 
   const hasAircraftInfo =
-    !!list.currentAirline || !!list.currentTitle || !!list.currentRegistration;
+    !!list.currentAirline || !!list.currentTitle;
 
   return (
     <div className={styles.panel}>
@@ -185,10 +185,6 @@ export function AircraftProfilesPanel() {
           <span className={styles.kvValue}>{list.currentAirline || "—"}</span>
         </div>
         <div className={styles.kv}>
-          <span className={styles.kvLabel}>Registration</span>
-          <span className={styles.kvValue}>{list.currentRegistration || "—"}</span>
-        </div>
-        <div className={styles.kv}>
           <span className={styles.kvLabel}>Title / Livery</span>
           <span className={styles.kvValue}>{list.currentTitle || "—"}</span>
         </div>
@@ -198,7 +194,7 @@ export function AircraftProfilesPanel() {
         </div>
       </Section>
 
-      <Section title="Profiles" hint="Profiles are matched in this order: Registration → Title → Airline → Default fallback">
+      <Section title="Profiles" hint="Profiles are matched in this order: Title → Airline → Default fallback">
         {list.profiles.length === 0 && (
           <div className={styles.empty}>No profiles configured.</div>
         )}
@@ -264,7 +260,7 @@ export function AircraftProfilesPanel() {
                         onChange={(e) => setDraftMatchString(e.target.value)}
                         disabled={busy}
                         className={styles.fieldInput}
-                        placeholder="ICAO airline / aircraft title / registration"
+                        placeholder="ICAO airline / aircraft title"
                         spellCheck={false}
                       />
                     ) : (

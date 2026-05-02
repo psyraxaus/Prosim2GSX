@@ -137,6 +137,16 @@
   cursor: not-allowed;
 }
 
+.buttonComplete {
+  background: #00cc66;
+  color: #000000;
+  border-color: #00cc66;
+}
+
+.buttonComplete:hover {
+  background: #00e673;
+}
+
 .error {
   color: #ff8080;
   padding: 12px;

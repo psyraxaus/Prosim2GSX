@@ -55,6 +55,18 @@ namespace Prosim2GSX.GSX
             {
                 if (_pushbackPreference == value) return;
                 _pushbackPreference = value;
+                // Persist on the active profile so the choice survives app
+                // restart and is identical across WPF and Web. Both UIs write
+                // through this setter, so saving here is the single point.
+                try
+                {
+                    if (AircraftProfile != null)
+                    {
+                        AircraftProfile.PushbackPreference = value;
+                        Config?.SaveConfiguration();
+                    }
+                }
+                catch (Exception ex) { Logger.LogException(ex); }
                 try { PushbackPreferenceChanged?.Invoke(value); } catch { }
             }
         }
@@ -111,7 +123,13 @@ namespace Prosim2GSX.GSX
             {
                 AircraftProfile = Config.AircraftProfiles.First(p => p.Name == name);
                 Logger.Debug($"Using Profile {AircraftProfile}");
+                // Hydrate the in-memory pushback preference from the profile so
+                // restarts pick up where the user left off. Bypass the public
+                // setter — we don't want to re-save during profile load.
+                if (AircraftProfile != null)
+                    _pushbackPreference = AircraftProfile.PushbackPreference;
                 ProfileChanged?.Invoke(AircraftProfile);
+                try { PushbackPreferenceChanged?.Invoke(_pushbackPreference); } catch { }
             }
         }
 

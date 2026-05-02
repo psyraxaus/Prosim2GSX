@@ -31,11 +31,6 @@
                     <TextBlock>Open / Close <Underline>Passenger Doors</Underline> when GSX <Underline>Stairs</Underline> are connected / removed</TextBlock>
                 </CheckBox>
 
-                <CheckBox IsChecked="{Binding DoorStairIncludeL2}" Style="{StaticResource CheckBoxSettingItemIndented}"
-                          ToolTip="Also open/close the L2 Door on the A321 if it is configured in your GSX Aircraft Profile (= using 3 Stairs on the A321)." IsEnabled="False">
-                    <TextBlock>Include <Underline>L2</Underline> Door (A321)</TextBlock>
-                </CheckBox>
-
                 <CheckBox IsChecked="{Binding DoorCateringHandling}" Style="{StaticResource CheckBoxSettingItem}"
                           ToolTip="Open and Close the requested door for GSX Catering.">
                     <TextBlock>Open / Close <Underline>Starboard Doors</Underline> for GSX Catering</TextBlock>
