@@ -59,6 +59,52 @@
   padding: 4px 0;
 }
 
+.vmMappingsHeader {
+  display: grid;
+  grid-template-columns: 80px 1fr 60px 32px;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+
+.vmMappingsRow {
+  display: grid;
+  grid-template-columns: 80px 1fr 60px 32px;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.vmPathRow {
+  display: grid;
+  grid-template-columns: minmax(140px, auto) 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.vmPathLabel {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.vmReloadBtn {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.vmReloadBtn:hover { border-color: var(--accent); }
+
 .statusCell {
   font-size: 12px;
   color: #FFB347;

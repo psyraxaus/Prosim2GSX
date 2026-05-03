@@ -280,17 +280,35 @@ export interface AudioMappingDto {
   onlyActive: boolean;
 }
 
+export interface VoiceMeeterMappingDto {
+  channel: AudioChannel;
+  stripIndex: number;
+  isBus: boolean;
+  useLatch: boolean;
+}
+
 export interface AudioSessionSuggestionDto {
   processName: string;
   isAccessible: boolean;
 }
 
+export interface VoiceMeeterStripDto {
+  index: number;
+  isBus: boolean;
+  label: string;
+  displayName: string;
+  key: string;
+}
+
 export interface AudioDto {
   isCoreAudioSelected: boolean;
+  useVoiceMeeter: boolean;
+  voiceMeeterDllPath: string;
   audioAcpSide: AcpSide;
   audioDeviceFlow: DataFlow;
   audioDeviceState: DeviceState;
   mappings: AudioMappingDto[];
+  voiceMeeterMappings: VoiceMeeterMappingDto[];
   blacklist: string[];
 }
 
