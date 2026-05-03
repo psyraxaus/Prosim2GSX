@@ -9,10 +9,13 @@ import {
   AudioChannel,
   AudioDto,
   AudioMappingDto,
+  AudioSessionSuggestionDto,
   DATA_FLOW_OPTIONS,
   DEVICE_STATE_OPTIONS,
 } from "../types";
 import styles from "./AudioSettingsPanel.module.css";
+
+const ELEVATED_SUFFIX = " — elevated";
 
 export function AudioSettingsPanel() {
   const { get, post } = useApi();
@@ -20,6 +23,7 @@ export function AudioSettingsPanel() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<AudioSessionSuggestionDto[]>([]);
 
   async function reload() {
     setError(null);
@@ -30,7 +34,16 @@ export function AudioSettingsPanel() {
       setError((e as Error).message ?? "Failed to load");
     }
   }
-  useEffect(() => { reload(); }, []);
+  async function reloadSuggestions() {
+    try {
+      const list = await get<AudioSessionSuggestionDto[]>("/audio/process-suggestions");
+      setSuggestions(list ?? []);
+    } catch { /* leave whatever we had; field still accepts free text */ }
+  }
+  useEffect(() => {
+    reload();
+    reloadSuggestions();
+  }, []);
 
   async function save() {
     if (!draft) return;
@@ -93,6 +106,21 @@ export function AudioSettingsPanel() {
     setDraft((d) => (d ? { ...d, blacklist: d.blacklist.filter((_, i) => i !== idx) } : d));
   }
 
+  // Per-mapping elevated-status derived from suggestions: matching binary
+  // entry that is currently NOT accessible. Mirrors the WPF Status column /
+  // banner without needing a transient field on the DTO.
+  const suggestionByName = new Map(
+    suggestions.map((s) => [s.processName.toLowerCase(), s]),
+  );
+  const elevatedBinaries = Array.from(new Set(
+    draft.mappings
+      .map((m) => m.binary)
+      .filter((b) => {
+        const match = suggestionByName.get((b ?? "").toLowerCase());
+        return match != null && !match.isAccessible;
+      }),
+  ));
+
   return (
     <div className={styles.panel}>
       <div className={styles.toolbar}>
@@ -127,39 +155,67 @@ export function AudioSettingsPanel() {
       </Section>
 
       <Section title="App → Channel Mappings">
+        {elevatedBinaries.length > 0 && (
+          <div className={styles.warningBanner}>
+            Elevated process(es) detected: {elevatedBinaries.join(", ")}.
+            Run Prosim2GSX as administrator to control these apps —
+            otherwise these mappings are inactive.
+          </div>
+        )}
+
         <div className={styles.mappingsHeader}>
           <span>Channel</span>
           <span>Binary</span>
           <span>Device</span>
           <span>Latch</span>
           <span>Active</span>
+          <span>Status</span>
           <span />
         </div>
         {draft.mappings.length === 0 && <div className={styles.empty}>No mappings configured.</div>}
-        {draft.mappings.map((m, i) => (
-          <div key={i} className={styles.mappingRow}>
-            <select value={m.channel}
-              onChange={(e) => updateMapping(i, { channel: e.target.value as AudioChannel })}
-              className={styles.cellSelect}>
-              {AUDIO_CHANNELS.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-            <input value={m.binary}
-              onChange={(e) => updateMapping(i, { binary: e.target.value })}
-              placeholder="ProcessName"
-              className={styles.cellInput} />
-            <input value={m.device}
-              onChange={(e) => updateMapping(i, { device: e.target.value })}
-              placeholder="(All)"
-              className={styles.cellInput} />
-            <input type="checkbox" checked={m.useLatch}
-              onChange={(e) => updateMapping(i, { useLatch: e.target.checked })} />
-            <input type="checkbox" checked={m.onlyActive}
-              onChange={(e) => updateMapping(i, { onlyActive: e.target.checked })} />
-            <button type="button" className={styles.removeBtn} onClick={() => removeMapping(i)}>×</button>
-          </div>
-        ))}
+        {draft.mappings.map((m, i) => {
+          const match = suggestionByName.get((m.binary ?? "").toLowerCase());
+          const isElevated = match != null && !match.isAccessible;
+          return (
+            <div key={i} className={styles.mappingRow}>
+              <select value={m.channel}
+                onChange={(e) => updateMapping(i, { channel: e.target.value as AudioChannel })}
+                className={styles.cellSelect}>
+                {AUDIO_CHANNELS.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <input value={m.binary}
+                list="audio-process-suggestions"
+                onFocus={reloadSuggestions}
+                onChange={(e) => {
+                  let v = e.target.value;
+                  if (v.endsWith(ELEVATED_SUFFIX)) v = v.slice(0, -ELEVATED_SUFFIX.length);
+                  updateMapping(i, { binary: v });
+                }}
+                placeholder="ProcessName"
+                className={styles.cellInput} />
+              <input value={m.device}
+                onChange={(e) => updateMapping(i, { device: e.target.value })}
+                placeholder="(All)"
+                className={styles.cellInput} />
+              <input type="checkbox" checked={m.useLatch}
+                onChange={(e) => updateMapping(i, { useLatch: e.target.checked })} />
+              <input type="checkbox" checked={m.onlyActive}
+                onChange={(e) => updateMapping(i, { onlyActive: e.target.checked })} />
+              <span className={styles.statusCell} title={isElevated ? "Elevated — run Prosim2GSX as admin" : ""}>
+                {isElevated ? "Elevated — run Prosim2GSX as admin" : ""}
+              </span>
+              <button type="button" className={styles.removeBtn} onClick={() => removeMapping(i)}>×</button>
+            </div>
+          );
+        })}
         <PrimaryButton onClick={addMapping} variant="secondary">Add mapping</PrimaryButton>
       </Section>
+
+      <datalist id="audio-process-suggestions">
+        {suggestions.map((s) => (
+          <option key={s.processName} value={s.isAccessible ? s.processName : s.processName + ELEVATED_SUFFIX} />
+        ))}
+      </datalist>
 
       <Section title="Device Blacklist">
         {draft.blacklist.length === 0 && <div className={styles.empty}>No devices blacklisted.</div>}

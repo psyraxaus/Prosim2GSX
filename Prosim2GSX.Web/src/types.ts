@@ -280,6 +280,11 @@ export interface AudioMappingDto {
   onlyActive: boolean;
 }
 
+export interface AudioSessionSuggestionDto {
+  processName: string;
+  isAccessible: boolean;
+}
+
 export interface AudioDto {
   isCoreAudioSelected: boolean;
   audioAcpSide: AcpSide;
