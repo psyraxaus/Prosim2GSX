@@ -93,26 +93,6 @@
       "OnlyActive": true
     }
   ],
-  "AudioStartupVolumes": {
-    "VHF1": 1,
-    "VHF2": -1,
-    "VHF3": -1,
-    "HF1": -1,
-    "HF2": -1,
-    "INT": 1,
-    "CAB": 1,
-    "PA": -1
-  },
-  "AudioStartupUnmute": {
-    "VHF1": true,
-    "VHF2": false,
-    "VHF3": false,
-    "HF1": false,
-    "HF2": false,
-    "INT": true,
-    "CAB": true,
-    "PA": false
-  },
   "GsxServiceStartDelay": 4000,
   "GroundTicks": 2,
   "DelayForegroundChange": 1250,
@@ -262,7 +242,7 @@
       }
     }
   ],
-  "ConfigVersion": 24,
+  "ConfigVersion": 25,
   "LogInterval": 3,
   "SizeLimit": 10485760,
   "LogCount": 3,

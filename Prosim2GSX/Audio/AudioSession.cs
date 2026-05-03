@@ -1,12 +1,12 @@
-﻿using CFIT.AppLogger;
-using CFIT.AppTools;
-using CFIT.SimConnectLib.SimResources;
+using CFIT.AppLogger;
 using CoreAudio;
 using Prosim2GSX.AppConfig;
+using ProsimInterface;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Prosim2GSX.Audio
 {
@@ -14,12 +14,12 @@ namespace Prosim2GSX.Audio
     {
         protected virtual AudioController Controller { get; } = controller;
         protected virtual SessionManager Manager => Controller.SessionManager;
-        public virtual AudioMapping Mapping => new(Channel, Device, Binary, UseLatch, OnlyActive);
-        public virtual AudioChannel Channel { get; } = mapping.Channel;
-        public virtual string Device { get; } = mapping.Device;
-        public virtual string Binary { get; } = mapping.Binary;
-        public virtual bool UseLatch { get; } = mapping.UseLatch;
-        public virtual bool OnlyActive { get; } = mapping.OnlyActive;
+        public virtual AudioMapping Mapping { get; } = mapping;
+        public virtual AudioChannel Channel => Mapping.Channel;
+        public virtual string Device => Mapping.Device;
+        public virtual string Binary => Mapping.Binary;
+        public virtual bool UseLatch => Mapping.UseLatch;
+        public virtual bool OnlyActive => Mapping.OnlyActive;
         public virtual uint ProcessId { get; protected set; } = 0;
         public virtual int ProcessCount { get; protected set; } = 0;
         public virtual bool IsActive => ProcessId > 0 && Controller.HasInitialized && Controller.IsExecutionAllowed;
@@ -30,8 +30,30 @@ namespace Prosim2GSX.Audio
         public virtual ConcurrentDictionary<string, bool> SynchedSessionsVolume { get; } = [];
         public virtual ConcurrentDictionary<string, bool> SynchedSessionsMute { get; } = [];
         public virtual List<AudioSessionControl2> SessionControls { get; } = [];
-        public virtual ConcurrentDictionary<AcpSide, ISimResourceSubscription> SubVolume { get; } = [];
-        public virtual ConcurrentDictionary<AcpSide, ISimResourceSubscription> SubMute { get; } = [];
+
+        // Cached current values from ProSim. Subscribe handlers feed these and
+        // forward to ApplyVolume/ApplyMute so a fresh SetSessionList can reseed
+        // newly discovered AudioSessionControl2s without waiting for the next
+        // knob movement.
+        protected virtual float CurrentVolume { get; set; } = 1f;
+        protected virtual bool CurrentMute { get; set; } = false;
+
+        // Coalescing write pipeline. ProSim SDK callbacks fire on the SDK
+        // polling thread shared by every dataref subscription in the app.
+        // CoreAudio SimpleAudioVolume.MasterVolume/Mute writes can take tens
+        // of ms (and seconds when an elevated process holds a session on the
+        // same device), so writing inline would stall every other dataref
+        // update. Callbacks now record the latest value under a lock and a
+        // single per-session worker drains them on the thread pool. Rapid
+        // knob movement collapses to the most recent pending value.
+        private float? _pendingVolume;
+        private bool? _pendingMute;
+        private bool _writerActive;
+        private readonly object _writeLock = new();
+
+        protected virtual Action<string, dynamic, dynamic> VolumeHandler { get; set; }
+        protected virtual Action<string, dynamic, dynamic> MuteHandler { get; set; }
+        protected virtual AcpSide SubscribedSide { get; set; }
 
         public override string ToString()
         {
@@ -100,7 +122,7 @@ namespace Prosim2GSX.Audio
                     try
                     {
                         query.First().SimpleAudioVolume.MasterVolume = ident.Value;
-                        SavedVolumes.Remove(ident.Key);
+                        SavedVolumes.TryRemove(ident.Key, out _);
                     }
                     catch { }
                 }
@@ -117,7 +139,7 @@ namespace Prosim2GSX.Audio
                     try
                     {
                         query.First().SimpleAudioVolume.Mute = ident.Value;
-                        SavedMutes.Remove(ident.Key);
+                        SavedMutes.TryRemove(ident.Key, out _);
                     }
                     catch { }
                 }
@@ -143,65 +165,189 @@ namespace Prosim2GSX.Audio
 
         public virtual void SetSimSubscriptions()
         {
-            SetSimSubscription(AcpSide.CPT, SubVolume, AudioController.VarsVolumeKnobsCapt, OnVolumeChange);
-            SetSimSubscription(AcpSide.FO, SubVolume, AudioController.VarsVolumeKnobsFo, OnVolumeChange);
-            SetSimSubscription(AcpSide.CPT, SubMute, AudioController.VarsVolumeLatchSwitchesCapt, OnMuteChange);
-            SetSimSubscription(AcpSide.FO, SubMute, AudioController.VarsVolumeLatchSwitchesFo, OnMuteChange);
-        }
+            var audio = Controller.AudioInterface;
+            if (audio == null)
+            {
+                Logger.Warning($"AudioInterface not available — skipping subscriptions for {this}");
+                return;
+            }
 
-        protected virtual void SetSimSubscription(AcpSide side, ConcurrentDictionary<AcpSide, ISimResourceSubscription> dict, ConcurrentDictionary<AudioChannel, string> varDict, Action<ISimResourceSubscription,object> action)
-        {
-            var sub = Controller.SimStore[varDict[Channel]];
-            sub.OnReceived += action;
-            dict.Add(side, sub);
+            ClearSimSubscriptions();
+
+            string channelName = Channel.ToString();
+            int side = (int)Controller.Config.AudioAcpSide;
+            SubscribedSide = Controller.Config.AudioAcpSide;
+
+            VolumeHandler = audio.SubscribeToVolume(channelName, side, OnVolumeValue);
+            MuteHandler = audio.SubscribeToMute(channelName, side, OnMuteValue);
+
+            // Seed current state immediately so newly discovered sessions match
+            // the live knob position without waiting for the next movement.
+            try
+            {
+                CurrentVolume = NormaliseVolume(audio.ReadVolume(channelName, side));
+                CurrentMute = UseLatch && !audio.ReadMute(channelName, side);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex, $"Seeding initial ACP state for {this}");
+            }
         }
 
         public virtual void ClearSimSubscriptions()
         {
-            foreach (var sub in SubVolume)
-                try { sub.Value.OnReceived -= OnVolumeChange; } catch { }
-            foreach (var sub in SubMute)
-                try { sub.Value.OnReceived -= OnMuteChange; } catch { }
+            var audio = Controller.AudioInterface;
+            if (audio == null)
+            {
+                VolumeHandler = null;
+                MuteHandler = null;
+                return;
+            }
 
-            SubVolume.Clear();
-            SubMute.Clear();
+            string channelName = Channel.ToString();
+            int side = (int)SubscribedSide;
+            try { if (VolumeHandler != null) audio.UnsubscribeVolume(channelName, side, VolumeHandler); } catch { }
+            try { if (MuteHandler != null) audio.UnsubscribeMute(channelName, side, MuteHandler); } catch { }
+            VolumeHandler = null;
+            MuteHandler = null;
         }
 
         public virtual void SynchControls()
         {
-            if (SubVolume.TryGetValue(Controller.Config.AudioAcpSide, out var subVol))
-                OnVolumeChange(subVol, null);
-            if (SubMute.TryGetValue(Controller.Config.AudioAcpSide, out var subMute))
-                OnMuteChange(subMute, null);
-        }
-
-        protected virtual void OnVolumeChange(ISimResourceSubscription sub, object data)
-        {
-            if (!IsActive || SessionControls.Count == 0 || !SubVolume.ContainsKey(Controller.Config.AudioAcpSide))
-                return;
-            if (sub.Name != SubVolume[Controller.Config.AudioAcpSide].Name)
-                return;
-
-            float value = sub.GetValue<float>();
-            if (value < 0 || value > 1.0f)
+            // Re-seed CurrentVolume/CurrentMute from ProSim and push them to
+            // every SessionControl so newly discovered controls match the live
+            // knob position without needing the user to move the knob.
+            var audio = Controller.AudioInterface;
+            if (audio != null)
             {
-                Logger.Debug($"Invalid Value Range for '{sub.Name}': {value}");
-                return;
+                try
+                {
+                    string channelName = Channel.ToString();
+                    int side = (int)Controller.Config.AudioAcpSide;
+                    CurrentVolume = NormaliseVolume(audio.ReadVolume(channelName, side));
+                    CurrentMute = UseLatch && !audio.ReadMute(channelName, side);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogException(ex, $"SynchControls read for {this}");
+                }
             }
 
+            // Route through the same worker as live callbacks so the
+            // AudioController.DoRun thread is not held up by a slow
+            // CoreAudio write either.
+            bool kick;
+            lock (_writeLock)
+            {
+                _pendingVolume = CurrentVolume;
+                if (UseLatch) _pendingMute = CurrentMute;
+                kick = !_writerActive;
+                if (kick) _writerActive = true;
+            }
+            if (kick) _ = Task.Run(DrainAsync);
+        }
+
+        protected virtual float NormaliseVolume(float raw)
+        {
+            float v = raw / (float)ProsimAudioInterface.VolumeMax;
+            if (v < 0f) v = 0f;
+            if (v > 1f) v = 1f;
+            return v;
+        }
+
+        protected virtual void OnVolumeValue(float raw)
+        {
+            float value = NormaliseVolume(raw);
+            CurrentVolume = value;
+            if (!IsActive || SessionControls.Count == 0) return;
+
+            bool kick;
+            lock (_writeLock)
+            {
+                _pendingVolume = value;
+                kick = !_writerActive;
+                if (kick) _writerActive = true;
+            }
+            if (kick) _ = Task.Run(DrainAsync);
+        }
+
+        protected virtual void OnMuteValue(bool unmuted)
+        {
+            if (!UseLatch) { CurrentMute = false; return; }
+            bool mute = !unmuted;
+            CurrentMute = mute;
+            if (!IsActive || SessionControls.Count == 0) return;
+
+            bool kick;
+            lock (_writeLock)
+            {
+                _pendingMute = mute;
+                kick = !_writerActive;
+                if (kick) _writerActive = true;
+            }
+            if (kick) _ = Task.Run(DrainAsync);
+        }
+
+        // Drains the latest pending volume/mute pair off the SDK polling
+        // thread. Producer-consumer with a single worker: any callback that
+        // arrives while a write is in flight overwrites the pending field
+        // (intermediate knob positions are dropped). The empty-pending check
+        // and _writerActive flip happen under the same lock the producer
+        // takes when setting pending, so a producer cannot lose its update.
+        private async Task DrainAsync()
+        {
             try
             {
-                if (data != null || Controller.Config.AudioSynchSessionOnCountChange)
-                    SessionControls.ForEach(ctrl => ctrl.SimpleAudioVolume.MasterVolume = value);
-                else
+                while (true)
                 {
-                    foreach (var ctrl in SessionControls)
+                    float? v;
+                    bool? m;
+                    lock (_writeLock)
                     {
-                        if (Controller.ResetVolumes || !SynchedSessionsVolume.ContainsKey(ctrl.SessionInstanceIdentifier))
+                        v = _pendingVolume; _pendingVolume = null;
+                        m = _pendingMute; _pendingMute = null;
+                        if (v == null && m == null)
                         {
-                            ctrl.SimpleAudioVolume.MasterVolume = value;
-                            SynchedSessionsVolume.TryAdd(ctrl.SessionInstanceIdentifier, true);
+                            _writerActive = false;
+                            return;
                         }
+                    }
+
+                    if (IsActive && SessionControls.Count > 0)
+                    {
+                        if (v.HasValue) ApplyVolume(v.Value);
+                        if (m.HasValue) ApplyMute(m.Value);
+                    }
+
+                    await Task.Yield();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+                lock (_writeLock) { _writerActive = false; }
+            }
+        }
+
+        // Live updates fire on actual dataref change — always write to every
+        // session control. The SynchedSessionsVolume/Mute tracking is kept
+        // for diagnostic visibility (and so RestoreVolumes can still clear
+        // them), but is no longer used to gate writes the way the old
+        // LVAR-poller flow needed.
+        protected virtual void ApplyVolume(float value)
+        {
+            try
+            {
+                foreach (var ctrl in SessionControls)
+                {
+                    try
+                    {
+                        ctrl.SimpleAudioVolume.MasterVolume = value;
+                        SynchedSessionsVolume.TryAdd(ctrl.SessionInstanceIdentifier, true);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Verbose($"ApplyVolume: session write skipped for {this}: {ex.GetType().Name}");
                     }
                 }
             }
@@ -211,34 +357,20 @@ namespace Prosim2GSX.Audio
             }
         }
 
-        protected virtual void OnMuteChange(ISimResourceSubscription sub, object data)
+        protected virtual void ApplyMute(bool mute)
         {
-            if (!IsActive || SessionControls.Count == 0 || !UseLatch || !SubMute.ContainsKey(Controller.Config.AudioAcpSide))
-                return;
-            if (sub.Name != SubMute[Controller.Config.AudioAcpSide].Name)
-                return;
-
-            float value = sub.GetValue<float>();
-            if (value < 0)
-            {
-                Logger.Debug($"Invalid Value Range for '{sub.Name}': {value}");
-                return;
-            }
-            bool mute = value == 0.0f;
-
             try
             {
-                if (data != null || Controller.Config.AudioSynchSessionOnCountChange)
-                    SessionControls.ForEach(ctrl => ctrl.SimpleAudioVolume.Mute = mute);
-                else
+                foreach (var ctrl in SessionControls)
                 {
-                    foreach (var ctrl in SessionControls)
+                    try
                     {
-                        if (Controller.ResetVolumes || !SynchedSessionsMute.ContainsKey(ctrl.SessionInstanceIdentifier))
-                        {
-                            ctrl.SimpleAudioVolume.Mute = mute;
-                            SynchedSessionsMute.TryAdd(ctrl.SessionInstanceIdentifier, true);
-                        }
+                        ctrl.SimpleAudioVolume.Mute = mute;
+                        SynchedSessionsMute.TryAdd(ctrl.SessionInstanceIdentifier, true);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Verbose($"ApplyMute: session write skipped for {this}: {ex.GetType().Name}");
                     }
                 }
             }

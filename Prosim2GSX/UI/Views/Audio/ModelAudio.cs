@@ -1,4 +1,3 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CoreAudio;
 using Prosim2GSX.AppConfig;
@@ -43,19 +42,8 @@ namespace Prosim2GSX.UI.Views.Audio
 
         protected override void InitializeModel()
         {
-            this.PropertyChanged += OnPropertyChanged;
             AudioState.PropertyChanged += OnAudioStateChanged;
             AudioController.DeviceManager.DevicesChanged += () => NotifyPropertyChanged(nameof(AudioDevices));
-        }
-
-        protected virtual void OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
-        {
-            if (e?.PropertyName == nameof(CurrentChannel))
-            {
-                NotifyPropertyChanged(nameof(SetStartupVolume));
-                NotifyPropertyChanged(nameof(StartupVolume));
-                NotifyPropertyChanged(nameof(StartupUnmute));
-            }
         }
 
         protected virtual void OnAudioStateChanged(object? sender, PropertyChangedEventArgs e)
@@ -73,43 +61,17 @@ namespace Prosim2GSX.UI.Views.Audio
             { AcpSide.FO, "First Officer" },
         };
 
-        public virtual AcpSide AudioAcpSide { get => Source.AudioAcpSide; set { SetModelValue<AcpSide>(value); AudioController.ResetVolumes = true; } }
-
-        [ObservableProperty]
-        protected AudioChannel _CurrentChannel = AudioChannel.VHF1;
-
-        public virtual bool SetStartupVolume
+        public virtual AcpSide AudioAcpSide
         {
-            get => Source.AudioStartupVolumes[CurrentChannel] >= 0.0;
+            get => Source.AudioAcpSide;
             set
             {
-                double setValue = value ? 1.0 : -1.0;
-                Source.AudioStartupVolumes[CurrentChannel] = setValue;
-                Source.SaveConfiguration();
-                OnPropertyChanged(nameof(SetStartupVolume));
-                OnPropertyChanged(nameof(StartupVolume));
-            }
-        }
-
-        public virtual double StartupVolume
-        {
-            get => (Source.AudioStartupVolumes[CurrentChannel] >= 0.0 ? Source.AudioStartupVolumes[CurrentChannel] * 100.0 : 0);
-            set
-            {
-                Source.AudioStartupVolumes[CurrentChannel] = value / 100.0;
-                Source.SaveConfiguration();
-                OnPropertyChanged(nameof(StartupVolume));
-            }
-        }
-
-        public virtual bool StartupUnmute
-        {
-            get => Source.AudioStartupUnmute[CurrentChannel];
-            set
-            {
-                Source.AudioStartupUnmute[CurrentChannel] = value;
-                Source.SaveConfiguration();
-                OnPropertyChanged(nameof(StartupUnmute));
+                SetModelValue<AcpSide>(value);
+                // Rebind subscriptions to the newly selected side and force a
+                // resynch on the next tick so newly subscribed datarefs push
+                // their current values into CoreAudio sessions.
+                AudioController.ResetMappings = true;
+                AudioController.ResetVolumes = true;
             }
         }
 

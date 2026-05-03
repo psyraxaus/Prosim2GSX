@@ -18,6 +18,9 @@ export function NumberField({ label, hint, value, onChange, min, max, step, suff
 export function TextField({ label, hint, value, onChange, placeholder, readOnly, monospace, disabled, }) {
     return (_jsx(Field, { label: label, hint: hint, children: _jsx("input", { type: "text", value: value, readOnly: readOnly, disabled: disabled, placeholder: placeholder, onChange: (e) => onChange(e.target.value), className: `${styles.textInput} ${monospace ? styles.monospace : ""}`, spellCheck: false, autoCapitalize: "off", autoComplete: "off" }) }));
 }
+export function RadioField({ label, hint, value, options, onChange, name, disabled, }) {
+    return (_jsx(Field, { label: label, hint: hint, children: _jsx("div", { className: styles.radioGroup, children: options.map((o) => (_jsxs("label", { className: styles.radioOption, children: [_jsx("input", { type: "radio", name: name, checked: value === o.value, disabled: disabled, onChange: () => onChange(o.value), className: styles.radio }), o.label] }, String(o.value)))) }) }));
+}
 export function SelectField({ label, hint, value, options, onChange, disabled, }) {
     return (_jsx(Field, { label: label, hint: hint, children: _jsx("select", { value: String(value), disabled: disabled, onChange: (e) => {
                 const raw = e.target.value;

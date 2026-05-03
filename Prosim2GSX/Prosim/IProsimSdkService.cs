@@ -25,6 +25,13 @@ namespace Prosim2GSX.Prosim
         ProsimAircraftInterface AircraftInterface { get; }
 
         /// <summary>
+        /// Audio dataref bridge — created when the aircraft interface is registered.
+        /// Read-only mirror of the ACP knobs/latches; AudioController subscribes for
+        /// volume/mute/power changes and never writes back.
+        /// </summary>
+        ProsimAudioInterface AudioInterface { get; }
+
+        /// <summary>
         /// Event raised when connection state changes
         /// </summary>
         event Action<bool> OnConnectionChanged;

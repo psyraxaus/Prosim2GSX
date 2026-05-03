@@ -6,9 +6,10 @@ using System.Linq;
 
 namespace Prosim2GSX.Web.Contracts
 {
-    // Audio Settings tab content — full mirror of the WPF tab, including the
-    // backend selector (CoreAudio vs VoiceMeeter), per-channel startup volumes
-    // and unmute flags, app→device mappings, and the device blacklist.
+    // Audio Settings tab content — full mirror of the WPF tab. Includes the
+    // backend selector (CoreAudio vs VoiceMeeter), app→device mappings, and
+    // the device blacklist. ACP knob/latch state is read from ProSim datarefs
+    // at runtime, so per-channel startup volumes are not exposed here.
     //
     // Threading: ApplyTo writes Config + AudioState. Phase 6 controllers must
     // marshal onto the WPF dispatcher.
@@ -26,12 +27,6 @@ namespace Prosim2GSX.Web.Contracts
         // Devices the user has chosen to exclude from enumeration.
         public List<string> Blacklist { get; set; } = new();
 
-        // Per-channel startup volume (0.0–1.0; -1.0 means "do not set").
-        public Dictionary<AudioChannel, double> StartupVolumes { get; set; } = new();
-
-        // Per-channel startup unmute flag.
-        public Dictionary<AudioChannel, bool> StartupUnmute { get; set; } = new();
-
         public static AudioDto From(AppService app)
         {
             var config = app.Config;
@@ -47,12 +42,6 @@ namespace Prosim2GSX.Web.Contracts
                 AudioDeviceState = config.AudioDeviceState,
                 Mappings = config.AudioMappings?.Select(AudioMappingDto.From).ToList() ?? new(),
                 Blacklist = config.AudioDeviceBlacklist?.ToList() ?? new(),
-                StartupVolumes = config.AudioStartupVolumes != null
-                    ? new Dictionary<AudioChannel, double>(config.AudioStartupVolumes)
-                    : new(),
-                StartupUnmute = config.AudioStartupUnmute != null
-                    ? new Dictionary<AudioChannel, bool>(config.AudioStartupUnmute)
-                    : new(),
             };
         }
 
@@ -81,12 +70,6 @@ namespace Prosim2GSX.Web.Contracts
             // Replace the lists wholesale — preserves caller-supplied order.
             config.AudioMappings = Mappings?.Select(m => m.ToAudioMapping()).ToList() ?? new();
             config.AudioDeviceBlacklist = Blacklist?.ToList() ?? new();
-
-            // Replace dictionaries wholesale to drop any keys removed by the client.
-            if (StartupVolumes != null)
-                config.AudioStartupVolumes = new Dictionary<AudioChannel, double>(StartupVolumes);
-            if (StartupUnmute != null)
-                config.AudioStartupUnmute = new Dictionary<AudioChannel, bool>(StartupUnmute);
 
             config.SaveConfiguration();
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useApi } from "../api/useApi";
 import { Section } from "../components/forms/Section";
-import { BoolField, SelectField } from "../components/forms/Field";
+import { RadioField, SelectField } from "../components/forms/Field";
 import { PrimaryButton } from "../components/forms/PrimaryButton";
 import {
   ACP_SIDE_OPTIONS,
@@ -93,21 +93,6 @@ export function AudioSettingsPanel() {
     setDraft((d) => (d ? { ...d, blacklist: d.blacklist.filter((_, i) => i !== idx) } : d));
   }
 
-  function setStartupVolume(channel: AudioChannel, raw: string) {
-    // Convention: -1.0 means "do not set". Empty input is also "do not set".
-    const val = raw === "" ? -1 : Number(raw);
-    setDraft((d) => {
-      if (!d) return d;
-      return { ...d, startupVolumes: { ...d.startupVolumes, [channel]: val } };
-    });
-  }
-  function toggleStartupUnmute(channel: AudioChannel, value: boolean) {
-    setDraft((d) => {
-      if (!d) return d;
-      return { ...d, startupUnmute: { ...d.startupUnmute, [channel]: value } };
-    });
-  }
-
   return (
     <div className={styles.panel}>
       <div className={styles.toolbar}>
@@ -119,10 +104,17 @@ export function AudioSettingsPanel() {
         </div>
       </div>
 
-      <Section title="Backend">
-        <BoolField label="CoreAudio Backend (off = VoiceMeeter)"
-          value={draft.isCoreAudioSelected}
-          onChange={(v) => update("isCoreAudioSelected", v)} />
+      <Section title="Audio API">
+        <RadioField
+          label="Backend"
+          name="audioApi"
+          value={draft.isCoreAudioSelected ? "core" : "voicemeeter"}
+          options={[
+            { value: "core", label: "Core Audio (Process Control)" },
+            { value: "voicemeeter", label: "VoiceMeeter API (Strip Control)" },
+          ]}
+          onChange={(v) => update("isCoreAudioSelected", v === "core")}
+        />
         <SelectField label="ACP Side" value={draft.audioAcpSide}
           options={ACP_SIDE_OPTIONS}
           onChange={(v) => update("audioAcpSide", v)} />
@@ -132,28 +124,6 @@ export function AudioSettingsPanel() {
         <SelectField label="Device State" value={draft.audioDeviceState}
           options={DEVICE_STATE_OPTIONS}
           onChange={(v) => update("audioDeviceState", v)} />
-      </Section>
-
-      <Section title="Startup Volumes" hint="-1 = do not set on startup. Range 0.0–1.0.">
-        {AUDIO_CHANNELS.map((c) => {
-          const vol = draft.startupVolumes[c];
-          const unmute = draft.startupUnmute[c] ?? false;
-          return (
-            <div key={c} className={styles.channelRow}>
-              <span className={styles.channelLabel}>{c}</span>
-              <input type="number" step="0.05" min={-1} max={1}
-                value={vol === undefined ? "" : vol}
-                onChange={(e) => setStartupVolume(c, e.target.value)}
-                className={styles.channelVolume}
-                placeholder="—" />
-              <label className={styles.channelUnmute}>
-                <input type="checkbox" checked={unmute}
-                  onChange={(e) => toggleStartupUnmute(c, e.target.checked)} />
-                Unmute on startup
-              </label>
-            </div>
-          );
-        })}
       </Section>
 
       <Section title="App → Channel Mappings">

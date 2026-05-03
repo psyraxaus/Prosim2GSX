@@ -1,14 +1,10 @@
-﻿using CFIT.AppFramework.Services;
+using CFIT.AppFramework.Services;
 using CFIT.AppLogger;
-using CFIT.AppTools;
 using CFIT.SimConnectLib;
-using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.AppConfig;
 using Prosim2GSX.Prosim;
 using ProsimInterface;
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -37,68 +33,21 @@ namespace Prosim2GSX.Audio
         public virtual CancellationToken RequestToken => AppService.Instance.RequestToken;
         public virtual SimConnectManager SimConnect => Prosim2GSX.Instance.AppService.SimConnect;
         public virtual ProsimSdkService ProsimService => AppService.Instance.ProsimService;
-        protected virtual ISimResourceSubscription SubPlanePowered { get; set; }
+        public virtual ProsimAudioInterface AudioInterface => ProsimService?.AudioInterface;
+
         public virtual bool IsActive { get; protected set; } = false;
-        public virtual bool IsPlanePowered => SubPlanePowered.GetNumber() > 0;
+        public virtual bool IsPlanePowered { get; protected set; } = false;
         public virtual bool HasInitialized { get; protected set; } = false;
         public virtual DeviceManager DeviceManager { get; }
         public virtual SessionManager SessionManager { get; }
         protected virtual DateTime NextProcessCheck { get; set; } = DateTime.MinValue;
         public virtual bool ResetVolumes { get; set; } = false;
         public virtual bool ResetMappings { get; set; } = false;
-        public static ConcurrentDictionary<AudioChannel, string> VarsVolumeKnobsCapt { get; } = new()
-        {
-            { AudioChannel.VHF1, "L:A_ASP_VHF_1_VOLUME" },
-            { AudioChannel.VHF2, "L:A_ASP_VHF_2_VOLUME" },
-            { AudioChannel.VHF3, "L:A_ASP_VHF_3_VOLUME" },
-            { AudioChannel.HF1, "L:A_ASP_HF_1_VOLUME" },
-            { AudioChannel.HF2, "L:A_ASP_HF_2_VOLUME" },
-            { AudioChannel.INT, "L:A_ASP_INT_VOLUME" },
-            { AudioChannel.CAB, "L:A_ASP_CAB_VOLUME" },
-            { AudioChannel.PA, "L:A_ASP_PA_VOLUME" },
-        };
-        public static ConcurrentDictionary<AudioChannel, string> VarsVolumeLatchSwitchesCapt { get; } = new()
-        {
-            { AudioChannel.VHF1, "L:S_ASP_VHF_1_REC_LATCH" },
-            { AudioChannel.VHF2, "L:S_ASP_VHF_2_REC_LATCH" },
-            { AudioChannel.VHF3, "L:S_ASP_VHF_3_REC_LATCH" },
-            { AudioChannel.HF1, "L:S_ASP_HF_1_REC_LATCH" },
-            { AudioChannel.HF2, "L:S_ASP_HF_2_REC_LATCH" },
-            { AudioChannel.INT, "L:S_ASP_INT_REC_LATCH" },
-            { AudioChannel.CAB, "L:S_ASP_CAB_REC_LATCH" },
-            { AudioChannel.PA, "L:S_ASP_PA_REC_LATCH" },
-        };
-        public static ConcurrentDictionary<AudioChannel, string> VarsVolumeKnobsFo { get; } = new()
-        {
-            { AudioChannel.VHF1, "L:A_ASP2_VHF_1_VOLUME" },
-            { AudioChannel.VHF2, "L:A_ASP2_VHF_2_VOLUME" },
-            { AudioChannel.VHF3, "L:A_ASP2_VHF_3_VOLUME" },
-            { AudioChannel.HF1, "L:A_ASP2_HF_1_VOLUME" },
-            { AudioChannel.HF2, "L:A_ASP2_HF_2_VOLUME" },
-            { AudioChannel.INT, "L:A_ASP2_INT_VOLUME" },
-            { AudioChannel.CAB, "L:A_ASP2_CAB_VOLUME" },
-            { AudioChannel.PA, "L:A_ASP2_PA_VOLUME" },
-        };
-        public static ConcurrentDictionary<AudioChannel, string> VarsVolumeLatchSwitchesFo { get; } = new()
-        {
-            { AudioChannel.VHF1, "L:S_ASP2_VHF_1_REC_LATCH" },
-            { AudioChannel.VHF2, "L:S_ASP2_VHF_2_REC_LATCH" },
-            { AudioChannel.VHF3, "L:S_ASP2_VHF_3_REC_LATCH" },
-            { AudioChannel.HF1, "L:S_ASP2_HF_1_REC_LATCH" },
-            { AudioChannel.HF2, "L:S_ASP2_HF_2_REC_LATCH" },
-            { AudioChannel.INT, "L:S_ASP2_INT_REC_LATCH" },
-            { AudioChannel.CAB, "L:S_ASP2_CAB_REC_LATCH" },
-            { AudioChannel.PA, "L:S_ASP2_PA_REC_LATCH" },
-        };
-        protected virtual List<ConcurrentDictionary<AudioChannel, string>> AllVars { get; } = [];
+
+        protected virtual Action<string, dynamic, dynamic> PowerHandler { get; set; }
 
         public AudioController(Config config) : base(config)
         {
-            AllVars.Add(VarsVolumeKnobsCapt);
-            AllVars.Add(VarsVolumeLatchSwitchesCapt);
-            AllVars.Add(VarsVolumeKnobsFo);
-            AllVars.Add(VarsVolumeLatchSwitchesFo);
-
             DeviceManager = new(this);
             SessionManager = new(this);
         }
@@ -106,55 +55,61 @@ namespace Prosim2GSX.Audio
         protected override Task InitReceivers()
         {
             base.InitReceivers();
-
-            SubPlanePowered = SimStore.AddVariable(ProsimConstants.VarPowered);
-            foreach (var dict in AllVars)
-                foreach (var name in dict.Values)
-                    SimStore.AddVariable(name);
-
             return Task.CompletedTask;
         }
 
         protected override Task FreeResources()
         {
             base.FreeResources();
-
-            SimStore.Remove(ProsimConstants.VarPowered);
-            foreach (var dict in AllVars)
-                foreach (var name in dict.Values)
-                    SimStore.Remove(name);
-
+            UnsubscribePower();
             DeviceManager.Clear();
             return Task.CompletedTask;
         }
 
-        protected virtual async Task SetStartupVolumes()
+        protected virtual void SubscribePower()
         {
+            var audio = AudioInterface;
+            if (audio == null)
+            {
+                Logger.Warning("AudioInterface not available — cannot subscribe to power gate");
+                return;
+            }
+
             try
             {
-                foreach (var channel in Enum.GetValues<AudioChannel>())
-                {
-                    if (Config.AudioStartupVolumes[channel] >= 0.0)
-                    {
-                        var knobVars = Config.AudioAcpSide == AcpSide.CPT ? VarsVolumeKnobsCapt : VarsVolumeKnobsFo;
-                        await SimStore[knobVars[channel]].WriteValue(Config.AudioStartupVolumes[channel]);
-                    }
+                var sdk = ProsimService?.AircraftInterface?.SdkInterface;
+                if (sdk != null)
+                    IsPlanePowered = sdk.GetBool(ProsimConstants.RefElecBusPowerDcEss);
+            }
+            catch { /* SDK may not be ready yet — first callback will seed it */ }
 
-                    if (Config.AudioStartupUnmute[channel])
-                    {
-                        var latchVars = Config.AudioAcpSide == AcpSide.CPT ? VarsVolumeLatchSwitchesCapt : VarsVolumeLatchSwitchesFo;
-                        await SimStore[latchVars[channel]].WriteValue(1);
-                    }
-                }
-            }
-            catch (Exception ex)
+            PowerHandler = audio.SubscribeToPower(ProsimConstants.RefElecBusPowerDcEss, value =>
             {
-                Logger.LogException(ex);
+                IsPlanePowered = value;
+                Logger.Debug($"Audio power gate -> {value}");
+            });
+        }
+
+        protected virtual void UnsubscribePower()
+        {
+            var audio = AudioInterface;
+            if (audio != null && PowerHandler != null)
+            {
+                try { audio.UnsubscribePower(ProsimConstants.RefElecBusPowerDcEss, PowerHandler); } catch { }
             }
+            PowerHandler = null;
         }
 
         protected override async Task DoRun()
         {
+            // Wait for the ProSim SDK to publish its audio interface — it's
+            // created in ProsimSdkService.SetAircraftInterface, which fires
+            // after the GsxController spins up.
+            while (AudioInterface == null && IsExecutionAllowed && !RequestToken.IsCancellationRequested)
+                await Task.Delay(Config.AudioServiceRunInterval, RequestToken);
+
+            SubscribePower();
+
             while (!IsPlanePowered && IsExecutionAllowed && !RequestToken.IsCancellationRequested)
                 await Task.Delay(Config.AudioServiceRunInterval, RequestToken);
 
@@ -164,7 +119,6 @@ namespace Prosim2GSX.Audio
                 SessionManager.RegisterMappings();
                 bool rescanNeeded = false;
                 IsActive = true;
-                await SetStartupVolumes();
                 while (SimConnect.IsSessionRunning && IsExecutionAllowed && !Token.IsCancellationRequested)
                 {
                     rescanNeeded = SessionManager.HasInactiveSessions || SessionManager.HasEmptySearches || ResetMappings;
@@ -213,6 +167,7 @@ namespace Prosim2GSX.Audio
             }
             IsActive = false;
             SessionManager.UnregisterMappings();
+            UnsubscribePower();
 
             Logger.Debug($"AudioService ended");
         }
@@ -222,6 +177,7 @@ namespace Prosim2GSX.Audio
             base.Stop();
 
             try { SessionManager.RestoreVolumes(); } catch { }
+            UnsubscribePower();
             IsActive = false;
             HasInitialized = false;
             DeviceManager.Clear();

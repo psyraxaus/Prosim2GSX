@@ -24,6 +24,7 @@ namespace Prosim2GSX.Prosim
 
         // SDK Interface
         public virtual ProsimAircraftInterface AircraftInterface { get; protected set; }
+        public virtual ProsimAudioInterface AudioInterface { get; protected set; }
 
         // Events
         public event Action<bool> OnConnectionChanged;
@@ -94,6 +95,18 @@ namespace Prosim2GSX.Prosim
 
             Logger.Information("ProsimAircraftInterface instance registered with SDK service");
             AircraftInterface = aircraftInterface;
+
+            try
+            {
+                AudioInterface = new ProsimAudioInterface(aircraftInterface.SdkInterface);
+                Logger.Debug("ProsimAudioInterface created alongside AircraftInterface");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Failed to create ProsimAudioInterface");
+                Logger.LogException(ex);
+                AudioInterface = null;
+            }
         }
 
         /// <summary>
@@ -452,6 +465,8 @@ namespace Prosim2GSX.Prosim
         protected override Task FreeResources()
         {
             base.FreeResources();
+            try { AudioInterface?.UnsubscribeAll(); } catch { }
+            AudioInterface = null;
             AircraftInterface = null;
             IsInitialized = false;
             IsConnected = false;

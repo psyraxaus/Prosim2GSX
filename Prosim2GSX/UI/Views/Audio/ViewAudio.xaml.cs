@@ -1,5 +1,4 @@
-﻿using CFIT.AppFramework.UI.Validations;
-using CFIT.AppFramework.UI.ViewModels;
+﻿using CFIT.AppFramework.UI.ViewModels;
 using CFIT.AppLogger;
 using CFIT.AppTools;
 using Prosim2GSX.AppConfig;
@@ -27,16 +26,12 @@ namespace Prosim2GSX.UI.Views.Audio
             ViewModel = new(AppService.Instance);
             this.DataContext = ViewModel;
 
-            SelectorCurrentChannel.ItemsSource = Enum.GetValues<AudioChannel>();
-            ViewModel.BindStringNumber(nameof(ViewModel.StartupVolume), InputStartupVolume, "100", new ValidationRuleRange<double>(0.0, 100));
-
             ViewModelMappings = new(GridAudioMappings, ViewModel.AppMappingCollection, AppWindow.IconLoader);
             ButtonAddMapping.Command = ViewModelMappings.BindAddUpdateButton(ButtonAddMapping, ImageAddMapping, GetMappingItem);
             ButtonRemoveMapping.Command = ViewModelMappings.BindRemoveButton(ButtonRemoveMapping);
 
             SelectorMappingChannel.ItemsSource = Enum.GetValues<AudioChannel>();
             ViewModelMappings.BindMember(SelectorMappingChannel, nameof(AudioMapping.Channel));
-            ViewModelMappings.AddUpdateCommand.Subscribe(SelectorCurrentChannel);
 
             ViewModelMappings.BindTextElement(InputMappingApp, nameof(AudioMapping.Binary));
             ViewModelMappings.AddUpdateCommand.Subscribe(InputMappingApp);

@@ -79,28 +79,6 @@ namespace Prosim2GSX.AppConfig
             new(AudioChannel.CAB, "", "FlightSimulator"),
             new(AudioChannel.CAB, "", "FlightSimulator2024"),
         ];
-        public virtual Dictionary<AudioChannel, double> AudioStartupVolumes { get; set; } = new()
-        {
-            { AudioChannel.VHF1, 1.0 },
-            { AudioChannel.VHF2, -1.0 },
-            { AudioChannel.VHF3, -1.0 },
-            { AudioChannel.HF1, -1.0 },
-            { AudioChannel.HF2, -1.0 },
-            { AudioChannel.INT, 1.0 },
-            { AudioChannel.CAB, 1.0 },
-            { AudioChannel.PA, -1.0 },
-        };
-        public virtual Dictionary<AudioChannel, bool> AudioStartupUnmute { get; set; } = new()
-        {
-            { AudioChannel.VHF1, true },
-            { AudioChannel.VHF2, false },
-            { AudioChannel.VHF3, false },
-            { AudioChannel.HF1, false },
-            { AudioChannel.HF2, false },
-            { AudioChannel.INT, true },
-            { AudioChannel.CAB, true },
-            { AudioChannel.PA, false },
-        };
         public virtual int GsxServiceStartDelay { get; set; } = 4000;
         public virtual int GroundTicks { get; set; } = 2;
         public virtual int DelayForegroundChange { get; set; } = 1250;
@@ -305,6 +283,11 @@ namespace Prosim2GSX.AppConfig
                         profile.MatchType = ProfileMatchType.Title;
                 }
             }
+
+            // v25: Audio startup volumes / unmute removed — ProSim datarefs are
+            // now the source of truth for ACP knob/latch state, so the app no
+            // longer writes startup values into the sim. Stale keys in
+            // existing AppConfig.json files are silently dropped on next save.
         }
 
         public virtual void SetFuelFob(string registration, double fuel)

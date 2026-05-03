@@ -287,8 +287,6 @@ export interface AudioDto {
   audioDeviceState: DeviceState;
   mappings: AudioMappingDto[];
   blacklist: string[];
-  startupVolumes: Partial<Record<AudioChannel, number>>;
-  startupUnmute: Partial<Record<AudioChannel, boolean>>;
 }
 
 // ──────────────────────────────────────────────────────────────────────────

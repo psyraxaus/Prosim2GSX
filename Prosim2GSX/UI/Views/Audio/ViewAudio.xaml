@@ -43,32 +43,6 @@
                 </StackPanel>
             </Border>
 
-            <!-- AUDIO CHANNEL -->
-            <TextBlock Style="{StaticResource CategoryHeader}" Text="AUDIO CHANNEL" Margin="0,0,0,4"/>
-            <Border Style="{StaticResource SectionCardBorder}">
-                <StackPanel>
-                    <StackPanel Style="{StaticResource SettingItemPanel}"
-                                ToolTip="Show the Settings for Startup Volume &amp; Mute for the selected Channel.">
-                        <TextBlock Style="{StaticResource TextBlockDefault}">Show Settings for Channel</TextBlock>
-                        <ComboBox Name="SelectorCurrentChannel" SelectedValue="{Binding CurrentChannel}" Margin="8,0,0,0" Style="{StaticResource ComboBoxDefault}"/>
-                    </StackPanel>
-
-                    <StackPanel Style="{StaticResource SettingItemPanel}"
-                                ToolTip="Set the Volume Knob on App Startup to the specified Volume/Position (will only be applied to the selected ACP Panel).">
-                        <CheckBox IsChecked="{Binding SetStartupVolume}" Margin="0" Style="{StaticResource CheckBoxSettingItem}">
-                            Set Volume Knob on Startup to
-                        </CheckBox>
-                        <TextBox Name="InputStartupVolume" IsEnabled="{Binding SetStartupVolume}" Margin="8,0,0,0" Style="{StaticResource TextBoxCentered}"/>
-                        <TextBlock Margin="2,0,0,0" Style="{StaticResource TextBlockDefault}">%</TextBlock>
-                    </StackPanel>
-
-                    <CheckBox IsChecked="{Binding StartupUnmute}" Style="{StaticResource CheckBoxSettingItem}"
-                              ToolTip="Unmute the Channel ('lift' the Knob) on App Startup (will only be applied to the selected ACP Panel).">
-                        Set Record Latch on Startup
-                    </CheckBox>
-                </StackPanel>
-            </Border>
-
             <!-- APP MAPPINGS -->
             <TextBlock Style="{StaticResource CategoryHeader}" Text="APP MAPPINGS" Margin="0,0,0,4"/>
             <Border Style="{StaticResource SectionCardBorder}">

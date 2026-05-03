@@ -38,42 +38,6 @@
   padding: 8px 0;
 }
 
-.channelRow {
-  display: grid;
-  grid-template-columns: 60px 100px 1fr;
-  align-items: center;
-  gap: 12px;
-  padding: 4px 0;
-}
-
-.channelLabel {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.channelVolume {
-  background: var(--bg-input);
-  color: var(--text-primary);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  padding: 5px 7px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  outline: none;
-  width: 100%;
-}
-
-.channelVolume:focus { border-color: var(--accent); }
-
-.channelUnmute {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
 .mappingsHeader {
   display: grid;
   grid-template-columns: 80px 1fr 1fr 60px 60px 32px;
@@ -138,8 +102,4 @@
     grid-template-columns: 1fr 32px;
     grid-auto-flow: row;
   }
-  .channelRow {
-    grid-template-columns: 60px 1fr;
-  }
-  .channelUnmute { grid-column: 1 / -1; }
 }
