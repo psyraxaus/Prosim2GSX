@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:Prosim2GSX.UI.Views.Audio"
+             xmlns:audio="clr-namespace:Prosim2GSX.Audio"
              d:DataContext="{d:DesignInstance Type=local:ModelAudio}"
              mc:Ignorable="d"
              d:DesignHeight="650" d:DesignWidth="800">
@@ -12,6 +13,8 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="../../StyleResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+            <audio:VoiceMeeterStripDisplayConverter x:Key="VmStripDisplay"/>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -33,6 +36,43 @@
                 </StackPanel>
             </Border>
 
+            <!-- VOICEMEETER -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="VOICEMEETER" Margin="0,0,0,4"/>
+            <Border Style="{StaticResource SectionCardBorder}">
+                <StackPanel>
+                    <CheckBox IsChecked="{Binding UseVoiceMeeter}"
+                              Style="{StaticResource CheckBoxSettingItem}"
+                              ToolTip="When enabled, ACP knobs drive VoiceMeeter Strip/Bus gain via the Remote API. CoreAudio app mappings sit dormant; VoiceMeeter mappings (channel → strip/bus) appear in their own section below.">
+                        Use VoiceMeeter as audio backend
+                    </CheckBox>
+
+                    <Border Background="#3A2A00"
+                            BorderBrush="#FFB347"
+                            BorderThickness="1"
+                            Padding="10,6"
+                            Margin="0,4,0,4"
+                            Visibility="{Binding HasVoiceMeeterWarning, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Foreground="#FFD98A"
+                                   TextWrapping="Wrap"
+                                   Text="{Binding VoiceMeeterWarning}"/>
+                    </Border>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <TextBlock Style="{StaticResource TextBlockDefault}" VerticalAlignment="Center" Margin="0,0,8,0">VoiceMeeter Remote DLL:</TextBlock>
+                        <TextBox Name="InputVoiceMeeterPath"
+                                 Text="{Binding VoiceMeeterDllPath, UpdateSourceTrigger=PropertyChanged}"
+                                 MinWidth="320"
+                                 Style="{StaticResource TextBoxLeft}"
+                                 ToolTip="Full path to VoicemeeterRemote64.dll. Configured at install time, or browse to select it now."/>
+                        <Button Name="ButtonBrowseVoiceMeeter"
+                                Content="Browse…"
+                                Margin="6,0,0,0"
+                                Padding="8,2"
+                                Click="ButtonBrowseVoiceMeeter_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
             <!-- ACP SOURCE -->
             <TextBlock Style="{StaticResource CategoryHeader}" Text="ACP SOURCE" Margin="0,0,0,4"/>
             <Border Style="{StaticResource SectionCardBorder}">
@@ -43,9 +83,23 @@
                 </StackPanel>
             </Border>
 
-            <!-- APP MAPPINGS -->
-            <TextBlock Style="{StaticResource CategoryHeader}" Text="APP MAPPINGS" Margin="0,0,0,4"/>
-            <Border Style="{StaticResource SectionCardBorder}">
+            <!-- ELEVATED-PROCESS BANNER -->
+            <Border Background="#3A2A00"
+                    BorderBrush="#FFB347"
+                    BorderThickness="1"
+                    Padding="10,6"
+                    Margin="0,0,0,6"
+                    Visibility="{Binding HasMappingWarnings, Converter={StaticResource BoolToVis}}">
+                <TextBlock Foreground="#FFD98A"
+                           TextWrapping="Wrap"
+                           Text="{Binding MappingWarningText}"/>
+            </Border>
+
+            <!-- APP MAPPINGS (CoreAudio mode only) -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="APP MAPPINGS" Margin="0,0,0,4"
+                       Visibility="{Binding IsCoreAudioSelected, Converter={StaticResource BoolToVis}}"/>
+            <Border Style="{StaticResource SectionCardBorder}"
+                    Visibility="{Binding IsCoreAudioSelected, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
                     <DataGrid Name="GridAudioMappings" Margin="0,0,0,6" SelectionUnit="FullRow" SelectionMode="Single">
                         <DataGrid.Columns>
@@ -88,6 +142,19 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
+
+                            <DataGridTemplateColumn Header="Status" MinWidth="220">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Status}"
+                                                   ToolTip="{Binding Status}"
+                                                   Foreground="#FFB347"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Margin="6,0,0,0"
+                                                   Style="{StaticResource TextBlockDefault}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
 
@@ -116,9 +183,80 @@
                 </StackPanel>
             </Border>
 
+            <!-- VOICEMEETER MAPPINGS (VoiceMeeter mode only) -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="VOICEMEETER MAPPINGS" Margin="0,0,0,4"
+                       Visibility="{Binding UseVoiceMeeter, Converter={StaticResource BoolToVis}}"/>
+            <Border Style="{StaticResource SectionCardBorder}"
+                    Visibility="{Binding UseVoiceMeeter, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <DataGrid Name="GridVoiceMeeterMappings" Margin="0,0,0,6" SelectionUnit="FullRow" SelectionMode="Single">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="Channel" MinWidth="96">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Channel}" HorizontalAlignment="Center" Style="{StaticResource TextBlockDefault}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTemplateColumn Header="Strip / Bus" MinWidth="220" Width="*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Margin="6,0,0,0" Style="{StaticResource TextBlockDefault}">
+                                            <TextBlock.Text>
+                                                <MultiBinding Converter="{StaticResource VmStripDisplay}" FallbackValue="">
+                                                    <Binding Path="StripIndex"/>
+                                                    <Binding Path="IsBus"/>
+                                                    <Binding Path="DataContext.AvailableStrips" RelativeSource="{RelativeSource AncestorType={x:Type UserControl}}"/>
+                                                </MultiBinding>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTemplateColumn Header="Use Mute">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding UseLatch}" IsHitTestVisible="False" HorizontalAlignment="Center" Margin="2,0,0,0" Style="{StaticResource CheckBoxDefault}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <ComboBox Name="SelectorVmChannel" SelectedIndex="0" HorizontalContentAlignment="Center" VerticalAlignment="Top" Style="{StaticResource ComboBoxDefault}" ToolTip="Audio channel that drives this VoiceMeeter target."/>
+                        <ComboBox Name="SelectorVmTarget"
+                                  ItemsSource="{Binding AvailableStrips}"
+                                  DisplayMemberPath="DisplayName"
+                                  SelectedValuePath="Key"
+                                  Margin="6,0,0,0"
+                                  MinWidth="220"
+                                  Style="{StaticResource ComboBoxDefault}"
+                                  VerticalAlignment="Top"
+                                  ToolTip="VoiceMeeter Strip or Bus to control. Reload strips after configuring the DLL path or starting VoiceMeeter."/>
+                        <Grid Name="PanelVmMute" HorizontalAlignment="Stretch">
+                            <CheckBox Name="CheckboxVmMute" Margin="4,3.5,0,0" HorizontalAlignment="Center" HorizontalContentAlignment="Center" Style="{StaticResource CheckBoxDefault}" VerticalAlignment="Top" ToolTip="Use the Record Latch (push/pull the Knob) to mute the strip/bus."/>
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Margin="6,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
+                            <Button Name="ButtonAddVmMapping" Margin="0,0,0,0" Style="{StaticResource BtnSquareSmall}" ToolTip="Add/Update VoiceMeeter Mapping">
+                                <Image Name="ImageAddVmMapping" Source="../../Icons/add.png" Style="{StaticResource ImgSquareSmall}"/>
+                            </Button>
+                            <Button Name="ButtonRemoveVmMapping" Margin="6,0,0,0" Style="{StaticResource BtnSquareSmall}" ToolTip="Remove VoiceMeeter Mapping">
+                                <Image Source="../../Icons/remove.png" Style="{StaticResource ImgSquareSmall}"/>
+                            </Button>
+                            <Button Name="ButtonReloadStrips" Margin="6,0,0,0" Padding="8,2" VerticalAlignment="Top" ToolTip="Re-query VoiceMeeter for available strips and buses." Click="ButtonReloadStrips_Click">Reload strips</Button>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
             <!-- DEVICE BLACKLIST -->
-            <TextBlock Style="{StaticResource CategoryHeader}" Text="DEVICE BLACKLIST" Margin="0,0,0,4"/>
-            <Border Style="{StaticResource SectionCardBorder}">
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="DEVICE BLACKLIST" Margin="0,0,0,4"
+                       Visibility="{Binding IsCoreAudioSelected, Converter={StaticResource BoolToVis}}"/>
+            <Border Style="{StaticResource SectionCardBorder}"
+                    Visibility="{Binding IsCoreAudioSelected, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
                     <ListView Name="ListDeviceBlacklist" MinWidth="248" MinHeight="64" Margin="0,0,0,6" HorizontalAlignment="Left" VerticalAlignment="Center" SelectionMode="Single"
                               ToolTip="Devices on this List will be skipped when searching for Audio Sessions of Apps.&#x0a;Devices which raise Errors during Session-Scan will temporarly be ignored while Prosim2GSX runs."/>
@@ -134,9 +272,11 @@
                 </StackPanel>
             </Border>
 
-            <!-- TROUBLESHOOTING -->
-            <TextBlock Style="{StaticResource CategoryHeader}" Text="TROUBLESHOOTING" Margin="0,0,0,4"/>
-            <Border Style="{StaticResource SectionCardBorder}">
+            <!-- TROUBLESHOOTING (CoreAudio mode only) -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="TROUBLESHOOTING" Margin="0,0,0,4"
+                       Visibility="{Binding IsCoreAudioSelected, Converter={StaticResource BoolToVis}}"/>
+            <Border Style="{StaticResource SectionCardBorder}"
+                    Visibility="{Binding IsCoreAudioSelected, Converter={StaticResource BoolToVis}}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>

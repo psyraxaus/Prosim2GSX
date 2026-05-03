@@ -5,8 +5,11 @@ using ProsimInterface;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace Prosim2GSX.Audio
 {
@@ -22,6 +25,10 @@ namespace Prosim2GSX.Audio
         public virtual bool OnlyActive => Mapping.OnlyActive;
         public virtual uint ProcessId { get; protected set; } = 0;
         public virtual int ProcessCount { get; protected set; } = 0;
+        public virtual bool IsAccessible { get; protected set; } = true;
+        // Suppresses repeat "elevated" warnings while a binary stays inaccessible.
+        // Reset when the process stops or transitions to accessible.
+        protected virtual bool ElevatedWarningLogged { get; set; } = false;
         public virtual bool IsActive => ProcessId > 0 && Controller.HasInitialized && Controller.IsExecutionAllowed;
         public virtual bool IsRunning => Manager?.ProcessList?.Any(p => p.ProcessName.Equals(Binary, StringComparison.InvariantCultureIgnoreCase)) == true;
         public virtual int SearchCounter { get; set; } = 0;
@@ -76,15 +83,37 @@ namespace Prosim2GSX.Audio
                     ClearSimSubscriptions();
                     ProcessId = 0;
                     SessionControls.Clear();
+                    SetStatus(null);
+                    IsAccessible = true;
+                    ElevatedWarningLogged = false;
                     result = -1;
                 }
 
                 if (running && ProcessId == 0)
                 {
-                    ProcessId = (uint)Manager.ProcessList.Where(p => p.ProcessName.Equals(Binary, StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault().Id;
+                    var proc = Manager.ProcessList.FirstOrDefault(p => p.ProcessName.Equals(Binary, StringComparison.InvariantCultureIgnoreCase));
+                    ProcessId = proc != null ? (uint)proc.Id : 0;
                     if (ProcessId != 0)
                     {
+                        IsAccessible = ProbeAccessible(proc);
+                        if (!IsAccessible)
+                        {
+                            if (!ElevatedWarningLogged)
+                            {
+                                Logger.Warning($"{Binary} runs at higher integrity than Prosim2GSX — excluded from audio control. Run Prosim2GSX elevated to control this app.");
+                                ElevatedWarningLogged = true;
+                            }
+                            SetStatus("Elevated — run Prosim2GSX as admin");
+                            // Do NOT subscribe or touch CoreAudio — leave
+                            // ProcessId set so we don't repeatedly re-probe
+                            // every tick, and report a session-change result
+                            // so the rescan loop can settle.
+                            return 1;
+                        }
+
                         Logger.Debug($"Binary '{Binary}' started (PID: {ProcessId})");
+                        SetStatus(null);
+                        ElevatedWarningLogged = false;
                         SetSimSubscriptions();
                         result = 1;
                     }
@@ -333,7 +362,9 @@ namespace Prosim2GSX.Audio
         // session control. The SynchedSessionsVolume/Mute tracking is kept
         // for diagnostic visibility (and so RestoreVolumes can still clear
         // them), but is no longer used to gate writes the way the old
-        // LVAR-poller flow needed.
+        // LVAR-poller flow needed. Note: in VoiceMeeter mode, AudioController
+        // does not register AudioSessions at all — VoiceMeeterChannelBinder
+        // owns the audio path. So this method is CoreAudio-only.
         protected virtual void ApplyVolume(float value)
         {
             try
@@ -372,6 +403,50 @@ namespace Prosim2GSX.Audio
                     {
                         Logger.Verbose($"ApplyMute: session write skipped for {this}: {ex.GetType().Name}");
                     }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+        }
+
+        // True if Prosim2GSX can read this Process's MainModule. Reading
+        // MainModule on a higher-integrity process throws Win32Exception
+        // (code 5, ACCESS_DENIED) — the same integrity barrier hides the
+        // process's audio session from CoreAudio enumeration when we run
+        // unelevated, so this is a reliable proxy.
+        protected virtual bool ProbeAccessible(Process proc)
+        {
+            if (proc == null) return false;
+            try
+            {
+                _ = proc.MainModule?.FileName;
+                return true;
+            }
+            catch (System.ComponentModel.Win32Exception) { return false; }
+            catch (InvalidOperationException) { return false; }
+            catch (Exception ex)
+            {
+                Logger.Verbose($"ProbeAccessible unexpected exception for '{Binary}': {ex.GetType().Name}");
+                return false;
+            }
+        }
+
+        // Writes to Mapping.Status on the WPF dispatcher so the UI sees the
+        // PropertyChanged on the right thread.
+        protected virtual void SetStatus(string status)
+        {
+            try
+            {
+                var dispatcher = Application.Current?.Dispatcher;
+                if (dispatcher == null || dispatcher.CheckAccess())
+                {
+                    Mapping.Status = status;
+                }
+                else
+                {
+                    dispatcher.BeginInvoke(new Action(() => Mapping.Status = status));
                 }
             }
             catch (Exception ex)

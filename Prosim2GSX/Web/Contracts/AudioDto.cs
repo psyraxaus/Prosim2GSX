@@ -17,12 +17,21 @@ namespace Prosim2GSX.Web.Contracts
     {
         public bool IsCoreAudioSelected { get; set; } = true;
 
+        // Persisted backend toggle (positive sense). IsCoreAudioSelected is
+        // kept on the wire for backwards compatibility; the two are inverses.
+        public bool UseVoiceMeeter { get; set; } = false;
+        public string VoiceMeeterDllPath { get; set; } = "";
+
         public AcpSide AudioAcpSide { get; set; } = AcpSide.CPT;
         public DataFlow AudioDeviceFlow { get; set; } = DataFlow.Render;
         public DeviceState AudioDeviceState { get; set; } = DeviceState.Active;
 
         // Mappings preserved in user-edit order (matches WPF grid order).
         public List<AudioMappingDto> Mappings { get; set; } = new();
+
+        // VoiceMeeter mappings — independent list, only routed when
+        // UseVoiceMeeter is true. CoreAudio mappings stay dormant.
+        public List<VoiceMeeterMappingDto> VoiceMeeterMappings { get; set; } = new();
 
         // Devices the user has chosen to exclude from enumeration.
         public List<string> Blacklist { get; set; } = new();
@@ -36,11 +45,14 @@ namespace Prosim2GSX.Web.Contracts
 
             return new AudioDto
             {
-                IsCoreAudioSelected = audio?.IsCoreAudioSelected ?? true,
+                IsCoreAudioSelected = !config.UseVoiceMeeter,
+                UseVoiceMeeter = config.UseVoiceMeeter,
+                VoiceMeeterDllPath = config.VoiceMeeterDllPath ?? "",
                 AudioAcpSide = config.AudioAcpSide,
                 AudioDeviceFlow = config.AudioDeviceFlow,
                 AudioDeviceState = config.AudioDeviceState,
                 Mappings = config.AudioMappings?.Select(AudioMappingDto.From).ToList() ?? new(),
+                VoiceMeeterMappings = config.VoiceMeeterMappings?.Select(VoiceMeeterMappingDto.From).ToList() ?? new(),
                 Blacklist = config.AudioDeviceBlacklist?.ToList() ?? new(),
             };
         }
@@ -52,7 +64,11 @@ namespace Prosim2GSX.Web.Contracts
             var ctrl = app.AudioService;
             if (config == null) return;
 
-            if (audio != null) audio.IsCoreAudioSelected = IsCoreAudioSelected;
+            // UseVoiceMeeter is the source of truth; IsCoreAudioSelected on
+            // the wire stays in sync but the inverse flag wins if both are set.
+            config.UseVoiceMeeter = UseVoiceMeeter;
+            config.VoiceMeeterDllPath = VoiceMeeterDllPath ?? "";
+            if (audio != null) audio.IsCoreAudioSelected = !UseVoiceMeeter;
 
             // Use the same setter side-effects ModelAudio relies on so the
             // controller picks up the change without a tab open.
@@ -69,18 +85,21 @@ namespace Prosim2GSX.Web.Contracts
 
             // Replace the lists wholesale — preserves caller-supplied order.
             config.AudioMappings = Mappings?.Select(m => m.ToAudioMapping()).ToList() ?? new();
+            config.VoiceMeeterMappings = VoiceMeeterMappings?.Select(m => m.ToVoiceMeeterMapping()).ToList() ?? new();
             config.AudioDeviceBlacklist = Blacklist?.ToList() ?? new();
 
             config.SaveConfiguration();
 
             // Match the WPF tab's setter side-effects: mappings/device-filter
             // changes prompt the controller to re-enumerate; ACP-side changes
-            // prompt a fresh volume reset on the next tick.
+            // prompt a fresh volume reset on the next tick. VoiceMeeter
+            // mapping edits flag a binder rebind on the audio service tick.
             if (ctrl != null)
             {
                 if (mappingsChanged)
                     ctrl.ResetMappings = true;
                 ctrl.ResetVolumes = true;
+                ctrl.ResetVoiceMeeterBindings = true;
             }
         }
 

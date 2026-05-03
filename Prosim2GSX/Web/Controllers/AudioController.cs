@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Prosim2GSX.Web.Contracts;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -36,6 +38,60 @@ namespace Prosim2GSX.Web.Controllers
             await Application.Current.Dispatcher.InvokeAsync(() => dto.ApplyTo(_app));
             var fresh = await Application.Current.Dispatcher.InvokeAsync(() => AudioDto.From(_app));
             return Ok(fresh);
+        }
+
+        // Suggestions for the mapping-binary autocomplete. Reads the same
+        // AudioSessionRegistry the WPF typeahead uses — only processes with
+        // a live CoreAudio session, deduped by ProcessName, IsAccessible
+        // mirrors AudioSession.ProbeAccessible.
+        [HttpGet("process-suggestions")]
+        public ActionResult<List<AudioSessionSuggestionDto>> GetProcessSuggestions()
+        {
+            var snapshot = _app?.AudioService?.SessionRegistry?.Snapshot;
+            if (snapshot == null) return Ok(new List<AudioSessionSuggestionDto>());
+            return Ok(snapshot
+                .Select(p => new AudioSessionSuggestionDto
+                {
+                    ProcessName = p.ProcessName,
+                    IsAccessible = p.IsAccessible,
+                })
+                .ToList());
+        }
+
+        // VoiceMeeter strips/buses for the per-mapping combo. Returns an
+        // empty list when VoiceMeeter is disabled, the DLL path is missing,
+        // or the Remote API rejected Login. The web client renders a
+        // warning in that case (mirrors WPF VoiceMeeterWarning).
+        [HttpGet("/api/voicemeeter/strips")]
+        public async Task<ActionResult<List<VoiceMeeterStripDto>>> GetVoiceMeeterStrips()
+        {
+            return await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                var vm = _app?.AudioService?.VoiceMeeter;
+                var cfg = _app?.Config;
+                if (vm == null || cfg == null)
+                    return (ActionResult<List<VoiceMeeterStripDto>>)Ok(new List<VoiceMeeterStripDto>());
+
+                // Strip list is read-only metadata — gate on IsLoaded, not
+                // IsAvailable, so suspend-state (CoreAudio mode) doesn't hide
+                // the strips from a user who's about to flip back to VM.
+                if (!vm.IsLoaded && !string.IsNullOrWhiteSpace(cfg.VoiceMeeterDllPath))
+                    vm.Login(cfg.VoiceMeeterDllPath);
+
+                if (!vm.IsLoaded)
+                    return Ok(new List<VoiceMeeterStripDto>());
+
+                var list = vm.GetStrips()
+                    .Select(s => new VoiceMeeterStripDto
+                    {
+                        Index = s.Index,
+                        IsBus = s.IsBus,
+                        Label = s.Label ?? "",
+                        DisplayName = s.DisplayName ?? "",
+                    })
+                    .ToList();
+                return Ok(list);
+            });
         }
     }
 }

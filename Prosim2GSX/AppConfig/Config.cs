@@ -146,6 +146,19 @@ namespace Prosim2GSX.AppConfig
         public virtual bool WebServerBindAll { get; set; } = false;
         public virtual string WebServerAuthToken { get; set; } = "";
 
+        // VoiceMeeter audio backend. UseVoiceMeeter routes SimpleAudioVolume
+        // writes through VoiceMeeter Remote API instead of CoreAudio. The DLL
+        // path is user-supplied at install time (or via the Audio Settings
+        // tab) and loaded dynamically at runtime — Prosim2GSX does NOT
+        // redistribute VoicemeeterRemote64.dll.
+        public virtual bool UseVoiceMeeter { get; set; } = false;
+        public virtual string VoiceMeeterDllPath { get; set; } = "";
+
+        // VoiceMeeter routing is per-mixer-target, not per-process. These
+        // mappings are independent of AudioMappings and only consulted when
+        // UseVoiceMeeter is true; the CoreAudio AudioMappings sit dormant.
+        public virtual List<VoiceMeeterMapping> VoiceMeeterMappings { get; set; } = new();
+
         //ProsimSDK
         public virtual string ProSimSdkPath { get; set; } = "";
         public virtual string ProSimSdkHostname { get; set; } = "localhost";
@@ -288,6 +301,16 @@ namespace Prosim2GSX.AppConfig
             // now the source of truth for ACP knob/latch state, so the app no
             // longer writes startup values into the sim. Stale keys in
             // existing AppConfig.json files are silently dropped on next save.
+
+            // v26: VoiceMeeter audio-backend integration — initial cut put
+            // VoiceMeeterStripIndex / VoiceMeeterIsBus on AudioMapping. v27
+            // moved them to a dedicated VoiceMeeterMapping list. Old fields
+            // are silently dropped on next save (System.Text.Json ignores
+            // unknown JSON keys).
+
+            // v27: VoiceMeeterMappings split off into their own collection.
+            // Empty list defaults in for upgrading users; CoreAudio mappings
+            // are unchanged and stay dormant while UseVoiceMeeter is true.
         }
 
         public virtual void SetFuelFob(string registration, double fuel)

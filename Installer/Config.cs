@@ -20,6 +20,13 @@ namespace Installer
         public static readonly string StateRemoveMobiAllowed = "RemoveMobiAllowed";
         public static readonly string OptionProSimSdkPath = "ProSimSdkPath";
         public static readonly string StateProSimSdkAutoDetected = "ProSimSdkAutoDetected";
+        public static readonly string OptionEnableVoiceMeeter = "EnableVoiceMeeter";
+        public static readonly string OptionVoiceMeeterDllPath = "VoiceMeeterDllPath";
+        public static readonly string StateVoiceMeeterAutoDetected = "VoiceMeeterAutoDetected";
+        // True when the existing AppConfig.json already shows VoiceMeeter on
+        // AND a valid DLL path. UPDATE installs in this state skip the
+        // VoiceMeeter section entirely so we don't re-prompt on every update.
+        public static readonly string StateVoiceMeeterAlreadyConfigured = "VoiceMeeterAlreadyConfigured";
         public static readonly string OptionOverwriteGSXProfiles = "OverwriteGSXProfiles";
         public static readonly string StateGSXProfilesExist = "GSXProfilesExist";
 
@@ -55,6 +62,98 @@ namespace Installer
             bool autoDetected = !string.IsNullOrEmpty(detectedPath);
             SetOption(StateProSimSdkAutoDetected, autoDetected);
             SetOption(OptionProSimSdkPath, detectedPath ?? "");
+
+            // VoiceMeeter integration (optional). On UPDATE installs, prefer
+            // values from the existing AppConfig.json so the user isn't
+            // re-prompted; on fresh INSTALLs, auto-detect VoicemeeterRemote64.dll
+            // under the standard VB-Audio install location and prefill.
+            var (existingEnabled, existingPath) = GetVoiceMeeterFromExistingConfig();
+            bool alreadyConfigured = existingEnabled && !string.IsNullOrEmpty(existingPath);
+            SetOption(StateVoiceMeeterAlreadyConfigured, alreadyConfigured);
+
+            string voiceMeeterPath = !string.IsNullOrEmpty(existingPath)
+                ? existingPath
+                : DetectVoiceMeeterDllPath();
+            SetOption(OptionEnableVoiceMeeter, existingEnabled);
+            SetOption(StateVoiceMeeterAutoDetected, !string.IsNullOrEmpty(voiceMeeterPath));
+            SetOption(OptionVoiceMeeterDllPath, voiceMeeterPath ?? "");
+        }
+
+        // Returns (UseVoiceMeeter, VoiceMeeterDllPath) from the existing app
+        // config, or (false, null) if missing / unparseable. Same lightweight
+        // string-extraction approach as GetSdkPathFromExistingConfig — avoids
+        // pulling in the full Prosim2GSX config type from the installer.
+        private static (bool enabled, string path) GetVoiceMeeterFromExistingConfig()
+        {
+            try
+            {
+                string configPath = Path.Combine(Sys.FolderAppDataRoaming(), "Prosim2GSX", "AppConfig.json");
+                if (!File.Exists(configPath)) return (false, null);
+                string json = File.ReadAllText(configPath);
+
+                bool enabled = ExtractBool(json, "UseVoiceMeeter") ?? false;
+                string path = ExtractString(json, "VoiceMeeterDllPath");
+                if (!string.IsNullOrEmpty(path) && !File.Exists(path))
+                    path = null;
+                return (enabled, path);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+                return (false, null);
+            }
+        }
+
+        private static string ExtractString(string json, string key)
+        {
+            string marker = $"\"{key}\"";
+            int idx = json.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (idx < 0) return null;
+            int colon = json.IndexOf(':', idx + marker.Length);
+            if (colon < 0) return null;
+            int q1 = json.IndexOf('"', colon + 1);
+            int q2 = q1 < 0 ? -1 : json.IndexOf('"', q1 + 1);
+            if (q1 < 0 || q2 < 0) return null;
+            return json.Substring(q1 + 1, q2 - q1 - 1).Replace("\\\\", "\\");
+        }
+
+        private static bool? ExtractBool(string json, string key)
+        {
+            string marker = $"\"{key}\"";
+            int idx = json.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (idx < 0) return null;
+            int colon = json.IndexOf(':', idx + marker.Length);
+            if (colon < 0) return null;
+            int after = colon + 1;
+            while (after < json.Length && char.IsWhiteSpace(json[after])) after++;
+            if (after + 4 <= json.Length && json.Substring(after, 4).Equals("true", StringComparison.OrdinalIgnoreCase)) return true;
+            if (after + 5 <= json.Length && json.Substring(after, 5).Equals("false", StringComparison.OrdinalIgnoreCase)) return false;
+            return null;
+        }
+
+        /// <summary>
+        /// Best-effort detection of VoicemeeterRemote64.dll. Returns null if
+        /// VoiceMeeter doesn't appear to be installed; user can browse to the
+        /// file manually on the config page if so.
+        /// </summary>
+        public static string DetectVoiceMeeterDllPath()
+        {
+            const string DllName = "VoicemeeterRemote64.dll";
+            string[] candidates = new[]
+            {
+                @"C:\Program Files (x86)\VB\Voicemeeter",
+                @"C:\Program Files\VB\Voicemeeter",
+            };
+            foreach (var dir in candidates)
+            {
+                try
+                {
+                    string p = Path.Combine(dir, DllName);
+                    if (File.Exists(p)) return p;
+                }
+                catch (Exception ex) { Logger.LogException(ex); }
+            }
+            return null;
         }
 
         /// <summary>

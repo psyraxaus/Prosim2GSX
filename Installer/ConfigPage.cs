@@ -35,6 +35,37 @@ namespace Installer
                 Items.Add(sdkItem);
             }
 
+            // VoiceMeeter integration (opt-in). Skip on UPDATE installs where
+            // the existing AppConfig.json already shows VoiceMeeter on with a
+            // valid DLL path — re-prompting on every update is noise. Fresh
+            // installs always show; UPDATE installs with no/invalid VM config
+            // also show so the user can opt in.
+            bool vmAlreadyConfigured = Config.GetOption<bool>(Config.StateVoiceMeeterAlreadyConfigured);
+            bool showVoiceMeeter = Config.Mode == SetupMode.INSTALL || !vmAlreadyConfigured;
+            if (showVoiceMeeter)
+            {
+                Items.Add(new ConfigItemCheckbox(
+                    "Enable VoiceMeeter integration",
+                    "Use VoiceMeeter as the audio backend instead of CoreAudio.\n\nVoiceMeeter must be installed separately. After enabling, point the field below at VoicemeeterRemote64.dll (typically C:\\Program Files (x86)\\VB\\Voicemeeter\\VoicemeeterRemote64.dll).\n\nYou can change this later from the Audio Settings tab.",
+                    Config.OptionEnableVoiceMeeter,
+                    Config));
+
+                string vmDescription = Config.GetOption<bool>(Config.StateVoiceMeeterAutoDetected)
+                    ? "VoiceMeeter Remote DLL was automatically detected. Verify the path below or browse to a different location."
+                    : "Browse to VoicemeeterRemote64.dll if you want VoiceMeeter integration. Leave blank to skip — you can configure it later from the Audio Settings tab.";
+                var vmItem = new ConfigItemFileBrowse(
+                    "VoiceMeeter Remote DLL",
+                    vmDescription,
+                    "VoiceMeeter Remote (VoicemeeterRemote64.dll)|VoicemeeterRemote64.dll|DLL files (*.dll)|*.dll|All files (*.*)|*.*",
+                    Config.OptionVoiceMeeterDllPath,
+                    Config)
+                {
+                    DefaultFileName = "VoicemeeterRemote64.dll",
+                    ValidationFunc = ValidateVoiceMeeterDllPath,
+                };
+                Items.Add(vmItem);
+            }
+
             ConfigItemHelper.CreateCheckboxDesktopLink(Config, ConfigBase.OptionDesktopLink, Items);
             ConfigItemHelper.CreateRadioAutoStart(Config, Items);
             if (Config.Mode == SetupMode.UPDATE)
@@ -67,6 +98,18 @@ namespace Installer
             if (!fileName.Equals("ProSimSDK.dll", StringComparison.OrdinalIgnoreCase))
                 return $"Warning: Expected 'ProSimSDK.dll' but selected '{fileName}'. Please verify this is the correct file.";
 
+            return null;
+        }
+
+        // VoiceMeeter is optional — empty path is valid (means "skip").
+        private static string ValidateVoiceMeeterDllPath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return null;
+            if (!path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+                return "Warning: The selected file is not a DLL file.";
+            string fileName = Path.GetFileName(path);
+            if (!fileName.Equals("VoicemeeterRemote64.dll", StringComparison.OrdinalIgnoreCase))
+                return $"Warning: Expected 'VoicemeeterRemote64.dll' but selected '{fileName}'. Please verify this is the correct file.";
             return null;
         }
     }
