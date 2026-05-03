@@ -51,6 +51,7 @@ namespace Prosim2GSX
         public virtual AudioState Audio { get; } = new();
         public virtual OfpState Ofp { get; } = new();
         public virtual ChecklistState Checklist { get; } = new();
+        public virtual WeightBalanceState WeightBalance { get; } = new();
         // Settings is an alias for the existing Config singleton — Config already
         // implements INotifyPropertyChanged and persists itself, so it serves as
         // the AppSettingsState surface unchanged.
@@ -90,6 +91,12 @@ namespace Prosim2GSX
         // Send-Now flow when the aircraft enters Flight. Backend service so
         // both WPF and web benefit identically.
         public virtual OfpAutoSendService OfpAutoSend { get; protected set; }
+
+        // Reads ProSim weight/cargo/pax/fuel datarefs each StateUpdateWorker
+        // tick and writes them into WeightBalanceState. Constructed
+        // unconditionally; the service itself null-guards on the SDK so a
+        // degraded mode (no SDK) just leaves the store at last-known values.
+        public virtual WeightBalanceService WeightBalanceService { get; protected set; }
 
         public AppService(Config config) : base(config)
         {
@@ -161,6 +168,11 @@ namespace Prosim2GSX
             // GsxService is null (degraded mode) so safe to call here.
             OfpAutoSend = new OfpAutoSendService(this);
             OfpAutoSend.Attach();
+
+            // W&B reader — populates WeightBalanceState from datarefs each
+            // StateUpdateWorker tick. The worker calls Tick() unconditionally;
+            // the service no-ops when the SDK is unavailable.
+            WeightBalanceService = new WeightBalanceService(this);
 
             // Eagerly load the checklist definition into ChecklistState so the
             // web UI can render even before the WPF Checklists tab is opened.

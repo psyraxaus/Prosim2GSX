@@ -61,6 +61,7 @@ namespace Prosim2GSX.Web
             _app.Config.PropertyChanged += OnConfigChanged;
             _app.Ofp.PropertyChanged += OnOfpChanged;
             _app.Checklist.PropertyChanged += OnChecklistChanged;
+            _app.WeightBalance.PropertyChanged += OnWeightBalanceChanged;
             HookChecklistItems(_app.Checklist);
             _app.FlightStatus.MessageLog.CollectionChanged += OnMessageLogChanged;
 
@@ -205,6 +206,9 @@ namespace Prosim2GSX.Web
 
         private void OnAudioChanged(object sender, PropertyChangedEventArgs e)
             => Broadcast(channel: "audio", e.PropertyName, sender);
+
+        private void OnWeightBalanceChanged(object sender, PropertyChangedEventArgs e)
+            => Broadcast(channel: "weightBalance", e.PropertyName, sender);
 
         private void OnConfigChanged(object sender, PropertyChangedEventArgs e)
         {
