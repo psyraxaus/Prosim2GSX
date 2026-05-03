@@ -8,8 +8,8 @@ Full and proper GSX Integration and Automation for the ProSim A320! <br/>
 - All **Service Calls** can be automated — including **Pushback Direction** (cockpit-style Korry buttons on the OFP tab) and **De-Icing** (auto-answer + fluid selection)
 - **Arrival Gate** can be assigned from the OFP tab — Prosim2GSX drives both ATC (via SayIntentions) and GSX (via an in-sim Stackless Python handler installed automatically)
 - Using the **INT/RAD** Switch as a Shortcut for certain GSX Interactions (i.e. call / confirm Pushback)
-- **GSX Audio** and **ATC Volume** can be controlled via the **INT/VHF1-Knob** from the ACP in the Cockpit
-- Applications can be **freely mapped** to Audio-Channels
+- **GSX Audio** and **ATC Volume** can be controlled via the **INT/VHF1-Knob** from the ACP in the Cockpit (driven directly from ProSim datarefs — no LVAR poller, no separate startup-state to configure)
+- Applications can be **freely mapped** to Audio-Channels — either via **CoreAudio** (per-process) or **VoiceMeeter Remote API** (per-strip/bus), selectable per install
 - Can be used, within certain Limits, with the native Integration
 - Supports to use the Volume Control without having GSX installed or running (or to solely use the native Integration)
 - **Embedded Web Interface** — mirrors the WPF UI in any LAN browser (phone, tablet, second PC). QR-code onboarding, bearer-token auth, loopback-only by default. Designed for **headless sim-PC** setups where the WPF window isn't reachable.
@@ -36,7 +36,7 @@ Full and proper GSX Integration and Automation for the ProSim A320! <br/>
 ### 1.2 - Installation, Update & Removal
 
 Just [Download](https://github.com/psyraxaus/Prosim2GSX/releases/latest) & Run the **Installer** Binary! It will check and install all Requirements the App (or remove it). Your existing Configuration persists through Updates.<br/>
-On the second Installer Page you can select if Auto-Start should be set up for Prosim2GSX (recommended for Ease of Use).<br/>
+On the second Installer Page you can select if Auto-Start should be set up for Prosim2GSX (recommended for Ease of Use). On a fresh install (or an update where the path is missing) the same page also asks for the **ProSim SDK** location and — optionally — the **VoiceMeeter Remote DLL** path if you want to use VoiceMeeter as the audio backend. Both fields try to auto-detect; both can be left/changed later from the WPF tabs.<br/>
 You do **not need to remove** the old Version for an Update (unless instructed) - using 'Remove' in the Installer completely removes Prosim2GSX and removes it from Auto-Start. This also removes your Configuration including Aircraft Profiles and saved Fuel!<br/><br/>
 
 It is highly likely that you need to **Unblock/Exclude** the Installer & App from BitDefender and other AV-/Security-Software.<br/>
@@ -297,17 +297,43 @@ The **default Profile** can not be deleted and there can only ever be one Profil
 
 #### 2.3.4 - Audio Settings
 
-Prosim2GSX will only start to control Volume once the Plane is **powered** (=DC Essential Bus powered). When the Aircraft is powered, Prosim2GSX will set each Audio-Channel to the configured Startup State (e.g. 100% Volume and unmuted for VHF1). **Only one ACP** Panel is used for Volume Control at any given time. But you can change your Seat Position / Panel at any Time (the Startup State is only applied to the Panel selected at that Time).<br/>
+Prosim2GSX will only start to control Volume once the Plane is **powered** (=DC Essential Bus powered). Volume and mute state are read directly from ProSim **datarefs** — the ACP knob and Record Latch are authoritative, so there is no separate "startup state" to configure anymore. Whatever the cockpit panel reads when the bus comes alive is what gets applied. **Only one ACP** Panel is used for Volume Control at any given time, but you can change your Seat Position / Panel at any Time.<br/>
 Prosim2GSX will automatically disable the native Volume Control when it starts. If you want to use the native Volume Control, disable the Volume Controller in the App Settings. In any Case: do not let both Apps control the same Stuff!<br/><br/>
+
+##### Audio Backend
+
+The top of the Audio Settings tab has an **Audio Backend** selector with two mutually-exclusive options:
+
+- **CoreAudio** (default) — Prosim2GSX directly drives per-application volume/mute on Windows audio sessions. This is the classic behaviour and works without any extra software. Use this if you let each app talk to your sound card on its own.
+- **VoiceMeeter** — Prosim2GSX drives **strips and buses** in [VoiceMeeter](https://vb-audio.com/Voicemeeter/) via the VoiceMeeter Remote API. Use this if your audio chain runs through VoiceMeeter (Banana / Potato / Standard) and you'd rather mix at the strip/bus level than at the per-app session level.
+
+VoiceMeeter must be installed separately — Prosim2GSX does not redistribute the VoiceMeeter DLL. The Installer offers to **auto-detect and configure** the path to `VoicemeeterRemote64.dll` on fresh install (typical location: `C:\Program Files (x86)\VB\Voicemeeter\VoicemeeterRemote64.dll`). You can also set or change the path later from the Audio Settings tab. The **VoiceMeeter card** on the tab shows a yellow warning when VoiceMeeter is enabled but the DLL path is missing or VoiceMeeter isn't running.<br/><br/>
+
+Switching backends is live — you don't need to restart Prosim2GSX. When swapping VoiceMeeter → CoreAudio, Prosim2GSX resets the VoiceMeeter strips it was driving back to neutral (0 dB, unmuted) so VoiceMeeter doesn't keep mixing at whatever the last ACP knob position was.<br/><br/>
+
+##### CoreAudio: App Mappings
+
+When the **CoreAudio** backend is selected, the **APP MAPPINGS** section is shown. You can map freely Applications to any of the ACP Channels. Per Default ATC Applications are controlled by VHF1, GSX by INT and the Simulator by CAB. You change the Mappings to your Preferences. All Mappings are global - they are not associated to an Aircraft Profile!<br/>
+To identify an Application you need to enter it's Binary Name without .exe Extension. The UI presents an autocomplete list of matching applications that **currently have a live audio session** (so the dropdown stays snappy and only shows things you can actually map). Inaccessible processes are tagged with " — elevated"; see the note below.<br/>
+The **Use Mute** Checkbox determines if the **Record Latch** (=Knob is pulled or pushed) is used to mute the Application.<br/><br/>
+
+**Elevated-process limitation.** If a target application is running **elevated** (as Administrator) while Prosim2GSX is running unelevated, Windows will refuse Prosim2GSX access to that application's audio session. When this is detected, the Audio Settings tab shows a **yellow banner** listing the affected binaries and the per-mapping Status column flags the offending row. The mapping stays in the config but is inactive until either the target app is run unelevated or Prosim2GSX itself is run as administrator. Running as administrator is generally **not recommended** — restart the target app unelevated where you can.<br/><br/>
 
 When you end your Session (or close Prosim2GSX), Prosim2GSX will try to reset all Audio Sessions of the controlled Applications to their last known State (before it started controlling the Volume). That might not work on Applications which reset their Audio Sessions at the same Time (like GSX). So **GSX can stay muted** when switching to another Plane (if it was muted) - keep that in Mind.<br/>
 Prosim2GSX will control **all Audio Sessions** on all Devices for a configured Application by default. You can change the Configuration to limit the Volume Control to a certain Device per Application - but on that Device it will still control all Sessions at once.<br/><br/>
 
-You can map freely Applications to any of the ACP Channels. Per Default ATC Applications are controlled by VHF1, GSX by INT and the Simulator by CAB. You change the Mappings to your Preferences. All Mappings are global - they are not associated to an Aircraft Profile!<br/>
-To identify an Application you need to enter it's Binary Name without .exe Extension. The UI will present a List of matching (running!) Applications to your Input to ease Selection. The **Use Mute** Checkbox determines if the **Record Latch** (=Knob is pulled or pushed) is used to mute the Application.<br/><br/>
+##### VoiceMeeter: Channel Mappings
+
+When the **VoiceMeeter** backend is selected, the **VOICEMEETER MAPPINGS** section is shown instead. Mappings here are **per ACP channel → strip or bus**, not per process — VoiceMeeter doesn't expose individual app sessions, the strip/bus is the routing target. The dropdown lists all strips and buses currently published by VoiceMeeter (with the user-assigned label, where set). Use the **Reload Strips** button if you've just reconfigured VoiceMeeter and want the list refreshed.<br/>
+The **Use Latch** checkbox is the VoiceMeeter equivalent of the Use Mute checkbox above — when ticked, the ACP Record Latch mutes the strip/bus.<br/>
+ACP volume `0..100%` maps to VoiceMeeter's **-60 dB to +12 dB** strip range (so 100% on the knob = +12 dB on the strip, not 0 dB).<br/><br/>
+
+The CoreAudio app mappings and the VoiceMeeter channel mappings are stored as **separate lists** in the config — flipping the radio doesn't lose either, so you can keep both wired up and switch between them as your audio chain changes.<br/><br/>
+
+##### Device Blacklist (CoreAudio only)
 
 Some Audio Devices act 'strangely' or throw Exceptions when being scanned by Prosim2GSX for Audio-Sessions. If you have such a Device, you can add it to the Blacklist so that Prosim2GSX ignores it (normally it should automatically add Devices throwing Exceptions).<br/>
-But there also Cases where Input (Capture) Devices are reported as Output (Render) Devices which leads to Any2GSX controlling the Volume of your Microphone! In such Cases these "false-output" also need to be added to the Blacklist.<br/>
+But there also Cases where Input (Capture) Devices are reported as Output (Render) Devices which leads to Prosim2GSX controlling the Volume of your Microphone! In such Cases these "false-output" also need to be added to the Blacklist.<br/>
 Matching is done on the Start of the Device Name, but it is recommended to use the exact Device Name for blacklisting. Tip: when you hit Ctrl+C on the Device Dropdown (under App Mappings), the selected Device's Name is automatically pasted to Blacklist Input Field.
 
 <br/><br/>
@@ -481,7 +507,7 @@ Seven tabs, mirroring the WPF UI in the same order:
 2. **OFP** — full parity with the WPF OFP tab: route details, three Korry pushback-direction buttons, arrival gate Confirm / Send Now, ATIS / METAR.
 3. **GSX Settings** — left-rail navigation by section, sticky save bar, full parity with the WPF GSX Settings tab.
 4. **Aircraft Profiles** — full CRUD against the Profiles list, including the active-profile selector.
-5. **Audio Settings** — *known limitation:* the panel structure ships and renders correctly, but the underlying audio mapping/control flow is being reworked. Treat this tab as read-only / preview only for now and use the WPF Audio Settings tab to make changes.
+5. **Audio Settings** — full parity with the WPF Audio Settings tab: backend selector (CoreAudio / VoiceMeeter), VoiceMeeter DLL-path card with status warning, App Mappings (CoreAudio) with running-process autocomplete and elevated banner, VoiceMeeter Channel Mappings (per-strip/bus), Device Blacklist.
 6. **App Settings** — global app settings (excluding the Web Interface card itself, which is WPF-only by design so you can never lock yourself out).
 7. **Checklists** — full parity with the WPF Checklists tab: per-profile checklist file, ECAM-style green-when-complete C/L COMPLETE button, sequential gating + retreat + past-progress freeze, manual-tick fallback for unreachable datarefs (see Section 2.3.6 for the engine semantics and authoring guide).
 
