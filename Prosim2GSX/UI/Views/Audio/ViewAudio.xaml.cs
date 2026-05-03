@@ -7,6 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -120,18 +122,94 @@ namespace Prosim2GSX.UI.Views.Audio
             return null;
         }
 
-        protected virtual void OnBinaryInputFocused(object sender, RoutedEventArgs e)
+        // Process.GetProcesses() enumerates every process on the system and
+        // can take 100s of ms on a busy box (MSFS / ProSim / plugins). Plus
+        // the returned Process objects each hold an OS handle until GC, so
+        // calling it on every keystroke leaks handles and locks up the UI.
+        // Strategy: enumerate once on focus, cache the resulting NAMES for a
+        // few seconds, and let every keystroke just filter that cached list
+        // in memory. Keystrokes touch the dispatcher only to update the
+        // ListView's ItemsSource with the (capped) filtered set.
+        private CancellationTokenSource _processSearchCts;
+        private List<string> _processNamesCache;
+        private DateTime _processNamesCachedAt = DateTime.MinValue;
+        private static readonly TimeSpan ProcessCacheTtl = TimeSpan.FromSeconds(3);
+        private const int MaxProcessSuggestions = 50;
+
+        protected virtual async void OnBinaryInputFocused(object sender, RoutedEventArgs e)
         {
-            ListActiveProcesses.ItemsSource = GetProcesses(InputMappingApp?.Text);
             ListActiveProcesses.Visibility = Visibility.Visible;
+            await RefreshProcessListAsync(InputMappingApp?.Text, debounceMs: 0);
         }
 
-        protected virtual void InputMappingApp_KeyUp(object sender, KeyEventArgs e)
+        protected virtual async void InputMappingApp_KeyUp(object sender, KeyEventArgs e)
         {
-            if (!Sys.IsEnter(e))
+            if (Sys.IsEnter(e)) return;
+            await RefreshProcessListAsync(InputMappingApp?.Text, debounceMs: 150);
+        }
+
+        private async Task RefreshProcessListAsync(string query, int debounceMs)
+        {
+            _processSearchCts?.Cancel();
+            var cts = new CancellationTokenSource();
+            _processSearchCts = cts;
+            var token = cts.Token;
+
+            try
             {
-                ListActiveProcesses.ItemsSource = GetProcesses(InputMappingApp?.Text);
+                if (debounceMs > 0)
+                    await Task.Delay(debounceMs, token);
+
+                if (_processNamesCache == null || DateTime.UtcNow - _processNamesCachedAt > ProcessCacheTtl)
+                {
+                    var names = await Task.Run(EnumerateProcessNames, token);
+                    if (token.IsCancellationRequested) return;
+                    _processNamesCache = names;
+                    _processNamesCachedAt = DateTime.UtcNow;
+                }
+
+                IEnumerable<string> filtered = string.IsNullOrWhiteSpace(query)
+                    ? _processNamesCache
+                    : _processNamesCache.Where(n => n.Contains(query, StringComparison.InvariantCultureIgnoreCase));
+
+                ListActiveProcesses.ItemsSource = filtered.Take(MaxProcessSuggestions).ToList();
             }
+            catch (TaskCanceledException) { /* superseded by a newer keystroke */ }
+            catch (Exception ex) { Logger.LogException(ex); }
+        }
+
+        private static List<string> EnumerateProcessNames()
+        {
+            var seen = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+            var result = new List<string>();
+            Process[] procs;
+            try { procs = Process.GetProcesses(); }
+            catch (Exception ex) { Logger.LogException(ex); return result; }
+
+            try
+            {
+                foreach (var p in procs)
+                {
+                    try
+                    {
+                        if (seen.Add(p.ProcessName))
+                            result.Add(p.ProcessName);
+                    }
+                    catch { }
+                }
+            }
+            finally
+            {
+                // Dispose the Process handles eagerly — otherwise each one
+                // sits in the finalizer queue holding an OS handle until GC.
+                foreach (var p in procs)
+                {
+                    try { p.Dispose(); } catch { }
+                }
+            }
+
+            result.Sort(StringComparer.InvariantCultureIgnoreCase);
+            return result;
         }
 
         protected virtual void OnProcessSelected(object sender, SelectionChangedEventArgs e)
@@ -147,22 +225,6 @@ namespace Prosim2GSX.UI.Views.Audio
         protected virtual void OnBinaryInputUnfocused(object sender, RoutedEventArgs e)
         {
             ListActiveProcesses.Visibility = Visibility.Collapsed;
-        }
-
-        protected virtual List<string> GetProcesses(string name)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(name))
-                    return [.. Process.GetProcesses().Select(p => p.ProcessName)];
-                else
-                    return [.. Process.GetProcesses().Where(p => p.ProcessName.Contains(name, StringComparison.InvariantCultureIgnoreCase)).Select(p => p.ProcessName)];
-            }
-            catch (Exception ex)
-            {
-                Logger.LogException(ex);
-                return [];
-            }
         }
 
         public virtual async void Start()

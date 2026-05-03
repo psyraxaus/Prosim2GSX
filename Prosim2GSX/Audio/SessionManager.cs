@@ -16,7 +16,26 @@ namespace Prosim2GSX.Audio
         protected virtual Config Config => Controller.Config;
         protected virtual ConcurrentDictionary<AudioChannel, List<AudioSession>> MappedAudioSessions { get; } = [];
         public virtual bool HasEmptySearches => MappedAudioSessions.Any(c => c.Value.Any(s => s.SearchCounter > Config.AudioProcessMaxSearchCount));
-        public virtual bool HasInactiveSessions => CheckInactiveSessions();
+
+        // CheckInactiveSessions iterates SessionControls[].State, which is a
+        // CoreAudio COM call per session. Read twice per audio tick (DoRun
+        // condition + log line) — cache so a degraded audio stack doesn't
+        // multiply the call count.
+        private static readonly TimeSpan InactiveCacheTtl = TimeSpan.FromSeconds(5);
+        private bool _cachedInactive;
+        private DateTime _inactiveCheckedAt = DateTime.MinValue;
+        public virtual bool HasInactiveSessions
+        {
+            get
+            {
+                if (DateTime.UtcNow - _inactiveCheckedAt < InactiveCacheTtl)
+                    return _cachedInactive;
+                _cachedInactive = CheckInactiveSessions();
+                _inactiveCheckedAt = DateTime.UtcNow;
+                return _cachedInactive;
+            }
+        }
+
         public virtual List<Process> ProcessList { get; } = [];
 
         public virtual void RegisterMappings()
@@ -60,6 +79,11 @@ namespace Prosim2GSX.Audio
         public virtual void Clear()
         {
             MappedAudioSessions.Clear();
+            foreach (var p in ProcessList)
+            {
+                try { p.Dispose(); } catch { }
+            }
+            ProcessList.Clear();
         }
 
         protected virtual bool CheckInactiveSessions()
@@ -83,6 +107,16 @@ namespace Prosim2GSX.Audio
         {
             bool result = false;
 
+            // Process objects each hold an OS handle that stays open until
+            // the GC finalizer thread sweeps. Calling Clear() drops the
+            // references but not the handles. Dispose the previous tick's
+            // objects eagerly so we don't leak ~200–500 handles per tick
+            // (which used to bring the system audio stack to its knees
+            // after a few minutes of audio service runtime).
+            foreach (var p in ProcessList)
+            {
+                try { p.Dispose(); } catch { }
+            }
             ProcessList.Clear();
             ProcessList.AddRange(Process.GetProcesses());
 

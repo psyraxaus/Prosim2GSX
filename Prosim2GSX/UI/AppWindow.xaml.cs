@@ -258,6 +258,14 @@ namespace Prosim2GSX.UI
 
         protected virtual void OnTabSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            // SelectionChanged is a routed event — child controls (ComboBox,
+            // ListView, DataGrid) inside the active tab raise it too and it
+            // bubbles up to the TabControl. Without this filter, ItemsSource
+            // / SelectedIndex changes inside a tab's Start() cascade back
+            // into this handler and re-invoke Start() recursively. Only
+            // handle events whose source is the TabControl itself.
+            if (!ReferenceEquals(e.OriginalSource, MainTabControl)) return;
+
             if (_previousTabIndex >= 0 && _previousTabIndex < MainTabControl.Items.Count)
             {
                 var prevContent = (MainTabControl.Items[_previousTabIndex] as TabItem)?.Content as IView;
