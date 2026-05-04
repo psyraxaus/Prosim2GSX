@@ -43,73 +43,74 @@ namespace Prosim2GSX.Services
                 var sdk = _app?.GsxService?.AircraftInterface?.ProsimInterface?.SdkInterface;
                 if (sdk == null || !sdk.IsConnected) return;
 
-                var s = _app.WeightBalance;
-                if (s == null) return;
+                var wbState = _app.WeightBalance;
+                if (wbState == null) return;
 
-                // ZFW + MACZFW. zfwcg is the readable equivalent of fms.init.zfwcg.
-                s.ZfwKg = ReadDouble(sdk, "aircraft.weight.zfw");
-                s.MaczfwPercent = ReadDouble(sdk, "aircraft.zfwcg");
+                // ZFW + MACZFW. RefAircraftZfwcg is the readable equivalent
+                // of RefFmsInitZfwcg (which is write-only).
+                wbState.ZfwKg = ReadDouble(sdk, ProsimConstants.RefWeightZfw);
+                wbState.MaczfwPercent = ReadDouble(sdk, ProsimConstants.RefAircraftZfwcg);
 
-                // Fuel — current vs capacity. aircraft.fuel.total.amount.kg is
-                // the kg-locked alias of aircraft.fuel.total.amount.
-                s.FuelInTanksKg = ReadDouble(sdk, "aircraft.fuel.total.amount.kg");
-                s.FuelCapacityKg = ReadDouble(sdk, "aircraft.fuel.total.capacity");
+                // Fuel — current vs capacity. RefFuelTotal is the kg-locked
+                // alias of aircraft.fuel.total.amount.
+                wbState.FuelInTanksKg = ReadDouble(sdk, ProsimConstants.RefFuelTotal);
+                wbState.FuelCapacityKg = ReadDouble(sdk, ProsimConstants.RefFuelTotalCapacity);
 
                 // GW = ZFW + fuel. Compute even when one side is zero so a
                 // freshly-loaded aircraft (zero fuel) still shows a sensible
                 // GW for the chart.
-                s.GwKg = s.ZfwKg + s.FuelInTanksKg;
+                wbState.GwKg = wbState.ZfwKg + wbState.FuelInTanksKg;
 
                 // MACGW lookup — index = floor(fuel / 100kg), clamped to
                 // [0, 199]. The 200-entry array's paired values produce
                 // intentional flat segments; do NOT collapse.
-                int idx = (int)Math.Floor(s.FuelInTanksKg / WeightBalanceState.FuelStepKg);
+                int idx = (int)Math.Floor(wbState.FuelInTanksKg / WeightBalanceState.FuelStepKg);
                 if (idx < 0) idx = 0;
                 if (idx >= WeightBalanceState.ZfwcgAdjArray.Length)
                     idx = WeightBalanceState.ZfwcgAdjArray.Length - 1;
-                s.MacgwPercent = s.MaczfwPercent + WeightBalanceState.ZfwcgAdjArray[idx];
+                wbState.MacgwPercent = wbState.MaczfwPercent + WeightBalanceState.ZfwcgAdjArray[idx];
 
                 // MACTOW currently mirrors MACGW until a separate take-off
                 // weight calculation is available. MacTowError stays false
                 // until we wire envelope-bounds checking.
-                s.MactowPercent = s.MacgwPercent;
-                s.MacTowError = false;
+                wbState.MactowPercent = wbState.MacgwPercent;
+                wbState.MacTowError = false;
 
                 // Cargo holds.
-                s.CargoFwdLoadedKg = ReadDouble(sdk, "aircraft.cargo.forward.amount");
-                s.CargoFwdCapacityKg = ReadDouble(sdk, "aircraft.cargo.forward.capacity");
-                s.CargoAftLoadedKg = ReadDouble(sdk, "aircraft.cargo.aft.amount");
-                s.CargoAftCapacityKg = ReadDouble(sdk, "aircraft.cargo.aft.capacity");
-                s.CargoBulkCapacityKg = ReadDouble(sdk, "aircraft.cargo.bulk.capacity");
-                s.CargoPlannedKg = ReadDouble(sdk, "efb.plannedCargoKg");
+                wbState.CargoFwdLoadedKg = ReadDouble(sdk, ProsimConstants.RefCargoForward);
+                wbState.CargoFwdCapacityKg = ReadDouble(sdk, ProsimConstants.RefCargoForwardCapacity);
+                wbState.CargoAftLoadedKg = ReadDouble(sdk, ProsimConstants.RefCargoRear);
+                wbState.CargoAftCapacityKg = ReadDouble(sdk, ProsimConstants.RefCargoAftCapacity);
+                wbState.CargoBulkCapacityKg = ReadDouble(sdk, ProsimConstants.RefCargoBulkCapacity);
+                wbState.CargoPlannedKg = ReadDouble(sdk, ProsimConstants.RefEfbPlannedCargoKg);
 
                 // Cargo doors.
-                s.FwdCargoDoorOpen = ReadBool(sdk, "doors.cargo.forward");
-                s.AftCargoDoorOpen = ReadBool(sdk, "doors.cargo.aft");
+                wbState.FwdCargoDoorOpen = ReadBool(sdk, ProsimConstants.RefDoorCargoForward);
+                wbState.AftCargoDoorOpen = ReadBool(sdk, ProsimConstants.RefDoorCargoAft);
 
                 // Passengers — capacities are static per aircraft, but reading
                 // each tick is cheap (SDK-side cache) and adapts when the
                 // aircraft is reloaded with a different config.
-                s.Zone1Capacity = ReadInt(sdk, "aircraft.passengers.zone1.capacity");
-                s.Zone2Capacity = ReadInt(sdk, "aircraft.passengers.zone2.capacity");
-                s.Zone3Capacity = ReadInt(sdk, "aircraft.passengers.zone3.capacity");
-                s.Zone4Capacity = ReadInt(sdk, "aircraft.passengers.zone4.capacity");
+                wbState.Zone1Capacity = ReadInt(sdk, ProsimConstants.RefPaxZone1Capacity);
+                wbState.Zone2Capacity = ReadInt(sdk, ProsimConstants.RefPaxZone2Capacity);
+                wbState.Zone3Capacity = ReadInt(sdk, ProsimConstants.RefPaxZone3Capacity);
+                wbState.Zone4Capacity = ReadInt(sdk, ProsimConstants.RefPaxZone4Capacity);
 
                 // Seat occupation drives the SVG cabin layout. The "boarded"
                 // count is the number of 'T' characters in that string —
                 // matches how the EFB derives boarded count from the same
                 // dataref.
-                var seats = sdk.GetString("aircraft.passengers.seatOccupation.string", "") ?? "";
-                s.SeatOccupation = seats;
-                s.PassengersBoarded = CountTrueChars(seats);
+                var seats = sdk.GetString(ProsimConstants.RefPaxCurrentString, "") ?? "";
+                wbState.SeatOccupation = seats;
+                wbState.PassengersBoarded = CountTrueChars(seats);
 
                 // Planned pax count — efb.passengerStatistics is an Object
                 // with a "totalNumOfPaxs" or similar field; the simpler
-                // fallback is aircraft.passengers.booked.string which holds
-                // the planned occupation pattern. The 'T' count there is the
-                // booked total.
-                var booked = sdk.GetString("aircraft.passengers.booked.string", "") ?? "";
-                s.PassengersPlanned = CountTrueChars(booked);
+                // fallback is aircraft.passengers.booked.string (RefPaxBookedString),
+                // which holds the planned occupation pattern. The 'T' count
+                // there is the booked total.
+                var booked = sdk.GetString(ProsimConstants.RefPaxBookedString, "") ?? "";
+                wbState.PassengersPlanned = CountTrueChars(booked);
 
                 // Planned fuel from SimBrief OFP. The cached LastSimbriefOfp
                 // refreshes when the user re-imports an OFP; null when no
@@ -128,7 +129,7 @@ namespace Prosim2GSX.Services
                 double plannedRaw = ParseDoubleOrZero(ofp?.Fuel?.PlanRamp);
                 bool simbriefIsLbs = string.Equals(ofp?.Params?.Units, "lbs", StringComparison.OrdinalIgnoreCase);
                 double conv = _app?.Config?.WeightConversion ?? 2.2046226218;
-                s.FuelPlannedKg = simbriefIsLbs && conv > 0 ? plannedRaw / conv : plannedRaw;
+                wbState.FuelPlannedKg = simbriefIsLbs && conv > 0 ? plannedRaw / conv : plannedRaw;
             }
             catch (Exception ex)
             {
