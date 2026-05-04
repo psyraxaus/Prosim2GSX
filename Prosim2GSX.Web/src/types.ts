@@ -13,9 +13,9 @@
 
 export type ConnectionStatus = "connecting" | "open" | "reconnecting" | "closed";
 
-export type WsChannel = "flightStatus" | "gsx" | "audio" | "appSettings" | "ofp" | "checklists";
+export type WsChannel = "flightStatus" | "gsx" | "audio" | "appSettings" | "ofp" | "checklists" | "weightBalance";
 
-export type StateChannel = "flightStatus" | "audio" | "gsxSettings" | "appSettings" | "ofp" | "checklists";
+export type StateChannel = "flightStatus" | "audio" | "gsxSettings" | "appSettings" | "ofp" | "checklists" | "weightBalance";
 
 export interface PatchEnvelope {
   channel: WsChannel;
@@ -657,4 +657,43 @@ export interface ToggleItemRequest {
 
 export interface ResetSectionRequest {
   sectionIndex: number;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Weight & Balance (read-only — W&B tab)
+// ──────────────────────────────────────────────────────────────────────────
+
+export interface WeightBalanceDto {
+  zfwKg: number;
+  maczfwPercent: number;
+  gwKg: number;
+  macgwPercent: number;
+  fuelPlannedKg: number;
+  fuelInTanksKg: number;
+  fuelCapacityKg: number;
+
+  cargoFwdLoadedKg: number;
+  cargoFwdCapacityKg: number;
+  cargoAftLoadedKg: number;
+  cargoAftCapacityKg: number;
+  cargoBulkCapacityKg: number;
+  cargoPlannedKg: number;
+
+  passengersPlanned: number;
+  passengersBoarded: number;
+  zone1Capacity: number;
+  zone2Capacity: number;
+  zone3Capacity: number;
+  zone4Capacity: number;
+  seatOccupation: string;
+
+  fwdCargoDoorOpen: boolean;
+  aftCargoDoorOpen: boolean;
+
+  mactowPercent: number;
+  macTowError: boolean;
+
+  mtowLimitKg: number;
+  mlwLimitKg: number;
+  mzfwLimitKg: number;
 }

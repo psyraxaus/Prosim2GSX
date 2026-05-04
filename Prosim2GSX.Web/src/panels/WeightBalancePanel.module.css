@@ -1,0 +1,289 @@
+.panel {
+  padding: 16px 18px;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(360px, 1.2fr) minmax(280px, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.loading {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.colHeading {
+  margin: 0 0 4px 0;
+  padding: 0;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--category-text);
+  font-weight: 600;
+}
+
+.colHeading + .colHeading {
+  margin-top: 12px;
+}
+
+/* ── LEFT COLUMN ── */
+
+.chartCol {
+  display: flex;
+  flex-direction: column;
+  /* Heading stays left-aligned (default flex-start). The chart card
+     below centres itself via its own auto margins so the graphic looks
+     visually balanced in the column without affecting the title. */
+  min-width: 0;
+}
+
+.chartCard {
+  background: #1a1a1a;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 6px);
+  padding: 8px;
+  width: 100%;
+  max-width: 720px;        /* don't stretch the chart unreasonably wide on huge screens */
+  margin: 0 auto;          /* centre the card horizontally within the column */
+}
+
+/* Chart container. Width fills the card; height is set by the PNG image
+   inside. Top padding pushes the PNG's offsetTop down so the X-axis
+   labels (positioned at pngTop − 10) sit cleanly INSIDE the chart's top
+   edge with comfortable visual breathing room. */
+.chart {
+  position: relative;
+  width: 100%;
+  padding-top: 28px;
+  padding-bottom: 8px;
+  text-align: center;
+  background: #1a1a1a;
+}
+
+/* PNG image. Centred horizontally (text-align: center on parent +
+   inline-block here). Aspect-preserved via height: auto. The panel
+   measures this element's offsetLeft / offsetTop / offsetWidth /
+   offsetHeight at runtime to compute every annotation position. */
+.chartImg {
+  display: inline-block;
+  width: 80%;
+  max-width: 100%;
+  height: auto;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Axis-number labels. Roboto 14px scaled to 0.7 ≈ 10px visual.
+   X-labels (top) anchor at their (left, top) coord centre.
+   Y-labels (left) use a wide right-aligned box so the digit hugs the
+   gutter to the LEFT of the tick mark. */
+.axisLabel {
+  position: absolute;
+  font-family: Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.22px;
+  color: #ffffff;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.7);
+}
+
+.axisLabelX { /* base styles only — auto-width digit-tight box */ }
+
+.axisLabelY {
+  width: 65px;
+  text-align: right;
+  transform: translate(-110%, -50%) scale(0.7);
+}
+
+/* Y-axis tick marks. Fixed widths so they don't grow past the labels at
+   high resolutions. Anchored on their right edge at (left, top) so the
+   tick extends leftward INTO the label gutter. */
+.tickLong {
+  position: absolute;
+  width: 10px;
+  height: 1px;
+  background: #ffffff;
+  pointer-events: none;
+  transform: translate(-100%, -50%);
+}
+
+.tickShort {
+  position: absolute;
+  width: 5px;
+  height: 1px;
+  background: #ffffff;
+  pointer-events: none;
+  transform: translate(-100%, -50%);
+}
+
+/* Limit-line + envelope-region annotations. Dark translucent pill,
+   centred at the visual CENTRE of the text via translate(-50%, -50%). */
+.limitLabel {
+  position: absolute;
+  font-size: 10px;
+  color: #ffffff;
+  white-space: nowrap;
+  pointer-events: none;
+  background: rgba(58, 61, 59, 0.7);
+  padding: 0;
+  transform: translate(-50%, -50%) scale(.7);
+}
+
+.envLabel {
+  position: absolute;
+  font-size: 10px;
+  color: #ffffff;
+  white-space: nowrap;
+  pointer-events: none;
+  background: rgba(58, 61, 59, 0.7);
+  padding: 0;
+  transform: translate(-50%, -50%) scale(.7);
+}
+
+/* Per-annotation transforms — combine the centring translate with a
+   rotation matching each label's location around the envelope. */
+.annot1 { transform: translate(-50%, -50%) scale(.8); }                 /* Operational Limits — horizontal */
+.annot2 { transform: translate(-50%, -50%) scale(.7) rotate(-43deg); }  /* Take-Off Limits, right */
+.annot3 { transform: translate(-50%, -50%) scale(.7) rotate(-60deg); }  /* Zfw limit, right */
+.annot4 { transform: translate(-50%, -50%) scale(.7) rotate(-85deg); }  /* Zfw limit, left */
+.annot5 { transform: translate(-50%, -50%) scale(.7) rotate(-110deg); } /* Take-Off Limits, bottom-left */
+
+.dot {
+  position: absolute;
+  pointer-events: none;
+  overflow: visible;       /* let the crosshair lines extend past the rim */
+}
+
+/* MAC% gauge bars — pink (ZFW) and orange (GW) strips below the chart.
+   Track is invisible; only the live coloured fill renders. */
+.gaugeBar {
+  position: relative;
+  height: 5px;
+  margin-top: 3px;
+  background: transparent;
+  width: 100%;
+}
+
+.gaugeFillZfw {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  background: #e91e63;
+}
+
+.gaugeFillGw {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  background: #ff8a00;
+}
+
+/* 4-cell summary table. */
+.summary {
+  width: 100%;
+  margin-top: 10px;
+  border-collapse: collapse;
+  font-size: 12px;
+  color: #ffffff;
+}
+
+.summary th,
+.summary td {
+  border: 1px solid #3f3f3f;
+  padding: 6px 8px;
+  text-align: center;
+}
+
+.summary th {
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: #cfd5e6;
+}
+
+.summary td {
+  font-weight: 700;
+  font-size: 14px;
+  font-family: var(--font-mono, monospace);
+}
+
+.note {
+  margin: 8px 0 0 0;
+  padding: 0;
+  text-align: center;
+  font-style: italic;
+  font-size: 11px;
+  color: #cfd5e6;
+}
+
+/* ── RIGHT COLUMN — passenger / cargo / fuel data cards ── */
+
+.dataCol {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dataCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 6px);
+  padding: 12px;
+}
+
+.dataCard + .colHeading {
+  margin-top: 14px;
+}
+
+.capacity {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--category-text);
+  margin-bottom: 8px;
+}
+
+.dataRow {
+  display: grid;
+  grid-template-columns: 92px 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.dataRow .label {
+  color: var(--category-text);
+  font-size: 12px;
+}
+
+.dataRow .headerCell {
+  color: var(--category-text);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.dataRow .value {
+  font-weight: 700;
+  font-size: 14px;
+  font-family: var(--font-mono, monospace);
+}
+
+.dataRow .subValue {
+  color: var(--category-text);
+  font-size: 11px;
+}
+
+/* ── Stack-on-narrow ──
+   Below 700px wide (typical phone portrait, narrow tablet) the two
+   columns stack vertically so each gets the full panel width. */
+@media (max-width: 700px) {
+  .panel {
+    grid-template-columns: 1fr;
+  }
+
+  .colHeading + .colHeading {
+    margin-top: 18px;
+  }
+}

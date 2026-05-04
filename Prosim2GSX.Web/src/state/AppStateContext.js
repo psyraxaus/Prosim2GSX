@@ -15,6 +15,7 @@ const initialState = {
     appSettings: null,
     ofp: null,
     checklists: null,
+    weightBalance: null,
     connection: "closed",
 };
 function reducer(state, action) {
