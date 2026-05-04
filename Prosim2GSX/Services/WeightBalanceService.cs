@@ -114,8 +114,21 @@ namespace Prosim2GSX.Services
                 // Planned fuel from SimBrief OFP. The cached LastSimbriefOfp
                 // refreshes when the user re-imports an OFP; null when no
                 // OFP has been loaded yet.
+                //
+                // Unit handling: SimBrief returns fuel in whatever unit the
+                // user's airline profile is configured for, advertised on
+                // ofp.Params.Units ("kgs" or "lbs"). SimbriefService converts
+                // before pushing to Prosim, but LastSimbriefOfp keeps the raw
+                // string, so we have to apply the same conversion here. All
+                // other reads in this service are kg-locked by ProsimDataref.csv
+                // (the columns marked "kg" do not flip with the avionics
+                // display-unit setting — only aircraft.fuel.total.amount has
+                // a unit-dependent base name, and we use the .kg alias).
                 var ofp = _app?.GsxService?.AircraftInterface?.LastSimbriefOfp;
-                s.FuelPlannedKg = ParseDoubleOrZero(ofp?.Fuel?.PlanRamp);
+                double plannedRaw = ParseDoubleOrZero(ofp?.Fuel?.PlanRamp);
+                bool simbriefIsLbs = string.Equals(ofp?.Params?.Units, "lbs", StringComparison.OrdinalIgnoreCase);
+                double conv = _app?.Config?.WeightConversion ?? 2.2046226218;
+                s.FuelPlannedKg = simbriefIsLbs && conv > 0 ? plannedRaw / conv : plannedRaw;
             }
             catch (Exception ex)
             {

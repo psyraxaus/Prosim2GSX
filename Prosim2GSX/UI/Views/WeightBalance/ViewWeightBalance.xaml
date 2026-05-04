@@ -1,0 +1,352 @@
+<UserControl x:Class="Prosim2GSX.UI.Views.WeightBalance.ViewWeightBalance"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:Prosim2GSX.UI.Views.WeightBalance"
+             d:DataContext="{d:DesignInstance Type=local:ModelWeightBalance}"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="900">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../../StyleResources.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid Margin="12,8,12,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="510"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT: CG envelope chart -->
+            <StackPanel Grid.Column="0">
+                <TextBlock Style="{StaticResource CategoryHeader}" Text="CG ENVELOPE"/>
+                <Border Style="{StaticResource SectionCardBorder}">
+                    <StackPanel>
+                        <Canvas Width="380" Height="340" Background="#1A1A1A" Margin="0,4,0,4"
+                                HorizontalAlignment="Left">
+                            <!-- LayoutTransform scales the entire chart (PNG, labels, dots,
+                                 gauge bars below) up 1.3x so the EFB's tight 17 px/MAC
+                                 label spacing renders legibly. Internal coordinates stay
+                                 calibrated to the EFB pixel system, so PNG and dot
+                                 alignment are unaffected. -->
+                            <Canvas.LayoutTransform>
+                                <ScaleTransform ScaleX="1.25" ScaleY="1.25"/>
+                            </Canvas.LayoutTransform>
+                            <!-- ProsimEFB envelope graphics — copied from /assets/img/wandb.png.
+                                 The PNG renders the three nested envelopes, fan lines, and
+                                 (likely) the limit lines + tick marks; we overlay axis
+                                 labels and the live ZFW/GW dots in the same coordinate
+                                 system the EFB uses (calibrated in ModelWeightBalance). -->
+                            <Image Source="/Prosim2GSX;component/UI/Views/WeightBalance/Resources/wandb.png"
+                                   Canvas.Left="0" Canvas.Top="0"
+                                   Width="380" Height="340" Stretch="Fill"/>
+
+                            <!-- "%MAC" + X-axis labels at top — positions taken verbatim
+                                 from the EFB markup so they sit exactly where the PNG's
+                                 gridlines hit the top edge. -->
+                            <TextBlock Canvas.Left="30"  Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="%MAC"/>
+                            <TextBlock Canvas.Left="57"  Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="21"/>
+                            <TextBlock Canvas.Left="74"  Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="22"/>
+                            <TextBlock Canvas.Left="91"  Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="23"/>
+                            <TextBlock Canvas.Left="108" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="24"/>
+                            <TextBlock Canvas.Left="125" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="25"/>
+                            <TextBlock Canvas.Left="142" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="26"/>
+                            <TextBlock Canvas.Left="159" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="27"/>
+                            <TextBlock Canvas.Left="176" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="28"/>
+                            <TextBlock Canvas.Left="193" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="29"/>
+                            <TextBlock Canvas.Left="210" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="30"/>
+                            <TextBlock Canvas.Left="227" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="31"/>
+                            <TextBlock Canvas.Left="244" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="32"/>
+                            <TextBlock Canvas.Left="261" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="33"/>
+                            <TextBlock Canvas.Left="278" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="34"/>
+                            <TextBlock Canvas.Left="295" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="35"/>
+                            <TextBlock Canvas.Left="312" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="36"/>
+                            <TextBlock Canvas.Left="329" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="37"/>
+                            <TextBlock Canvas.Left="346" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="38"/>
+
+                            <!-- Y-axis labels — top values from the EFB markup. -->
+                            <TextBlock Canvas.Left="40" Canvas.Top="42"  Foreground="#FFFFFF" FontSize="10" Text="75"/>
+                            <TextBlock Canvas.Left="40" Canvas.Top="77"  Foreground="#FFFFFF" FontSize="10" Text="70"/>
+                            <TextBlock Canvas.Left="40" Canvas.Top="112" Foreground="#FFFFFF" FontSize="10" Text="65"/>
+                            <TextBlock Canvas.Left="40" Canvas.Top="147" Foreground="#FFFFFF" FontSize="10" Text="60"/>
+                            <TextBlock Canvas.Left="40" Canvas.Top="183" Foreground="#FFFFFF" FontSize="10" Text="55"/>
+                            <TextBlock Canvas.Left="40" Canvas.Top="218" Foreground="#FFFFFF" FontSize="10" Text="50"/>
+                            <TextBlock Canvas.Left="40" Canvas.Top="253" Foreground="#FFFFFF" FontSize="10" Text="45"/>
+                            <TextBlock Canvas.Left="40" Canvas.Top="288" Foreground="#FFFFFF" FontSize="10" Text="40"/>
+                            <TextBlock Canvas.Left="40" Canvas.Top="323" Foreground="#FFFFFF" FontSize="10" Text="35"/>
+
+                            <!-- Limit-line annotations — positions verbatim from EFB.
+                                 The PNG itself draws the dashed/solid horizontal lines;
+                                 these are just the textual labels. -->
+                            <TextBlock Canvas.Left="192" Canvas.Top="61"  Foreground="#FFFFFF" FontSize="10" Text="MTOW = 73,500KG"/>
+                            <TextBlock Canvas.Left="179" Canvas.Top="111" Foreground="#FFFFFF" FontSize="10" Text="MLW = 64,500KG"/>
+                            <TextBlock Canvas.Left="169" Canvas.Top="135" Foreground="#FFFFFF" FontSize="10" Text="MZFW = 61,000KG"/>
+
+                            <!-- Envelope-region annotations.
+                                 EFB positions are kept verbatim; we add RotateTransforms
+                                 to the four side labels so they follow the diagonal
+                                 envelope edges (matching the EFB reference rendering).
+                                 The transform pivots at each TextBlock's top-left
+                                 corner, so the Canvas.Left/Top coordinate is the
+                                 rotation anchor — small position nudges are normal
+                                 if the angles are tweaked later. -->
+                            <TextBlock Canvas.Left="156" Canvas.Top="190" Foreground="#FFFFFF" FontSize="11"
+                                       FontWeight="DemiBold" Text="OPERATIONAL LIMITS"/>
+
+                            <TextBlock Canvas.Left="263" Canvas.Top="192" Foreground="#FFFFFF" FontSize="10" Text="TAKE-OFF LIMITS">
+                                <TextBlock.RenderTransform>
+                                    <RotateTransform Angle="65"/>
+                                </TextBlock.RenderTransform>
+                            </TextBlock>
+
+                            <TextBlock Canvas.Left="266" Canvas.Top="222" Foreground="#FFFFFF" FontSize="10" Text="ZFW LIMIT">
+                                <TextBlock.RenderTransform>
+                                    <RotateTransform Angle="75"/>
+                                </TextBlock.RenderTransform>
+                            </TextBlock>
+
+                            <TextBlock Canvas.Left="92" Canvas.Top="216" Foreground="#FFFFFF" FontSize="10" Text="ZFW LIMIT">
+                                <TextBlock.RenderTransform>
+                                    <RotateTransform Angle="-75"/>
+                                </TextBlock.RenderTransform>
+                            </TextBlock>
+
+                            <TextBlock Canvas.Left="79" Canvas.Top="265" Foreground="#FFFFFF" FontSize="10" Text="TAKE-OFF LIMITS">
+                                <TextBlock.RenderTransform>
+                                    <RotateTransform Angle="-65"/>
+                                </TextBlock.RenderTransform>
+                            </TextBlock>
+
+                            <!-- ZFW point — pink quadrant-fill crosshair.
+                                 Two pie wedges (top-right + bottom-left) painted in pink
+                                 over a white base; crosshair lines extend slightly past the rim. -->
+                            <Grid Width="22" Height="22"
+                                  Canvas.Left="{Binding ZfwDotLeft}"
+                                  Canvas.Top="{Binding ZfwDotTop}">
+                                <Ellipse Fill="White" Stroke="#80000000" StrokeThickness="1"/>
+                                <Path Fill="#E91E63">
+                                    <Path.Data>
+                                        <GeometryGroup>
+                                            <PathGeometry>
+                                                <PathFigure StartPoint="11,11" IsClosed="True">
+                                                    <LineSegment Point="11,1"/>
+                                                    <ArcSegment Point="21,11" Size="10,10" SweepDirection="Clockwise"/>
+                                                </PathFigure>
+                                            </PathGeometry>
+                                            <PathGeometry>
+                                                <PathFigure StartPoint="11,11" IsClosed="True">
+                                                    <LineSegment Point="11,21"/>
+                                                    <ArcSegment Point="1,11" Size="10,10" SweepDirection="Clockwise"/>
+                                                </PathFigure>
+                                            </PathGeometry>
+                                        </GeometryGroup>
+                                    </Path.Data>
+                                </Path>
+                                <Line X1="11" Y1="-2" X2="11" Y2="24" Stroke="White" StrokeThickness="1.2"/>
+                                <Line X1="-2" Y1="11" X2="24" Y2="11" Stroke="White" StrokeThickness="1.2"/>
+                            </Grid>
+
+                            <!-- GW point — solid light blue with white crosshair. -->
+                            <Grid Width="22" Height="22"
+                                  Canvas.Left="{Binding GwDotLeft}"
+                                  Canvas.Top="{Binding GwDotTop}">
+                                <Ellipse Fill="#80B7CFD9" Stroke="#FFFFFF" StrokeThickness="1"/>
+                                <Line X1="11" Y1="-2" X2="11" Y2="24" Stroke="White" StrokeThickness="1.2"/>
+                                <Line X1="-2" Y1="11" X2="24" Y2="11" Stroke="White" StrokeThickness="1.2"/>
+                            </Grid>
+                        </Canvas>
+
+                        <!-- MAC% gauge bars below the chart. Width matches the
+                             scaled chart (380 logical × 1.25 = 475) so the bars
+                             line up visually under the envelope. The track
+                             rectangle is gone — only the live coloured fill
+                             is rendered, so an empty bar (MAC% = 0) is invisible
+                             rather than appearing as a dark band. -->
+                        <Grid Margin="0,2,0,1" Height="6" Width="475" HorizontalAlignment="Left">
+                            <Rectangle HorizontalAlignment="Left" Fill="#E91E63"
+                                       Width="{Binding ZfwBarFillWidth}"/>
+                        </Grid>
+                        <Grid Margin="0,1,0,4" Height="6" Width="475" HorizontalAlignment="Left">
+                            <Rectangle HorizontalAlignment="Left" Fill="#FF8A00"
+                                       Width="{Binding GwBarFillWidth}"/>
+                        </Grid>
+
+                        <!-- Bordered summary strip — 4 cells in a row. -->
+                        <Grid Margin="0,8,0,4" Width="475" HorizontalAlignment="Left">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" BorderBrush="#3F3F3F" BorderThickness="1" Padding="6,4,6,4">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Foreground="{DynamicResource CategoryTextBrush}" FontSize="11"
+                                               HorizontalAlignment="Center" Text="ZFW (KG)"/>
+                                    <TextBlock FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"
+                                               Text="{Binding ZfwKg, StringFormat={}{0:N0}}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="1" BorderBrush="#3F3F3F" BorderThickness="0,1,1,1" Padding="6,4,6,4">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Foreground="{DynamicResource CategoryTextBrush}" FontSize="11"
+                                               HorizontalAlignment="Center" Text="MACZFW (%)"/>
+                                    <TextBlock FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"
+                                               Text="{Binding MaczfwPercent, StringFormat={}{0:F1}}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="2" BorderBrush="#3F3F3F" BorderThickness="0,1,1,1" Padding="6,4,6,4">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Foreground="{DynamicResource CategoryTextBrush}" FontSize="11"
+                                               HorizontalAlignment="Center" Text="GW (KG)"/>
+                                    <TextBlock FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"
+                                               Text="{Binding GwKg, StringFormat={}{0:N0}}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="3" BorderBrush="#3F3F3F" BorderThickness="0,1,1,1" Padding="6,4,6,4">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Foreground="{DynamicResource CategoryTextBrush}" FontSize="11"
+                                               HorizontalAlignment="Center" Text="MACGW (%)"/>
+                                    <TextBlock FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"
+                                               Text="{Binding MacgwPercent, StringFormat={}{0:F1}}"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <TextBlock Margin="0,4,0,4" FontStyle="Italic" FontSize="11"
+                                   HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource CategoryTextBrush}"
+                                   Text="NOTE: THE ABOVE FIGURES ARE LIVE."/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- RIGHT: data panels.
+                 Grid.IsSharedSizeScope keeps the first ("Pax/Cargo/FWD-AFT/Fuel")
+                 label column the same width across the three sub-grids, so rows
+                 line up while still auto-sizing to the widest label. -->
+            <StackPanel Grid.Column="1" Margin="12,0,0,0" Grid.IsSharedSizeScope="True">
+
+                <!-- PASSENGERS -->
+                <TextBlock Style="{StaticResource CategoryHeader}" Text="PASSENGERS"/>
+                <Border Style="{StaticResource SectionCardBorder}">
+                    <Grid Margin="6,4,6,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="WbLabelCol"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.ColumnSpan="3" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource CategoryTextBrush}" FontSize="11">
+                            <Run Text="CAPACITY: "/>
+                            <Run Text="{Binding PassengersTotalCapacity, Mode=OneWay}"/>
+                            <Run Text=" ECONOMY"/>
+                        </TextBlock>
+
+                        <Label Grid.Row="1" Grid.Column="1" Foreground="{DynamicResource CategoryTextBrush}">PLANNED</Label>
+                        <Label Grid.Row="1" Grid.Column="2" Foreground="{DynamicResource CategoryTextBrush}">BOARDED</Label>
+
+                        <Label Grid.Row="2" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">Pax</Label>
+                        <TextBlock Grid.Row="2" Grid.Column="1" FontWeight="Bold" VerticalAlignment="Center" Margin="5,0,0,0"
+                                   Text="{Binding PassengersPlanned}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="2" FontWeight="Bold" VerticalAlignment="Center" Margin="5,0,0,0"
+                                   Text="{Binding PassengersBoarded}"/>
+                    </Grid>
+                </Border>
+
+                <!-- CARGO -->
+                <TextBlock Style="{StaticResource CategoryHeader}" Text="CARGO" Margin="0,8,0,0"/>
+                <Border Style="{StaticResource SectionCardBorder}">
+                    <Grid Margin="6,4,6,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="WbLabelCol"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.ColumnSpan="3" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource CategoryTextBrush}" FontSize="11">
+                            <Run Text="CAPACITY: "/>
+                            <Run Text="{Binding CargoFwdCapacityKg, StringFormat={}{0:N0}, Mode=OneWay}"/>
+                            <Run Text=" KG FWD, "/>
+                            <Run Text="{Binding CargoAftCapacityKg, StringFormat={}{0:N0}, Mode=OneWay}"/>
+                            <Run Text=" KG AFT, "/>
+                            <Run Text="{Binding CargoBulkCapacityKg, StringFormat={}{0:N0}, Mode=OneWay}"/>
+                            <Run Text=" KG BULK"/>
+                        </TextBlock>
+
+                        <Label Grid.Row="1" Grid.Column="1" Foreground="{DynamicResource CategoryTextBrush}" FontSize="11">PLANNED (KG)</Label>
+                        <Label Grid.Row="1" Grid.Column="2" Foreground="{DynamicResource CategoryTextBrush}" FontSize="11">LOADED (KG)</Label>
+
+                        <Label Grid.Row="2" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">Cargo</Label>
+                        <TextBlock Grid.Row="2" Grid.Column="1" FontWeight="Bold" VerticalAlignment="Center" Margin="5,0,0,0"
+                                   Text="{Binding CargoPlannedKg, StringFormat={}{0:N0}}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="2" FontWeight="Bold" VerticalAlignment="Center" Margin="5,0,0,0"
+                                   Text="{Binding CargoLoadedTotalKg, StringFormat={}{0:N0}}"/>
+
+                        <Label Grid.Row="3" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}" FontSize="11">FWD / AFT</Label>
+                        <TextBlock Grid.Row="3" Grid.Column="1"
+                                   Foreground="{DynamicResource CategoryTextBrush}" FontSize="11" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Row="3" Grid.Column="2" Margin="5,0,0,0"
+                                   Foreground="{DynamicResource CategoryTextBrush}" FontSize="11" VerticalAlignment="Center">
+                            <Run Text="{Binding CargoFwdLoadedKg, StringFormat={}{0:N0}, Mode=OneWay}"/>
+                            <Run Text=" / "/>
+                            <Run Text="{Binding CargoAftLoadedKg, StringFormat={}{0:N0}, Mode=OneWay}"/>
+                        </TextBlock>
+                    </Grid>
+                </Border>
+
+                <!-- FUEL -->
+                <TextBlock Style="{StaticResource CategoryHeader}" Text="FUEL" Margin="0,8,0,0"/>
+                <Border Style="{StaticResource SectionCardBorder}">
+                    <Grid Margin="6,4,6,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="WbLabelCol"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.ColumnSpan="3" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource CategoryTextBrush}" FontSize="11">
+                            <Run Text="CAPACITY USABLE "/>
+                            <Run Text="{Binding FuelCapacityKg, StringFormat={}{0:N0}, Mode=OneWay}"/>
+                            <Run Text=" KG — SG: 0.80"/>
+                        </TextBlock>
+
+                        <Label Grid.Row="1" Grid.Column="1" Foreground="{DynamicResource CategoryTextBrush}" FontSize="11">PLANNED (KG)</Label>
+                        <Label Grid.Row="1" Grid.Column="2" Foreground="{DynamicResource CategoryTextBrush}" FontSize="11">IN TANKS (KG)</Label>
+
+                        <Label Grid.Row="2" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">Fuel</Label>
+                        <TextBlock Grid.Row="2" Grid.Column="1" FontWeight="Bold" VerticalAlignment="Center" Margin="5,0,0,0"
+                                   Text="{Binding FuelPlannedKg, StringFormat={}{0:N0}}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="2" FontWeight="Bold" VerticalAlignment="Center" Margin="5,0,0,0"
+                                   Text="{Binding FuelInTanksKg, StringFormat={}{0:N0}}"/>
+                    </Grid>
+                </Border>
+
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</UserControl>
