@@ -12,6 +12,71 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="../../StyleResources.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+
+            <local:NegativeHalfConverter x:Key="NegHalf"/>
+
+            <!-- Shared item-container styles. Both bind to the same item
+                 properties (CenterLeft/CenterTop for labels, Left/Top for
+                 ticks) so each ItemsControl just plugs the right style in. -->
+            <Style x:Key="LabelContainerStyle" TargetType="ContentPresenter">
+                <Setter Property="Canvas.Left" Value="{Binding CenterLeft}"/>
+                <Setter Property="Canvas.Top"  Value="{Binding CenterTop}"/>
+            </Style>
+            <Style x:Key="TickContainerStyle" TargetType="ContentPresenter">
+                <Setter Property="Canvas.Left" Value="{Binding Left}"/>
+                <Setter Property="Canvas.Top"  Value="{Binding Top}"/>
+            </Style>
+
+            <!-- Plain axis label. The wrapper Canvas is 0×0 but Canvas
+                 doesn't clip its children or constrain their measure, so
+                 the TextBlock sizes naturally. Setting Canvas.Left/Top to
+                 -ActualWidth/2 / -ActualHeight/2 centres the text on the
+                 wrapper's origin — which the ContentPresenter has already
+                 placed at (CenterLeft, CenterTop). RenderTransformOrigin
+                 then scales / rotates around the same centre. -->
+            <DataTemplate x:Key="AxisLabelTemplate" DataType="{x:Type local:ChartLabel}">
+                <Canvas>
+                    <TextBlock x:Name="lbl" Text="{Binding Text}"
+                               Foreground="#FFFFFF" FontSize="14"
+                               Canvas.Left="{Binding ActualWidth,  ElementName=lbl, Converter={StaticResource NegHalf}}"
+                               Canvas.Top ="{Binding ActualHeight, ElementName=lbl, Converter={StaticResource NegHalf}}"
+                               RenderTransformOrigin="0.5,0.5">
+                        <TextBlock.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}"/>
+                                <RotateTransform Angle="{Binding Angle}"/>
+                            </TransformGroup>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
+                </Canvas>
+            </DataTemplate>
+
+            <!-- Pill-bordered annotation. Same centring trick; the Border
+                 carries the dark translucent fill that sits behind the
+                 limit lines and envelope-edge labels in the source chart. -->
+            <DataTemplate x:Key="AnnotationTemplate" DataType="{x:Type local:ChartLabel}">
+                <Canvas>
+                    <Border x:Name="brd" Background="#B33A3D3B" Padding="3,1,3,1"
+                            Canvas.Left="{Binding ActualWidth,  ElementName=brd, Converter={StaticResource NegHalf}}"
+                            Canvas.Top ="{Binding ActualHeight, ElementName=brd, Converter={StaticResource NegHalf}}"
+                            RenderTransformOrigin="0.5,0.5">
+                        <Border.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}"/>
+                                <RotateTransform Angle="{Binding Angle}"/>
+                            </TransformGroup>
+                        </Border.RenderTransform>
+                        <TextBlock Text="{Binding Text}" Foreground="#FFFFFF" FontSize="14"/>
+                    </Border>
+                </Canvas>
+            </DataTemplate>
+
+            <!-- Y-axis tick. Width comes from the item (10 long, 5 short);
+                 the container places the rectangle so its right edge sits
+                 just inside the chart frame at the matching weight value. -->
+            <DataTemplate x:Key="TickTemplate" DataType="{x:Type local:ChartTick}">
+                <Rectangle Width="{Binding Width}" Height="1" Fill="#FFFFFF"/>
+            </DataTemplate>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -26,108 +91,80 @@
             <StackPanel Grid.Column="0">
                 <TextBlock Style="{StaticResource CategoryHeader}" Text="CG ENVELOPE"/>
                 <Border Style="{StaticResource SectionCardBorder}">
-                    <StackPanel>
-                        <Canvas Width="380" Height="340" Background="#1A1A1A" Margin="0,4,0,4"
-                                HorizontalAlignment="Left">
-                            <!-- LayoutTransform scales the entire chart (PNG, labels, dots,
-                                 gauge bars below) up 1.3x so the EFB's tight 17 px/MAC
-                                 label spacing renders legibly. Internal coordinates stay
-                                 calibrated to the EFB pixel system, so PNG and dot
-                                 alignment are unaffected. -->
-                            <Canvas.LayoutTransform>
-                                <ScaleTransform ScaleX="1.25" ScaleY="1.25"/>
-                            </Canvas.LayoutTransform>
-                            <!-- ProsimEFB envelope graphics — copied from /assets/img/wandb.png.
-                                 The PNG renders the three nested envelopes, fan lines, and
-                                 (likely) the limit lines + tick marks; we overlay axis
-                                 labels and the live ZFW/GW dots in the same coordinate
-                                 system the EFB uses (calibrated in ModelWeightBalance). -->
+                    <!-- Viewbox lets the fixed-size 600×580 chart Canvas
+                         scale uniformly to the column's available width.
+                         StretchDirection="DownOnly" prevents up-scaling
+                         past the native 600 px (so the labels stay crisp
+                         on huge windows). -->
+                    <Viewbox Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left">
+                        <Canvas Width="600" Height="580" Background="#1A1A1A">
+
+                            <!-- Envelope graphic. Fills the chart sub-rectangle;
+                                 every label and dot below is positioned in the
+                                 same coordinate system. -->
                             <Image Source="/Prosim2GSX;component/UI/Views/WeightBalance/Resources/wandb.png"
-                                   Canvas.Left="0" Canvas.Top="0"
-                                   Width="380" Height="340" Stretch="Fill"/>
+                                   Canvas.Left="80" Canvas.Top="30"
+                                   Width="500" Height="435" Stretch="Fill"/>
 
-                            <!-- "%MAC" + X-axis labels at top — positions taken verbatim
-                                 from the EFB markup so they sit exactly where the PNG's
-                                 gridlines hit the top edge. -->
-                            <TextBlock Canvas.Left="30"  Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="%MAC"/>
-                            <TextBlock Canvas.Left="57"  Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="21"/>
-                            <TextBlock Canvas.Left="74"  Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="22"/>
-                            <TextBlock Canvas.Left="91"  Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="23"/>
-                            <TextBlock Canvas.Left="108" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="24"/>
-                            <TextBlock Canvas.Left="125" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="25"/>
-                            <TextBlock Canvas.Left="142" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="26"/>
-                            <TextBlock Canvas.Left="159" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="27"/>
-                            <TextBlock Canvas.Left="176" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="28"/>
-                            <TextBlock Canvas.Left="193" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="29"/>
-                            <TextBlock Canvas.Left="210" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="30"/>
-                            <TextBlock Canvas.Left="227" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="31"/>
-                            <TextBlock Canvas.Left="244" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="32"/>
-                            <TextBlock Canvas.Left="261" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="33"/>
-                            <TextBlock Canvas.Left="278" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="34"/>
-                            <TextBlock Canvas.Left="295" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="35"/>
-                            <TextBlock Canvas.Left="312" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="36"/>
-                            <TextBlock Canvas.Left="329" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="37"/>
-                            <TextBlock Canvas.Left="346" Canvas.Top="13" Foreground="#FFFFFF" FontSize="10" Text="38"/>
+                            <!-- X-axis %MAC labels (top of chart). -->
+                            <ItemsControl ItemsSource="{Binding XAxisLabels}"
+                                          Width="600" Height="580"
+                                          ItemTemplate="{StaticResource AxisLabelTemplate}"
+                                          ItemContainerStyle="{StaticResource LabelContainerStyle}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
 
-                            <!-- Y-axis labels — top values from the EFB markup. -->
-                            <TextBlock Canvas.Left="40" Canvas.Top="42"  Foreground="#FFFFFF" FontSize="10" Text="75"/>
-                            <TextBlock Canvas.Left="40" Canvas.Top="77"  Foreground="#FFFFFF" FontSize="10" Text="70"/>
-                            <TextBlock Canvas.Left="40" Canvas.Top="112" Foreground="#FFFFFF" FontSize="10" Text="65"/>
-                            <TextBlock Canvas.Left="40" Canvas.Top="147" Foreground="#FFFFFF" FontSize="10" Text="60"/>
-                            <TextBlock Canvas.Left="40" Canvas.Top="183" Foreground="#FFFFFF" FontSize="10" Text="55"/>
-                            <TextBlock Canvas.Left="40" Canvas.Top="218" Foreground="#FFFFFF" FontSize="10" Text="50"/>
-                            <TextBlock Canvas.Left="40" Canvas.Top="253" Foreground="#FFFFFF" FontSize="10" Text="45"/>
-                            <TextBlock Canvas.Left="40" Canvas.Top="288" Foreground="#FFFFFF" FontSize="10" Text="40"/>
-                            <TextBlock Canvas.Left="40" Canvas.Top="323" Foreground="#FFFFFF" FontSize="10" Text="35"/>
+                            <!-- Y-axis weight labels (left side). -->
+                            <ItemsControl ItemsSource="{Binding YAxisLabels}"
+                                          Width="600" Height="580"
+                                          ItemTemplate="{StaticResource AxisLabelTemplate}"
+                                          ItemContainerStyle="{StaticResource LabelContainerStyle}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
 
-                            <!-- Limit-line annotations — positions verbatim from EFB.
-                                 The PNG itself draws the dashed/solid horizontal lines;
-                                 these are just the textual labels. -->
-                            <TextBlock Canvas.Left="192" Canvas.Top="61"  Foreground="#FFFFFF" FontSize="10" Text="MTOW = 73,500KG"/>
-                            <TextBlock Canvas.Left="179" Canvas.Top="111" Foreground="#FFFFFF" FontSize="10" Text="MLW = 64,500KG"/>
-                            <TextBlock Canvas.Left="169" Canvas.Top="135" Foreground="#FFFFFF" FontSize="10" Text="MZFW = 61,000KG"/>
+                            <!-- Y-axis tick marks (1T resolution). -->
+                            <ItemsControl ItemsSource="{Binding Ticks}"
+                                          Width="600" Height="580"
+                                          ItemTemplate="{StaticResource TickTemplate}"
+                                          ItemContainerStyle="{StaticResource TickContainerStyle}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
 
-                            <!-- Envelope-region annotations.
-                                 EFB positions are kept verbatim; we add RotateTransforms
-                                 to the four side labels so they follow the diagonal
-                                 envelope edges (matching the EFB reference rendering).
-                                 The transform pivots at each TextBlock's top-left
-                                 corner, so the Canvas.Left/Top coordinate is the
-                                 rotation anchor — small position nudges are normal
-                                 if the angles are tweaked later. -->
-                            <TextBlock Canvas.Left="156" Canvas.Top="190" Foreground="#FFFFFF" FontSize="11"
-                                       FontWeight="DemiBold" Text="OPERATIONAL LIMITS"/>
+                            <!-- Limit-line annotations (MTOW / MLW / MZFW). -->
+                            <ItemsControl ItemsSource="{Binding LimitAnnotations}"
+                                          Width="600" Height="580"
+                                          ItemTemplate="{StaticResource AnnotationTemplate}"
+                                          ItemContainerStyle="{StaticResource LabelContainerStyle}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
 
-                            <TextBlock Canvas.Left="263" Canvas.Top="192" Foreground="#FFFFFF" FontSize="10" Text="TAKE-OFF LIMITS">
-                                <TextBlock.RenderTransform>
-                                    <RotateTransform Angle="65"/>
-                                </TextBlock.RenderTransform>
-                            </TextBlock>
-
-                            <TextBlock Canvas.Left="266" Canvas.Top="222" Foreground="#FFFFFF" FontSize="10" Text="ZFW LIMIT">
-                                <TextBlock.RenderTransform>
-                                    <RotateTransform Angle="75"/>
-                                </TextBlock.RenderTransform>
-                            </TextBlock>
-
-                            <TextBlock Canvas.Left="92" Canvas.Top="216" Foreground="#FFFFFF" FontSize="10" Text="ZFW LIMIT">
-                                <TextBlock.RenderTransform>
-                                    <RotateTransform Angle="-75"/>
-                                </TextBlock.RenderTransform>
-                            </TextBlock>
-
-                            <TextBlock Canvas.Left="79" Canvas.Top="265" Foreground="#FFFFFF" FontSize="10" Text="TAKE-OFF LIMITS">
-                                <TextBlock.RenderTransform>
-                                    <RotateTransform Angle="-65"/>
-                                </TextBlock.RenderTransform>
-                            </TextBlock>
+                            <!-- Envelope-edge annotations (Operational Limits +
+                                 Take-Off / Zfw labels with their rotations). -->
+                            <ItemsControl ItemsSource="{Binding EnvelopeAnnotations}"
+                                          Width="600" Height="580"
+                                          ItemTemplate="{StaticResource AnnotationTemplate}"
+                                          ItemContainerStyle="{StaticResource LabelContainerStyle}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
 
                             <!-- ZFW point — pink quadrant-fill crosshair.
-                                 Two pie wedges (top-right + bottom-left) painted in pink
-                                 over a white base; crosshair lines extend slightly past the rim. -->
+                                 Two pie wedges (top-right + bottom-left) painted
+                                 in pink over a white base; crosshair lines
+                                 extend slightly past the rim. -->
                             <Grid Width="22" Height="22"
                                   Canvas.Left="{Binding ZfwDotLeft}"
-                                  Canvas.Top="{Binding ZfwDotTop}">
+                                  Canvas.Top="{Binding ZfwDotTop}"
+                                  Visibility="{Binding ZfwDotVisibility}">
                                 <Ellipse Fill="White" Stroke="#80000000" StrokeThickness="1"/>
                                 <Path Fill="#E91E63">
                                     <Path.Data>
@@ -154,75 +191,76 @@
                             <!-- GW point — solid light blue with white crosshair. -->
                             <Grid Width="22" Height="22"
                                   Canvas.Left="{Binding GwDotLeft}"
-                                  Canvas.Top="{Binding GwDotTop}">
+                                  Canvas.Top="{Binding GwDotTop}"
+                                  Visibility="{Binding GwDotVisibility}">
                                 <Ellipse Fill="#80B7CFD9" Stroke="#FFFFFF" StrokeThickness="1"/>
                                 <Line X1="11" Y1="-2" X2="11" Y2="24" Stroke="White" StrokeThickness="1.2"/>
                                 <Line X1="-2" Y1="11" X2="24" Y2="11" Stroke="White" StrokeThickness="1.2"/>
                             </Grid>
+
+                            <!-- MAC% gauge bars below the chart. The track
+                                 is invisible; only the live coloured fill
+                                 renders so an empty bar is invisible rather
+                                 than appearing as a dark band. -->
+                            <Rectangle Canvas.Left="80" Canvas.Top="470" Height="5"
+                                       Width="{Binding ZfwBarFillWidth}" Fill="#E91E63"/>
+                            <Rectangle Canvas.Left="80" Canvas.Top="478" Height="5"
+                                       Width="{Binding GwBarFillWidth}" Fill="#FF8A00"/>
+
+                            <!-- Bordered summary strip — 4 cells in a row. -->
+                            <Grid Canvas.Left="80" Canvas.Top="495" Width="500" Height="50">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" BorderBrush="#3F3F3F" BorderThickness="1" Padding="6,4,6,4">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock Foreground="#CFD5E6" FontSize="10"
+                                                   HorizontalAlignment="Center" Text="ZFW (KG)"/>
+                                        <TextBlock Foreground="#FFFFFF" FontWeight="Bold" FontSize="14"
+                                                   HorizontalAlignment="Center"
+                                                   Text="{Binding ZfwKg, StringFormat={}{0:N0}}"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="1" BorderBrush="#3F3F3F" BorderThickness="0,1,1,1" Padding="6,4,6,4">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock Foreground="#CFD5E6" FontSize="10"
+                                                   HorizontalAlignment="Center" Text="MACZFW (%)"/>
+                                        <TextBlock Foreground="#FFFFFF" FontWeight="Bold" FontSize="14"
+                                                   HorizontalAlignment="Center"
+                                                   Text="{Binding MaczfwPercent, StringFormat={}{0:F1}}"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="2" BorderBrush="#3F3F3F" BorderThickness="0,1,1,1" Padding="6,4,6,4">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock Foreground="#CFD5E6" FontSize="10"
+                                                   HorizontalAlignment="Center" Text="GW (KG)"/>
+                                        <TextBlock Foreground="#FFFFFF" FontWeight="Bold" FontSize="14"
+                                                   HorizontalAlignment="Center"
+                                                   Text="{Binding GwKg, StringFormat={}{0:N0}}"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="3" BorderBrush="#3F3F3F" BorderThickness="0,1,1,1" Padding="6,4,6,4">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock Foreground="#CFD5E6" FontSize="10"
+                                                   HorizontalAlignment="Center" Text="MACGW (%)"/>
+                                        <TextBlock Foreground="#FFFFFF" FontWeight="Bold" FontSize="14"
+                                                   HorizontalAlignment="Center"
+                                                   Text="{Binding MacgwPercent, StringFormat={}{0:F1}}"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <!-- Live-data note. Centred over the gauge/summary
+                                 width so it visually anchors on the chart. -->
+                            <TextBlock Canvas.Left="80" Canvas.Top="558" Width="500"
+                                       FontStyle="Italic" FontSize="11"
+                                       TextAlignment="Center" Foreground="#CFD5E6"
+                                       Text="NOTE: THE ABOVE FIGURES ARE LIVE."/>
                         </Canvas>
-
-                        <!-- MAC% gauge bars below the chart. Width matches the
-                             scaled chart (380 logical × 1.25 = 475) so the bars
-                             line up visually under the envelope. The track
-                             rectangle is gone — only the live coloured fill
-                             is rendered, so an empty bar (MAC% = 0) is invisible
-                             rather than appearing as a dark band. -->
-                        <Grid Margin="0,2,0,1" Height="6" Width="475" HorizontalAlignment="Left">
-                            <Rectangle HorizontalAlignment="Left" Fill="#E91E63"
-                                       Width="{Binding ZfwBarFillWidth}"/>
-                        </Grid>
-                        <Grid Margin="0,1,0,4" Height="6" Width="475" HorizontalAlignment="Left">
-                            <Rectangle HorizontalAlignment="Left" Fill="#FF8A00"
-                                       Width="{Binding GwBarFillWidth}"/>
-                        </Grid>
-
-                        <!-- Bordered summary strip — 4 cells in a row. -->
-                        <Grid Margin="0,8,0,4" Width="475" HorizontalAlignment="Left">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" BorderBrush="#3F3F3F" BorderThickness="1" Padding="6,4,6,4">
-                                <StackPanel HorizontalAlignment="Center">
-                                    <TextBlock Foreground="{DynamicResource CategoryTextBrush}" FontSize="11"
-                                               HorizontalAlignment="Center" Text="ZFW (KG)"/>
-                                    <TextBlock FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"
-                                               Text="{Binding ZfwKg, StringFormat={}{0:N0}}"/>
-                                </StackPanel>
-                            </Border>
-                            <Border Grid.Column="1" BorderBrush="#3F3F3F" BorderThickness="0,1,1,1" Padding="6,4,6,4">
-                                <StackPanel HorizontalAlignment="Center">
-                                    <TextBlock Foreground="{DynamicResource CategoryTextBrush}" FontSize="11"
-                                               HorizontalAlignment="Center" Text="MACZFW (%)"/>
-                                    <TextBlock FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"
-                                               Text="{Binding MaczfwPercent, StringFormat={}{0:F1}}"/>
-                                </StackPanel>
-                            </Border>
-                            <Border Grid.Column="2" BorderBrush="#3F3F3F" BorderThickness="0,1,1,1" Padding="6,4,6,4">
-                                <StackPanel HorizontalAlignment="Center">
-                                    <TextBlock Foreground="{DynamicResource CategoryTextBrush}" FontSize="11"
-                                               HorizontalAlignment="Center" Text="GW (KG)"/>
-                                    <TextBlock FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"
-                                               Text="{Binding GwKg, StringFormat={}{0:N0}}"/>
-                                </StackPanel>
-                            </Border>
-                            <Border Grid.Column="3" BorderBrush="#3F3F3F" BorderThickness="0,1,1,1" Padding="6,4,6,4">
-                                <StackPanel HorizontalAlignment="Center">
-                                    <TextBlock Foreground="{DynamicResource CategoryTextBrush}" FontSize="11"
-                                               HorizontalAlignment="Center" Text="MACGW (%)"/>
-                                    <TextBlock FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"
-                                               Text="{Binding MacgwPercent, StringFormat={}{0:F1}}"/>
-                                </StackPanel>
-                            </Border>
-                        </Grid>
-
-                        <TextBlock Margin="0,4,0,4" FontStyle="Italic" FontSize="11"
-                                   HorizontalAlignment="Center"
-                                   Foreground="{DynamicResource CategoryTextBrush}"
-                                   Text="NOTE: THE ABOVE FIGURES ARE LIVE."/>
-                    </StackPanel>
+                    </Viewbox>
                 </Border>
             </StackPanel>
 

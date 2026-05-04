@@ -1,8 +1,11 @@
 using CFIT.AppFramework.UI.ViewModels;
 using Prosim2GSX.State;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Windows;
+using System.Windows.Data;
 
 namespace Prosim2GSX.UI.Views.WeightBalance
 {
@@ -12,44 +15,68 @@ namespace Prosim2GSX.UI.Views.WeightBalance
     // through to the store, and PropertyChanged is forwarded so XAML bindings
     // refresh without the view-model duplicating any state.
     //
-    // The chart-coordinate properties (ZfwDotLeft/Top, GwDotLeft/Top) live
-    // here so the XAML can bind Canvas.Left/Top directly without a converter
-    // chain — the math fits cleanly with the rest of the projection.
+    // Chart geometry mirrors the proportional layout used by the web panel.
+    // The PNG occupies a fixed sub-rectangle of the chart Canvas; every
+    // annotation, tick, and label is positioned via the same XForMac() /
+    // YForT() helpers and the same ratio constants, so the WPF and web
+    // charts render identically over the same envelope graphic.
     public partial class ModelWeightBalance : ViewModelBase<AppService>
     {
         protected virtual AppService AppService => Source;
         protected virtual WeightBalanceState State => AppService?.WeightBalance;
 
-        // Chart canvas dimensions and axis ranges. Kept here (not on the
-        // store) because they are pure presentation: the envelope chart is
-        // a WPF rendering choice. The React panel uses its own SVG geometry.
-        // Calibration adopted verbatim from the ProsimEFB W&B page so the
-        // wandb.png envelope graphics align with our dot positions without
-        // any scaling. The label positions in the EFB markup map to:
-        //   MAC 21  → label left=57, line at x=62  (label centred on line)
-        //   MAC 38  → label left=346, line at x=351
-        //   75T     → label top=42.07, line at y=47
-        //   35T     → label top=323, line at y=328
-        // From which: 17 px / 1% MAC, 7.023 px / 1T.
-        public const double ChartWidth = 380;
-        public const double ChartHeight = 340;
-        public const double PlotLeft = 62;
-        public const double PlotRight = 351;
-        public const double PlotTop = 47;
-        public const double PlotBottom = 328;
+        // ── Canvas + PNG sub-rectangle ───────────────────────────────────────
+        public const double CanvasW    = 600;
+        public const double CanvasH    = 580;
+        public const double PngLeft    = 80;
+        public const double PngTop     = 30;
+        public const double PngWidth   = 500;
+        public const double PngHeight  = 435;
+
+        // ── Axis ranges baked into the PNG ───────────────────────────────────
+        // Top numbers run [21..38]; the endpoint values 20 and 39 form the
+        // chart frame and aren't labelled. Left numbers run [35..75] in 5T
+        // steps; ticks fill in the 1T steps between (and continue to 77T
+        // since the envelope extends slightly past the last numeric label).
+        public const double TopNumMin     = 20;
+        public const double TopNumMax     = 39;
+        public const double LeftNumMinKg  = 35;
+        public const double LeftNumMaxKg  = 78;
+        public const int    LeftKgStep    = 5;
+
+        // MAC% range used for clamping the live CG dots and the gauge-bar
+        // fills. The PNG's actual envelope is narrower than the labelled
+        // axis, but these are the operational limits we surface to the user.
         public const double AxisMacMin = 21;
         public const double AxisMacMax = 38;
-        public const double AxisWeightMinT = 35;
-        public const double AxisWeightMaxT = 75;
+
+        // ── Bottom-of-chart UI offsets (gauges + summary + note) ─────────────
+        // All inside the Canvas so they scale with the chart through the
+        // outer Viewbox. Gauges sit immediately below the PNG, the four-cell
+        // summary table below them, and the live-data note last.
+        public const double GaugeZfwTop   = 470;
+        public const double GaugeGwTop    = 478;
+        public const double GaugeWidth    = PngWidth;
+        public const double GaugeHeight   = 5;
+        public const double SummaryTop    = 495;
+        public const double SummaryHeight = 50;
+        public const double NoteTop       = 558;
+
         public const double DotRadius = 11;
-        // 380 logical px × the chart's LayoutTransform scale (1.25) — keeps
-        // the gauge bars visually aligned with the rendered chart underneath
-        // and ensures the chart fits inside the SectionCardBorder's content
-        // area (510 col − 24 padding = 486 available; 380 × 1.25 = 475 fits).
-        public const double GaugeBarWidth = 475;
+
+        public List<ChartLabel> XAxisLabels { get; }
+        public List<ChartLabel> YAxisLabels { get; }
+        public List<ChartTick>  Ticks { get; }
+        public List<ChartLabel> LimitAnnotations { get; }
+        public List<ChartLabel> EnvelopeAnnotations { get; }
 
         public ModelWeightBalance(AppService appService) : base(appService)
         {
+            XAxisLabels         = BuildXAxisLabels();
+            YAxisLabels         = BuildYAxisLabels();
+            Ticks               = BuildTicks();
+            LimitAnnotations    = BuildLimitAnnotations();
+            EnvelopeAnnotations = BuildEnvelopeAnnotations();
         }
 
         protected override void InitializeModel()
@@ -99,18 +126,117 @@ namespace Prosim2GSX.UI.Views.WeightBalance
             NotifyPropertyChanged(nameof(ZfwDotTop));
             NotifyPropertyChanged(nameof(GwDotLeft));
             NotifyPropertyChanged(nameof(GwDotTop));
-            NotifyPropertyChanged(nameof(MtowLineTop));
-            NotifyPropertyChanged(nameof(MlwLineTop));
-            NotifyPropertyChanged(nameof(MzfwLineTop));
+            NotifyPropertyChanged(nameof(ZfwDotVisibility));
+            NotifyPropertyChanged(nameof(GwDotVisibility));
             NotifyPropertyChanged(nameof(ZfwBarFillWidth));
             NotifyPropertyChanged(nameof(GwBarFillWidth));
         }
 
-        // Bottom-of-chart MAC% gauge bars. Width is the normalised MAC%
-        // position scaled to the gauge bar's full width — bound directly to
-        // a Rectangle.Width so no value converter is needed.
-        public virtual double ZfwBarFillWidth => MacFraction(MaczfwPercent) * GaugeBarWidth;
-        public virtual double GwBarFillWidth => MacFraction(MacgwPercent) * GaugeBarWidth;
+        // ── Coordinate helpers (mirror the web panel exactly) ────────────────
+        // X position for a MAC% value, anchored at the PNG's left edge.
+        protected static double XForMac(double mac) =>
+            PngLeft + PngWidth * (mac - TopNumMin) / (TopNumMax - TopNumMin);
+
+        // Y position for a weight in tonnes, anchored at the PNG's top edge.
+        // The −2 nudge matches the web panel — labels visually align with
+        // the centre of their tick marks.
+        protected static double YForT(double t) =>
+            PngTop + PngHeight * (LeftNumMaxKg - t) / (LeftNumMaxKg - LeftNumMinKg) - 2;
+
+        // Annotation position from a (xRatio, yRatio) pair anchored at the
+        // PNG's top-left. Same ratio table the web panel uses, so labels
+        // land in identical spots.
+        protected static (double left, double top) AnnotPos(double xRatio, double yRatio) =>
+            (PngLeft + xRatio * PngWidth, PngTop + yRatio * PngHeight);
+
+        // ── Static collection builders ───────────────────────────────────────
+        private static List<ChartLabel> BuildXAxisLabels()
+        {
+            var list = new List<ChartLabel>
+            {
+                // "%MAC" gutter label — top-left of the chart frame.
+                new ChartLabel { CenterLeft = PngLeft - 10, CenterTop = PngTop - 10, Text = "%MAC" },
+            };
+            for (int m = (int)TopNumMin + 1; m < (int)TopNumMax; m++)
+            {
+                list.Add(new ChartLabel
+                {
+                    CenterLeft = XForMac(m),
+                    CenterTop  = PngTop - 10,
+                    Text       = m.ToString(CultureInfo.InvariantCulture),
+                });
+            }
+            return list;
+        }
+
+        private static List<ChartLabel> BuildYAxisLabels()
+        {
+            var list = new List<ChartLabel>();
+            for (double t = LeftNumMinKg; t <= 75; t += LeftKgStep)
+            {
+                list.Add(new ChartLabel
+                {
+                    CenterLeft = PngLeft - 8,
+                    CenterTop  = YForT(t),
+                    Text       = t.ToString("0", CultureInfo.InvariantCulture),
+                });
+            }
+            return list;
+        }
+
+        private static List<ChartTick> BuildTicks()
+        {
+            var list = new List<ChartTick>();
+            for (int t = (int)LeftNumMinKg; t < (int)LeftNumMaxKg; t++)
+            {
+                bool isLong = (t % 5) == 0;
+                double w = isLong ? 10 : 5;
+                list.Add(new ChartTick
+                {
+                    Left  = PngLeft - w,
+                    Top   = YForT(t) - 0.5,  // 1px line — centre on yForT
+                    Width = w,
+                });
+            }
+            return list;
+        }
+
+        private static List<ChartLabel> BuildLimitAnnotations()
+        {
+            return new List<ChartLabel>
+            {
+                MakePillLabel(0.47, 0.125, "MTOW = 73,500KG"),
+                MakePillLabel(0.43, 0.29,  "MLW = 64,500KG"),
+                MakePillLabel(0.40, 0.37,  "MZFW = 61,000KG"),
+            };
+        }
+
+        private static List<ChartLabel> BuildEnvelopeAnnotations()
+        {
+            // Casing matches the web panel for consistency.
+            return new List<ChartLabel>
+            {
+                MakePillLabel(0.40, 0.56, "Operational Limits", scale: 0.8),
+                MakePillLabel(0.69, 0.56, "Take-Off Limits",    angle: -43),
+                MakePillLabel(0.70, 0.66, "Zfw limit",          angle: -60),
+                MakePillLabel(0.16, 0.64, "Zfw limit",          angle: -85),
+                MakePillLabel(0.12, 0.80, "Take-Off Limits",    angle: -110),
+            };
+        }
+
+        private static ChartLabel MakePillLabel(double xRatio, double yRatio, string text,
+                                                 double scale = 0.7, double angle = 0)
+        {
+            var (l, t) = AnnotPos(xRatio, yRatio);
+            return new ChartLabel { CenterLeft = l, CenterTop = t, Text = text, Scale = scale, Angle = angle };
+        }
+
+        // ── Bottom-of-chart MAC% gauge bars ──────────────────────────────────
+        // Width is the normalised MAC% position scaled to the gauge bar's
+        // full width — bound directly to a Rectangle.Width so no value
+        // converter is needed.
+        public virtual double ZfwBarFillWidth => MacFraction(MaczfwPercent) * GaugeWidth;
+        public virtual double GwBarFillWidth  => MacFraction(MacgwPercent)  * GaugeWidth;
 
         protected static double MacFraction(double mac)
         {
@@ -119,61 +245,101 @@ namespace Prosim2GSX.UI.Views.WeightBalance
             return (clamped - AxisMacMin) / (AxisMacMax - AxisMacMin);
         }
 
-        // ── Raw values ──────────────────────────────────────────────────────
-        public virtual double ZfwKg => State?.ZfwKg ?? 0;
-        public virtual double MaczfwPercent => State?.MaczfwPercent ?? 0;
-        public virtual double GwKg => State?.GwKg ?? 0;
-        public virtual double MacgwPercent => State?.MacgwPercent ?? 0;
-        public virtual double FuelPlannedKg => State?.FuelPlannedKg ?? 0;
-        public virtual double FuelInTanksKg => State?.FuelInTanksKg ?? 0;
-        public virtual double FuelCapacityKg => State?.FuelCapacityKg ?? 0;
-        public virtual double CargoFwdLoadedKg => State?.CargoFwdLoadedKg ?? 0;
-        public virtual double CargoFwdCapacityKg => State?.CargoFwdCapacityKg ?? 0;
-        public virtual double CargoAftLoadedKg => State?.CargoAftLoadedKg ?? 0;
-        public virtual double CargoAftCapacityKg => State?.CargoAftCapacityKg ?? 0;
+        // ── Raw values (forwarded from store) ────────────────────────────────
+        public virtual double ZfwKg               => State?.ZfwKg ?? 0;
+        public virtual double MaczfwPercent       => State?.MaczfwPercent ?? 0;
+        public virtual double GwKg                => State?.GwKg ?? 0;
+        public virtual double MacgwPercent        => State?.MacgwPercent ?? 0;
+        public virtual double FuelPlannedKg       => State?.FuelPlannedKg ?? 0;
+        public virtual double FuelInTanksKg       => State?.FuelInTanksKg ?? 0;
+        public virtual double FuelCapacityKg      => State?.FuelCapacityKg ?? 0;
+        public virtual double CargoFwdLoadedKg    => State?.CargoFwdLoadedKg ?? 0;
+        public virtual double CargoFwdCapacityKg  => State?.CargoFwdCapacityKg ?? 0;
+        public virtual double CargoAftLoadedKg    => State?.CargoAftLoadedKg ?? 0;
+        public virtual double CargoAftCapacityKg  => State?.CargoAftCapacityKg ?? 0;
         public virtual double CargoBulkCapacityKg => State?.CargoBulkCapacityKg ?? 0;
-        public virtual double CargoPlannedKg => State?.CargoPlannedKg ?? 0;
-        public virtual double CargoLoadedTotalKg => CargoFwdLoadedKg + CargoAftLoadedKg;
-        public virtual int PassengersPlanned => State?.PassengersPlanned ?? 0;
-        public virtual int PassengersBoarded => State?.PassengersBoarded ?? 0;
-        public virtual int PassengersTotalCapacity =>
+        public virtual double CargoPlannedKg      => State?.CargoPlannedKg ?? 0;
+        public virtual double CargoLoadedTotalKg  => CargoFwdLoadedKg + CargoAftLoadedKg;
+        public virtual int    PassengersPlanned   => State?.PassengersPlanned ?? 0;
+        public virtual int    PassengersBoarded   => State?.PassengersBoarded ?? 0;
+        public virtual int    PassengersTotalCapacity =>
             (State?.Zone1Capacity ?? 0) + (State?.Zone2Capacity ?? 0)
             + (State?.Zone3Capacity ?? 0) + (State?.Zone4Capacity ?? 0);
-        public virtual int Zone1Capacity => State?.Zone1Capacity ?? 0;
-        public virtual int Zone2Capacity => State?.Zone2Capacity ?? 0;
-        public virtual int Zone3Capacity => State?.Zone3Capacity ?? 0;
-        public virtual int Zone4Capacity => State?.Zone4Capacity ?? 0;
-        public virtual double MactowPercent => State?.MactowPercent ?? 0;
+        public virtual int    Zone1Capacity       => State?.Zone1Capacity ?? 0;
+        public virtual int    Zone2Capacity       => State?.Zone2Capacity ?? 0;
+        public virtual int    Zone3Capacity       => State?.Zone3Capacity ?? 0;
+        public virtual int    Zone4Capacity       => State?.Zone4Capacity ?? 0;
+        public virtual double MactowPercent       => State?.MactowPercent ?? 0;
 
-        // ── Chart geometry ──────────────────────────────────────────────────
-        // Convert (MAC%, weight kg) to Canvas pixel coordinates. The dot
-        // properties subtract DotRadius so the bound (Canvas.Left, Canvas.Top)
+        // ── Live dot positions ───────────────────────────────────────────────
+        // Top-left of the 22×22 dot, so the bound (Canvas.Left, Canvas.Top)
         // plant the dot's centre on the data point.
         public virtual double ZfwDotLeft => MacToX(MaczfwPercent) - DotRadius;
-        public virtual double ZfwDotTop => WeightToY(ZfwKg / 1000.0) - DotRadius;
-        public virtual double GwDotLeft => MacToX(MacgwPercent) - DotRadius;
-        public virtual double GwDotTop => WeightToY(GwKg / 1000.0) - DotRadius;
+        public virtual double ZfwDotTop  => WeightToY(ZfwKg / 1000.0) - DotRadius;
+        public virtual double GwDotLeft  => MacToX(MacgwPercent) - DotRadius;
+        public virtual double GwDotTop   => WeightToY(GwKg / 1000.0) - DotRadius;
 
-        // Limit lines — Y positions for the dashed MTOW/MLW/MZFW horizontals.
-        // Limits are A320 family constants on WeightBalanceState.
-        public virtual double MtowLineTop => WeightToY((State?.MtowLimitKg ?? 73500) / 1000.0);
-        public virtual double MlwLineTop => WeightToY((State?.MlwLimitKg ?? 64500) / 1000.0);
-        public virtual double MzfwLineTop => WeightToY((State?.MzfwLimitKg ?? 61000) / 1000.0);
+        // Hide dots when the source values are unset — otherwise they'd
+        // park in the bottom-left corner on first paint.
+        public virtual Visibility ZfwDotVisibility =>
+            (ZfwKg > 0 && MaczfwPercent > 0) ? Visibility.Visible : Visibility.Collapsed;
+        public virtual Visibility GwDotVisibility =>
+            (GwKg > 0 && MacgwPercent > 0) ? Visibility.Visible : Visibility.Collapsed;
 
-        protected static double MacToX(double macPercent)
+        protected static double MacToX(double mac)
         {
-            if (double.IsNaN(macPercent) || macPercent <= 0) return PlotLeft;
-            double clamped = Math.Clamp(macPercent, AxisMacMin, AxisMacMax);
-            double frac = (clamped - AxisMacMin) / (AxisMacMax - AxisMacMin);
-            return PlotLeft + frac * (PlotRight - PlotLeft);
+            if (double.IsNaN(mac) || mac <= 0) return XForMac(AxisMacMin);
+            double clamped = Math.Clamp(mac, AxisMacMin, AxisMacMax);
+            return XForMac(clamped);
         }
 
-        protected static double WeightToY(double weightT)
+        protected static double WeightToY(double t)
         {
-            if (double.IsNaN(weightT) || weightT <= 0) return PlotBottom;
-            double clamped = Math.Clamp(weightT, AxisWeightMinT, AxisWeightMaxT);
-            double frac = (AxisWeightMaxT - clamped) / (AxisWeightMaxT - AxisWeightMinT);
-            return PlotTop + frac * (PlotBottom - PlotTop);
+            if (double.IsNaN(t) || t <= 0) return YForT(LeftNumMinKg);
+            double clamped = Math.Clamp(t, LeftNumMinKg, 75);
+            return YForT(clamped);
         }
+    }
+
+    // POCO for axis labels and pill-bordered annotations. CenterLeft/
+    // CenterTop is the position the text's visual centre should land on;
+    // the XAML template uses a 0×0 wrapper Grid so HorizontalAlignment="Center"
+    // + VerticalAlignment="Center" centres the un-transformed text on that
+    // anchor, then RenderTransform scales/rotates around the same centre.
+    public class ChartLabel
+    {
+        public double CenterLeft { get; set; }
+        public double CenterTop  { get; set; }
+        public string Text       { get; set; } = string.Empty;
+        public double Scale      { get; set; } = 0.7;
+        public double Angle      { get; set; } = 0;
+    }
+
+    // POCO for Y-axis tick marks. Left/Top is the absolute top-left of the
+    // 1-pixel-tall rectangle (no centring trick — ticks are drawn directly).
+    public class ChartTick
+    {
+        public double Left  { get; set; }
+        public double Top   { get; set; }
+        public double Width { get; set; }
+    }
+
+    // Converter used inside the chart label DataTemplates: takes a width or
+    // height and returns its negation halved. Bound to Canvas.Left/Top on
+    // the inner element with ElementName=Self, the result is a -W/2 / -H/2
+    // offset that centres the element on its wrapper Canvas's origin —
+    // which is itself positioned at (CenterLeft, CenterTop). Net effect:
+    // the visual centre of the un-transformed text/pill lands on the data
+    // anchor, and RenderTransformOrigin="0.5,0.5" then scales/rotates
+    // around that same point.
+    public class NegativeHalfConverter : IValueConverter
+    {
+        public object Convert(object value, System.Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is double d) return -d / 2.0;
+            return 0.0;
+        }
+        public object ConvertBack(object value, System.Type targetType, object parameter, CultureInfo culture)
+            => throw new System.NotSupportedException();
     }
 }
