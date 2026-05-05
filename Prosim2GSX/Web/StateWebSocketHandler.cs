@@ -62,6 +62,7 @@ namespace Prosim2GSX.Web
             _app.Ofp.PropertyChanged += OnOfpChanged;
             _app.Checklist.PropertyChanged += OnChecklistChanged;
             _app.WeightBalance.PropertyChanged += OnWeightBalanceChanged;
+            _app.Loadsheet.PropertyChanged += OnLoadsheetChanged;
             HookChecklistItems(_app.Checklist);
             _app.FlightStatus.MessageLog.CollectionChanged += OnMessageLogChanged;
 
@@ -209,6 +210,35 @@ namespace Prosim2GSX.Web
 
         private void OnWeightBalanceChanged(object sender, PropertyChangedEventArgs e)
             => Broadcast(channel: "weightBalance", e.PropertyName, sender);
+
+        // Loadsheet broadcasts the full Prelim+Final pair on every property
+        // change rather than per-property patches — the React panel renders
+        // both cards atomically (each card is one card, not 8 fields), and a
+        // single combined patch is cheaper to reason about than 16 individual
+        // PropertyChanged broadcasts. Cost is small: the DTO pair is ~20
+        // primitives + 2 strings, fired only when something actually moved.
+        private void OnLoadsheetChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (_connections.IsEmpty) return;
+            try
+            {
+                var snap = LoadsheetSnapshotDto.From(_app);
+                var envelope = new
+                {
+                    channel = "loadsheet",
+                    patch = new Dictionary<string, object>
+                    {
+                        ["prelim"] = snap.Prelim,
+                        ["final"] = snap.Final,
+                    },
+                };
+                BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+        }
 
         private void OnConfigChanged(object sender, PropertyChangedEventArgs e)
         {

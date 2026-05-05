@@ -52,6 +52,7 @@ namespace Prosim2GSX
         public virtual OfpState Ofp { get; } = new();
         public virtual ChecklistState Checklist { get; } = new();
         public virtual WeightBalanceState WeightBalance { get; } = new();
+        public virtual LoadsheetState Loadsheet { get; } = new();
         // Settings is an alias for the existing Config singleton — Config already
         // implements INotifyPropertyChanged and persists itself, so it serves as
         // the AppSettingsState surface unchanged.
@@ -97,6 +98,12 @@ namespace Prosim2GSX
         // unconditionally; the service itself null-guards on the SDK so a
         // degraded mode (no SDK) just leaves the store at last-known values.
         public virtual WeightBalanceService WeightBalanceService { get; protected set; }
+
+        // Reads the two EFB loadsheet datarefs (efb.prelimLoadsheet,
+        // efb.finalLoadsheet) each StateUpdateWorker tick and projects the
+        // parsed JSON into LoadsheetState. Same null-safety story as W&B —
+        // no SDK simply leaves both slots at "none"/"pending".
+        public virtual LoadsheetService LoadsheetService { get; protected set; }
 
         public AppService(Config config) : base(config)
         {
@@ -173,6 +180,10 @@ namespace Prosim2GSX
             // StateUpdateWorker tick. The worker calls Tick() unconditionally;
             // the service no-ops when the SDK is unavailable.
             WeightBalanceService = new WeightBalanceService(this);
+
+            // Loadsheet reader — populates LoadsheetState from the two EFB
+            // loadsheet datarefs. Same Tick() contract as the W&B service.
+            LoadsheetService = new LoadsheetService(this);
 
             // Eagerly load the checklist definition into ChecklistState so the
             // web UI can render even before the WPF Checklists tab is opened.
