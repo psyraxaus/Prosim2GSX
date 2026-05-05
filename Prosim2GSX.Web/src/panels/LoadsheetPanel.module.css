@@ -1,0 +1,211 @@
+.panel {
+  padding: 16px 18px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.loading {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.title {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--category-text);
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 6px 14px;
+  border-radius: var(--radius-sm, 4px);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--accent, #4a90e2);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnDanger {
+  border-color: rgba(220, 64, 64, 0.6);
+}
+
+.btnDanger:hover:not(:disabled) {
+  border-color: #dc4040;
+  background: rgba(220, 64, 64, 0.1);
+}
+
+/* Two cards side-by-side; stack on narrow screens. */
+.cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 6px);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Final-card error highlight per spec. */
+.cardError {
+  border-color: #dc4040;
+  box-shadow: 0 0 0 1px rgba(220, 64, 64, 0.4);
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardLabel {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  font-weight: 600;
+  color: var(--category-text);
+}
+
+/* Status badges — three colours per spec (PENDING amber, RECEIVED green,
+   ERROR red). Tone classnames mirror the FlightStatusPanel pill scheme. */
+.badge {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+
+.badge_warn {
+  color: #f5a623;
+  background: rgba(245, 166, 35, 0.12);
+  border-color: rgba(245, 166, 35, 0.5);
+}
+
+.badge_ok {
+  color: #2dbe4d;
+  background: rgba(45, 190, 77, 0.12);
+  border-color: rgba(45, 190, 77, 0.5);
+}
+
+.badge_bad {
+  color: #dc4040;
+  background: rgba(220, 64, 64, 0.12);
+  border-color: rgba(220, 64, 64, 0.5);
+}
+
+.empty {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-style: italic;
+  padding: 8px 0;
+}
+
+/* 2-column key/value grid. Labels left-aligned, values right-aligned in
+   monospace. */
+.kvGrid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 14px;
+  align-items: center;
+}
+
+.kvLabel {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--category-text);
+}
+
+.kvValue {
+  font-family: var(--font-mono, monospace);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: right;
+  color: var(--text-primary);
+}
+
+.kvValueBad {
+  color: #dc4040;
+}
+
+/* MAC% range indicator. Track is a thin line, marker is a circle that
+   slides between min/max anchors. */
+.range {
+  margin-top: 4px;
+}
+
+.rangeLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.rangeMid {
+  letter-spacing: 0.08em;
+  color: var(--category-text);
+}
+
+.rangeBar {
+  position: relative;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+
+.rangeMarker {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #2dbe4d;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--bg-card);
+}
+
+.rangeMarkerBad {
+  background: #dc4040;
+}
+
+@media (max-width: 700px) {
+  .cards {
+    grid-template-columns: 1fr;
+  }
+}

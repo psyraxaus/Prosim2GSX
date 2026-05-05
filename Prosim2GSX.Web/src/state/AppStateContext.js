@@ -16,6 +16,7 @@ const initialState = {
     ofp: null,
     checklists: null,
     weightBalance: null,
+    loadsheet: null,
     connection: "closed",
 };
 function reducer(state, action) {

@@ -13,9 +13,9 @@
 
 export type ConnectionStatus = "connecting" | "open" | "reconnecting" | "closed";
 
-export type WsChannel = "flightStatus" | "gsx" | "audio" | "appSettings" | "ofp" | "checklists" | "weightBalance";
+export type WsChannel = "flightStatus" | "gsx" | "audio" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet";
 
-export type StateChannel = "flightStatus" | "audio" | "gsxSettings" | "appSettings" | "ofp" | "checklists" | "weightBalance";
+export type StateChannel = "flightStatus" | "audio" | "gsxSettings" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet";
 
 export interface PatchEnvelope {
   channel: WsChannel;
@@ -696,4 +696,35 @@ export interface WeightBalanceDto {
   mtowLimitKg: number;
   mlwLimitKg: number;
   mzfwLimitKg: number;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Loadsheet (read-only — LOADSHEET tab)
+// ──────────────────────────────────────────────────────────────────────────
+
+// Lifecycle string for a single slot. "none" until ProSim writes a non-empty
+// blob; flips to "received" on a successful parse, or "error" if the JSON
+// is malformed (raw string is preserved on the DTO for diagnosis).
+export type LoadsheetType = "none" | "prelim" | "final";
+export type LoadsheetStatus = "pending" | "received" | "error";
+
+export interface LoadsheetDto {
+  type: LoadsheetType;
+  status: LoadsheetStatus;
+  macTow: number;
+  macTowError: boolean;
+  minMacTow: number;
+  maxMacTow: number;
+  loadsheetIdent: string;
+  towKg: number;
+  rawJson: string;
+  // ISO-8601 string from System.Text.Json (Prosim2GSX.Web uses the
+  // default DateTime serialiser — no special converter needed for the
+  // panel; new Date(...) parses it).
+  receivedAt: string | null;
+}
+
+export interface LoadsheetSnapshotDto {
+  prelim: LoadsheetDto;
+  final: LoadsheetDto;
 }

@@ -25,6 +25,7 @@ export interface AppState {
   ofp: Record<string, unknown> | null;
   checklists: Record<string, unknown> | null;
   weightBalance: Record<string, unknown> | null;
+  loadsheet: Record<string, unknown> | null;
   connection: ConnectionStatus;
 }
 
@@ -42,6 +43,7 @@ const initialState: AppState = {
   ofp: null,
   checklists: null,
   weightBalance: null,
+  loadsheet: null,
   connection: "closed",
 };
 

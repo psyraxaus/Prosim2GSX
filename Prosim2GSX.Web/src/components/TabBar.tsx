@@ -3,6 +3,7 @@ import styles from "./TabBar.module.css";
 export type TabKey =
   | "flightStatus"
   | "ofp"
+  | "loadsheet"
   | "weightBalance"
   | "checklists"
   | "gsxSettings"
@@ -16,10 +17,11 @@ interface Tab {
 }
 
 // Order matches the WPF AppWindow tabs:
-// Flight Status → OFP → W&B → Checklists → GSX Settings → Aircraft Profiles → Audio Settings → App Settings.
+// Flight Status → OFP → Loadsheet → W&B → Checklists → GSX Settings → Aircraft Profiles → Audio Settings → App Settings.
 const TABS: Tab[] = [
   { key: "flightStatus", label: "Flight Status" },
   { key: "ofp", label: "OFP" },
+  { key: "loadsheet", label: "Loadsheet" },
   { key: "weightBalance", label: "W&B" },
   { key: "checklists", label: "Checklists" },
   { key: "gsxSettings", label: "GSX Settings" },
