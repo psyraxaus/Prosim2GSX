@@ -3,6 +3,7 @@ using CFIT.AppTools;
 using Prosim2GSX.UI.Views.Audio;
 using Prosim2GSX.UI.Views.Checklists;
 using Prosim2GSX.UI.Views.Debug;
+using Prosim2GSX.UI.Views.Loadsheet;
 using Prosim2GSX.UI.Views.Monitor;
 using Prosim2GSX.UI.Views.Profiles;
 using Prosim2GSX.UI.Views.Settings;
@@ -88,11 +89,12 @@ namespace Prosim2GSX.UI
             {
                 MainTabControl.Items[0] = CreateTabItem("FLIGHT STATUS", new ViewMonitor());
                 MainTabControl.Items[1] = CreateTabItem("OFP", new Views.Ofp.ViewOfp());
-                MainTabControl.Items[2] = CreateTabItem("W&B", new ViewWeightBalance());
-                MainTabControl.Items[3] = CreateTabItem("CHECKLISTS", new ViewChecklist());
-                MainTabControl.Items[4] = CreateTabItem("GSX SETTINGS", new Views.Automation.ViewAutomation());
-                MainTabControl.Items[5] = CreateTabItem("AIRCRAFT PROFILES", new ViewProfiles());
-                MainTabControl.Items[6] = CreateTabItem("AUDIO SETTINGS", new ViewAudio());
+                MainTabControl.Items[2] = CreateTabItem("LOADSHEET", new ViewLoadsheet());
+                MainTabControl.Items[3] = CreateTabItem("W&B", new ViewWeightBalance());
+                MainTabControl.Items[4] = CreateTabItem("CHECKLISTS", new ViewChecklist());
+                MainTabControl.Items[5] = CreateTabItem("GSX SETTINGS", new Views.Automation.ViewAutomation());
+                MainTabControl.Items[6] = CreateTabItem("AIRCRAFT PROFILES", new ViewProfiles());
+                MainTabControl.Items[7] = CreateTabItem("AUDIO SETTINGS", new ViewAudio());
             }
             else
             {
@@ -100,17 +102,18 @@ namespace Prosim2GSX.UI
                 var placeholder = CreateDegradedPlaceholder();
                 MainTabControl.Items[0] = CreateTabItem("FLIGHT STATUS", placeholder);
                 MainTabControl.Items[1] = CreateTabItem("OFP", CreateDegradedPlaceholder());
-                MainTabControl.Items[2] = CreateTabItem("W&B", CreateDegradedPlaceholder());
-                MainTabControl.Items[3] = CreateTabItem("CHECKLISTS", CreateDegradedPlaceholder());
-                MainTabControl.Items[4] = CreateTabItem("GSX SETTINGS", CreateDegradedPlaceholder());
-                MainTabControl.Items[5] = CreateTabItem("AIRCRAFT PROFILES", CreateDegradedPlaceholder());
-                MainTabControl.Items[6] = CreateTabItem("AUDIO SETTINGS", CreateDegradedPlaceholder());
+                MainTabControl.Items[2] = CreateTabItem("LOADSHEET", CreateDegradedPlaceholder());
+                MainTabControl.Items[3] = CreateTabItem("W&B", CreateDegradedPlaceholder());
+                MainTabControl.Items[4] = CreateTabItem("CHECKLISTS", CreateDegradedPlaceholder());
+                MainTabControl.Items[5] = CreateTabItem("GSX SETTINGS", CreateDegradedPlaceholder());
+                MainTabControl.Items[6] = CreateTabItem("AIRCRAFT PROFILES", CreateDegradedPlaceholder());
+                MainTabControl.Items[7] = CreateTabItem("AUDIO SETTINGS", CreateDegradedPlaceholder());
             }
 
             // Settings tab is always available (needed to configure SDK path)
-            MainTabControl.Items[7] = CreateTabItem("APP SETTINGS", new ViewSettings());
+            MainTabControl.Items[8] = CreateTabItem("APP SETTINGS", new ViewSettings());
 
-            // Optional Debug tab — appended at index 8 only when AppConfig
+            // Optional Debug tab — appended at index 9 only when AppConfig
             // ShowDebugTab is true. Kept out of the XAML so the visual tree
             // never even constructs the view in normal end-user installs.
             if (Prosim2GSX.Instance.AppService?.Config?.ShowDebugTab == true)
@@ -120,7 +123,7 @@ namespace Prosim2GSX.UI
 
             // Set index and previousTabIndex before subscribing so SelectionChanged
             // does not fire Start() while the window is still in its layout pass.
-            int defaultTab = sdkAvailable ? 0 : 7; // Go straight to Settings in degraded mode
+            int defaultTab = sdkAvailable ? 0 : 8; // Go straight to Settings in degraded mode
             MainTabControl.SelectedIndex = defaultTab;
             _previousTabIndex = defaultTab;
             MainTabControl.SelectionChanged += OnTabSelectionChanged;

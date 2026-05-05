@@ -51,6 +51,7 @@
             </TabControl.Resources>
             <TabItem Header="FLIGHT STATUS"/>
             <TabItem Header="OFP"/>
+            <TabItem Header="LOADSHEET"/>
             <TabItem Header="W&amp;B"/>
             <TabItem Header="CHECKLISTS"/>
             <TabItem Header="GSX SETTINGS"/>
