@@ -355,6 +355,28 @@ namespace Prosim2GSX.Web
             }
         }
 
+        // FMS sync result → "fmsSync" channel snapshot. Fired only after a
+        // POST /api/fms/sync attempt — this is a one-shot broadcast (not
+        // per-property), so listeners can drive a flash + label transition
+        // without subscribing to W&B deltas. Caller is MactowValidationService.
+        public void BroadcastFmsSync(FmsSyncResultDto result)
+        {
+            if (_connections.IsEmpty || result == null) return;
+            try
+            {
+                var envelope = new
+                {
+                    channel = "fmsSync",
+                    snapshot = result,
+                };
+                BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+        }
+
         // GsxController.PushbackPreferenceChanged → "ofp" channel patch.
         // Lives outside the OFP store because the preference itself is on
         // GsxController (in-memory, session-scoped); the WS broadcast keeps

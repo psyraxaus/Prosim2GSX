@@ -1,11 +1,16 @@
 using CFIT.AppFramework.UI.ViewModels;
+using CommunityToolkit.Mvvm.Input;
+using Prosim2GSX.Services;
 using Prosim2GSX.State;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
+using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace Prosim2GSX.UI.Views.WeightBalance
 {
@@ -121,6 +126,12 @@ namespace Prosim2GSX.UI.Views.WeightBalance
             NotifyPropertyChanged(nameof(Zone3Capacity));
             NotifyPropertyChanged(nameof(Zone4Capacity));
             NotifyPropertyChanged(nameof(MactowPercent));
+            NotifyPropertyChanged(nameof(MacTowError));
+            NotifyPropertyChanged(nameof(MacTowBrush));
+            NotifyPropertyChanged(nameof(MacTowErrorRangeVisibility));
+            NotifyPropertyChanged(nameof(MacTowRangeText));
+            NotifyPropertyChanged(nameof(IsSyncEnabled));
+            SyncToFmsCommand?.NotifyCanExecuteChanged();
 
             NotifyPropertyChanged(nameof(ZfwDotLeft));
             NotifyPropertyChanged(nameof(ZfwDotTop));
@@ -298,6 +309,167 @@ namespace Prosim2GSX.UI.Views.WeightBalance
             if (double.IsNaN(t) || t <= 0) return YForT(LeftNumMinKg);
             double clamped = Math.Clamp(t, LeftNumMinKg, 75);
             return YForT(clamped);
+        }
+
+        // ── MACTOW validation + FMS sync ────────────────────────────────────
+        // MACTOW resolution and bounds checking are owned by
+        // MactowValidationService; the view-model just projects what the
+        // service exposes through the store and adds UI affordances on top.
+
+        public virtual bool MacTowError => State?.MacTowError ?? false;
+
+        // Green when MACTOW is in range (or unset — no error to show), red
+        // when MacTowError is set. Hardcoded colours matching the React
+        // panel's CSS to keep the two surfaces visually identical.
+        public virtual Brush MacTowBrush => MacTowError
+            ? new SolidColorBrush(Color.FromRgb(0xE5, 0x39, 0x35))   // red
+            : new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50));  // green
+
+        // Bounds come from LoadsheetState (single source of truth — same
+        // values the loadsheet parser uses to set PrelimMacTowError /
+        // FinalMacTowError). Defaults of (0, 0) mean a degraded-mode read
+        // shows "VALID RANGE: 0.0 – 0.0" rather than null-refing.
+        public virtual double MinMacTow => AppService?.Loadsheet?.MinMacTow ?? 0.0;
+        public virtual double MaxMacTow => AppService?.Loadsheet?.MaxMacTow ?? 0.0;
+
+        public virtual string MacTowRangeText =>
+            $"VALID RANGE: {MinMacTow:F1} – {MaxMacTow:F1}";
+
+        public virtual Visibility MacTowErrorRangeVisibility =>
+            MacTowError ? Visibility.Visible : Visibility.Collapsed;
+
+        // ── Sync-to-FMS state machine ───────────────────────────────────────
+        // Three transient UI signals layered on top of the persistent
+        // MACTOW projection: IsSyncing (spinner + disable), FmsSyncFlash
+        // ("idle" | "success" | "error" — drives a timed coloured flash on
+        // the button background), and FmsSyncMessage (the text shown next
+        // to the button after the attempt). Flash durations match the React
+        // panel: 3 s on success, 5 s on failure.
+        private readonly DispatcherTimer _flashTimer = new() { Interval = TimeSpan.FromSeconds(3) };
+        private bool _isSyncing;
+        private string _fmsSyncFlash = "idle";
+        private string _fmsSyncMessage = "";
+
+        public virtual bool IsSyncing
+        {
+            get => _isSyncing;
+            protected set
+            {
+                if (_isSyncing == value) return;
+                _isSyncing = value;
+                NotifyPropertyChanged(nameof(IsSyncing));
+                NotifyPropertyChanged(nameof(IsSyncEnabled));
+                NotifyPropertyChanged(nameof(SyncButtonText));
+                SyncToFmsCommand?.NotifyCanExecuteChanged();
+            }
+        }
+
+        public virtual string FmsSyncFlash
+        {
+            get => _fmsSyncFlash;
+            protected set
+            {
+                if (_fmsSyncFlash == value) return;
+                _fmsSyncFlash = value;
+                NotifyPropertyChanged(nameof(FmsSyncFlash));
+                NotifyPropertyChanged(nameof(FmsSyncFlashBrush));
+                NotifyPropertyChanged(nameof(FmsSyncMessageVisibility));
+            }
+        }
+
+        public virtual string FmsSyncMessage
+        {
+            get => _fmsSyncMessage;
+            protected set
+            {
+                if (_fmsSyncMessage == value) return;
+                _fmsSyncMessage = value;
+                NotifyPropertyChanged(nameof(FmsSyncMessage));
+                NotifyPropertyChanged(nameof(FmsSyncMessageVisibility));
+            }
+        }
+
+        public virtual Brush FmsSyncFlashBrush => FmsSyncFlash switch
+        {
+            "success" => new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50)),  // green
+            "error"   => new SolidColorBrush(Color.FromRgb(0xE5, 0x39, 0x35)),  // red
+            _         => Brushes.Transparent,
+        };
+
+        public virtual Visibility FmsSyncMessageVisibility =>
+            string.IsNullOrEmpty(FmsSyncMessage) ? Visibility.Collapsed : Visibility.Visible;
+
+        public virtual bool IsSyncEnabled => !IsSyncing && !MacTowError;
+
+        public virtual string SyncButtonText => IsSyncing ? "SYNCING…" : "SYNC TO FMS";
+
+        // SDK writes happen on a background thread so the UI stays
+        // responsive during the multi-write sequence. The service result
+        // is consumed back on the dispatcher to update the flash state +
+        // start the timer that clears it.
+        [RelayCommand(CanExecute = nameof(IsSyncEnabled))]
+        protected virtual async Task SyncToFmsAsync()
+        {
+            if (IsSyncing) return;
+
+            var svc = AppService?.MactowValidationService;
+            if (svc == null)
+            {
+                FmsSyncMessage = "MACTOW validation service unavailable";
+                FmsSyncFlash = "error";
+                StartFlashTimer(TimeSpan.FromSeconds(5));
+                return;
+            }
+
+            IsSyncing = true;
+            FmsSyncMessage = "";
+            FmsSyncFlash = "idle";
+
+            try
+            {
+                var result = await Task.Run(() => svc.SyncToFms());
+                if (result?.Success == true)
+                {
+                    FmsSyncMessage = "FMS UPDATED";
+                    FmsSyncFlash = "success";
+                    StartFlashTimer(TimeSpan.FromSeconds(3));
+                }
+                else
+                {
+                    FmsSyncMessage = string.IsNullOrEmpty(result?.ErrorMessage)
+                        ? "FMS sync failed"
+                        : result.ErrorMessage;
+                    FmsSyncFlash = "error";
+                    StartFlashTimer(TimeSpan.FromSeconds(5));
+                }
+            }
+            catch (Exception ex)
+            {
+                FmsSyncMessage = ex.Message ?? "FMS sync failed";
+                FmsSyncFlash = "error";
+                StartFlashTimer(TimeSpan.FromSeconds(5));
+            }
+            finally
+            {
+                IsSyncing = false;
+            }
+        }
+
+        private void StartFlashTimer(TimeSpan duration)
+        {
+            _flashTimer.Stop();
+            _flashTimer.Interval = duration;
+            _flashTimer.Tick -= OnFlashTimerTick;
+            _flashTimer.Tick += OnFlashTimerTick;
+            _flashTimer.Start();
+        }
+
+        private void OnFlashTimerTick(object sender, EventArgs e)
+        {
+            _flashTimer.Stop();
+            _flashTimer.Tick -= OnFlashTimerTick;
+            FmsSyncFlash = "idle";
+            FmsSyncMessage = "";
         }
     }
 

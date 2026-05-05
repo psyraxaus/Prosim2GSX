@@ -35,6 +35,13 @@ namespace Prosim2GSX.Web.Contracts
         public double MactowPercent { get; set; }
         public bool MacTowError { get; set; }
 
+        // MACTOW envelope bounds. Sourced from LoadsheetState (10.5 / 45.0
+        // for the A320) so the loadsheet validator and the W&B panel share
+        // a single source of truth. Surfaced on the wire so the React panel
+        // can render "VALID RANGE" without a second fetch.
+        public double MinMacTow { get; set; }
+        public double MaxMacTow { get; set; }
+
         // Aircraft envelope limits — A320 family hardcoded constants. Surfaced on
         // the wire so the React panel can render the chart axes without a second
         // config fetch and so a future variant change only needs touching one
@@ -74,6 +81,8 @@ namespace Prosim2GSX.Web.Contracts
                 AftCargoDoorOpen = s.AftCargoDoorOpen,
                 MactowPercent = s.MactowPercent,
                 MacTowError = s.MacTowError,
+                MinMacTow = app?.Loadsheet?.MinMacTow ?? 0.0,
+                MaxMacTow = app?.Loadsheet?.MaxMacTow ?? 0.0,
                 MtowLimitKg = s.MtowLimitKg,
                 MlwLimitKg = s.MlwLimitKg,
                 MzfwLimitKg = s.MzfwLimitKg,

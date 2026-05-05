@@ -275,6 +275,97 @@
   font-size: 11px;
 }
 
+/* ── MACTOW row + SYNC TO FMS button ── */
+
+.mactowRow {
+  margin-top: 8px;
+  padding: 6px 8px;
+}
+
+.mactowLine {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.mactowLabel {
+  color: var(--category-text);
+  font-weight: 500;
+}
+
+.mactowValueOk {
+  color: #4CAF50;
+  font-variant-numeric: tabular-nums;
+}
+
+.mactowValueError {
+  color: #E53935;
+  font-variant-numeric: tabular-nums;
+}
+
+.mactowWarn {
+  color: #E53935;
+  font-size: 16px;
+}
+
+.mactowRange {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #E53935;
+}
+
+.fmsSyncRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+}
+
+.fmsSyncButton {
+  min-width: 140px;
+  padding: 8px 14px;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  border: 1px solid #555;
+  border-radius: 4px;
+  cursor: pointer;
+  background: var(--surface-1, #2A2A2A);
+  color: var(--text-primary, #FFFFFF);
+  transition: background 200ms ease, color 200ms ease;
+}
+
+.fmsSyncButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.fmsSyncButton.fmsSyncSuccess {
+  background: #4CAF50;
+  color: #FFFFFF;
+  border-color: #4CAF50;
+}
+
+.fmsSyncButton.fmsSyncError {
+  background: #E53935;
+  color: #FFFFFF;
+  border-color: #E53935;
+}
+
+.fmsSyncMessageOk {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4CAF50;
+}
+
+.fmsSyncMessageError {
+  font-size: 12px;
+  font-weight: 600;
+  color: #E53935;
+}
+
 /* ── Stack-on-narrow ──
    Below 700px wide (typical phone portrait, narrow tablet) the two
    columns stack vertically so each gets the full panel width. */

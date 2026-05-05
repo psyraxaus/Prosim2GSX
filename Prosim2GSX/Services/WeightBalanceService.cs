@@ -70,11 +70,24 @@ namespace Prosim2GSX.Services
                     idx = WeightBalanceState.ZfwcgAdjArray.Length - 1;
                 wbState.MacgwPercent = wbState.MaczfwPercent + WeightBalanceState.ZfwcgAdjArray[idx];
 
-                // MACTOW currently mirrors MACGW until a separate take-off
-                // weight calculation is available. MacTowError stays false
-                // until we wire envelope-bounds checking.
+                // MACTOW resolves to the loadsheet value when available
+                // (final → prelim) and falls back to the live MACGW mirror
+                // otherwise. MacTowError is computed against the A320
+                // envelope bounds (LoadsheetState.MinMacTow/MaxMacTow). The
+                // live mirror is written first so the resolver can read it
+                // as the "computed" fallback in the same tick.
                 wbState.MactowPercent = wbState.MacgwPercent;
-                wbState.MacTowError = false;
+                var mactowSvc = _app?.MactowValidationService;
+                if (mactowSvc != null)
+                {
+                    var (resolved, _) = mactowSvc.ResolveCurrentMacTow();
+                    wbState.MactowPercent = resolved;
+                    wbState.MacTowError = mactowSvc.IsOutOfRange(resolved);
+                }
+                else
+                {
+                    wbState.MacTowError = false;
+                }
 
                 // Cargo holds.
                 wbState.CargoFwdLoadedKg = ReadDouble(sdk, ProsimConstants.RefCargoForward);

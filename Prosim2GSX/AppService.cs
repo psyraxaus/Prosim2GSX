@@ -105,6 +105,12 @@ namespace Prosim2GSX
         // no SDK simply leaves both slots at "none"/"pending".
         public virtual LoadsheetService LoadsheetService { get; protected set; }
 
+        // Resolves the active MACTOW (loadsheet → live mirror), validates
+        // it against the A320 envelope, and writes the FMS init datarefs on
+        // demand. Read by WeightBalanceService each tick to populate
+        // MactowPercent/MacTowError; called from FmsController for sync.
+        public virtual MactowValidationService MactowValidationService { get; protected set; }
+
         public AppService(Config config) : base(config)
         {
             RefreshToken();
@@ -184,6 +190,12 @@ namespace Prosim2GSX
             // Loadsheet reader — populates LoadsheetState from the two EFB
             // loadsheet datarefs. Same Tick() contract as the W&B service.
             LoadsheetService = new LoadsheetService(this);
+
+            // MACTOW validation + FMS sync. Constructed AFTER WeightBalance
+            // and Loadsheet so its resolver can read both stores. The
+            // service itself is null-safe under degraded SDK; the FMS sync
+            // path short-circuits with an error result rather than throwing.
+            MactowValidationService = new MactowValidationService(this);
 
             // Eagerly load the checklist definition into ChecklistState so the
             // web UI can render even before the WPF Checklists tab is opened.

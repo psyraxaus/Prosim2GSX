@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useApi } from "../api/useApi";
 import { useAppState } from "../state/AppStateContext";
-import { WeightBalanceDto } from "../types";
+import { FmsSyncResultDto, WeightBalanceDto } from "../types";
 import styles from "./WeightBalancePanel.module.css";
 
 // Read-only Weight & Balance panel. Initial REST load on mount; live
@@ -63,8 +63,15 @@ const ANNOT_RATIOS = {
 const DOT_RADIUS = 11;
 
 export function WeightBalancePanel() {
-  const { get } = useApi();
+  const { get, post } = useApi();
   const { state, dispatch } = useAppState();
+
+  // Sync-to-FMS UI state. "idle" | "pending" | "success" | "error".
+  // Success/error transitions are auto-cleared on a setTimeout matching
+  // the WPF DispatcherTimer durations (3 s green / 5 s red).
+  const [syncStatus, setSyncStatus] = useState<"idle" | "pending" | "success" | "error">("idle");
+  const [syncMessage, setSyncMessage] = useState<string>("");
+  const syncTimerRef = useRef<number | null>(null);
 
   // PNG image bounding box. All chart annotations are positioned relative
   // to these four values. Re-measured by ResizeObserver on container size
@@ -111,10 +118,46 @@ export function WeightBalancePanel() {
     return () => { cancelled = true; };
   }, [get, dispatch]);
 
+  // Clear any pending flash timer on unmount so a navigate-away mid-flash
+  // doesn't fire setState on an unmounted component.
+  useEffect(() => () => {
+    if (syncTimerRef.current !== null) {
+      window.clearTimeout(syncTimerRef.current);
+      syncTimerRef.current = null;
+    }
+  }, []);
+
   const wb = state.weightBalance as unknown as WeightBalanceDto | null;
   if (!wb) {
     return <div className={styles.loading}>Loading weight &amp; balance…</div>;
   }
+
+  const triggerFlash = (status: "success" | "error", message: string, durationMs: number) => {
+    setSyncStatus(status);
+    setSyncMessage(message);
+    if (syncTimerRef.current !== null) window.clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = window.setTimeout(() => {
+      setSyncStatus("idle");
+      setSyncMessage("");
+      syncTimerRef.current = null;
+    }, durationMs);
+  };
+
+  const handleSync = async () => {
+    if (syncStatus === "pending" || wb.macTowError) return;
+    setSyncStatus("pending");
+    setSyncMessage("");
+    try {
+      const result = await post<FmsSyncResultDto>("/fms/sync");
+      if (result?.success) {
+        triggerFlash("success", "FMS UPDATED", 3000);
+      } else {
+        triggerFlash("error", result?.errorMessage || "FMS sync failed", 5000);
+      }
+    } catch (e) {
+      triggerFlash("error", (e as Error)?.message || "FMS sync failed", 5000);
+    }
+  };
 
   // ── Coordinate helpers ─────────────────────────────────────────────────
   // X position for a MAC% value, anchored at the PNG's left edge.
@@ -291,6 +334,56 @@ export function WeightBalancePanel() {
           </table>
 
           <p className={styles.note}>NOTE: THE ABOVE FIGURES ARE LIVE.</p>
+
+          {/* MACTOW row + SYNC TO FMS button. Resolved MACTOW is sourced
+              from LoadsheetService (final → prelim → computed) and pushed
+              into wb.mactowPercent each tick by WeightBalanceService. The
+              button is disabled while syncing OR when MACTOW is out of
+              range; the flash background follows syncStatus and clears on
+              a 3s/5s timer matching the WPF parity. */}
+          <div className={styles.mactowRow}>
+            <div className={styles.mactowLine}>
+              <span className={styles.mactowLabel}>MACTOW (%):</span>
+              <span className={wb.macTowError ? styles.mactowValueError : styles.mactowValueOk}>
+                {wb.mactowPercent.toFixed(1)}
+              </span>
+              {wb.macTowError && (
+                <span className={styles.mactowWarn} aria-label="out of range">⚠</span>
+              )}
+            </div>
+            {wb.macTowError && (
+              <div className={styles.mactowRange}>
+                VALID RANGE: {wb.minMacTow.toFixed(1)} – {wb.maxMacTow.toFixed(1)}
+              </div>
+            )}
+          </div>
+
+          <div className={styles.fmsSyncRow}>
+            <button
+              type="button"
+              className={[
+                styles.fmsSyncButton,
+                syncStatus === "success" ? styles.fmsSyncSuccess : "",
+                syncStatus === "error" ? styles.fmsSyncError : "",
+              ].filter(Boolean).join(" ")}
+              disabled={syncStatus === "pending" || wb.macTowError}
+              title={wb.macTowError ? "MACTOW out of range" : ""}
+              onClick={handleSync}
+            >
+              {syncStatus === "pending" ? "SYNCING…" : "SYNC TO FMS"}
+            </button>
+            {syncMessage && (
+              <span
+                className={
+                  syncStatus === "success"
+                    ? styles.fmsSyncMessageOk
+                    : styles.fmsSyncMessageError
+                }
+              >
+                {syncMessage}
+              </span>
+            )}
+          </div>
         </div>
       </section>
 

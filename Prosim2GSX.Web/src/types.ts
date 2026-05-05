@@ -692,10 +692,27 @@ export interface WeightBalanceDto {
 
   mactowPercent: number;
   macTowError: boolean;
+  minMacTow: number;
+  maxMacTow: number;
 
   mtowLimitKg: number;
   mlwLimitKg: number;
   mzfwLimitKg: number;
+}
+
+// Result of a POST /api/fms/sync attempt. Also broadcast on the WS
+// "fmsSync" channel as a one-shot snapshot after every sync.
+export interface FmsSyncResultDto {
+  success: boolean;
+  writtenFields: string[];
+  failedFields: string[];
+  skippedFields: string[];
+  errorMessage: string;
+  macTow: number;
+  macTowError: boolean;
+  zfwKg: number;
+  maczfwPercent: number;
+  timestamp: string;
 }
 
 // ──────────────────────────────────────────────────────────────────────────
