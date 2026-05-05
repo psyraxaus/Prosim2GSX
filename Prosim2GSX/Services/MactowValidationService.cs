@@ -1,8 +1,10 @@
 using CFIT.AppLogger;
+using Prosim2GSX.State;
 using Prosim2GSX.Web.Contracts;
 using ProsimInterface;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 
 namespace Prosim2GSX.Services
 {
@@ -36,11 +38,154 @@ namespace Prosim2GSX.Services
     // as Skipped in the result rather than written or silently ignored.
     public class MactowValidationService
     {
+        // Operational tolerances for "FMS out of date" detection. Match
+        // A320 dispatch practice: ZFWCG is entered to 0.1 %MAC, ZFW to
+        // the next 100 kg, block fuel to the next 100 kg (we round UP on
+        // write, so the smallest *real* operational change is one full
+        // step beyond the rounding step → 200 kg).
+        public const double StaleThresholdMacPercent = 0.1;
+        public const double StaleThresholdZfwKg = 100.0;
+        public const double StaleThresholdBlockKg = 200.0;
+
         private readonly AppService _app;
+
+        // Last-sync snapshot — set on every successful SyncToFms(). Cleared
+        // on flight-cycle reset (LoadsheetService calls ResetSyncTracking).
+        // Null _lastSyncedAt = "never synced this flight" → not "stale", just
+        // "untouched", so FmsSyncStale stays false until the user actually
+        // pushes once.
+        private DateTime? _lastSyncedAt;
+        private double _lastSyncedMacTow;
+        private double _lastSyncedZfwKg;
+        private double _lastSyncedMaczfwPercent;
+        private double _lastSyncedBlockKg;
+        private string _lastSyncedSource = "";
+
+        // Auto-sync edge tracking. Re-fires when FinalReceivedAt advances
+        // (covers the resend case which writes a fresh timestamp). Null
+        // sentinel = no auto-sync fired yet for the current final slot.
+        private DateTime? _autoSyncFiredForFinalAt;
+        private LoadsheetState _attachedLoadsheet;
 
         public MactowValidationService(AppService app)
         {
             _app = app;
+        }
+
+        // Wire the auto-sync subscription. Called from
+        // AppService.CreateServiceControllers after construction so the
+        // service has a valid AppService reference and Loadsheet is set.
+        // Idempotent — repeated calls re-attach to the same store without
+        // double-subscribing.
+        public virtual void Attach()
+        {
+            var ls = _app?.Loadsheet;
+            if (ls == null || ReferenceEquals(_attachedLoadsheet, ls)) return;
+            if (_attachedLoadsheet != null)
+                _attachedLoadsheet.PropertyChanged -= OnLoadsheetChanged;
+            _attachedLoadsheet = ls;
+            _attachedLoadsheet.PropertyChanged += OnLoadsheetChanged;
+        }
+
+        private void OnLoadsheetChanged(object sender, PropertyChangedEventArgs e)
+        {
+            // Re-evaluate on Status or ReceivedAt changes — both flag the
+            // "final has arrived (or been resent)" edge. Other prelim
+            // updates are irrelevant to the auto-sync trigger.
+            if (e?.PropertyName != nameof(LoadsheetState.FinalStatus)
+                && e?.PropertyName != nameof(LoadsheetState.FinalReceivedAt))
+                return;
+            TryAutoSyncOnFinal();
+        }
+
+        protected virtual void TryAutoSyncOnFinal()
+        {
+            try
+            {
+                var cfg = _app?.Config;
+                var ls = _app?.Loadsheet;
+                if (cfg == null || ls == null) return;
+                if (!cfg.AutoSyncFmsOnFinal) return;
+                if (ls.FinalStatus != "received") return;
+                var receivedAt = ls.FinalReceivedAt;
+                if (receivedAt == null) return;
+
+                // Same final timestamp we already auto-fired for? skip.
+                if (_autoSyncFiredForFinalAt.HasValue && _autoSyncFiredForFinalAt.Value == receivedAt.Value)
+                    return;
+
+                if (ls.FinalMacTowError)
+                {
+                    Logger.Warning("FMS auto-sync skipped — final loadsheet MACTOW out of envelope");
+                    _autoSyncFiredForFinalAt = receivedAt;
+                    return;
+                }
+
+                Logger.Information("FMS auto-sync triggered by final loadsheet arrival");
+                _autoSyncFiredForFinalAt = receivedAt;
+                SyncToFms();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+        }
+
+        // Cleared by LoadsheetService.ProcessShutdownReset so a new flight
+        // starts with no "stale" baseline. Also clears the auto-sync edge
+        // marker so the first final loadsheet of the next flight fires.
+        public virtual void ResetSyncTracking()
+        {
+            _lastSyncedAt = null;
+            _lastSyncedMacTow = 0;
+            _lastSyncedZfwKg = 0;
+            _lastSyncedMaczfwPercent = 0;
+            _lastSyncedBlockKg = 0;
+            _lastSyncedSource = "";
+            _autoSyncFiredForFinalAt = null;
+
+            var wb = _app?.WeightBalance;
+            if (wb != null)
+            {
+                wb.FmsSyncStale = false;
+                wb.FmsLastSyncedAt = null;
+                wb.FmsLastSyncedSource = "";
+            }
+        }
+
+        // Called from WeightBalanceService.Tick AFTER MactowPercent /
+        // MacTowSource have been written. Compares the current resolved
+        // values against the last-sync snapshot and sets FmsSyncStale.
+        // No-op when never synced.
+        public virtual void UpdateStaleness()
+        {
+            try
+            {
+                var wb = _app?.WeightBalance;
+                if (wb == null) return;
+                if (_lastSyncedAt == null)
+                {
+                    if (wb.FmsSyncStale) wb.FmsSyncStale = false;
+                    return;
+                }
+
+                double currentBlock = RoundBlockFuelKg(wb.FuelPlannedKg);
+                bool sourceUpgraded =
+                    string.Equals(_lastSyncedSource, "prelim", StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(wb.MacTowSource, "final", StringComparison.OrdinalIgnoreCase);
+
+                bool drift =
+                    Math.Abs(wb.MactowPercent - _lastSyncedMacTow) > StaleThresholdMacPercent
+                    || Math.Abs(wb.ZfwKg - _lastSyncedZfwKg) > StaleThresholdZfwKg
+                    || Math.Abs(wb.MaczfwPercent - _lastSyncedMaczfwPercent) > StaleThresholdMacPercent
+                    || Math.Abs(currentBlock - _lastSyncedBlockKg) > StaleThresholdBlockKg;
+
+                wb.FmsSyncStale = sourceUpgraded || drift;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
         }
 
         // Resolve the current MACTOW. Source order: FinalStatus="received"
@@ -143,7 +288,21 @@ namespace Prosim2GSX.Services
 
                 Logger.Information(
                     $"FMS sync: zfw={wb.ZfwKg:F0} zfwcg={wb.MaczfwPercent:F2} block={block:F0} " +
+                    $"source={wb.MacTowSource} " +
                     $"written=[{string.Join(",", written)}] failed=[{string.Join(",", failed)}]");
+
+                if (result.Success)
+                {
+                    _lastSyncedAt = result.Timestamp;
+                    _lastSyncedMacTow = wb.MactowPercent;
+                    _lastSyncedZfwKg = wb.ZfwKg;
+                    _lastSyncedMaczfwPercent = wb.MaczfwPercent;
+                    _lastSyncedBlockKg = block;
+                    _lastSyncedSource = wb.MacTowSource ?? "";
+                    wb.FmsLastSyncedAt = _lastSyncedAt;
+                    wb.FmsLastSyncedSource = _lastSyncedSource;
+                    wb.FmsSyncStale = false;
+                }
 
                 PopulateBroadcastFields(result);
                 BroadcastResult(result);

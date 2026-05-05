@@ -279,6 +279,7 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
                         <!-- "MACTOW (%): nn.n" — green if in range, red if not. -->
@@ -294,6 +295,15 @@
                                        VerticalAlignment="Center" Text="&#x26A0;"
                                        Foreground="#E53935"
                                        Visibility="{Binding MacTowErrorRangeVisibility}"/>
+                            <!-- Resolution-source chip (FINAL / PRELIM / COMPUTED). -->
+                            <Border Margin="10,0,0,0" Padding="6,2,6,2" CornerRadius="3"
+                                    Background="{Binding MacTowSourceBrush}"
+                                    ToolTip="{Binding MacTowSourceTooltip}">
+                                <TextBlock Text="{Binding MacTowSourceText}"
+                                           Foreground="#FFFFFF"
+                                           FontSize="10" FontWeight="Bold"
+                                           VerticalAlignment="Center"/>
+                            </Border>
                         </StackPanel>
 
                         <!-- VALID RANGE line — only shown on error. -->
@@ -301,6 +311,15 @@
                                    FontSize="11" Foreground="#E53935"
                                    Text="{Binding MacTowRangeText}"
                                    Visibility="{Binding MacTowErrorRangeVisibility}"/>
+
+                        <!-- "FMS OUT OF DATE — last sync HH:MM:SS (PRELIM)"
+                             — only shown when the last-synced values have
+                             drifted past operational thresholds. -->
+                        <TextBlock Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="3"
+                                   Margin="0,4,0,0" FontSize="11" FontWeight="Bold"
+                                   Foreground="#F5A623"
+                                   Text="{Binding FmsSyncStaleText}"
+                                   Visibility="{Binding FmsSyncStaleVisibility}"/>
 
                         <!-- SYNC TO FMS button. Disabled while syncing or
                              when MACTOW is out of range. Background flashes

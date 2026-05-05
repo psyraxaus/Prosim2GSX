@@ -342,6 +342,7 @@ export interface AppSettingsDto {
   runAudioService: boolean;
   useSayIntentions: boolean;
   allowManualChecklistOverride: boolean;
+  autoSyncFmsOnFinal: boolean;
   openAppWindowOnStart: boolean;
 
   proSimSdkPath: string;
@@ -692,6 +693,10 @@ export interface WeightBalanceDto {
 
   mactowPercent: number;
   macTowError: boolean;
+  macTowSource: "final" | "prelim" | "computed";
+  fmsSyncStale: boolean;
+  fmsLastSyncedAt: string | null;
+  fmsLastSyncedSource: string;
   minMacTow: number;
   maxMacTow: number;
 

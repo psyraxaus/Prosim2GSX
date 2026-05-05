@@ -38,15 +38,25 @@ namespace Prosim2GSX.Web.Controllers
             return Ok(dto);
         }
 
-        // Placeholder per spec — logs the action; no actual EFB resend call.
-        // The Prosim SDK's ProsimEfbInterface.ProsimLoadsheetTask("/resend",
-        // HttpMethod.Post) is the wire-up point if/when this is promoted to a
-        // real command.
+        // Resend the requested slot via the EFB SDK. ?slot=prelim |
+        // final. Defaults to "prelim" for backward compatibility with any
+        // caller that still hits the no-arg endpoint.
         [HttpPost("resend")]
-        public IActionResult Resend()
+        public async Task<IActionResult> Resend([FromQuery] string slot = "prelim")
         {
-            Logger.Information("Loadsheet resend requested via web API (placeholder — no EFB call wired)");
-            return Ok();
+            var svc = _app?.LoadsheetService;
+            if (svc == null)
+            {
+                Logger.Warning("Loadsheet resend requested but LoadsheetService is unavailable");
+                return Ok(new { success = false, message = "Loadsheet service unavailable" });
+            }
+
+            // Hop onto the WPF dispatcher to start the async SDK call, then
+            // await the inner task so the controller thread isn't blocked
+            // through the ProSim REST round-trip.
+            var taskOnUi = await Application.Current.Dispatcher.InvokeAsync(() => svc.ResendAsync(slot));
+            var success = await taskOnUi;
+            return Ok(new { success, slot });
         }
 
         [HttpDelete]

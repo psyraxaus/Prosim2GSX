@@ -77,12 +77,15 @@ namespace Prosim2GSX.Services
                 // live mirror is written first so the resolver can read it
                 // as the "computed" fallback in the same tick.
                 wbState.MactowPercent = wbState.MacgwPercent;
+                wbState.MacTowSource = "computed";
                 var mactowSvc = _app?.MactowValidationService;
                 if (mactowSvc != null)
                 {
-                    var (resolved, _) = mactowSvc.ResolveCurrentMacTow();
+                    var (resolved, source) = mactowSvc.ResolveCurrentMacTow();
                     wbState.MactowPercent = resolved;
+                    wbState.MacTowSource = source;
                     wbState.MacTowError = mactowSvc.IsOutOfRange(resolved);
+                    mactowSvc.UpdateStaleness();
                 }
                 else
                 {

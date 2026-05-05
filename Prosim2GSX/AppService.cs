@@ -195,7 +195,10 @@ namespace Prosim2GSX
             // and Loadsheet so its resolver can read both stores. The
             // service itself is null-safe under degraded SDK; the FMS sync
             // path short-circuits with an error result rather than throwing.
+            // Attach() wires the auto-sync subscription onto LoadsheetState
+            // (no-op when AutoSyncFmsOnFinal is disabled in config).
             MactowValidationService = new MactowValidationService(this);
+            MactowValidationService.Attach();
 
             // Eagerly load the checklist definition into ChecklistState so the
             // web UI can render even before the WPF Checklists tab is opened.

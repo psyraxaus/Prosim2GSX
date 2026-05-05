@@ -350,10 +350,38 @@ export function WeightBalancePanel() {
               {wb.macTowError && (
                 <span className={styles.mactowWarn} aria-label="out of range">⚠</span>
               )}
+              {/* Resolution-source chip: FINAL LS / PRELIM LS / COMPUTED. */}
+              <span
+                className={[
+                  styles.sourceChip,
+                  wb.macTowSource === "final" ? styles.sourceChipFinal : "",
+                  wb.macTowSource === "prelim" ? styles.sourceChipPrelim : "",
+                  wb.macTowSource === "computed" ? styles.sourceChipComputed : "",
+                ].filter(Boolean).join(" ")}
+                title={
+                  wb.macTowSource === "final"
+                    ? "MACTOW from final loadsheet (authoritative)"
+                    : wb.macTowSource === "prelim"
+                    ? "MACTOW from preliminary loadsheet (will upgrade when final arrives)"
+                    : "No loadsheet received yet — value is live W&B computed mirror"
+                }
+              >
+                {wb.macTowSource === "final" ? "FINAL LS" : wb.macTowSource === "prelim" ? "PRELIM LS" : "COMPUTED"}
+              </span>
             </div>
             {wb.macTowError && (
               <div className={styles.mactowRange}>
                 VALID RANGE: {wb.minMacTow.toFixed(1)} – {wb.maxMacTow.toFixed(1)}
+              </div>
+            )}
+            {wb.fmsSyncStale && (
+              <div className={styles.fmsStale}>
+                FMS OUT OF DATE
+                {wb.fmsLastSyncedAt && (
+                  <> — last sync {new Date(wb.fmsLastSyncedAt).toLocaleTimeString()}{" "}
+                    {wb.fmsLastSyncedSource && `(${wb.fmsLastSyncedSource.toUpperCase()})`}
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -370,7 +398,16 @@ export function WeightBalancePanel() {
               title={wb.macTowError ? "MACTOW out of range" : ""}
               onClick={handleSync}
             >
-              {syncStatus === "pending" ? "SYNCING…" : "SYNC TO FMS"}
+              {syncStatus === "pending"
+                ? "SYNCING…"
+                : (() => {
+                    const verb = wb.fmsSyncStale ? "RESYNC TO FMS" : "SYNC TO FMS";
+                    const suffix =
+                      wb.macTowSource === "final" ? " (FINAL)" :
+                      wb.macTowSource === "prelim" ? " (PRELIM)" :
+                      " (COMPUTED)";
+                    return verb + suffix;
+                  })()}
             </button>
             {syncMessage && (
               <span

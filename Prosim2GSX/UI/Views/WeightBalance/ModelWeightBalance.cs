@@ -130,6 +130,14 @@ namespace Prosim2GSX.UI.Views.WeightBalance
             NotifyPropertyChanged(nameof(MacTowBrush));
             NotifyPropertyChanged(nameof(MacTowErrorRangeVisibility));
             NotifyPropertyChanged(nameof(MacTowRangeText));
+            NotifyPropertyChanged(nameof(MacTowSource));
+            NotifyPropertyChanged(nameof(MacTowSourceText));
+            NotifyPropertyChanged(nameof(MacTowSourceBrush));
+            NotifyPropertyChanged(nameof(MacTowSourceTooltip));
+            NotifyPropertyChanged(nameof(FmsSyncStale));
+            NotifyPropertyChanged(nameof(FmsSyncStaleVisibility));
+            NotifyPropertyChanged(nameof(FmsSyncStaleText));
+            NotifyPropertyChanged(nameof(SyncButtonText));
             NotifyPropertyChanged(nameof(IsSyncEnabled));
             SyncToFmsCommand?.NotifyCanExecuteChanged();
 
@@ -401,7 +409,66 @@ namespace Prosim2GSX.UI.Views.WeightBalance
 
         public virtual bool IsSyncEnabled => !IsSyncing && !MacTowError;
 
-        public virtual string SyncButtonText => IsSyncing ? "SYNCING…" : "SYNC TO FMS";
+        // Button text encodes both the busy state and the resolution
+        // source so the user always knows what would be written. RESYNC
+        // takes precedence when stale — it's the more important signal.
+        public virtual string SyncButtonText
+        {
+            get
+            {
+                if (IsSyncing) return "SYNCING…";
+                string verb = FmsSyncStale ? "RESYNC TO FMS" : "SYNC TO FMS";
+                string suffix = MacTowSource switch
+                {
+                    "final" => " (FINAL)",
+                    "prelim" => " (PRELIM)",
+                    _ => " (COMPUTED)",
+                };
+                return verb + suffix;
+            }
+        }
+
+        // ── Source chip ──────────────────────────────────────────────────────
+        public virtual string MacTowSource => State?.MacTowSource ?? "computed";
+
+        public virtual string MacTowSourceText => MacTowSource switch
+        {
+            "final" => "FINAL LS",
+            "prelim" => "PRELIM LS",
+            _ => "COMPUTED",
+        };
+
+        public virtual Brush MacTowSourceBrush => MacTowSource switch
+        {
+            "final" => new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50)),  // green
+            "prelim" => new SolidColorBrush(Color.FromRgb(0xF5, 0xA6, 0x23)), // amber
+            _ => new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80)),        // grey
+        };
+
+        public virtual string MacTowSourceTooltip => MacTowSource switch
+        {
+            "final" => "MACTOW from final loadsheet (authoritative)",
+            "prelim" => "MACTOW from preliminary loadsheet (will upgrade when final arrives)",
+            _ => "No loadsheet received yet — value is live W&B computed mirror",
+        };
+
+        // ── Staleness indicator ──────────────────────────────────────────────
+        public virtual bool FmsSyncStale => State?.FmsSyncStale ?? false;
+
+        public virtual Visibility FmsSyncStaleVisibility =>
+            FmsSyncStale ? Visibility.Visible : Visibility.Collapsed;
+
+        public virtual string FmsSyncStaleText
+        {
+            get
+            {
+                var at = State?.FmsLastSyncedAt;
+                var src = State?.FmsLastSyncedSource ?? "";
+                if (at == null) return "FMS OUT OF DATE";
+                var srcLabel = string.IsNullOrEmpty(src) ? "" : $" ({src.ToUpperInvariant()})";
+                return $"FMS OUT OF DATE — last sync {at.Value.ToLocalTime():HH:mm:ss}{srcLabel}";
+            }
+        }
 
         // SDK writes happen on a background thread so the UI stays
         // responsive during the multi-write sequence. The service result

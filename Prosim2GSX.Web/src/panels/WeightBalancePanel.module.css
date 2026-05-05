@@ -316,6 +316,37 @@
   color: #E53935;
 }
 
+/* MACTOW resolution source chip — FINAL LS / PRELIM LS / COMPUTED. */
+.sourceChip {
+  margin-left: 8px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  border-radius: 3px;
+  color: #FFFFFF;
+}
+
+.sourceChipFinal {
+  background: #4CAF50;
+}
+
+.sourceChipPrelim {
+  background: #F5A623;
+}
+
+.sourceChipComputed {
+  background: #808080;
+}
+
+/* "FMS OUT OF DATE — last sync HH:MM:SS (PRELIM)" amber callout. */
+.fmsStale {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #F5A623;
+}
+
 .fmsSyncRow {
   display: flex;
   align-items: center;

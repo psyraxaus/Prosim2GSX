@@ -3,6 +3,7 @@ using Prosim2GSX.State;
 using ProsimInterface;
 using System;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Prosim2GSX.Services
 {
@@ -97,6 +98,11 @@ namespace Prosim2GSX.Services
                 ResetSlots(ls);
                 _prevPrelimRaw = null;
                 _prevFinalRaw = null;
+                // Tear down the FMS-sync staleness baseline so the next
+                // flight starts clean — without this the user would see
+                // "RESYNC TO FMS" persist across flights even after the
+                // loadsheet reset.
+                _app?.MactowValidationService?.ResetSyncTracking();
                 Logger.Information("Loadsheet slots reset on flight-cycle shutdown");
             }
 
@@ -192,6 +198,46 @@ namespace Prosim2GSX.Services
             if (ls == null) return;
             ResetSlot(ls, "prelim");
             ResetSlot(ls, "final");
+        }
+
+        // Resend the requested loadsheet slot via the EFB SDK. Clears the
+        // private "previous raw" change-detection so the next tick will
+        // re-apply the new content even if ProSim emits identical JSON
+        // (which it can — re-send doesn't necessarily produce different
+        // bytes if the inputs haven't moved). Slot is "prelim" or "final".
+        public virtual async Task<bool> ResendAsync(string slot)
+        {
+            try
+            {
+                var ai = _app?.GsxService?.AircraftInterface;
+                if (ai == null)
+                {
+                    Logger.Warning($"Loadsheet resend ({slot}) — aircraft interface unavailable");
+                    return false;
+                }
+
+                if (string.Equals(slot, "prelim", StringComparison.OrdinalIgnoreCase))
+                {
+                    _prevPrelimRaw = null;
+                    await ai.ResendPrelimLoadsheet();
+                    Logger.Information("Loadsheet resend (prelim) → SDK call dispatched");
+                    return true;
+                }
+                if (string.Equals(slot, "final", StringComparison.OrdinalIgnoreCase))
+                {
+                    _prevFinalRaw = null;
+                    await ai.ResendFinalLoadsheet();
+                    Logger.Information("Loadsheet resend (final) → SDK call dispatched");
+                    return true;
+                }
+                Logger.Warning($"Loadsheet resend — unknown slot '{slot}'");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+                return false;
+            }
         }
 
         protected virtual void ResetSlot(LoadsheetState ls, string type)

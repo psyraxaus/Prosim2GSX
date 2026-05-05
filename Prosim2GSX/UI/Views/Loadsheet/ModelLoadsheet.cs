@@ -149,12 +149,30 @@ namespace Prosim2GSX.UI.Views.Loadsheet
                 : new Thickness(1);
 
         // ── Action handlers ──────────────────────────────────────────────────
-        // Resend is a placeholder per spec — log only, no EFB call wired.
-        // Mirrors LoadsheetController.Resend so the WPF and web buttons
-        // produce identical observable behaviour.
-        public virtual void OnResend()
+        // Resend the most-recent slot via the EFB SDK. If the final has
+        // been received, resending FINAL is the operationally meaningful
+        // action (it's the latest authoritative loadsheet); otherwise
+        // resend PRELIM. The web RESEND button mirrors this logic via
+        // the same LoadsheetController.Resend?slot=… endpoint, so both
+        // surfaces produce identical observable behaviour.
+        public virtual async void OnResend()
         {
-            Logger.Information("Loadsheet resend requested via WPF tab (placeholder — no EFB call wired)");
+            try
+            {
+                var svc = AppService?.LoadsheetService;
+                if (svc == null)
+                {
+                    Logger.Warning("Loadsheet resend requested but LoadsheetService is unavailable");
+                    return;
+                }
+                string slot = State?.FinalStatus == "received" ? "final" : "prelim";
+                bool ok = await svc.ResendAsync(slot);
+                Logger.Information($"Loadsheet resend ({slot}) via WPF tab → success: {ok}");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
         }
 
         // Reset routes through the same service path the DELETE endpoint uses.

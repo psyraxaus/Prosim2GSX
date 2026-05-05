@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using System;
 
 namespace Prosim2GSX.State
 {
@@ -55,11 +56,26 @@ namespace Prosim2GSX.State
         [ObservableProperty] private bool _FwdCargoDoorOpen;
         [ObservableProperty] private bool _AftCargoDoorOpen;
 
-        // Take-off MAC% (currently mirrors MACGW until a separate take-off
-        // weight is computed; MacTowError is reserved for an out-of-envelope
-        // flag the React panel can colour the indicator on).
+        // Take-off MAC% — resolved each tick by MactowValidationService from
+        // the loadsheet (final → prelim → live computed) so both UIs see the
+        // same authoritative value. MacTowSource records which path produced
+        // the value so the panel can show "FINAL LS" / "PRELIM LS" /
+        // "COMPUTED" chips and adjust the SYNC TO FMS button label
+        // accordingly. MacTowError is the envelope check against
+        // LoadsheetState.MinMacTow / MaxMacTow.
         [ObservableProperty] private double _MactowPercent;
         [ObservableProperty] private bool _MacTowError;
+        [ObservableProperty] private string _MacTowSource = "computed";
+
+        // FMS sync staleness. Set by MactowValidationService on every tick:
+        // true when a prior sync exists AND any of MACTOW (>0.1 %MAC),
+        // ZFW (>100 kg), or block-fuel (>200 kg) have drifted past their
+        // operational tolerance, OR the loadsheet source has upgraded
+        // (prelim → final). Drives the "RESYNC TO FMS" button label and a
+        // chip that calls out the staleness reason.
+        [ObservableProperty] private bool _FmsSyncStale;
+        [ObservableProperty] private DateTime? _FmsLastSyncedAt;
+        [ObservableProperty] private string _FmsLastSyncedSource = "";
 
         // Hardcoded A320-family envelope limits. Public so WeightBalanceDto
         // can project them onto the wire without reflection.

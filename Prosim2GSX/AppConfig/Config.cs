@@ -58,6 +58,15 @@ namespace Prosim2GSX.AppConfig
         // ECAM behaviour where checks track aircraft state. Lives in the new
         // Integrations card alongside UseSayIntentions.
         public virtual bool AllowManualChecklistOverride { get; set; } = false;
+
+        // When true, the FMS init datarefs (zfw, zfwcg, block) are
+        // automatically written the moment the final loadsheet arrives —
+        // matching real-world dispatch flow where the FMS init values
+        // come straight from the signed-off loadsheet. Off by default so
+        // existing installs don't gain new behaviour silently. Out-of-
+        // envelope MACTOW blocks the auto-sync; the user retains the
+        // manual SYNC TO FMS button for that case.
+        public virtual bool AutoSyncFmsOnFinal { get; set; } = false;
         public virtual string AudioDebugFile { get; set; } = "log\\AudioDebug.txt";
         public virtual DataFlow AudioDeviceFlow { get; set; } = DataFlow.Render;
         public virtual DeviceState AudioDeviceState { get; set; } = DeviceState.Active;
@@ -311,6 +320,10 @@ namespace Prosim2GSX.AppConfig
             // v27: VoiceMeeterMappings split off into their own collection.
             // Empty list defaults in for upgrading users; CoreAudio mappings
             // are unchanged and stay dormant while UseVoiceMeeter is true.
+
+            // v28: AutoSyncFmsOnFinal added as an opt-in. Default false on
+            // upgrade keeps existing installs on the manual-sync workflow;
+            // the user enables it via Settings > Integrations.
         }
 
         public virtual void SetFuelFob(string registration, double fuel)

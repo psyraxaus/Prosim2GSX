@@ -44,13 +44,19 @@ export function LoadsheetPanel() {
     if (!ls) {
         return _jsx("div", { className: styles.loading, children: "Loading loadsheet\u2026" });
     }
+    // Resend the most-recent slot. Once the final has been received, the
+    // operationally meaningful action is to resend FINAL (it's the latest
+    // authoritative loadsheet); otherwise we resend PRELIM. Mirrors the
+    // WPF tab's OnResend logic so both surfaces produce identical
+    // observable behaviour against the slot-aware controller endpoint.
     const onResend = async () => {
         setBusy("resend");
         try {
-            await post("/loadsheet/resend");
+            const slot = ls.final?.status === "received" ? "final" : "prelim";
+            await post(`/loadsheet/resend?slot=${slot}`);
         }
         catch {
-            /* silently ignored — placeholder endpoint, never fails meaningfully */
+            /* SDK errors are logged server-side; no user-visible toast yet */
         }
         finally {
             setBusy(null);

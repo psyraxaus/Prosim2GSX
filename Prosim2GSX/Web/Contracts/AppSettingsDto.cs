@@ -50,6 +50,7 @@ namespace Prosim2GSX.Web.Contracts
         public bool RunAudioService { get; set; }
         public bool UseSayIntentions { get; set; }
         public bool AllowManualChecklistOverride { get; set; }
+        public bool AutoSyncFmsOnFinal { get; set; }
         public bool OpenAppWindowOnStart { get; set; }
 
         // ProSim SDK
@@ -102,6 +103,7 @@ namespace Prosim2GSX.Web.Contracts
                 RunAudioService = c.RunAudioService,
                 UseSayIntentions = c.UseSayIntentions,
                 AllowManualChecklistOverride = c.AllowManualChecklistOverride,
+                AutoSyncFmsOnFinal = c.AutoSyncFmsOnFinal,
                 OpenAppWindowOnStart = c.OpenAppWindowOnStart,
 
                 ProSimSdkPath = c.ProSimSdkPath ?? "",
@@ -147,6 +149,7 @@ namespace Prosim2GSX.Web.Contracts
             c.RunAudioService = RunAudioService;
             c.UseSayIntentions = UseSayIntentions;
             c.AllowManualChecklistOverride = AllowManualChecklistOverride;
+            c.AutoSyncFmsOnFinal = AutoSyncFmsOnFinal;
             c.OpenAppWindowOnStart = OpenAppWindowOnStart;
 
             c.ProSimSdkPath = ProSimSdkPath ?? "";

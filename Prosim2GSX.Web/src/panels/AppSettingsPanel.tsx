@@ -116,6 +116,8 @@ export function AppSettingsPanel() {
           onChange={(v) => update("useSayIntentions", v)} />
         <BoolField label="Allow Manual Checklist Override" value={draft.allowManualChecklistOverride}
           onChange={(v) => update("allowManualChecklistOverride", v)} />
+        <BoolField label="Auto-sync FMS on Final Loadsheet" value={draft.autoSyncFmsOnFinal}
+          onChange={(v) => update("autoSyncFmsOnFinal", v)} />
       </Section>
 
       <Section title="Display">

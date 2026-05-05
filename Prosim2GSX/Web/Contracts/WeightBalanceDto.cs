@@ -35,6 +35,21 @@ namespace Prosim2GSX.Web.Contracts
         public double MactowPercent { get; set; }
         public bool MacTowError { get; set; }
 
+        // Resolution source for the displayed MACTOW: "final" | "prelim" |
+        // "computed". Drives the chip next to the value and changes the
+        // SYNC TO FMS button's label so the user knows which dataset
+        // would actually be written.
+        public string MacTowSource { get; set; } = "computed";
+
+        // FMS sync staleness signals. FmsSyncStale flips true when the
+        // resolved values have drifted past operational thresholds OR the
+        // loadsheet source has upgraded since the last sync. Last-synced
+        // metadata is surfaced so the UI can show "last sync HH:MM:SS
+        // (PRELIM)" alongside the RESYNC TO FMS button.
+        public bool FmsSyncStale { get; set; }
+        public System.DateTime? FmsLastSyncedAt { get; set; }
+        public string FmsLastSyncedSource { get; set; } = "";
+
         // MACTOW envelope bounds. Sourced from LoadsheetState (10.5 / 45.0
         // for the A320) so the loadsheet validator and the W&B panel share
         // a single source of truth. Surfaced on the wire so the React panel
@@ -81,6 +96,10 @@ namespace Prosim2GSX.Web.Contracts
                 AftCargoDoorOpen = s.AftCargoDoorOpen,
                 MactowPercent = s.MactowPercent,
                 MacTowError = s.MacTowError,
+                MacTowSource = s.MacTowSource ?? "computed",
+                FmsSyncStale = s.FmsSyncStale,
+                FmsLastSyncedAt = s.FmsLastSyncedAt,
+                FmsLastSyncedSource = s.FmsLastSyncedSource ?? "",
                 MinMacTow = app?.Loadsheet?.MinMacTow ?? 0.0,
                 MaxMacTow = app?.Loadsheet?.MaxMacTow ?? 0.0,
                 MtowLimitKg = s.MtowLimitKg,

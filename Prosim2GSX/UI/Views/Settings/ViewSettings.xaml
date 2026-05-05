@@ -61,6 +61,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Use SayIntentions.AI for ATIS/weather and gate assignment. Requires SayIntentions installed and api_key in flight.json.">Use SayIntentions:</TextBlock>
@@ -68,6 +69,9 @@
 
                     <TextBlock Grid.Column="0" Grid.Row="1" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="When enabled, allow manual click on dataref-bound checklist items to override their automatic state. Off = real-aircraft behaviour (only manual items are clickable).">Allow Manual Checklist Override:</TextBlock>
                     <CheckBox Grid.Column="1" Grid.Row="1" IsChecked="{Binding AllowManualChecklistOverride}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="When enabled, allow manual click on dataref-bound checklist items to override their automatic state. Off = real-aircraft behaviour (only manual items are clickable)."/>
+
+                    <TextBlock Grid.Column="0" Grid.Row="2" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="When enabled, the FMS init datarefs (zfw, zfwcg, block fuel) are automatically written the moment the final loadsheet arrives. Off = manual SYNC TO FMS button only.">Auto-sync FMS on Final Loadsheet:</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="2" IsChecked="{Binding AutoSyncFmsOnFinal}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="When enabled, the FMS init datarefs (zfw, zfwcg, block fuel) are automatically written the moment the final loadsheet arrives. Off = manual SYNC TO FMS button only."/>
                 </Grid>
             </Border>
 

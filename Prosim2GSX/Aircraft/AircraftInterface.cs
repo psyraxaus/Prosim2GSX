@@ -90,7 +90,34 @@ namespace Prosim2GSX.Aircraft
         // are up). All other state-machine transitions keep the existing
         // EnginesRunning ("any engine") semantics.
         public virtual bool AllEnginesRunning => ProsimInterface.GetAllEnginesRunning();
-        public virtual bool IsFinalReceived => ProsimInterface.GetFinalReceived();
+        // "Final loadsheet has been received." Source: the polled
+        // LoadsheetState (set by LoadsheetService.Tick when ProSim writes
+        // efb.finalLoadsheet). This is the authoritative signal and stays
+        // consistent with the React panel + WPF LDGST tab — eliminating
+        // the parallel-signal divergence where automation gating could
+        // see "received" while the visible UI still showed "pending".
+        // Worst-case latency vs the SDK's in-memory WasFinalTransmitted
+        // flag is one StateUpdateWorker tick (~500 ms); every consumer
+        // here is long-running automation (door close, jetway removal,
+        // APU/pushback gating) so the bound is operationally fine.
+        public virtual bool IsFinalReceived =>
+            AppService.Instance?.Loadsheet?.FinalStatus == "received";
+
+        // Same dataref-poll source as IsFinalReceived. Currently unused
+        // by automation but exposed for symmetry — Phase E staleness
+        // detection benefits from a public "prelim is in" signal.
+        public virtual bool IsPrelimReceived =>
+            AppService.Instance?.Loadsheet?.PrelimStatus == "received";
+
+        // RESEND passthroughs to the SDK's public loadsheet generators.
+        // Cabin chime is intentionally not re-fired on resend — the SDK
+        // call accepts a no-op callback so users can refresh the
+        // loadsheet after editing pax/cargo without ringing the cabin.
+        public virtual System.Threading.Tasks.Task ResendPrelimLoadsheet() =>
+            ProsimInterface.GeneratePrelimLoadsheet();
+
+        public virtual System.Threading.Tasks.Task ResendFinalLoadsheet() =>
+            ProsimInterface.GenerateFinalLoadsheet();
         public virtual bool IsExternalPowerConnected => ProsimInterface.GetExternalPowerConnected();
         public virtual bool IsApuRunning => ProsimInterface.IsApuRunning;
         public virtual bool IsApuBleedOn => ProsimInterface.IsApuBleedOn;
