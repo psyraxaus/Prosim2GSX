@@ -31,6 +31,7 @@
   "RunAudioService": true,
   "UseSayIntentions": false,
   "AllowManualChecklistOverride": false,
+  "AutoSyncFmsOnFinal": false,
   "AudioDebugFile": "log\\AudioDebug.txt",
   "AudioDeviceFlow": 0,
   "AudioDeviceState": 1,
@@ -245,7 +246,7 @@
       }
     }
   ],
-  "ConfigVersion": 27,
+  "ConfigVersion": 28,
   "LogInterval": 3,
   "SizeLimit": 10485760,
   "LogCount": 3,
