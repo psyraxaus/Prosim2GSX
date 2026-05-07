@@ -178,12 +178,13 @@ namespace Prosim2GSX.Services
         // First 4 chars of the cached SimBrief request_id. Empty when no
         // OFP has been imported yet. The EFB does the exact same projection
         // at OFP-import time (config.flight.loadsheetIdent = o.params.request_id.substring(0, 4)).
+        // Read from EfbFlightPlan.CurrentOfp.OfpId — the canonical app-side
+        // OFP cache, populated by EfbFlightPlanService.
         protected virtual string ResolveLoadsheetIdent()
         {
             try
             {
-                var ofp = _app?.GsxService?.AircraftInterface?.LastSimbriefOfp;
-                var rid = ofp?.Params?.RequestId;
+                var rid = _app?.EfbFlightPlan?.CurrentOfp?.OfpId;
                 if (string.IsNullOrEmpty(rid)) return "";
                 return rid.Length <= 4 ? rid : rid.Substring(0, 4);
             }

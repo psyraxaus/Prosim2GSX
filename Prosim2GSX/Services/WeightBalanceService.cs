@@ -128,24 +128,11 @@ namespace Prosim2GSX.Services
                 var booked = sdk.GetString(ProsimConstants.RefPaxBookedString, "") ?? "";
                 wbState.PassengersPlanned = CountTrueChars(booked);
 
-                // Planned fuel from SimBrief OFP. The cached LastSimbriefOfp
-                // refreshes when the user re-imports an OFP; null when no
-                // OFP has been loaded yet.
-                //
-                // Unit handling: SimBrief returns fuel in whatever unit the
-                // user's airline profile is configured for, advertised on
-                // ofp.Params.Units ("kgs" or "lbs"). SimbriefService converts
-                // before pushing to Prosim, but LastSimbriefOfp keeps the raw
-                // string, so we have to apply the same conversion here. All
-                // other reads in this service are kg-locked by ProsimDataref.csv
-                // (the columns marked "kg" do not flip with the avionics
-                // display-unit setting — only aircraft.fuel.total.amount has
-                // a unit-dependent base name, and we use the .kg alias).
-                var ofp = _app?.GsxService?.AircraftInterface?.LastSimbriefOfp;
-                double plannedRaw = ParseDoubleOrZero(ofp?.Fuel?.PlanRamp);
-                bool simbriefIsLbs = string.Equals(ofp?.Params?.Units, "lbs", StringComparison.OrdinalIgnoreCase);
-                double conv = _app?.Config?.WeightConversion ?? 2.2046226218;
-                wbState.FuelPlannedKg = simbriefIsLbs && conv > 0 ? plannedRaw / conv : plannedRaw;
+                // Planned fuel from the EFB INIT cache (CurrentOfp). The cache
+                // is populated by EfbFlightPlanService — it normalises lbs →
+                // kg at parse time, so we read a kg double directly. Null
+                // when no OFP has been fetched yet.
+                wbState.FuelPlannedKg = _app?.EfbFlightPlan?.CurrentOfp?.FuelRampKg ?? 0;
             }
             catch (Exception ex)
             {
@@ -191,12 +178,6 @@ namespace Prosim2GSX.Services
             {
                 return false;
             }
-        }
-
-        private static double ParseDoubleOrZero(string s)
-        {
-            if (string.IsNullOrWhiteSpace(s)) return 0.0;
-            return double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : 0.0;
         }
 
         private static int CountTrueChars(string seats)
