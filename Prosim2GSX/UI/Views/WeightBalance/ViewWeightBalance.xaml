@@ -459,21 +459,31 @@
                              so a tall window doesn't blow the icon up to fill
                              the column; uniform stretch keeps the aspect. -->
                         <Viewbox Stretch="Uniform" StretchDirection="DownOnly"
-                                 MaxHeight="220" HorizontalAlignment="Center">
+                                 MaxHeight="200" HorizontalAlignment="Center">
                             <!-- Source SVG has the plane in nose-RIGHT
                                  orientation (wing leading-edge curve sweeps
                                  from fuselage at high-x toward wingtip at
                                  low-x, which is the standard aft-sweep
-                                 going from nose toward tail). Rotate -90°
-                                 around centre — CCW visually — so source
-                                 RIGHT becomes display TOP and the plane
-                                 reads nose-up. LayoutTransform (not
-                                 RenderTransform) so the Viewbox measures
-                                 the rotated bounds correctly. -->
-                            <Canvas Width="750" Height="750">
-                                <Canvas.LayoutTransform>
-                                    <RotateTransform Angle="-90" CenterX="375" CenterY="375"/>
-                                </Canvas.LayoutTransform>
+                                 going from nose toward tail). Rotate -180°
+                                 around centre so source RIGHT becomes
+                                 display LEFT — plane displays horizontal
+                                 with nose-LEFT, fuselage along the card's
+                                 wider axis. The Border wrapper clips to a
+                                 750×210 viewport that captures the central
+                                 fuselage band (source y=270..480 = the
+                                 fuselage + engines + inner wing, with
+                                 wingtips cropped). Margin -270 on the
+                                 inner Canvas slides the 750×750 layout box
+                                 up so the desired band aligns with the
+                                 Border viewport. -->
+                            <Border Width="750" Height="210" ClipToBounds="True">
+                                <Canvas Width="750" Height="750"
+                                        Margin="0,-270,0,0"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Top">
+                                    <Canvas.LayoutTransform>
+                                        <RotateTransform Angle="-180" CenterX="375" CenterY="375"/>
+                                    </Canvas.LayoutTransform>
 
                                 <!-- Aircraft outline. Filled mid-grey so it
                                      reads as a silhouette; stroke is a thin
@@ -510,12 +520,16 @@
 
                                 <!-- Bulk cargo door — starboard edge, far
                                      aft (low source X, between aft cargo
-                                     and tail). Hidden when the airframe
-                                     has no bulk hold (CargoBulkCapacityKg = 0). -->
+                                     and tail). Always rendered so the
+                                     silhouette reads consistently across
+                                     airframes; BulkDoorBrush returns grey
+                                     when CargoBulkCapacityKg = 0. Status
+                                     text below the silhouette still reads
+                                     "N/A" in that case. -->
                                 <Rectangle Canvas.Left="255" Canvas.Top="392" Width="20" Height="11"
                                            Fill="{Binding BulkDoorBrush}"
                                            Stroke="#FFFFFF" StrokeThickness="1.2"
-                                           Visibility="{Binding BulkFittedVisibility}" HorizontalAlignment="Left" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                           HorizontalAlignment="Left" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
                                     <Rectangle.RenderTransform>
                                         <TransformGroup>
                                             <ScaleTransform/>
@@ -525,7 +539,8 @@
                                         </TransformGroup>
                                     </Rectangle.RenderTransform>
                                 </Rectangle>
-                            </Canvas>
+                                </Canvas>
+                            </Border>
                         </Viewbox>
 
                         <!-- Per-door status text row — three equal cells. The

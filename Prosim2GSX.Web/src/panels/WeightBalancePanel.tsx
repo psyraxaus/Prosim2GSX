@@ -2,7 +2,26 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useApi } from "../api/useApi";
 import { useAppState } from "../state/AppStateContext";
 import { FmsSyncResultDto, WeightBalanceDto } from "../types";
+import { A320_OUTLINE_PATH } from "./a320Silhouette";
 import styles from "./WeightBalancePanel.module.css";
+
+// Cargo-doors section colours — matching the WPF model's brushes so the
+// two surfaces read identically. Bulk on a non-fitted airframe falls
+// back to a neutral grey; the rect is hidden, but the brush stays
+// defined for the status text colour.
+const DOOR_CLOSED_COLOR = "#4CAF50"; // green
+const DOOR_OPEN_COLOR   = "#F5A623"; // amber
+const DOOR_NA_COLOR     = "#555555"; // grey
+
+function doorColor(open: boolean, fitted = true): string {
+  if (!fitted) return DOOR_NA_COLOR;
+  return open ? DOOR_OPEN_COLOR : DOOR_CLOSED_COLOR;
+}
+
+function doorStatus(open: boolean, fitted = true): string {
+  if (!fitted) return "N/A";
+  return open ? "OPEN" : "CLOSED";
+}
 
 // Read-only Weight & Balance panel. Initial REST load on mount; live
 // updates arrive through the WebSocket "weightBalance" channel and are
@@ -469,6 +488,88 @@ export function WeightBalancePanel() {
               {" / "}
               {wb.cargoAftLoadedKg.toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </span>
+          </div>
+        </div>
+
+        {/* CARGO DOORS — top-down silhouette + per-door state +
+            departure-readiness banner. Source SVG is in nose-right
+            orientation, so a -90° rotation around (375, 375) wraps both
+            the silhouette and the door rects to display nose-up. The
+            same path data + door coords are used by the WPF view, so
+            the two surfaces stay aligned. The readiness banner mirrors
+            !Aircraft.HasOpenDoors (covers entry + cargo) — same predicate
+            the GSX state machine uses to gate CloseAllDoors() on final,
+            so a banner saying "DOORS OPEN" can mean a pax door is open
+            even when the cargo silhouette is all green. */}
+        <h2 className={styles.colHeading}>Cargo Doors</h2>
+        <div className={styles.dataCard}>
+          {/* viewBox crops to the central horizontal band (source y=270..480
+              = fuselage + engines + inner wing) so the silhouette renders
+              wide and short, filling the card's wider axis. The -180°
+              rotation puts source-RIGHT (nose) on display-LEFT, giving a
+              horizontal aircraft with fuselage along the card width.
+              Door positions stay the same in source coords; they rotate
+              with the path. */}
+          <svg viewBox="0 270 750 210" className={styles.silhouetteSvg}>
+            <g transform="rotate(-180 375 375)">
+              <path d={A320_OUTLINE_PATH} fill="#3F3F3F" stroke="#7A7A7A" strokeWidth={2} />
+
+              {/* All three doors sit on the starboard fuselage edge
+                  (source HIGH y) to match the real A320 layout — fwd,
+                  aft, and bulk are all on the right side of the
+                  airframe in real life. Long axis runs along source X
+                  (fore-aft) and becomes vertical in display. Coords
+                  match ViewWeightBalance.xaml exactly. */}
+              <rect x={498} y={389} width={41} height={14}
+                    fill={doorColor(wb.fwdCargoDoorOpen)}
+                    stroke="#FFFFFF" strokeWidth={1.2} />
+              <rect x={293} y={389} width={41} height={14}
+                    fill={doorColor(wb.aftCargoDoorOpen)}
+                    stroke="#FFFFFF" strokeWidth={1.2} />
+              {/* BULK is always rendered so the silhouette reads
+                  consistently across airframes; doorColor returns grey
+                  when CargoBulkCapacityKg = 0, mirroring the WPF
+                  BulkDoorBrush. Status text below still reads "N/A"
+                  in that case. */}
+              <rect x={255} y={392} width={20} height={11}
+                    transform="rotate(-0.265 265 397.5)"
+                    fill={doorColor(wb.bulkCargoDoorOpen, wb.cargoBulkCapacityKg > 0)}
+                    stroke="#FFFFFF" strokeWidth={1.2} />
+            </g>
+          </svg>
+
+          {/* Per-door status grid — three equal cells, value text takes
+              the matching door colour so a quick scan picks the right
+              door without reading the label. */}
+          <div className={styles.doorStatusGrid}>
+            <div className={styles.doorStatusCell}>
+              <span className={styles.doorStatusLabel}>FWD</span>
+              <span className={styles.doorStatusValue}
+                    style={{ color: doorColor(wb.fwdCargoDoorOpen) }}>
+                {doorStatus(wb.fwdCargoDoorOpen)}
+              </span>
+            </div>
+            <div className={styles.doorStatusCell}>
+              <span className={styles.doorStatusLabel}>AFT</span>
+              <span className={styles.doorStatusValue}
+                    style={{ color: doorColor(wb.aftCargoDoorOpen) }}>
+                {doorStatus(wb.aftCargoDoorOpen)}
+              </span>
+            </div>
+            <div className={styles.doorStatusCell}>
+              <span className={styles.doorStatusLabel}>BULK</span>
+              <span className={styles.doorStatusValue}
+                    style={{ color: doorColor(wb.bulkCargoDoorOpen, wb.cargoBulkCapacityKg > 0) }}>
+                {doorStatus(wb.bulkCargoDoorOpen, wb.cargoBulkCapacityKg > 0)}
+              </span>
+            </div>
+          </div>
+
+          <div className={[
+            styles.readinessBanner,
+            wb.allDoorsClosed ? styles.readinessOk : styles.readinessOpen,
+          ].join(" ")}>
+            {wb.allDoorsClosed ? "ALL DOORS CLOSED" : "DOORS OPEN"}
           </div>
         </div>
 

@@ -275,6 +275,68 @@
   font-size: 11px;
 }
 
+/* ── Cargo doors silhouette + status + readiness banner ──
+   The SVG is sized via max-height so the section stays compact in the
+   right column. The inner <g> is rotated -90° to display the
+   nose-right source layout as nose-up; door rects sit in source coords
+   and rotate with the group. */
+
+.silhouetteSvg {
+  display: block;
+  width: 100%;
+  /* viewBox is 750×210 (~3.57:1) so the SVG renders wide-and-short.
+     max-height caps the visual height; max-width lets it stretch wide
+     enough to use the card's wider dimension. */
+  max-width: 640px;
+  max-height: 200px;
+  margin: 0 auto 8px auto;
+}
+
+.doorStatusGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.doorStatusCell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.doorStatusLabel {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--category-text);
+}
+
+.doorStatusValue {
+  font-weight: 700;
+  font-size: 13px;
+  font-family: var(--font-mono, monospace);
+}
+
+.readinessBanner {
+  margin-top: 10px;
+  padding: 6px 10px;
+  border-radius: 3px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: #FFFFFF;
+}
+
+.readinessOk {
+  background: #4CAF50;
+}
+
+.readinessOpen {
+  background: #F5A623;
+}
+
 /* ── MACTOW row + SYNC TO FMS button ── */
 
 .mactowRow {
