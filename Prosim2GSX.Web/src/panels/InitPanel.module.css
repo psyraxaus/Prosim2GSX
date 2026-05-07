@@ -134,12 +134,142 @@
   color: var(--fms-override);
 }
 
-.valueEmpty {
-  color: var(--fms-amber);
-  background: var(--fms-amber);
-  color: var(--fms-bg);
-  padding: 1px 4px;
+/* Pending / empty (no OFP loaded yet) — a row of individual amber-
+ * outlined boxes, mimicking a real Airbus FMS INIT page where each
+ * character slot has its own square box waiting for an entry.
+ * Renders as inline-flex so the boxes sit side-by-side without the
+ * wrapper expanding to fill its grid cell. */
+.pending {
+  display: inline-flex;
+  gap: 1px;
+  width: max-content;
+  justify-self: start;
+  flex: 0 0 auto;
+}
+
+.pendingBox {
+  display: inline-block;
+  width: 0.62em;
+  height: 1em;
+  border: 1px solid var(--fms-amber);
+  background: transparent;
+  box-sizing: border-box;
+}
+
+/* When a pending block sits in a fuel row (display: flex), push it to
+ * the right edge so it lines up with where the green value normally
+ * lives. */
+.pendingFuel {
+  margin-left: auto;
+}
+
+/* Brief white→green flash when a value first lands. Applied via inline
+ * key=fetchedAt so React reuses the same DOM and the animation re-fires. */
+@keyframes fms-flash {
+  0%   { color: #ffffff; }
+  100% { color: var(--fms-green); }
+}
+
+.flash {
+  animation: fms-flash 220ms ease-out;
+}
+
+/* Editor — inline input + ENT / CLR keys for the four writable rows. */
+.editor {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.editorInput {
+  background: var(--fms-btn-bg);
+  border: 1px solid var(--fms-cyan);
+  color: var(--fms-green);
+  font-family: var(--fms-font);
+  font-size: 13px;
   font-weight: bold;
+  padding: 2px 6px;
+  width: 90px;
+  text-align: right;
+  outline: none;
+  border-radius: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.editorInput:focus {
+  border-color: var(--fms-green);
+}
+
+.editorKey {
+  background: var(--fms-btn-bg);
+  border: 1px solid var(--fms-btn-border);
+  color: var(--fms-white);
+  border-radius: 0;
+  padding: 2px 6px;
+  font-family: var(--fms-font);
+  font-size: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+}
+
+.editorKey:hover {
+  border-color: var(--fms-cyan);
+  color: var(--fms-cyan);
+}
+
+.editorKeyEnter {
+  border-color: var(--fms-cyan);
+  color: var(--fms-cyan);
+}
+
+.editorKeyClr {
+  border-color: var(--fms-warn);
+  color: var(--fms-warn);
+}
+
+/* Editable rows are click targets when locked. Subtle hover hint so the
+ * pilot knows they can edit. */
+.rowFuelEditable {
+  cursor: pointer;
+}
+
+.rowFuelEditable:hover .valueRight {
+  border-bottom: 1px dashed var(--fms-cyan);
+  margin-bottom: -1px; /* keep layout stable */
+}
+
+/* "OUT OF RANGE" — red, sits to the right of the editor, fades after
+ * 2s via React state (the timeout clears the message). */
+.editorError {
+  color: var(--fms-warn);
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+  margin-left: 6px;
+}
+
+/* MOD chip for overridden rows. */
+.modChip {
+  color: var(--fms-override);
+  font-size: 10px;
+  font-weight: bold;
+  margin-left: 6px;
+  letter-spacing: 0.05em;
+}
+
+/* Fetch-phase scrolling text at the bottom of the left panel. Cycles
+ * "CONTACTING SIMBRIEF..." → "PARSING OFP..." → "WRITING TO FMS..."
+ * while isBusy is true; cleared when the fetch finishes. */
+.fetchPhase {
+  color: var(--fms-cyan);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  margin-top: 6px;
+  min-height: 1em;
 }
 
 .cyanLabel {
