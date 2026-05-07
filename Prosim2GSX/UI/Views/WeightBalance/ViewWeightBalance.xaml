@@ -112,7 +112,9 @@
                                           ItemTemplate="{StaticResource AxisLabelTemplate}"
                                           ItemContainerStyle="{StaticResource LabelContainerStyle}">
                                 <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                                    <ItemsPanelTemplate>
+                                        <Canvas/>
+                                    </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                             </ItemsControl>
 
@@ -122,7 +124,9 @@
                                           ItemTemplate="{StaticResource AxisLabelTemplate}"
                                           ItemContainerStyle="{StaticResource LabelContainerStyle}">
                                 <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                                    <ItemsPanelTemplate>
+                                        <Canvas/>
+                                    </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                             </ItemsControl>
 
@@ -132,7 +136,9 @@
                                           ItemTemplate="{StaticResource TickTemplate}"
                                           ItemContainerStyle="{StaticResource TickContainerStyle}">
                                 <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                                    <ItemsPanelTemplate>
+                                        <Canvas/>
+                                    </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                             </ItemsControl>
 
@@ -142,7 +148,9 @@
                                           ItemTemplate="{StaticResource AnnotationTemplate}"
                                           ItemContainerStyle="{StaticResource LabelContainerStyle}">
                                 <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                                    <ItemsPanelTemplate>
+                                        <Canvas/>
+                                    </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                             </ItemsControl>
 
@@ -153,7 +161,9 @@
                                           ItemTemplate="{StaticResource AnnotationTemplate}"
                                           ItemContainerStyle="{StaticResource LabelContainerStyle}">
                                 <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                                    <ItemsPanelTemplate>
+                                        <Canvas/>
+                                    </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                             </ItemsControl>
 
@@ -430,6 +440,144 @@
                             <Run Text="{Binding CargoAftLoadedKg, StringFormat={}{0:N0}, Mode=OneWay}"/>
                         </TextBlock>
                     </Grid>
+                </Border>
+
+                <!-- CARGO DOORS — top-down silhouette + per-door state +
+                     departure-readiness banner. The silhouette path data is
+                     a public const on the model (cleaned A320 outline from
+                     the user-supplied SVG), so the React panel and this
+                     view share the exact same coordinate space and the
+                     door rectangles land on the same fuselage positions in
+                     both surfaces. Door rectangles are placed in the SVG's
+                     750×750 viewBox; the Viewbox scales the whole canvas
+                     to whatever width the right column ends up at. -->
+                <TextBlock Style="{StaticResource CategoryHeader}" Text="CARGO DOORS" Margin="0,8,0,0"/>
+                <Border Style="{StaticResource SectionCardBorder}">
+                    <StackPanel Margin="6,4,6,4">
+
+                        <!-- Silhouette + door indicators. Capped at 220 px tall
+                             so a tall window doesn't blow the icon up to fill
+                             the column; uniform stretch keeps the aspect. -->
+                        <Viewbox Stretch="Uniform" StretchDirection="DownOnly"
+                                 MaxHeight="220" HorizontalAlignment="Center">
+                            <!-- Source SVG has the plane in nose-RIGHT
+                                 orientation (wing leading-edge curve sweeps
+                                 from fuselage at high-x toward wingtip at
+                                 low-x, which is the standard aft-sweep
+                                 going from nose toward tail). Rotate -90°
+                                 around centre — CCW visually — so source
+                                 RIGHT becomes display TOP and the plane
+                                 reads nose-up. LayoutTransform (not
+                                 RenderTransform) so the Viewbox measures
+                                 the rotated bounds correctly. -->
+                            <Canvas Width="750" Height="750">
+                                <Canvas.LayoutTransform>
+                                    <RotateTransform Angle="-90" CenterX="375" CenterY="375"/>
+                                </Canvas.LayoutTransform>
+
+                                <!-- Aircraft outline. Filled mid-grey so it
+                                     reads as a silhouette; stroke is a thin
+                                     edge in the same family for definition
+                                     against the dark card background. -->
+                                <Path Data="{x:Static local:ModelWeightBalance.A320OutlineGeometry}"
+                                      Fill="#3F3F3F" Stroke="#7A7A7A" StrokeThickness="2"/>
+
+                                <!-- Door rectangles in SOURCE (nose-right)
+                                     coords. After -90° rotation:
+                                     source HIGH x → display TOP (nose),
+                                     source LOW  x → display BOTTOM (tail),
+                                     source LOW  y → display LEFT (port),
+                                     source HIGH y → display RIGHT (starboard).
+                                     All three cargo doors sit on STARBOARD
+                                     (source HIGH y) to match the real
+                                     A320 — fwd, aft, and bulk are all on
+                                     the right side of the airframe in real
+                                     life. Long axis along source X
+                                     (fore-aft) becomes vertical in display. -->
+
+                                <!-- Forward cargo door — starboard edge,
+                                     forward of wing root (high source X =
+                                     closer to the nose at right). -->
+                                <Rectangle Canvas.Left="498" Canvas.Top="389" Width="41" Height="14"
+                                           Fill="{Binding FwdDoorBrush}"
+                                           Stroke="#FFFFFF" StrokeThickness="1.2" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+
+                                <!-- Aft cargo door — starboard edge, aft of
+                                     wing trailing edge (mid-low source X). -->
+                                <Rectangle Canvas.Left="293" Canvas.Top="389" Width="41" Height="14"
+                                           Fill="{Binding AftDoorBrush}"
+                                           Stroke="#FFFFFF" StrokeThickness="1.2" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+
+                                <!-- Bulk cargo door — starboard edge, far
+                                     aft (low source X, between aft cargo
+                                     and tail). Hidden when the airframe
+                                     has no bulk hold (CargoBulkCapacityKg = 0). -->
+                                <Rectangle Canvas.Left="255" Canvas.Top="392" Width="20" Height="11"
+                                           Fill="{Binding BulkDoorBrush}"
+                                           Stroke="#FFFFFF" StrokeThickness="1.2"
+                                           Visibility="{Binding BulkFittedVisibility}" HorizontalAlignment="Left" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                    <Rectangle.RenderTransform>
+                                        <TransformGroup>
+                                            <ScaleTransform/>
+                                            <SkewTransform/>
+                                            <RotateTransform Angle="-0.265"/>
+                                            <TranslateTransform/>
+                                        </TransformGroup>
+                                    </Rectangle.RenderTransform>
+                                </Rectangle>
+                            </Canvas>
+                        </Viewbox>
+
+                        <!-- Per-door status text row — three equal cells. The
+                             value text inherits the same green/amber/grey as
+                             its rectangle so a quick scan picks the matching
+                             door without reading the label. -->
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                <TextBlock Text="FWD" Foreground="{DynamicResource CategoryTextBrush}"
+                                           FontSize="11" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding FwdDoorStatusText}" FontWeight="Bold" FontSize="13"
+                                           Foreground="{Binding FwdDoorBrush}"
+                                           HorizontalAlignment="Center"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                <TextBlock Text="AFT" Foreground="{DynamicResource CategoryTextBrush}"
+                                           FontSize="11" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding AftDoorStatusText}" FontWeight="Bold" FontSize="13"
+                                           Foreground="{Binding AftDoorBrush}"
+                                           HorizontalAlignment="Center"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                                <TextBlock Text="BULK" Foreground="{DynamicResource CategoryTextBrush}"
+                                           FontSize="11" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding BulkDoorStatusText}" FontWeight="Bold" FontSize="13"
+                                           Foreground="{Binding BulkDoorBrush}"
+                                           HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Departure-readiness banner. Mirrors !HasOpenDoors
+                             so it reflects the same predicate the GSX state
+                             machine uses to gate CloseAllDoors() — that
+                             includes pax doors, so the banner can read
+                             "DOORS OPEN" while the cargo silhouette is all
+                             green (pax door open during boarding). -->
+                        <Border Margin="0,8,0,0" Padding="8,5,8,5" CornerRadius="3"
+                                Background="{Binding ReadinessBannerBrush}">
+                            <TextBlock Text="{Binding ReadinessBannerText}"
+                                       Foreground="#FFFFFF" FontWeight="Bold" FontSize="13"
+                                       HorizontalAlignment="Center"/>
+                        </Border>
+
+                    </StackPanel>
                 </Border>
 
                 <!-- FUEL -->

@@ -69,6 +69,73 @@ namespace Prosim2GSX.UI.Views.WeightBalance
 
         public const double DotRadius = 11;
 
+        // ── Cargo-doors silhouette ──────────────────────────────────────────
+        // Cleaned A320 outline extracted from the user-supplied
+        // top-down SVG (OUTLINE group only — engineering callouts and the
+        // white background discarded). Units match the original 750×750
+        // viewBox; the XAML binds Path.Data via x:Static so the React panel
+        // and the WPF view share the same coordinate space and door
+        // positions stay aligned across both surfaces.
+        public const string A320OutlinePathData =
+            "M350.995,207.883 c-2.094,0.125 -4.208,0.38 -6.244,0.899 c-1.419,0.366 -2.825,0.867 -4.099,1.598 c1.468,0.843 3.094,1.402 4.738,1.788 " +
+            "c2.336,0.541 4.76,0.749 7.153,0.791 l13.673,44.816 c-2.119,0.121 -4.259,0.374 -6.319,0.895 c-1.434,0.367 -2.854,0.871 -4.141,1.609 " +
+            "c1.481,0.85 3.121,1.412 4.781,1.798 c2.361,0.542 4.812,0.746 7.23,0.783 l7.46,24.453 v6.993 c-1.439,0.069 -2.933,0.125 -4.346,0.416 " +
+            "c-0.343,0.077 -0.688,0.175 -0.998,0.343 c-0.112,0.063 -0.298,0.166 -0.306,0.308 c-0.002,0.065 0.036,0.123 0.079,0.169 " +
+            "c0.115,0.117 0.259,0.202 0.405,0.274 c0.251,0.119 0.525,0.19 0.795,0.25 c1.418,0.286 2.93,0.363 4.372,0.458 v8.424 " +
+            "c-2.384,0.078 -4.797,0.301 -7.124,0.842 c-1.587,0.374 -3.162,0.903 -4.581,1.716 c3.535,2.004 7.7,2.526 11.705,2.584 v37.773 H262.931 " +
+            "l-2.155,0.011 c-1.1,0.002 -3.162,0.061 -4.25,0.085 c-4.462,0.131 -9.729,0.464 -14.195,0.866 c-11.896,1.072 -24.171,3.173 -35.871,5.588 " +
+            "c0,0 -14.253,3.021 -14.253,3.021 c-0.141,0.027 -0.304,0.066 -0.446,0.085 c-0.398,0.062 -0.805,0.096 -1.208,0.079 " +
+            "c-0.983,-0.03 -1.953,-0.382 -2.705,-1.021 c-0.378,-0.315 -0.708,-0.691 -0.989,-1.094 c-0.255,-0.326 -40.05,-63.595 -40.325,-63.983 " +
+            "c-0.242,-0.361 -0.533,-0.69 -0.864,-0.972 c-0.872,-0.749 -1.994,-1.149 -3.117,-1.33 c-0.485,-0.079 -0.986,-0.121 -1.477,-0.135 " +
+            "c-0.112,0.003 -0.285,-0.01 -0.399,-0.006 c0,0 -12.757,0 -12.757,0 l16.957,75.321 c-5.748,0.971 -11.661,2.223 -17.28,3.785 " +
+            "c-4.318,1.222 -8.688,2.652 -12.737,4.597 v4.484 c4.049,1.945 8.42,3.375 12.737,4.597 c5.618,1.561 11.532,2.814 17.28,3.785 " +
+            "l-16.957,75.321 h12.757 c0.126,-0.009 0.275,0.004 0.399,-0.006 c0.531,-0.016 1.069,-0.062 1.592,-0.154 " +
+            "c1.083,-0.189 2.16,-0.587 3.003,-1.311 c0.33,-0.282 0.622,-0.611 0.863,-0.972 c0.335,-0.493 40.007,-63.535 40.325,-63.984 " +
+            "c0.281,-0.403 0.611,-0.78 0.989,-1.094 c0.764,-0.649 1.756,-1.002 2.755,-1.022 c0.423,-0.014 0.851,0.026 1.268,0.099 " +
+            "c0.097,0.023 0.239,0.041 0.336,0.067 c0,0 14.253,3.021 14.253,3.021 c11.698,2.418 23.974,4.516 35.871,5.588 " +
+            "c5.213,0.475 11.082,0.817 16.31,0.919 c1.034,0.029 3.246,0.037 4.29,0.043 c0,0 112.297,0 112.297,0 v37.773 " +
+            "c-4.005,0.058 -8.17,0.579 -11.705,2.584 c1.419,0.813 2.994,1.342 4.581,1.716 c2.327,0.541 4.74,0.764 7.124,0.842 v8.424 " +
+            "c-1.443,0.095 -2.953,0.172 -4.372,0.458 c-0.28,0.062 -0.563,0.135 -0.821,0.263 c-0.138,0.072 -0.276,0.154 -0.384,0.267 " +
+            "c-0.042,0.046 -0.078,0.104 -0.074,0.169 c0.013,0.141 0.195,0.24 0.306,0.303 c0.311,0.168 0.656,0.266 0.998,0.343 " +
+            "c1.413,0.29 2.908,0.347 4.346,0.416 v6.993 l-7.46,24.453 c-2.419,0.037 -4.869,0.241 -7.23,0.783 c-1.66,0.386 -3.3,0.947 -4.781,1.798 " +
+            "c1.287,0.738 2.707,1.242 4.141,1.609 c2.06,0.521 4.2,0.774 6.319,0.895 l-13.673,44.816 c-2.393,0.043 -4.818,0.25 -7.153,0.791 " +
+            "c-1.644,0.385 -3.27,0.945 -4.738,1.788 c1.274,0.731 2.68,1.232 4.099,1.598 c2.035,0.519 4.15,0.774 6.244,0.899 l-20.316,66.594 " +
+            "c-2.083,0.127 -4.269,0.242 -6.315,0.659 c-0.19,0.048 -0.414,0.092 -0.576,0.202 c-0.031,0.023 -0.059,0.054 -0.065,0.093 " +
+            "c-0.004,0.023 0,0.047 0.007,0.069 c0.006,0.019 0.014,0.038 0.026,0.054 c0.04,0.052 0.103,0.077 0.163,0.099 " +
+            "c0.32,0.099 0.676,0.115 1.009,0.145 c2.321,0.132 4.786,0.089 7.111,0.026 c4.108,-0.154 8.227,-0.435 12.15,-1.761 " +
+            "c2.766,-0.914 5.4,-2.301 7.639,-4.173 c2.232,-1.852 4.063,-4.175 5.443,-6.721 l69.92,-135.423 c2.048,0.597 4.171,1.128 6.292,1.371 " +
+            "c0.002,0.016 0.226,2.662 0.228,2.677 c0.006,0.048 0.014,0.098 0.028,0.145 c0.042,0.153 0.123,0.296 0.234,0.409 " +
+            "c0.084,0.086 0.185,0.156 0.295,0.205 c0.04,0.017 0.082,0.033 0.124,0.044 c0.013,0.005 0.035,0.009 0.048,0.012 " +
+            "c0,0 0.395,0.088 0.395,0.088 c8.169,1.692 16.665,1.798 24.978,1.66 c5.601,-0.16 11.426,-0.343 16.871,-1.746 " +
+            "c0.365,-0.104 0.697,-0.321 0.937,-0.614 c0.255,-0.309 0.408,-0.702 0.428,-1.102 c0.117,-7.132 -0.011,-15.629 -0.252,-22.764 " +
+            "c-0.019,-0.227 -0.08,-0.451 -0.179,-0.657 c-0.201,-0.422 -0.566,-0.763 -1,-0.935 c-0.09,-0.035 -0.185,-0.066 -0.28,-0.087 " +
+            "c-1.009,-0.219 -2.187,-0.415 -3.211,-0.562 c-5.21,-0.717 -10.751,-0.622 -16.007,-0.568 c-6.402,0.149 -12.931,0.538 -19.235,1.709 " +
+            "l18.319,-35.481 l16.758,-3.646 c7.797,-0.043 78.331,0.104 83.883,-0.11 c6.3,-0.155 13.327,-0.42 19.581,-1 " +
+            "c6.726,-0.611 13.529,-1.614 20.062,-3.35 c8.054,-2.172 16.05,-5.148 23.581,-8.736 c3.828,-1.883 7.775,-3.924 11.089,-6.632 " +
+            "c1.493,-1.265 2.926,-2.749 3.6,-4.623 c0.313,-0.857 0.393,-1.781 0.38,-2.688 c0.014,-0.928 -0.071,-1.875 -0.401,-2.749 " +
+            "c-0.685,-1.846 -2.101,-3.311 -3.578,-4.562 c-3.313,-2.709 -7.261,-4.75 -11.089,-6.633 c-7.531,-3.588 -15.527,-6.564 -23.581,-8.736 " +
+            "c-6.532,-1.735 -13.337,-2.739 -20.062,-3.35 c-6.248,-0.579 -13.297,-0.85 -19.581,-1 c-5.457,-0.195 -76.445,-0.084 -83.882,-0.11 l-16.758,-3.646 " +
+            "l-18.319,-35.481 c6.303,1.171 12.833,1.561 19.235,1.709 c5.259,0.052 10.794,0.149 16.007,-0.568 " +
+            "c1.022,-0.15 2.202,-0.343 3.211,-0.562 c0.105,-0.024 0.211,-0.058 0.31,-0.1 c0.432,-0.18 0.79,-0.526 0.984,-0.952 " +
+            "c0.095,-0.207 0.153,-0.432 0.168,-0.66 c0.231,-7.139 0.373,-15.629 0.247,-22.764 c-0.026,-0.389 -0.177,-0.769 -0.426,-1.07 " +
+            "c-0.241,-0.293 -0.572,-0.511 -0.937,-0.614 c-5.443,-1.403 -11.272,-1.587 -16.871,-1.746 c-8.314,-0.137 -16.809,-0.032 -24.978,1.66 " +
+            "c0,0 -0.395,0.088 -0.395,0.088 l-0.016,0.004 c-0.03,0.008 -0.065,0.017 -0.094,0.028 c-0.045,0.017 -0.092,0.037 -0.135,0.061 " +
+            "c-0.081,0.045 -0.157,0.102 -0.221,0.168 c-0.107,0.11 -0.187,0.246 -0.23,0.393 c-0.015,0.052 -0.027,0.107 -0.032,0.161 " +
+            "c-0.004,0.014 -0.225,2.661 -0.228,2.677 c-2.12,0.243 -4.245,0.775 -6.292,1.371 l-69.92,-135.423 c-1.38,-2.546 -3.21,-4.87 -5.443,-6.721 " +
+            "c-2.239,-1.871 -4.873,-3.258 -7.639,-4.173 c-3.923,-1.326 -8.042,-1.608 -12.15,-1.761 c-2.404,-0.061 -4.94,-0.117 -7.338,0.044 " +
+            "c-0.263,0.027 -0.537,0.047 -0.79,0.13 c-0.062,0.023 -0.129,0.052 -0.164,0.111 c-0.01,0.018 -0.017,0.039 -0.022,0.059 " +
+            "c-0.004,0.02 -0.004,0.04 0.001,0.06 c0.012,0.039 0.043,0.068 0.075,0.09 c0.185,0.114 0.42,0.157 0.63,0.208 " +
+            "c2.025,0.401 4.189,0.52 6.249,0.644 L350.995,207.883 z";
+
+        // Parsed once at class-load time. XAML binds Path.Data via x:Static
+        // to *this* field, not the string above — Path.Data expects a
+        // Geometry, and {x:Static} returns the raw field value without
+        // running the GeometryConverter, so handing it the string would
+        // throw a type mismatch on the setter. Parsing here also surfaces
+        // any malformed path syntax at init rather than at first paint.
+        public static readonly Geometry A320OutlineGeometry =
+            Geometry.Parse(A320OutlinePathData);
+
         public List<ChartLabel> XAxisLabels { get; }
         public List<ChartLabel> YAxisLabels { get; }
         public List<ChartTick>  Ticks { get; }
@@ -118,6 +185,20 @@ namespace Prosim2GSX.UI.Views.WeightBalance
             NotifyPropertyChanged(nameof(CargoBulkCapacityKg));
             NotifyPropertyChanged(nameof(CargoPlannedKg));
             NotifyPropertyChanged(nameof(CargoLoadedTotalKg));
+            NotifyPropertyChanged(nameof(FwdCargoDoorOpen));
+            NotifyPropertyChanged(nameof(AftCargoDoorOpen));
+            NotifyPropertyChanged(nameof(BulkCargoDoorOpen));
+            NotifyPropertyChanged(nameof(AllDoorsClosed));
+            NotifyPropertyChanged(nameof(BulkFitted));
+            NotifyPropertyChanged(nameof(BulkFittedVisibility));
+            NotifyPropertyChanged(nameof(FwdDoorBrush));
+            NotifyPropertyChanged(nameof(AftDoorBrush));
+            NotifyPropertyChanged(nameof(BulkDoorBrush));
+            NotifyPropertyChanged(nameof(FwdDoorStatusText));
+            NotifyPropertyChanged(nameof(AftDoorStatusText));
+            NotifyPropertyChanged(nameof(BulkDoorStatusText));
+            NotifyPropertyChanged(nameof(ReadinessBannerText));
+            NotifyPropertyChanged(nameof(ReadinessBannerBrush));
             NotifyPropertyChanged(nameof(PassengersPlanned));
             NotifyPropertyChanged(nameof(PassengersBoarded));
             NotifyPropertyChanged(nameof(PassengersTotalCapacity));
@@ -279,6 +360,50 @@ namespace Prosim2GSX.UI.Views.WeightBalance
         public virtual double CargoBulkCapacityKg => State?.CargoBulkCapacityKg ?? 0;
         public virtual double CargoPlannedKg      => State?.CargoPlannedKg ?? 0;
         public virtual double CargoLoadedTotalKg  => CargoFwdLoadedKg + CargoAftLoadedKg;
+
+        // ── Cargo door state + readiness ────────────────────────────────────
+        // Door booleans forwarded from the store (polled each tick by
+        // WeightBalanceService). BulkFitted gates the bulk indicator on
+        // CargoBulkCapacityKg > 0 — there's no system.config flag for "bulk
+        // hold present" in the SDK, so capacity is the reliable signal.
+        public virtual bool FwdCargoDoorOpen  => State?.FwdCargoDoorOpen ?? false;
+        public virtual bool AftCargoDoorOpen  => State?.AftCargoDoorOpen ?? false;
+        public virtual bool BulkCargoDoorOpen => State?.BulkCargoDoorOpen ?? false;
+        public virtual bool AllDoorsClosed    => State?.AllDoorsClosed ?? true;
+        public virtual bool BulkFitted        => CargoBulkCapacityKg > 0;
+        public virtual Visibility BulkFittedVisibility =>
+            BulkFitted ? Visibility.Visible : Visibility.Collapsed;
+
+        // Door colour: green when closed, amber when open. Bulk on a
+        // non-fitted airframe is masked grey so the indicator still draws
+        // (visibility is collapsed in the view, but the brush stays defined
+        // for safety). Hex matches the React panel for visual parity.
+        protected static readonly Brush DoorClosedBrush =
+            new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50));   // green
+        protected static readonly Brush DoorOpenBrush =
+            new SolidColorBrush(Color.FromRgb(0xF5, 0xA6, 0x23));   // amber
+        protected static readonly Brush DoorNotFittedBrush =
+            new SolidColorBrush(Color.FromRgb(0x55, 0x55, 0x55));   // grey
+
+        public virtual Brush FwdDoorBrush => FwdCargoDoorOpen ? DoorOpenBrush : DoorClosedBrush;
+        public virtual Brush AftDoorBrush => AftCargoDoorOpen ? DoorOpenBrush : DoorClosedBrush;
+        public virtual Brush BulkDoorBrush =>
+            !BulkFitted ? DoorNotFittedBrush : (BulkCargoDoorOpen ? DoorOpenBrush : DoorClosedBrush);
+
+        public virtual string FwdDoorStatusText  => FwdCargoDoorOpen ? "OPEN" : "CLOSED";
+        public virtual string AftDoorStatusText  => AftCargoDoorOpen ? "OPEN" : "CLOSED";
+        public virtual string BulkDoorStatusText =>
+            !BulkFitted ? "N/A" : (BulkCargoDoorOpen ? "OPEN" : "CLOSED");
+
+        // Readiness banner mirrors !Aircraft.HasOpenDoors (covers entry +
+        // cargo + bulk). Same predicate the GSX state machine uses to gate
+        // CloseAllDoors() on final, so the banner reflects departure
+        // reality — including pax doors that aren't drawn on the silhouette.
+        public virtual string ReadinessBannerText =>
+            AllDoorsClosed ? "ALL DOORS CLOSED" : "DOORS OPEN";
+
+        public virtual Brush ReadinessBannerBrush =>
+            AllDoorsClosed ? DoorClosedBrush : DoorOpenBrush;
         public virtual int    PassengersPlanned   => State?.PassengersPlanned ?? 0;
         public virtual int    PassengersBoarded   => State?.PassengersBoarded ?? 0;
         public virtual int    PassengersTotalCapacity =>
