@@ -59,6 +59,20 @@ namespace Prosim2GSX.State
         [ObservableProperty] private bool _AftCargoDoorOpen;
         [ObservableProperty] private bool _BulkCargoDoorOpen;
 
+        // Entry / wing-exit doors L1..R4 — eight booleans for the A320's
+        // four pax doors plus four overwing exits. Field naming mirrors the
+        // ProsimConstants.RefDoor{1..4}{L|R} dataref constants so a grep
+        // traces state → constant → dataref straight through. Drives the
+        // "Aircraft Status" silhouette on the W&B tab.
+        [ObservableProperty] private bool _Door1LOpen;
+        [ObservableProperty] private bool _Door1ROpen;
+        [ObservableProperty] private bool _Door2LOpen;
+        [ObservableProperty] private bool _Door2ROpen;
+        [ObservableProperty] private bool _Door3LOpen;
+        [ObservableProperty] private bool _Door3ROpen;
+        [ObservableProperty] private bool _Door4LOpen;
+        [ObservableProperty] private bool _Door4ROpen;
+
         // Departure-readiness mirror of !Aircraft.HasOpenDoors. Covers all
         // doors (entry + cargo + bulk) per the GSX state machine, which uses
         // the same predicate to gate CloseAllDoors() on final. Default true

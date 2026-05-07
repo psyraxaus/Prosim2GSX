@@ -33,6 +33,20 @@ namespace Prosim2GSX.Web.Contracts
         public bool AftCargoDoorOpen { get; set; }
         public bool BulkCargoDoorOpen { get; set; }
 
+        // Entry / overwing doors L1..R4 — drives the "Aircraft Status"
+        // silhouette on the W&B tab. L1/R1 = forward pax, L2/R2 + L3/R3 =
+        // overwing exits, L4/R4 = aft pax. Field naming mirrors
+        // WeightBalanceState.Door{1..4}{L|R}Open and the
+        // ProsimConstants.RefDoor{1..4}{L|R} dataref constants.
+        public bool Door1LOpen { get; set; }
+        public bool Door1ROpen { get; set; }
+        public bool Door2LOpen { get; set; }
+        public bool Door2ROpen { get; set; }
+        public bool Door3LOpen { get; set; }
+        public bool Door3ROpen { get; set; }
+        public bool Door4LOpen { get; set; }
+        public bool Door4ROpen { get; set; }
+
         // Mirror of !Aircraft.HasOpenDoors. Drives the W&B tab's
         // departure-readiness banner; covers all doors (entry + cargo).
         public bool AllDoorsClosed { get; set; } = true;
@@ -100,6 +114,14 @@ namespace Prosim2GSX.Web.Contracts
                 FwdCargoDoorOpen = s.FwdCargoDoorOpen,
                 AftCargoDoorOpen = s.AftCargoDoorOpen,
                 BulkCargoDoorOpen = s.BulkCargoDoorOpen,
+                Door1LOpen = s.Door1LOpen,
+                Door1ROpen = s.Door1ROpen,
+                Door2LOpen = s.Door2LOpen,
+                Door2ROpen = s.Door2ROpen,
+                Door3LOpen = s.Door3LOpen,
+                Door3ROpen = s.Door3ROpen,
+                Door4LOpen = s.Door4LOpen,
+                Door4ROpen = s.Door4ROpen,
                 AllDoorsClosed = s.AllDoorsClosed,
                 MactowPercent = s.MactowPercent,
                 MacTowError = s.MacTowError,

@@ -107,6 +107,19 @@ namespace Prosim2GSX.Services
                 wbState.AftCargoDoorOpen = ReadBool(sdk, ProsimConstants.RefDoorCargoAft);
                 wbState.BulkCargoDoorOpen = ReadBool(sdk, ProsimConstants.RefDoorCargoBulk);
 
+                // Entry / overwing doors L1..R4. L1/R1 = forward pax,
+                // L2/R2 + L3/R3 = overwing emergency exits, L4/R4 = aft pax.
+                // All eight render on the "Aircraft Status" silhouette so the
+                // user can see boarding/catering door state at a glance.
+                wbState.Door1LOpen = ReadBool(sdk, ProsimConstants.RefDoor1L);
+                wbState.Door1ROpen = ReadBool(sdk, ProsimConstants.RefDoor1R);
+                wbState.Door2LOpen = ReadBool(sdk, ProsimConstants.RefDoor2L);
+                wbState.Door2ROpen = ReadBool(sdk, ProsimConstants.RefDoor2R);
+                wbState.Door3LOpen = ReadBool(sdk, ProsimConstants.RefDoor3L);
+                wbState.Door3ROpen = ReadBool(sdk, ProsimConstants.RefDoor3R);
+                wbState.Door4LOpen = ReadBool(sdk, ProsimConstants.RefDoor4L);
+                wbState.Door4ROpen = ReadBool(sdk, ProsimConstants.RefDoor4R);
+
                 // Departure readiness — mirrors the GSX state machine's
                 // Aircraft.HasOpenDoors predicate (covers entry + cargo +
                 // bulk) so the banner reflects what would actually gate
