@@ -71,6 +71,7 @@ namespace Prosim2GSX.State
                     try { _app?.WeightBalanceService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
                     try { _app?.LoadsheetService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
                     try { _app?.EfbFlightPlanService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
+                    try { _app?.LoadsheetTimingService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
                 });
             }
             finally

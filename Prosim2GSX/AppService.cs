@@ -119,6 +119,12 @@ namespace Prosim2GSX
         // single fetch path; null-safe under degraded SDK.
         public virtual EfbFlightPlanService EfbFlightPlanService { get; protected set; }
 
+        // Auto-trigger timing for the loadsheet workflow. Polled from the
+        // shared StateUpdateWorker tick; emits notifications at T-30 / T-0
+        // / boarding-complete and reads STD from EfbFlightPlanState (with
+        // a manual override fallback for OFP-less workflows).
+        public virtual LoadsheetTimingService LoadsheetTimingService { get; protected set; }
+
         public AppService(Config config) : base(config)
         {
             RefreshToken();
@@ -212,6 +218,12 @@ namespace Prosim2GSX
             // fetches each tick and exposes the manual fetch + override API
             // to the REST controller (Slice 4).
             EfbFlightPlanService = new EfbFlightPlanService(this);
+
+            // Loadsheet timing — fires prelim/overdue/final-due notifications
+            // off the EfbFlightPlan-derived STD and the SDK boarding-state
+            // dataref. Constructed after EfbFlightPlanService and Loadsheet
+            // so its resolver and state checks see the latest stores.
+            LoadsheetTimingService = new LoadsheetTimingService(this);
 
             // Eagerly load the checklist definition into ChecklistState so the
             // web UI can render even before the WPF Checklists tab is opened.

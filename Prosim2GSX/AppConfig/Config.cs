@@ -87,6 +87,14 @@ namespace Prosim2GSX.AppConfig
         public virtual bool EfbAutoSyncToFmsOnFetch { get; set; } = false;
         public virtual bool EfbPreferEfbFlightPlan { get; set; } = false;
         public virtual bool EfbLockFieldsFromOfp { get; set; } = true;
+
+        // Loadsheet auto-trigger timing. LoadsheetTimingService fires
+        // operational notifications at T-PrelimOffset before STD, at T-0
+        // (overdue if prelim still pending), and on the boarding-complete
+        // rising edge. Disabled flag mutes the trigger entirely without
+        // having to tear down the service.
+        public virtual int LoadsheetPrelimOffsetMinutes { get; set; } = 30;
+        public virtual bool LoadsheetAutoTriggerEnabled { get; set; } = true;
         public virtual string AudioDebugFile { get; set; } = "log\\AudioDebug.txt";
         public virtual DataFlow AudioDeviceFlow { get; set; } = DataFlow.Render;
         public virtual DeviceState AudioDeviceState { get; set; } = DeviceState.Active;
@@ -344,6 +352,12 @@ namespace Prosim2GSX.AppConfig
             // v28: AutoSyncFmsOnFinal added as an opt-in. Default false on
             // upgrade keeps existing installs on the manual-sync workflow;
             // the user enables it via Settings > Integrations.
+
+            // v29: LoadsheetPrelimOffsetMinutes + LoadsheetAutoTriggerEnabled
+            // added for the loadsheet auto-trigger timing service. The C#
+            // defaults (30 minutes / enabled) take effect for any install
+            // that upgrades from <29 — no explicit migration needed since
+            // System.Text.Json applies the default to missing keys.
         }
 
         public virtual void SetFuelFob(string registration, double fuel)
