@@ -53,6 +53,7 @@ namespace Prosim2GSX
         public virtual ChecklistState Checklist { get; } = new();
         public virtual WeightBalanceState WeightBalance { get; } = new();
         public virtual LoadsheetState Loadsheet { get; } = new();
+        public virtual EfbFlightPlanState EfbFlightPlan { get; } = new();
         // Settings is an alias for the existing Config singleton — Config already
         // implements INotifyPropertyChanged and persists itself, so it serves as
         // the AppSettingsState surface unchanged.
@@ -110,6 +111,12 @@ namespace Prosim2GSX
         // demand. Read by WeightBalanceService each tick to populate
         // MactowPercent/MacTowError; called from FmsController for sync.
         public virtual MactowValidationService MactowValidationService { get; protected set; }
+
+        // Owns the EFB Flight Planning (INIT) tab workflow: manual SimBrief
+        // fetch, MCDU auto-fetch observation, and per-field override
+        // management. Reads through the SDK's SimbriefService so there's a
+        // single fetch path; null-safe under degraded SDK.
+        public virtual EfbFlightPlanService EfbFlightPlanService { get; protected set; }
 
         public AppService(Config config) : base(config)
         {
@@ -199,6 +206,11 @@ namespace Prosim2GSX
             // (no-op when AutoSyncFmsOnFinal is disabled in config).
             MactowValidationService = new MactowValidationService(this);
             MactowValidationService.Attach();
+
+            // EFB Flight Planning service — picks up MCDU-triggered SDK
+            // fetches each tick and exposes the manual fetch + override API
+            // to the REST controller (Slice 4).
+            EfbFlightPlanService = new EfbFlightPlanService(this);
 
             // Eagerly load the checklist definition into ChecklistState so the
             // web UI can render even before the WPF Checklists tab is opened.
