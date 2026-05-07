@@ -13,9 +13,9 @@
 
 export type ConnectionStatus = "connecting" | "open" | "reconnecting" | "closed";
 
-export type WsChannel = "flightStatus" | "gsx" | "audio" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet";
+export type WsChannel = "flightStatus" | "gsx" | "audio" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet" | "efbFlightPlan";
 
-export type StateChannel = "flightStatus" | "audio" | "gsxSettings" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet";
+export type StateChannel = "flightStatus" | "audio" | "gsxSettings" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet" | "efbFlightPlan";
 
 export interface PatchEnvelope {
   channel: WsChannel;
@@ -749,4 +749,88 @@ export interface LoadsheetDto {
 export interface LoadsheetSnapshotDto {
   prelim: LoadsheetDto;
   final: LoadsheetDto;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// EFB Flight Planning (INIT tab)
+// ──────────────────────────────────────────────────────────────────────────
+
+export type OfpStatus = "Empty" | "Loaded" | "Partial";
+export type OfpSource = "None" | "SimbriefEfb" | "Mcdu" | "Manual";
+
+// Mirrors Prosim2GSX/State/OFPData.cs. All weights are kg (server normalises
+// lbs → kg at parse time). DateTime fields ride as ISO-8601 strings.
+export interface OFPData {
+  ofpId: string;
+  departureIcao: string;
+  arrivalIcao: string;
+  alternateIcao: string;
+  flightNumber: string;
+  airlineIcao: string;
+  callsign: string;
+
+  zfwKg: number;
+  oewKg: number;
+
+  fuelRampKg: number;
+  fuelTripKg: number;
+  fuelContingencyKg: number;
+  fuelAlternateKg: number;
+  fuelMinimumKg: number;
+  fuelExtraKg: number;
+  fuelTaxiKg: number;
+  fuelReserveKg: number;
+
+  passengerCount: number;
+  cargoKg: number;
+
+  cruiseFlightLevel: number;
+  costIndex: number;
+  route: string;
+  departurePlanRwy: string;
+  arrivalPlanRwy: string;
+
+  // STD = scheduled out; ETA = estimated touchdown (Airbus FMS convention).
+  std: string | null;
+  eta: string | null;
+
+  aircraftType: string;
+  aircraftReg: string;
+  aircraftEngines: string;
+
+  fetchedAt: string;
+}
+
+// Mirrors Prosim2GSX/Web/Contracts/EfbFlightPlanDto.cs. The "effective" value
+// for a writable field is overrideValues[field] when overrideFlags[field] is
+// true, else ofp.<field>.
+export interface EfbFlightPlanDto {
+  isOfpLoaded: boolean;
+  status: OfpStatus;
+  source: OfpSource;
+  ofp: OFPData | null;
+  overrideFlags: Record<string, boolean>;
+  overrideValues: Record<string, unknown>;
+  fetchedAt: string | null;
+  lastFetchError: string;
+  isBusy: boolean;
+  autoSyncToFmsOnFetch: boolean;
+  preferEfbFlightPlan: boolean;
+  lockFieldsFromOfp: boolean;
+}
+
+export interface FetchOfpRequest {
+  departure: string;
+  arrival: string;
+  alternate: string;
+  flightNumber: string;
+}
+
+export interface OverrideRequest {
+  field: string;
+  value: number | string | boolean;
+}
+
+export interface ClearOverrideRequest {
+  field: string;
 }

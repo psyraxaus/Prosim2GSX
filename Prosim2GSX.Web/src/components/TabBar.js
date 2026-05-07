@@ -1,9 +1,10 @@
 import { jsx as _jsx } from "react/jsx-runtime";
 import styles from "./TabBar.module.css";
 // Order matches the WPF AppWindow tabs:
-// Flight Status → OFP → Loadsheet → W&B → Checklists → GSX Settings → Aircraft Profiles → Audio Settings → App Settings.
+// Flight Status → INIT → OFP → Loadsheet → W&B → Checklists → GSX Settings → Aircraft Profiles → Audio Settings → App Settings.
 const TABS = [
     { key: "flightStatus", label: "Flight Status" },
+    { key: "init", label: "INIT" },
     { key: "ofp", label: "OFP" },
     { key: "loadsheet", label: "Loadsheet" },
     { key: "weightBalance", label: "W&B" },

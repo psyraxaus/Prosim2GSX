@@ -53,7 +53,8 @@ export function useWebSocket(dispatch) {
                             env.channel === "audio" ||
                             env.channel === "appSettings" ||
                             env.channel === "ofp" ||
-                            env.channel === "checklists") {
+                            env.channel === "checklists" ||
+                            env.channel === "efbFlightPlan") {
                             dispatch({ type: "set", channel: env.channel, state: env.snapshot });
                         }
                         return;

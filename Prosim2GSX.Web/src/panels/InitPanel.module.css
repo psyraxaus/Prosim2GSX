@@ -1,0 +1,234 @@
+/* Airbus FMS palette + base layout for the EFB INIT tab. The full design
+ * system (animations, blink cursor, fetch sequence) lands in the next
+ * polish slice; this v1 covers the colours, monospace font, sharp
+ * borders, and two-column layout. */
+
+.panel {
+  --fms-bg:           #0a0e1a;
+  --fms-bg-section:   #0d1220;
+  --fms-cyan:         #00d4e8;
+  --fms-green:        #39ff6e;
+  --fms-amber:        #ffaa00;
+  --fms-white:        #d8dce8;
+  --fms-grey:         #4a5268;
+  --fms-btn-bg:       #1e2535;
+  --fms-btn-border:   #3a4558;
+  --fms-warn:         #ff4444;
+  --fms-override:     #ff8c00;
+  --fms-font:         'Courier New', 'Lucida Console', monospace;
+
+  background: var(--fms-bg);
+  color: var(--fms-white);
+  font-family: var(--fms-font);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  /* Cancel main's vertical padding so the FMS background runs to the
+   * top edge. Main has no horizontal padding (App.module.css: padding:
+   * 16px 0), so horizontal margin stays 0 — anything else creates a
+   * horizontal scrollbar at the document level. The dark background
+   * covers the whole window; the content within is capped via .inner. */
+  margin: -16px 0 0 0;
+  padding: 14px;
+  min-height: calc(100vh - 110px);
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.inner {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* Stack columns on narrow viewports (phones / split-screen browsers). */
+@media (max-width: 760px) {
+  .columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.column {
+  background: var(--fms-bg-section);
+  border: 1px solid var(--fms-grey);
+  padding: 14px;
+  min-width: 0; /* allow column to shrink inside the grid */
+}
+
+.title {
+  color: var(--fms-cyan);
+  font-weight: bold;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  margin: 0 0 8px 0;
+}
+
+.separator {
+  height: 1px;
+  background: var(--fms-grey);
+  opacity: 0.4;
+  margin: 8px 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 110px auto;
+  gap: 12px;
+  margin: 4px 0;
+  align-items: center;
+}
+
+.rowSplit {
+  display: grid;
+  grid-template-columns: 60px 80px 40px 80px 50px 80px;
+  gap: 8px;
+  margin: 4px 0;
+  align-items: center;
+  justify-content: start;
+}
+
+.rowFuel {
+  /* Flex with explicit widths so the row is always 280px wide regardless
+   * of the parent column's size. A grid with max-width still gets
+   * stretched by its 1fr track when the column is wider. */
+  display: flex;
+  align-items: center;
+  margin: 3px 0;
+}
+
+.rowFuel .label {
+  width: 120px;
+  flex-shrink: 0;
+}
+
+.rowFuel .valueRight {
+  width: 160px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.label {
+  color: var(--fms-white);
+  font-size: 11px;
+}
+
+.value {
+  color: var(--fms-green);
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.valueRight {
+  color: var(--fms-green);
+  font-weight: bold;
+  font-size: 13px;
+  text-align: right;
+}
+
+.valueOverridden {
+  color: var(--fms-override);
+}
+
+.valueEmpty {
+  color: var(--fms-amber);
+  background: var(--fms-amber);
+  color: var(--fms-bg);
+  padding: 1px 4px;
+  font-weight: bold;
+}
+
+.cyanLabel {
+  color: var(--fms-cyan);
+  font-weight: bold;
+}
+
+.statusRow {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  margin: 4px 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  display: inline-block;
+}
+
+.statusDotGreen { background: var(--fms-green); }
+.statusDotAmber { background: var(--fms-amber); }
+.statusDotWarn  { background: var(--fms-warn);  }
+.statusDotCyan  { background: var(--fms-cyan);  }
+
+.errorLine {
+  color: var(--fms-warn);
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.fetchedAt {
+  color: var(--fms-grey);
+  font-size: 11px;
+  text-align: right;
+  margin-top: 4px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  background: var(--fms-btn-bg);
+  border: 1px solid var(--fms-btn-border);
+  color: var(--fms-white);
+  border-radius: 0;
+  padding: 6px 14px;
+  font-family: var(--fms-font);
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: border-color 100ms, color 100ms;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--fms-cyan);
+  color: var(--fms-cyan);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btnPrimary {
+  border-color: var(--fms-cyan);
+  color: var(--fms-cyan);
+}
+
+.btnAmber {
+  border-color: var(--fms-amber);
+  color: var(--fms-amber);
+}
+
+.btnWarn {
+  border-color: var(--fms-warn);
+  color: var(--fms-warn);
+}
+
+.loading {
+  color: var(--fms-cyan);
+  font-family: var(--fms-font);
+  text-align: center;
+  padding: 40px;
+}

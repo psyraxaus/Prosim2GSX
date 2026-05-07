@@ -12,6 +12,7 @@ import { AudioSettingsPanel } from "./panels/AudioSettingsPanel";
 import { AppSettingsPanel } from "./panels/AppSettingsPanel";
 import { GsxSettingsPanel } from "./panels/GsxSettingsPanel";
 import { OfpPanel } from "./panels/OfpPanel";
+import { InitPanel } from "./panels/InitPanel";
 import { LoadsheetPanel } from "./panels/LoadsheetPanel";
 import { WeightBalancePanel } from "./panels/WeightBalancePanel";
 import { ChecklistsPanel } from "./panels/ChecklistsPanel";
@@ -83,6 +84,7 @@ function AppShell() {
       <TabBar active={tab} onSelect={setTab} />
       <main className={styles.main}>
         {tab === "flightStatus" && <FlightStatusPanel />}
+        {tab === "init" && <InitPanel />}
         {tab === "ofp" && <OfpPanel />}
         {tab === "loadsheet" && <LoadsheetPanel />}
         {tab === "weightBalance" && <WeightBalancePanel />}
