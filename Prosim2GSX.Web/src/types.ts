@@ -13,9 +13,9 @@
 
 export type ConnectionStatus = "connecting" | "open" | "reconnecting" | "closed";
 
-export type WsChannel = "flightStatus" | "gsx" | "audio" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet" | "efbFlightPlan";
+export type WsChannel = "flightStatus" | "gsx" | "audio" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet" | "efbFlightPlan" | "notifications";
 
-export type StateChannel = "flightStatus" | "audio" | "gsxSettings" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet" | "efbFlightPlan";
+export type StateChannel = "flightStatus" | "audio" | "gsxSettings" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet" | "efbFlightPlan" | "notifications";
 
 export interface PatchEnvelope {
   channel: WsChannel;
@@ -828,4 +828,23 @@ export interface OverrideRequest {
 
 export interface ClearOverrideRequest {
   field: string;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Notifications
+// ──────────────────────────────────────────────────────────────────────────
+
+export type NotificationSeverity = "info" | "warning" | "error";
+
+export interface NotificationDto {
+  id: string;
+  type: string;
+  severity: NotificationSeverity;
+  message: string;
+  timestamp: string;
+  dismissed: boolean;
+}
+
+export interface NotificationsSnapshotDto {
+  items: NotificationDto[];
 }

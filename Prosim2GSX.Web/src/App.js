@@ -7,6 +7,7 @@ import { useWebSocket } from "./ws/useWebSocket";
 import { useApi } from "./api/useApi";
 import { useTheme } from "./theme/useTheme";
 import { Header } from "./components/Header";
+import { NotificationBanner } from "./components/NotificationBanner";
 import { TabBar } from "./components/TabBar";
 import { FlightStatusPanel } from "./panels/FlightStatusPanel";
 import { AudioSettingsPanel } from "./panels/AudioSettingsPanel";
@@ -66,5 +67,5 @@ function AppShell() {
     const themeName = state.appSettings?.currentTheme ?? null;
     useTheme(themeName);
     const [tab, setTab] = useState("flightStatus");
-    return (_jsxs("div", { className: styles.app, children: [_jsx(Header, {}), _jsx(TabBar, { active: tab, onSelect: setTab }), _jsxs("main", { className: styles.main, children: [tab === "flightStatus" && _jsx(FlightStatusPanel, {}), tab === "init" && _jsx(InitPanel, {}), tab === "ofp" && _jsx(OfpPanel, {}), tab === "loadsheet" && _jsx(LoadsheetPanel, {}), tab === "weightBalance" && _jsx(WeightBalancePanel, {}), tab === "checklists" && _jsx(ChecklistsPanel, {}), tab === "gsxSettings" && _jsx(GsxSettingsPanel, {}), tab === "aircraftProfiles" && _jsx(AircraftProfilesPanel, {}), tab === "audioSettings" && _jsx(AudioSettingsPanel, {}), tab === "appSettings" && _jsx(AppSettingsPanel, {})] })] }));
+    return (_jsxs("div", { className: styles.app, children: [_jsx(Header, {}), _jsx(NotificationBanner, {}), _jsx(TabBar, { active: tab, onSelect: setTab }), _jsxs("main", { className: styles.main, children: [tab === "flightStatus" && _jsx(FlightStatusPanel, {}), tab === "init" && _jsx(InitPanel, {}), tab === "ofp" && _jsx(OfpPanel, {}), tab === "loadsheet" && _jsx(LoadsheetPanel, {}), tab === "weightBalance" && _jsx(WeightBalancePanel, {}), tab === "checklists" && _jsx(ChecklistsPanel, {}), tab === "gsxSettings" && _jsx(GsxSettingsPanel, {}), tab === "aircraftProfiles" && _jsx(AircraftProfilesPanel, {}), tab === "audioSettings" && _jsx(AudioSettingsPanel, {}), tab === "appSettings" && _jsx(AppSettingsPanel, {})] })] }));
 }

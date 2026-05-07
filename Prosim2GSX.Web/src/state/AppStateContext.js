@@ -18,6 +18,7 @@ const initialState = {
     weightBalance: null,
     loadsheet: null,
     efbFlightPlan: null,
+    notifications: null,
     connection: "closed",
 };
 function reducer(state, action) {

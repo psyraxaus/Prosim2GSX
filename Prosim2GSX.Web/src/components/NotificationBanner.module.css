@@ -1,0 +1,60 @@
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 14px;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+  /* Sit between header and tab bar — App.tsx mounts it there. */
+}
+
+.severity {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.message {
+  flex: 1 1 auto;
+  font-weight: 500;
+}
+
+.dismiss {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  opacity: 0.8;
+}
+
+.dismiss:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* Severity colours — flat backgrounds with high-contrast text so the
+   banner reads cleanly against any active theme. Spec requires
+   blue/amber/red (info/warning/error). */
+.sev_info {
+  background: #2778d8;
+  color: #ffffff;
+}
+
+.sev_warning {
+  background: #e0a000;
+  color: #000000;
+}
+
+.sev_error {
+  background: #c63030;
+  color: #ffffff;
+}

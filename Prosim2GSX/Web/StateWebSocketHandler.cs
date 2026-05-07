@@ -64,6 +64,7 @@ namespace Prosim2GSX.Web
             _app.WeightBalance.PropertyChanged += OnWeightBalanceChanged;
             _app.Loadsheet.PropertyChanged += OnLoadsheetChanged;
             _app.EfbFlightPlan.PropertyChanged += OnEfbFlightPlanChanged;
+            _app.Notifications.PropertyChanged += OnNotificationsChanged;
             HookChecklistItems(_app.Checklist);
             _app.FlightStatus.MessageLog.CollectionChanged += OnMessageLogChanged;
 
@@ -288,6 +289,29 @@ namespace Prosim2GSX.Web
                 {
                     channel = "ofp",
                     patch = new Dictionary<string, object> { [camel] = value },
+                };
+                BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+        }
+
+        // Notifications broadcast: full-snapshot per change. The list is
+        // replaced wholesale on every Add/Dismiss, so a single snapshot is
+        // the natural envelope — same shape the React panel needs to
+        // recompute "most recent non-dismissed".
+        private void OnNotificationsChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (_connections.IsEmpty) return;
+            try
+            {
+                var dto = NotificationsSnapshotDto.From(_app);
+                var envelope = new
+                {
+                    channel = "notifications",
+                    snapshot = dto,
                 };
                 BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default));
             }

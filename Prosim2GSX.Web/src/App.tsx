@@ -6,6 +6,7 @@ import { useWebSocket } from "./ws/useWebSocket";
 import { useApi } from "./api/useApi";
 import { useTheme } from "./theme/useTheme";
 import { Header } from "./components/Header";
+import { NotificationBanner } from "./components/NotificationBanner";
 import { TabBar, TabKey } from "./components/TabBar";
 import { FlightStatusPanel } from "./panels/FlightStatusPanel";
 import { AudioSettingsPanel } from "./panels/AudioSettingsPanel";
@@ -81,6 +82,7 @@ function AppShell() {
   return (
     <div className={styles.app}>
       <Header />
+      <NotificationBanner />
       <TabBar active={tab} onSelect={setTab} />
       <main className={styles.main}>
         {tab === "flightStatus" && <FlightStatusPanel />}

@@ -65,7 +65,8 @@ export function useWebSocket(dispatch: Dispatch<AppAction>) {
               env.channel === "appSettings" ||
               env.channel === "ofp" ||
               env.channel === "checklists" ||
-              env.channel === "efbFlightPlan"
+              env.channel === "efbFlightPlan" ||
+              env.channel === "notifications"
             ) {
               dispatch({ type: "set", channel: env.channel, state: env.snapshot });
             }

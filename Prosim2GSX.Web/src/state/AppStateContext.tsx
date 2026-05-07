@@ -27,6 +27,7 @@ export interface AppState {
   weightBalance: Record<string, unknown> | null;
   loadsheet: Record<string, unknown> | null;
   efbFlightPlan: Record<string, unknown> | null;
+  notifications: Record<string, unknown> | null;
   connection: ConnectionStatus;
 }
 
@@ -46,6 +47,7 @@ const initialState: AppState = {
   weightBalance: null,
   loadsheet: null,
   efbFlightPlan: null,
+  notifications: null,
   connection: "closed",
 };
 
