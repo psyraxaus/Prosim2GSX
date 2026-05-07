@@ -54,6 +54,7 @@
             <TabItem Header="OFP"/>
             <TabItem Header="LOADSHEET"/>
             <TabItem Header="W&amp;B"/>
+            <TabItem Header="FUEL"/>
             <TabItem Header="CHECKLISTS"/>
             <TabItem Header="GSX SETTINGS"/>
             <TabItem Header="AIRCRAFT PROFILES"/>
