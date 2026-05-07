@@ -58,6 +58,12 @@ namespace Prosim2GSX.Services
                 "passengerCount",
             };
 
+        // Edge tracking for the shutdown auto-reset trigger. Mirrors the
+        // pattern in LoadsheetService.ProcessShutdownReset and
+        // StateUpdateWorker.UpdateChecklist.
+        private bool _wasOnGround = true;
+        private bool _wasEnginesRunning;
+
         public EfbFlightPlanService(AppService app)
         {
             _app = app;
@@ -72,6 +78,9 @@ namespace Prosim2GSX.Services
             {
                 var state = _app?.EfbFlightPlan;
                 if (state == null) return;
+
+                ProcessShutdownReset(state);
+
                 if (state.IsBusy) return;
 
                 var ai = _app?.GsxService?.AircraftInterface;
@@ -90,6 +99,32 @@ namespace Prosim2GSX.Services
             {
                 Logger.LogException(ex);
             }
+        }
+
+        // Auto-clears the OFP cache when the aircraft transitions from
+        // running-engines-on-ground to engines-off-on-ground (i.e. shutdown
+        // after a flight). Same edge that LoadsheetService and the checklist
+        // auto-reset use, so the INIT tab clears in lockstep with the rest
+        // of the flight-cycle state.
+        protected virtual void ProcessShutdownReset(EfbFlightPlanState state)
+        {
+            var fs = _app?.FlightStatus;
+            if (fs == null) return;
+
+            bool nowOnGround = fs.AppOnGround;
+            bool nowEnginesRunning = fs.AppEnginesRunning;
+
+            if (nowOnGround && _wasEnginesRunning && !nowEnginesRunning)
+            {
+                if (state.Status != OfpStatus.Empty || state.OverrideFlags.Count > 0)
+                {
+                    Logger.Information("EFB INIT: clearing OFP cache on flight-cycle shutdown");
+                    ResetFlight();
+                }
+            }
+
+            _wasOnGround = nowOnGround;
+            _wasEnginesRunning = nowEnginesRunning;
         }
 
         // Manual fetch entry point used by the FETCH OFP button. Source is
