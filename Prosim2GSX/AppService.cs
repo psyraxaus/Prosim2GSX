@@ -133,6 +133,14 @@ namespace Prosim2GSX
         // a manual override fallback for OFP-less workflows).
         public virtual LoadsheetTimingService LoadsheetTimingService { get; protected set; }
 
+        // Synthetic passenger manifest generator — fills the cabin on demand
+        // from the Aircraft Status panel without going through GSX. Writes
+        // aircraft.passengers.seatOccupation.string directly via the SDK so
+        // the WeightBalance store picks up the change on the next tick and
+        // the silhouette re-renders. Cached manifest survives the request
+        // so subsequent GET /api/passengers/manifest returns the same names.
+        public virtual PassengerSimulationService PassengerSimulationService { get; protected set; }
+
         public AppService(Config config) : base(config)
         {
             RefreshToken();
@@ -238,6 +246,12 @@ namespace Prosim2GSX
             // dataref. Constructed after EfbFlightPlanService and Loadsheet
             // so its resolver and state checks see the latest stores.
             LoadsheetTimingService = new LoadsheetTimingService(this);
+
+            // Passenger simulation — writes a synthetic manifest's
+            // seatOccupation.string to ProSim on demand. Independent of the
+            // GSX boarding pipeline; the W&B store mirrors the dataref each
+            // tick so the silhouette reflects the new state automatically.
+            PassengerSimulationService = new PassengerSimulationService(this);
 
             // Eagerly load the checklist definition into ChecklistState so the
             // web UI can render even before the WPF Checklists tab is opened.
