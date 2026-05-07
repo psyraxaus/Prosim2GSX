@@ -33,6 +33,10 @@ namespace Prosim2GSX.Commands.Handlers
             registry.Register<ResetFlightRequest, EfbFlightPlanDto>(
                 "efb.resetFlight",
                 (req, ct) => ResetFlight(app, ct));
+
+            registry.Register<SyncToFmsRequest, EfbFlightPlanDto>(
+                "efb.syncToFms",
+                (req, ct) => SyncToFms(app, ct));
         }
 
         private static async Task<EfbFlightPlanDto> FetchOfp(AppService app, FetchOfpRequest req, CancellationToken ct)
@@ -81,6 +85,15 @@ namespace Prosim2GSX.Commands.Handlers
             if (svc == null)
                 throw new CommandValidationException("EFB Flight Planning service not available.");
             svc.ResetFlight();
+            return Task.FromResult(EfbFlightPlanDto.From(app));
+        }
+
+        private static Task<EfbFlightPlanDto> SyncToFms(AppService app, CancellationToken _)
+        {
+            var svc = app?.EfbFlightPlanService;
+            if (svc == null)
+                throw new CommandValidationException("EFB Flight Planning service not available.");
+            svc.SyncToFms();
             return Task.FromResult(EfbFlightPlanDto.From(app));
         }
     }

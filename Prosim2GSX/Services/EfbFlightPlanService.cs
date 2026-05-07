@@ -285,6 +285,52 @@ namespace Prosim2GSX.Services
                 WriteFmsInitFromOfp(data);
         }
 
+        // Manual SYNC TO FMS — pushes the effective ZFW + block fuel to the
+        // FMS init datarefs. "Effective" means override-if-set else the OFP
+        // value. Idempotent — safe to call when nothing has drifted. Used
+        // by the WPF SYNC TO FMS button and the REST endpoint of the same
+        // name. Cargo + pax aren't included here — those datarefs are kept
+        // in sync continuously by the SDK's import + the override write
+        // path, so a manual re-sync of them buys nothing.
+        public virtual void SyncToFms()
+        {
+            var state = _app?.EfbFlightPlan;
+            var ofp = state?.CurrentOfp;
+            if (ofp == null) return;
+
+            var sdk = _app?.GsxService?.AircraftInterface?.ProsimInterface?.SdkInterface;
+            if (sdk == null || !sdk.IsConnected) return;
+
+            try
+            {
+                var zfw = GetEffectiveDouble("zfwKg", ofp.ZfwKg);
+                var ramp = GetEffectiveDouble("fuelRampKg", ofp.FuelRampKg);
+                var block = MactowValidationService.RoundBlockFuelKg(ramp);
+
+                sdk.SetDouble(ProsimConstants.RefFmsInitZfw, zfw);
+                sdk.SetDouble(ProsimConstants.RefFmsInitBlock, block);
+                Logger.Information($"EFB INIT manual sync: zfw={zfw:F0} blockFuel={block:F0}");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+        }
+
+        // Returns the override value if set for this field, otherwise the OFP
+        // fallback. Coerces JsonElement / boxed primitives via TryToDouble.
+        private double GetEffectiveDouble(string field, double ofpValue)
+        {
+            var state = _app?.EfbFlightPlan;
+            if (state?.OverrideValues != null
+                && state.OverrideFlags != null
+                && state.OverrideFlags.TryGetValue(field, out var on) && on
+                && state.OverrideValues.TryGetValue(field, out var v)
+                && TryToDouble(v, out var ov))
+                return ov;
+            return ofpValue;
+        }
+
         // ── ProSim writes ───────────────────────────────────────────────────
 
         // Writes ZFW + block fuel to the FMS init datarefs from the supplied

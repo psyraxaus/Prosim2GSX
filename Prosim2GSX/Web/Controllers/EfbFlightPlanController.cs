@@ -15,6 +15,7 @@ namespace Prosim2GSX.Web.Controllers
     //   POST /api/efb/clear-override     — { field }
     //   POST /api/efb/clear-all-overrides
     //   POST /api/efb/reset-flight       — clears OFP cache + all overrides
+    //   POST /api/efb/sync-to-fms        — pushes effective ZFW + block to FMS init
     //
     // POST endpoints delegate to the CommandRegistry — same dispatch helper
     // shape as OfpController so error mapping (validation → 400, missing
@@ -54,6 +55,11 @@ namespace Prosim2GSX.Web.Controllers
         public Task<IActionResult> ResetFlight()
             => Dispatch<ResetFlightRequest, EfbFlightPlanDto>(
                 "efb.resetFlight", new ResetFlightRequest());
+
+        [HttpPost("sync-to-fms")]
+        public Task<IActionResult> SyncToFms()
+            => Dispatch<SyncToFmsRequest, EfbFlightPlanDto>(
+                "efb.syncToFms", new SyncToFmsRequest());
 
         private async Task<IActionResult> Dispatch<TReq, TRes>(string name, TReq req)
         {

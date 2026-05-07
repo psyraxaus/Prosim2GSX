@@ -30,4 +30,6 @@ namespace Prosim2GSX.Web.Contracts.Commands
     public class ClearAllOverridesRequest { }
 
     public class ResetFlightRequest { }
+
+    public class SyncToFmsRequest { }
 }
