@@ -89,10 +89,18 @@ namespace Prosim2GSX.AppConfig
         public virtual bool EfbLockFieldsFromOfp { get; set; } = true;
 
         // Loadsheet auto-trigger timing. LoadsheetTimingService fires
-        // operational notifications at T-PrelimOffset before STD, at T-0
-        // (overdue if prelim still pending), and on the boarding-complete
-        // rising edge. Disabled flag mutes the trigger entirely without
-        // having to tear down the service.
+        // a warning notification at T-0 (STD reached) when the prelim
+        // hasn't been received — actionable since the SDK transmits
+        // the prelim only when GSX refuel goes Active, so a missing
+        // prelim at STD means refuel hasn't been called yet. The
+        // boarding-complete rising edge also fires an info "final
+        // incoming" notification.
+        //
+        // PrelimOffsetMinutes bounds the overdue window: only fire if
+        // STD was reached within the last N minutes. Stops a stale OFP
+        // / day-rollover from firing a false positive on first eval.
+        // Disabled flag mutes the trigger entirely without tearing
+        // down the service.
         public virtual int LoadsheetPrelimOffsetMinutes { get; set; } = 30;
         public virtual bool LoadsheetAutoTriggerEnabled { get; set; } = true;
         public virtual string AudioDebugFile { get; set; } = "log\\AudioDebug.txt";

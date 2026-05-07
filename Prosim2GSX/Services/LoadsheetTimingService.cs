@@ -4,23 +4,29 @@ using System;
 
 namespace Prosim2GSX.Services
 {
-    // Auto-trigger timing for the loadsheet workflow. Three operational
+    // Auto-trigger timing for the loadsheet workflow. Two operational
     // notifications get raised on the lifecycle of a flight:
     //
-    //   1. Prelim due — at T-PrelimOffsetMinutes before STD (default 30).
-    //      Info severity. Suppressed if the prelim has already arrived.
-    //   2. Prelim overdue — at T-0 if the prelim still hasn't arrived.
-    //      Warning severity. Different Type from (1) so the React banner
-    //      shows it as a fresh alert rather than mutating the existing
-    //      info notification.
-    //   3. Final due — on the boarding-complete rising edge (the SDK's
-    //      ProsimBoardingService writes "completed" to efb.efb.boardingStatus
-    //      when GSX finishes, the native ProSim EFB writes "ended" when
-    //      the user manually completes; IsEfbBoardingCompleted accepts
-    //      both). Info severity. Fires before the SDK actually transmits
-    //      the final loadsheet — the SDK has a randomised FinalDelay
-    //      (Profile.FinalDelay{Min,Max}) between boarding-complete and
-    //      the final-loadsheet POST, so this is a heads-up.
+    //   1. Prelim overdue — at T-0 (STD reached) if the prelim has not
+    //      yet been received. Warning severity. The actionable case:
+    //      the SDK transmits the prelim only when GSX refuel goes
+    //      Active (see ProsimAircraftInterface.OnRefuelActive — code
+    //      comment "Generate preliminary loadsheet when refueling is
+    //      called (real-world ops timing)"), so a missing prelim at
+    //      STD means the user hasn't called refuel.
+    //   2. Final incoming — on the boarding-complete rising edge (the
+    //      SDK's ProsimBoardingService writes "completed" to
+    //      efb.efb.boardingStatus when GSX finishes, the native ProSim
+    //      EFB writes "ended" when the user manually completes;
+    //      IsEfbBoardingCompleted accepts both). Info severity. The
+    //      SDK then waits a randomised FinalDelay (Profile.FinalDelay{
+    //      Min,Max}, defaults 90–150s) before transmitting the final
+    //      loadsheet, so the wording acknowledges the gap.
+    //
+    // No T-30 "prelim due" notification — the prelim is keyed off the
+    // GSX refuel-active event in the SDK, not STD, so a wall-clock
+    // notification would be misleading. STD only matters for the
+    // overdue check.
     //
     // STD source priority:
     //   1. EfbFlightPlanState.CurrentOfp.Std (the EfbFlightPlanService
@@ -51,7 +57,6 @@ namespace Prosim2GSX.Services
         private readonly AppService _app;
 
         // Fired flags so each notification only fires once per flight.
-        private bool _prelimDueFired;
         private bool _prelimOverdueFired;
         private bool _finalDueFired;
 
@@ -174,7 +179,6 @@ namespace Prosim2GSX.Services
 
         private void ResetFiredFlags()
         {
-            _prelimDueFired = false;
             _prelimOverdueFired = false;
             _finalDueFired = false;
         }
@@ -200,13 +204,17 @@ namespace Prosim2GSX.Services
                 return;
             }
 
-            // Rising edge — fire once.
+            // Rising edge — fire once. Wording acknowledges that the SDK
+            // doesn't transmit the final loadsheet immediately; it waits
+            // Profile.FinalDelay{Min,Max} (defaults 90–150s) before the
+            // POST. So this is a heads-up, not a "should be there now"
+            // alert.
             if (nowComplete && !_lastBoardingCompleted && !_finalDueFired)
             {
                 EmitNotification(
-                    type: "loadsheet_final_due",
+                    type: "loadsheet_final_incoming",
                     severity: "info",
-                    message: "Boarding complete — final loadsheet due");
+                    message: "Boarding complete — final loadsheet incoming (~2 min)");
                 _finalDueFired = true;
             }
 
@@ -219,34 +227,27 @@ namespace Prosim2GSX.Services
             if (!std.HasValue) return;
 
             var minutesToStd = ComputeMinutesToStd(std.Value);
-            int prelimOffset = Math.Max(1, _app?.Config?.LoadsheetPrelimOffsetMinutes ?? 30);
+            // Window bound — only fire overdue if STD was reached within
+            // the last `overdueWindow` minutes. Stops a stale OFP / day-
+            // rollover from generating a false positive on first eval.
+            int overdueWindow = Math.Max(1, _app?.Config?.LoadsheetPrelimOffsetMinutes ?? 30);
 
             bool prelimReceived =
                 string.Equals(_app?.Loadsheet?.PrelimStatus, "received", StringComparison.OrdinalIgnoreCase);
 
-            // Prelim due at T-PrelimOffset, suppressed if already received.
-            if (!_prelimDueFired
-                && !prelimReceived
-                && minutesToStd <= prelimOffset
-                && minutesToStd > -prelimOffset) // avoid firing for ancient pre-arm windows on first eval
-            {
-                EmitNotification(
-                    type: "loadsheet_prelim_due",
-                    severity: "info",
-                    message: $"Prelim loadsheet due — {prelimOffset} minutes to departure");
-                _prelimDueFired = true;
-            }
-
-            // Overdue at T-0, suppressed if prelim arrived in the meantime.
+            // Overdue at T-0 — suppressed if prelim arrived in the
+            // meantime. Actionable: the SDK transmits the prelim only
+            // when GSX refuel goes Active, so a missing prelim at STD
+            // means the user hasn't called refuel.
             if (!_prelimOverdueFired
                 && !prelimReceived
                 && minutesToStd <= 0
-                && minutesToStd > -prelimOffset) // 12-hour wrap can produce massive negatives, ignore those
+                && minutesToStd > -overdueWindow)
             {
                 EmitNotification(
                     type: "loadsheet_prelim_overdue",
                     severity: "warning",
-                    message: "Prelim loadsheet overdue — STD reached without preliminary loadsheet");
+                    message: "STD reached — prelim loadsheet not received. Call refuel to generate.");
                 _prelimOverdueFired = true;
             }
         }
