@@ -53,6 +53,7 @@ namespace Prosim2GSX
         public virtual ChecklistState Checklist { get; } = new();
         public virtual WeightBalanceState WeightBalance { get; } = new();
         public virtual LoadsheetState Loadsheet { get; } = new();
+        public virtual FuelState Fuel { get; } = new();
         public virtual EfbFlightPlanState EfbFlightPlan { get; } = new();
         public virtual NotificationsState Notifications { get; } = new();
         // Settings is an alias for the existing Config singleton — Config already
@@ -100,6 +101,13 @@ namespace Prosim2GSX
         // unconditionally; the service itself null-guards on the SDK so a
         // degraded mode (no SDK) just leaves the store at last-known values.
         public virtual WeightBalanceService WeightBalanceService { get; protected set; }
+
+        // Reads ProSim fuel datarefs (totals, per-tank amounts, per-tank
+        // capacities) each StateUpdateWorker tick into FuelState. Distinct
+        // from the W&B fuel mini-section: this drives the dedicated FUEL
+        // tab (planned vs in-tanks delta, over/under flags, kg/L mirror,
+        // tank-breakdown bars). Same null-safety story as W&B.
+        public virtual FuelService FuelService { get; protected set; }
 
         // Reads the two EFB loadsheet datarefs (efb.prelimLoadsheet,
         // efb.finalLoadsheet) each StateUpdateWorker tick and projects the
@@ -200,6 +208,12 @@ namespace Prosim2GSX
             // StateUpdateWorker tick. The worker calls Tick() unconditionally;
             // the service no-ops when the SDK is unavailable.
             WeightBalanceService = new WeightBalanceService(this);
+
+            // Fuel reader — populates FuelState (totals, per-tank, deltas,
+            // litres). Separate service from W&B because the FUEL tab needs
+            // per-tank breakdown + delta/over-fuel flags that the W&B store
+            // doesn't carry. Same Tick() contract; null-safe under degraded SDK.
+            FuelService = new FuelService(this);
 
             // Loadsheet reader — populates LoadsheetState from the two EFB
             // loadsheet datarefs. Same Tick() contract as the W&B service.

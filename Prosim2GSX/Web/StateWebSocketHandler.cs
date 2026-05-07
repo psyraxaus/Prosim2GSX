@@ -62,6 +62,7 @@ namespace Prosim2GSX.Web
             _app.Ofp.PropertyChanged += OnOfpChanged;
             _app.Checklist.PropertyChanged += OnChecklistChanged;
             _app.WeightBalance.PropertyChanged += OnWeightBalanceChanged;
+            _app.Fuel.PropertyChanged += OnFuelChanged;
             _app.Loadsheet.PropertyChanged += OnLoadsheetChanged;
             _app.EfbFlightPlan.PropertyChanged += OnEfbFlightPlanChanged;
             _app.Notifications.PropertyChanged += OnNotificationsChanged;
@@ -212,6 +213,9 @@ namespace Prosim2GSX.Web
 
         private void OnWeightBalanceChanged(object sender, PropertyChangedEventArgs e)
             => Broadcast(channel: "weightBalance", e.PropertyName, sender);
+
+        private void OnFuelChanged(object sender, PropertyChangedEventArgs e)
+            => Broadcast(channel: "fuel", e.PropertyName, sender);
 
         // Loadsheet broadcasts the full Prelim+Final pair on every property
         // change rather than per-property patches — the React panel renders

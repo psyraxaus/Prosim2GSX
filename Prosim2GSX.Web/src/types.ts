@@ -13,9 +13,9 @@
 
 export type ConnectionStatus = "connecting" | "open" | "reconnecting" | "closed";
 
-export type WsChannel = "flightStatus" | "gsx" | "audio" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet" | "efbFlightPlan" | "notifications";
+export type WsChannel = "flightStatus" | "gsx" | "audio" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet" | "efbFlightPlan" | "notifications" | "fuel";
 
-export type StateChannel = "flightStatus" | "audio" | "gsxSettings" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet" | "efbFlightPlan" | "notifications";
+export type StateChannel = "flightStatus" | "audio" | "gsxSettings" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet" | "efbFlightPlan" | "notifications" | "fuel";
 
 export interface PatchEnvelope {
   channel: WsChannel;
@@ -698,6 +698,32 @@ export interface WeightBalanceDto {
   mtowLimitKg: number;
   mlwLimitKg: number;
   mzfwLimitKg: number;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Fuel (read-only — FUEL tab)
+// ──────────────────────────────────────────────────────────────────────────
+
+// Mirror of Web/Contracts/FuelDto.cs. Live updates arrive on the WS "fuel"
+// channel as per-property camelCase patches; the reducer's default branch
+// merges them into state.fuel.
+export interface FuelDto {
+  plannedRampKg: number;
+  fuelInTanksKg: number;
+  fuelCentreKg: number;
+  fuelLeftKg: number;
+  fuelRightKg: number;
+  fuelCapacityKg: number;
+  fuelCentreCapacityKg: number;
+  fuelLeftCapacityKg: number;
+  fuelRightCapacityKg: number;
+  fuelDeltaKg: number;
+  isOverFuelled: boolean;
+  isUnderFuelled: boolean;
+  specificGravity: number;
+  plannedRampLitres: number;
+  fuelInTanksLitres: number;
+  underFuelThresholdKg: number;
 }
 
 // Result of a POST /api/fms/sync attempt. Also broadcast on the WS

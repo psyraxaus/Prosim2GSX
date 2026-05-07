@@ -1,0 +1,209 @@
+.panel {
+  padding: 16px 18px;
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.loading {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.colHeading {
+  margin: 0 0 4px 0;
+  padding: 0;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--category-text);
+  font-weight: 600;
+}
+
+.colHeading + .colHeading,
+.dataCard + .colHeading {
+  margin-top: 14px;
+}
+
+.dataCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 6px);
+  padding: 12px;
+}
+
+.capacity {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--category-text);
+  margin-bottom: 8px;
+}
+
+/* ── Capacity bar ──────────────────────────────────────────────────────
+   Single horizontal bar showing fuel-in-tanks as a fraction of usable
+   capacity. Overlaid centred label gives the absolute kg figures. The
+   fill colour is set per-status by the parent (.capacityFillGreen /
+   ...Amber / ...Red / ...Neutral). */
+.capacityBar {
+  position: relative;
+  width: 100%;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.capacityFill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  transition: width 200ms ease;
+}
+
+.capacityFillGreen   { background: #4CAF50; }
+.capacityFillAmber   { background: #F5A623; }
+.capacityFillRed     { background: #E53935; }
+.capacityFillNeutral { background: #4F6F8F; }   /* slate-blue when no plan */
+
+.capacityLabel {
+  position: absolute;
+  left: 0; right: 0; top: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #FFFFFF;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
+  font-family: var(--font-mono, monospace);
+  pointer-events: none;
+}
+
+/* ── Summary grid: PLANNED / IN TANKS in KG and L ─────────────────────
+   2-col header row + 2-col value row, repeated for kg then litres. */
+.summaryGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 18px;
+  margin-top: 12px;
+}
+
+.summaryHeader {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--category-text);
+  text-align: center;
+}
+
+.summaryValue {
+  font-weight: 700;
+  font-size: 18px;
+  font-family: var(--font-mono, monospace);
+  text-align: center;
+  color: var(--text-primary, #FFFFFF);
+}
+
+/* ── Delta row ───────────────────────────────────────────────────────── */
+.deltaRow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.deltaLabel {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--category-text);
+  font-weight: 600;
+}
+
+.deltaValue {
+  font-size: 18px;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  font-variant-numeric: tabular-nums;
+}
+
+.deltaTag {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #FFFFFF;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.deltaGreen   .deltaValue { color: #4CAF50; }
+.deltaAmber   .deltaValue { color: #F5A623; }
+.deltaRed     .deltaValue { color: #E53935; }
+.deltaNeutral .deltaValue { color: var(--category-text); }
+
+/* ── Tank breakdown rows ────────────────────────────────────────────── */
+.tankRow {
+  display: grid;
+  grid-template-columns: 64px 1fr 160px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.tankRow + .tankRow {
+  border-top: 1px solid var(--border);
+}
+
+.tankLabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--category-text);
+}
+
+.tankBar {
+  position: relative;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.tankFill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  background: #4CAF50;
+  transition: width 200ms ease;
+}
+
+.tankValue {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  text-align: right;
+  color: var(--text-primary, #FFFFFF);
+}
+
+.note {
+  margin: 8px 0 0 0;
+  padding: 0;
+  text-align: center;
+  font-style: italic;
+  font-size: 11px;
+  color: #cfd5e6;
+}
+
+/* Stack-on-narrow already happens implicitly because the panel is
+   single-column; no media query needed. */

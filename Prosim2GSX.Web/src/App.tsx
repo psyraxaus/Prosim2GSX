@@ -16,6 +16,7 @@ import { OfpPanel } from "./panels/OfpPanel";
 import { InitPanel } from "./panels/InitPanel";
 import { LoadsheetPanel } from "./panels/LoadsheetPanel";
 import { WeightBalancePanel } from "./panels/WeightBalancePanel";
+import { FuelPanel } from "./panels/FuelPanel";
 import { ChecklistsPanel } from "./panels/ChecklistsPanel";
 import { AircraftProfilesPanel } from "./panels/AircraftProfilesPanel";
 import { AppSettingsDto } from "./types";
@@ -90,6 +91,7 @@ function AppShell() {
         {tab === "ofp" && <OfpPanel />}
         {tab === "loadsheet" && <LoadsheetPanel />}
         {tab === "weightBalance" && <WeightBalancePanel />}
+        {tab === "fuel" && <FuelPanel />}
         {tab === "checklists" && <ChecklistsPanel />}
         {tab === "gsxSettings" && <GsxSettingsPanel />}
         {tab === "aircraftProfiles" && <AircraftProfilesPanel />}

@@ -19,6 +19,7 @@ const initialState = {
     loadsheet: null,
     efbFlightPlan: null,
     notifications: null,
+    fuel: null,
     connection: "closed",
 };
 function reducer(state, action) {
