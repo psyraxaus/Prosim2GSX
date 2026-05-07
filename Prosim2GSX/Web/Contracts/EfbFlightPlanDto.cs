@@ -21,9 +21,17 @@ namespace Prosim2GSX.Web.Contracts
         public string LastFetchError { get; set; } = "";
         public bool IsBusy { get; set; }
 
+        // Behaviour flags from Config — projected so the panel renders the
+        // correct UX (locked vs editable fields, auto-sync hint, etc.)
+        // without a second round-trip to /api/app-settings.
+        public bool AutoSyncToFmsOnFetch { get; set; }
+        public bool PreferEfbFlightPlan { get; set; }
+        public bool LockFieldsFromOfp { get; set; }
+
         public static EfbFlightPlanDto From(AppService app)
         {
             var s = app?.EfbFlightPlan;
+            var c = app?.Config;
             if (s == null) return new EfbFlightPlanDto();
             return new EfbFlightPlanDto
             {
@@ -36,6 +44,9 @@ namespace Prosim2GSX.Web.Contracts
                 FetchedAt = s.FetchedAt,
                 LastFetchError = s.LastFetchError ?? "",
                 IsBusy = s.IsBusy,
+                AutoSyncToFmsOnFetch = c?.EfbAutoSyncToFmsOnFetch == true,
+                PreferEfbFlightPlan = c?.EfbPreferEfbFlightPlan == true,
+                LockFieldsFromOfp = c?.EfbLockFieldsFromOfp != false,
             };
         }
     }

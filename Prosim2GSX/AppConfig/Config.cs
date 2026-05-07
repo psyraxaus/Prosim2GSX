@@ -67,6 +67,26 @@ namespace Prosim2GSX.AppConfig
         // envelope MACTOW blocks the auto-sync; the user retains the
         // manual SYNC TO FMS button for that case.
         public virtual bool AutoSyncFmsOnFinal { get; set; } = false;
+
+        // EFB INIT tab — flight planning behaviour flags.
+        //
+        // EfbAutoSyncToFmsOnFetch: when true, ZFW and block fuel are pushed
+        // to the FMS init datarefs the moment an OFP fetch completes.
+        // Default off — pilot retains positive control via the manual SYNC
+        // TO FMS button. This is independent of AutoSyncFmsOnFinal (which
+        // gates the final-loadsheet write); both can run concurrently.
+        //
+        // EfbPreferEfbFlightPlan: surfaced for the React panel so it can
+        // hint the user that the INIT tab is the canonical entry point.
+        // No behavioural gate yet — placeholder for future "skip ProSim
+        // EFB sync" wiring.
+        //
+        // EfbLockFieldsFromOfp: drives the override UX — when true, OFP-
+        // derived fields render as locked rows requiring an explicit
+        // unlock click to edit. When false, fields are directly editable.
+        public virtual bool EfbAutoSyncToFmsOnFetch { get; set; } = false;
+        public virtual bool EfbPreferEfbFlightPlan { get; set; } = false;
+        public virtual bool EfbLockFieldsFromOfp { get; set; } = true;
         public virtual string AudioDebugFile { get; set; } = "log\\AudioDebug.txt";
         public virtual DataFlow AudioDeviceFlow { get; set; } = DataFlow.Render;
         public virtual DeviceState AudioDeviceState { get; set; } = DeviceState.Active;
