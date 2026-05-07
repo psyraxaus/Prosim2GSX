@@ -130,27 +130,6 @@ export function OfpPanel() {
     <div className={styles.panel}>
       {error && <div className={styles.error}>{error}</div>}
 
-      <Section title="Flight Information">
-        {ofp.isOfpLoaded ? (
-          <div className={styles.kvGrid}>
-            <KV label="Departure" value={ofp.departureIcao} mono />
-            <KV label="Arrival" value={ofp.arrivalIcao} mono />
-            <KV label="Alternate" value={ofp.alternateIcao || "—"} mono />
-            <KV label="Flight" value={ofp.flightNumber || "—"} mono />
-            <KV label="Plan RWY Out" value={ofp.departurePlanRwy || "—"} mono />
-            <KV label="Plan RWY In" value={ofp.arrivalPlanRwy || "—"} mono />
-            <KV label="CPDLC" value={ofp.cpdlcStation || "—"} mono />
-            <KV label="Cruise Alt" value={ofp.cruiseAltitude || "—"} mono />
-            <KV label="Block Fuel" value={ofp.blockFuelKg || "—"} mono />
-            <KV label="Block Time" value={ofp.blockTimeFormatted || "—"} mono />
-            <KV label="Pax" value={ofp.paxCount || "—"} mono />
-            <KV label="Air Distance" value={ofp.airDistance || "—"} mono />
-          </div>
-        ) : (
-          <div className={styles.empty}>No OFP loaded. Import a flight plan in ProSim.</div>
-        )}
-      </Section>
-
       <Section title="Pushback Direction">
         <div className={styles.korryGroup} role="group" aria-label="Pushback direction">
           <KorryPushbackButton
@@ -241,6 +220,9 @@ export function OfpPanel() {
           >
             {busy === "weather" || ofp.isRefreshingWeather ? "Refreshing…" : "Refresh Weather"}
           </PrimaryButton>
+          {ofp.cpdlcStation && (
+            <span className={styles.weatherStatus}>CPDLC: {ofp.cpdlcStation}</span>
+          )}
           {ofp.weatherStatus && <span className={styles.weatherStatus}>{ofp.weatherStatus}</span>}
         </div>
 
@@ -249,15 +231,6 @@ export function OfpPanel() {
           <WeatherCard title={`Arrival ${ofp.arrivalIcao || ""}`} wx={ofp.arrivalWeather} />
         </div>
       </Section>
-    </div>
-  );
-}
-
-function KV({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className={styles.kv}>
-      <span className={styles.kvLabel}>{label}</span>
-      <span className={mono ? styles.kvValueMono : styles.kvValue}>{value}</span>
     </div>
   );
 }

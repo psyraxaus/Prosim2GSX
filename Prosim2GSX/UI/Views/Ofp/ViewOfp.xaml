@@ -19,75 +19,6 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="12,8,12,8">
 
-            <!-- ROUTE -->
-            <TextBlock Style="{StaticResource CategoryHeader}" Text="ROUTE" Margin="0,0,0,4"/>
-            <Border Style="{StaticResource SectionCardBorder}">
-                <StackPanel>
-                    <!-- When no OFP loaded -->
-                    <TextBlock Text="No OFP loaded. Load a flight plan in the MCDU to populate route details."
-                               FontStyle="Italic"
-                               Foreground="{DynamicResource CategoryTextBrush}"
-                               HorizontalAlignment="Center"
-                               Margin="6,8,6,8"
-                               Visibility="{Binding IsOfpNotLoaded, Converter={StaticResource BoolVisibilityConverter}}"/>
-
-                    <!-- When OFP loaded -->
-                    <Grid Visibility="{Binding IsOfpLoaded, Converter={StaticResource BoolVisibilityConverter}}" Margin="6,4,6,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <Label Grid.Row="0" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">Flight</Label>
-                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding FlightNumber}" FontWeight="Bold" VerticalAlignment="Center"/>
-                        <Label Grid.Row="0" Grid.Column="2" Foreground="{DynamicResource CategoryTextBrush}">Pax</Label>
-                        <TextBlock Grid.Row="0" Grid.Column="3" Text="{Binding PaxCount}" FontWeight="Bold" VerticalAlignment="Center"/>
-
-                        <Label Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">Departure</Label>
-                        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding DepartureIcao}" FontWeight="Bold"/>
-                            <TextBlock Text=" RWY " Foreground="{DynamicResource CategoryTextBrush}"/>
-                            <TextBlock Text="{Binding DeparturePlanRwy}"/>
-                        </StackPanel>
-                        <Label Grid.Row="1" Grid.Column="2" Foreground="{DynamicResource CategoryTextBrush}">Block fuel</Label>
-                        <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding BlockFuelKg}" FontWeight="Bold" VerticalAlignment="Center"/>
-
-                        <Label Grid.Row="2" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">Arrival</Label>
-                        <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding ArrivalIcao}" FontWeight="Bold"/>
-                            <TextBlock Text=" RWY " Foreground="{DynamicResource CategoryTextBrush}"/>
-                            <TextBlock Text="{Binding ArrivalPlanRwy}"/>
-                        </StackPanel>
-                        <Label Grid.Row="2" Grid.Column="2" Foreground="{DynamicResource CategoryTextBrush}">Block time</Label>
-                        <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding BlockTimeFormatted}" FontWeight="Bold" VerticalAlignment="Center"/>
-
-                        <Label Grid.Row="3" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">Alternate</Label>
-                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding AlternateIcao}" FontWeight="Bold" VerticalAlignment="Center"/>
-                        <Label Grid.Row="3" Grid.Column="2" Foreground="{DynamicResource CategoryTextBrush}">Cruise</Label>
-                        <TextBlock Grid.Row="3" Grid.Column="3" Text="{Binding CruiseAltitude}" FontWeight="Bold" VerticalAlignment="Center"/>
-
-                        <Label Grid.Row="4" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">Distance</Label>
-                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding AirDistance}" FontWeight="Bold" VerticalAlignment="Center"/>
-                        <Label Grid.Row="4" Grid.Column="2"
-                               Foreground="{DynamicResource CategoryTextBrush}"
-                               ToolTip="CPDLC logon station for the airport SayIntentions currently considers active (departure → arrival as the flight progresses). Enter on the MCDU when requesting clearance.">CPDLC</Label>
-                        <TextBlock Grid.Row="4" Grid.Column="3"
-                                   Text="{Binding CpdlcStation}"
-                                   FontWeight="Bold"
-                                   VerticalAlignment="Center"/>
-                    </Grid>
-                </StackPanel>
-            </Border>
-
             <!-- PUSHBACK DIRECTION -->
             <TextBlock Style="{StaticResource CategoryHeader}" Text="PUSHBACK DIRECTION" Margin="0,8,0,4"/>
             <Border Style="{StaticResource SectionCardBorder}">
@@ -188,11 +119,23 @@
                         Padding="10,2,10,2"
                         VerticalAlignment="Center"/>
             </Grid>
-            <TextBlock Text="{Binding WeatherStatus}"
-                       FontStyle="Italic"
-                       Foreground="{DynamicResource CategoryTextBrush}"
-                       Margin="0,2,0,2"
-                       Visibility="{Binding WeatherStatus, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+            <!-- CPDLC + status share the line under the WEATHER header — the
+                 CPDLC station is fetched alongside weather (same SayIntentions
+                 round-trip) so they live together. -->
+            <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                <TextBlock Text="CPDLC: "
+                           Foreground="{DynamicResource CategoryTextBrush}"
+                           Visibility="{Binding HasCpdlcStation, Converter={StaticResource BoolVisibilityConverter}}"/>
+                <TextBlock Text="{Binding CpdlcStation}"
+                           FontWeight="Bold"
+                           Margin="0,0,12,0"
+                           Visibility="{Binding HasCpdlcStation, Converter={StaticResource BoolVisibilityConverter}}"
+                           ToolTip="CPDLC logon station for the airport SayIntentions currently considers active (departure → arrival as the flight progresses). Enter on the MCDU when requesting clearance."/>
+                <TextBlock Text="{Binding WeatherStatus}"
+                           FontStyle="Italic"
+                           Foreground="{DynamicResource CategoryTextBrush}"
+                           Visibility="{Binding WeatherStatus, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+            </StackPanel>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>

@@ -137,15 +137,6 @@ namespace Prosim2GSX.UI.Views.Ofp
             NotifyPropertyChanged(nameof(IsOfpNotLoaded));
             NotifyPropertyChanged(nameof(DepartureIcao));
             NotifyPropertyChanged(nameof(ArrivalIcao));
-            NotifyPropertyChanged(nameof(FlightNumber));
-            NotifyPropertyChanged(nameof(AlternateIcao));
-            NotifyPropertyChanged(nameof(DeparturePlanRwy));
-            NotifyPropertyChanged(nameof(ArrivalPlanRwy));
-            NotifyPropertyChanged(nameof(CruiseAltitude));
-            NotifyPropertyChanged(nameof(BlockFuelKg));
-            NotifyPropertyChanged(nameof(BlockTimeFormatted));
-            NotifyPropertyChanged(nameof(PaxCount));
-            NotifyPropertyChanged(nameof(AirDistance));
             ConfirmArrivalGateCommand.NotifyCanExecuteChanged();
             SendNowCommand.NotifyCanExecuteChanged();
             RefreshWeatherCommand.NotifyCanExecuteChanged();
@@ -165,28 +156,11 @@ namespace Prosim2GSX.UI.Views.Ofp
 
         protected virtual SimbriefResponse Ofp => AircraftInterface?.LastSimbriefOfp;
 
+        // Retained for gate-assignment (SayIntentions.AssignGateAsync needs the
+        // ICAO) and the weather card titles. All other flight-info fields moved
+        // to the INIT tab via EfbFlightPlanState.
         public virtual string DepartureIcao => AircraftInterface?.FmsOrigin ?? Ofp?.Origin?.IcaoCode ?? "";
         public virtual string ArrivalIcao => AircraftInterface?.FmsDestination ?? Ofp?.Destination?.IcaoCode ?? "";
-        public virtual string AlternateIcao => Ofp?.Alternate?.IcaoCode ?? "";
-        public virtual string FlightNumber
-            => string.IsNullOrWhiteSpace(Ofp?.General?.FlightNumber) ? "" : $"{Ofp.General.IcaoAirline}{Ofp.General.FlightNumber}";
-        public virtual string DeparturePlanRwy => Ofp?.Origin?.PlanRwy ?? "";
-        public virtual string ArrivalPlanRwy => Ofp?.Destination?.PlanRwy ?? "";
-        public virtual string CruiseAltitude => Ofp?.Atc?.InitialAlt ?? "";
-        public virtual string BlockFuelKg => Ofp?.Fuel?.PlanRamp ?? "";
-        public virtual string BlockTimeFormatted => FormatBlockSeconds(Ofp?.Times?.EstBlock);
-        public virtual string PaxCount => Ofp?.Weights?.PaxCount ?? "";
-        public virtual string AirDistance => Ofp?.General?.AirDistance ?? "";
-
-        protected static string FormatBlockSeconds(string secondsStr)
-        {
-            if (long.TryParse(secondsStr, out long seconds) && seconds > 0)
-            {
-                var span = TimeSpan.FromSeconds(seconds);
-                return $"{(int)span.TotalHours}h {span.Minutes:D2}m";
-            }
-            return "";
-        }
 
         // Arrival Gate input + Confirm
         protected string _arrivalGate = "";

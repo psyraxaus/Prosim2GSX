@@ -4,31 +4,20 @@ using System;
 
 namespace Prosim2GSX.Web.Contracts
 {
-    // Read-only OFP tab snapshot. Combines:
-    //   - Live OFP metadata from AircraftInterface + LastSimbriefOfp
-    //     (departure/arrival ICAOs, flight number, runways, fuel, time, pax)
-    //   - Workflow state from OfpState (pending arrival gate, status strings)
-    //   - Weather cache from OfpState (projected through WeatherDto)
-    //   - Pushback preference from GsxController
-    //   - SayIntentions availability (Config flag + service IsActive)
+    // Read-only OFP tab snapshot. The OFP tab now owns gate / weather /
+    // pushback only — flight info (dep/arr/alt/flightNumber/runways/fuel/
+    // time/pax/distance) lives on the INIT tab via EfbFlightPlanDto.
+    // DepartureIcao + ArrivalIcao are retained because the gate
+    // assignment and weather cards still need them for context.
     //
-    // The Phase 8B OFP panel REST-loads this on mount and on tab activation;
-    // WS deltas on the "ofp" channel keep it current between fetches.
+    // The OFP panel REST-loads this on mount and on tab activation; WS
+    // deltas on the "ofp" channel keep it current between fetches.
     public class OfpDto
     {
-        // OFP metadata (live)
+        // OFP metadata (live) — kept for gate-assignment + weather context.
         public bool IsOfpLoaded { get; set; }
         public string DepartureIcao { get; set; } = "";
         public string ArrivalIcao { get; set; } = "";
-        public string AlternateIcao { get; set; } = "";
-        public string FlightNumber { get; set; } = "";
-        public string DeparturePlanRwy { get; set; } = "";
-        public string ArrivalPlanRwy { get; set; } = "";
-        public string CruiseAltitude { get; set; } = "";
-        public string BlockFuelKg { get; set; } = "";
-        public string BlockTimeFormatted { get; set; } = "";
-        public string PaxCount { get; set; } = "";
-        public string AirDistance { get; set; } = "";
 
         // Workflow state
         public string PendingArrivalGate { get; set; } = "";
@@ -71,17 +60,6 @@ namespace Prosim2GSX.Web.Contracts
                 IsOfpLoaded = ai?.IsFlightPlanLoaded == true,
                 DepartureIcao = ai?.FmsOrigin ?? ofp?.Origin?.IcaoCode ?? "",
                 ArrivalIcao = ai?.FmsDestination ?? ofp?.Destination?.IcaoCode ?? "",
-                AlternateIcao = ofp?.Alternate?.IcaoCode ?? "",
-                FlightNumber = string.IsNullOrWhiteSpace(ofp?.General?.FlightNumber)
-                    ? ""
-                    : $"{ofp.General.IcaoAirline}{ofp.General.FlightNumber}",
-                DeparturePlanRwy = ofp?.Origin?.PlanRwy ?? "",
-                ArrivalPlanRwy = ofp?.Destination?.PlanRwy ?? "",
-                CruiseAltitude = ofp?.Atc?.InitialAlt ?? "",
-                BlockFuelKg = ofp?.Fuel?.PlanRamp ?? "",
-                BlockTimeFormatted = FormatBlockSeconds(ofp?.Times?.EstBlock),
-                PaxCount = ofp?.Weights?.PaxCount ?? "",
-                AirDistance = ofp?.General?.AirDistance ?? "",
 
                 PendingArrivalGate = ofpState?.PendingArrivalGate ?? "",
                 GateAssignmentStatus = ofpState?.GateAssignmentStatus ?? "",
@@ -101,14 +79,5 @@ namespace Prosim2GSX.Web.Contracts
             };
         }
 
-        private static string FormatBlockSeconds(string secondsStr)
-        {
-            if (long.TryParse(secondsStr, out long seconds) && seconds > 0)
-            {
-                var span = TimeSpan.FromSeconds(seconds);
-                return $"{(int)span.TotalHours}h {span.Minutes:D2}m";
-            }
-            return "";
-        }
     }
 }

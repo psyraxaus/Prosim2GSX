@@ -480,19 +480,14 @@ export interface WeatherDto {
   windSpeed: number | null;
 }
 
+// Read-only OFP tab snapshot. Flight info (dep/arr/altn/flight#/runways/
+// fuel/time/pax/distance) moved to the INIT tab via EfbFlightPlanDto;
+// DepartureIcao + ArrivalIcao retained here for gate assignment + weather
+// card titles.
 export interface OfpDto {
   isOfpLoaded: boolean;
   departureIcao: string;
   arrivalIcao: string;
-  alternateIcao: string;
-  flightNumber: string;
-  departurePlanRwy: string;
-  arrivalPlanRwy: string;
-  cruiseAltitude: string;
-  blockFuelKg: string;
-  blockTimeFormatted: string;
-  paxCount: string;
-  airDistance: string;
 
   pendingArrivalGate: string;
   gateAssignmentStatus: string;
