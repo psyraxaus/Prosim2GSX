@@ -63,6 +63,7 @@ namespace Prosim2GSX.Web
             _app.Checklist.PropertyChanged += OnChecklistChanged;
             _app.WeightBalance.PropertyChanged += OnWeightBalanceChanged;
             _app.Loadsheet.PropertyChanged += OnLoadsheetChanged;
+            _app.EfbFlightPlan.PropertyChanged += OnEfbFlightPlanChanged;
             HookChecklistItems(_app.Checklist);
             _app.FlightStatus.MessageLog.CollectionChanged += OnMessageLogChanged;
 
@@ -287,6 +288,30 @@ namespace Prosim2GSX.Web
                 {
                     channel = "ofp",
                     patch = new Dictionary<string, object> { [camel] = value },
+                };
+                BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+        }
+
+        // EFB Flight Planning broadcast: full-snapshot per change. CurrentOfp
+        // is a complex object (not a primitive) and the override dicts move
+        // together with status, so per-property patches buy nothing — the
+        // panel renders all fields atomically. Snapshot-only matches the
+        // checklists + fmsSync convention.
+        private void OnEfbFlightPlanChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (_connections.IsEmpty) return;
+            try
+            {
+                var dto = EfbFlightPlanDto.From(_app);
+                var envelope = new
+                {
+                    channel = "efbFlightPlan",
+                    snapshot = dto,
                 };
                 BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default));
             }
