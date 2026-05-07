@@ -86,7 +86,92 @@ export function LoadsheetPanel() {
             setBusy(null);
         }
     };
-    return (_jsxs("div", { className: styles.panel, children: [_jsxs("div", { className: styles.header, children: [_jsx("h2", { className: styles.title, children: "LOADSHEET" }), _jsxs("div", { className: styles.actions, children: [_jsx("button", { type: "button", className: styles.btn, onClick: onResend, disabled: busy !== null, children: busy === "resend" ? "RESENDING…" : "RESEND" }), _jsx("button", { type: "button", className: `${styles.btn} ${styles.btnDanger}`, onClick: onReset, disabled: busy !== null, children: busy === "reset" ? "RESETTING…" : "RESET" })] })] }), _jsxs("div", { className: styles.cards, children: [_jsx(LoadsheetCard, { label: "PRELIM", dto: ls.prelim }), _jsx(LoadsheetCard, { label: "FINAL", dto: ls.final, finalErrorBorder: true })] })] }));
+    return (_jsxs("div", { className: styles.panel, children: [_jsxs("div", { className: styles.header, children: [_jsx("h2", { className: styles.title, children: "LOADSHEET" }), _jsxs("div", { className: styles.actions, children: [_jsx("button", { type: "button", className: styles.btn, onClick: onResend, disabled: busy !== null, children: busy === "resend" ? "RESENDING…" : "RESEND" }), _jsx("button", { type: "button", className: `${styles.btn} ${styles.btnDanger}`, onClick: onReset, disabled: busy !== null, children: busy === "reset" ? "RESETTING…" : "RESET" })] })] }), _jsx(StdControl, {}), _jsxs("div", { className: styles.cards, children: [_jsx(LoadsheetCard, { label: "PRELIM", dto: ls.prelim }), _jsx(LoadsheetCard, { label: "FINAL", dto: ls.final, finalErrorBorder: true })] })] }));
+}
+// STD control — shows the current effective STD and lets the user set
+// (or clear) a manual override when no OFP is loaded. OFP-derived STD
+// is read-only here; the INIT tab is where you change it.
+function StdControl() {
+    const { get, post } = useApi();
+    const [std, setStd] = useState({ std: null, source: "none" });
+    const [draft, setDraft] = useState(""); // HH:MM in UTC
+    const [busy, setBusy] = useState(null);
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const r = await get("/loadsheet/std");
+                if (!cancelled) {
+                    setStd(r);
+                    if (r.source === "manual" && r.std) {
+                        setDraft(formatHHMMUtc(r.std));
+                    }
+                }
+            }
+            catch {
+                /* useApi handled 401 */
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [get]);
+    const onSet = async () => {
+        if (!/^\d{2}:\d{2}$/.test(draft))
+            return;
+        const iso = hhmmToIsoUtcToday(draft);
+        if (!iso)
+            return;
+        setBusy("set");
+        try {
+            const r = await post("/loadsheet/set-std", { std: iso });
+            setStd(r);
+        }
+        catch {
+            /* ignore */
+        }
+        finally {
+            setBusy(null);
+        }
+    };
+    const onClear = async () => {
+        setBusy("clear");
+        try {
+            const r = await post("/loadsheet/set-std", { std: null });
+            setStd(r);
+            setDraft("");
+        }
+        catch {
+            /* ignore */
+        }
+        finally {
+            setBusy(null);
+        }
+    };
+    return (_jsxs("div", { className: styles.stdRow, children: [_jsx("span", { className: styles.stdLabel, children: "STD (UTC)" }), _jsx("span", { className: styles.stdValue, children: std.std ? formatHHMMUtc(std.std) + "Z" : "—" }), _jsx("span", { className: styles.stdSource, children: std.source === "ofp" ? "from OFP" : std.source === "manual" ? "manual" : "not set" }), std.source !== "ofp" && (_jsxs("span", { className: styles.stdInputWrap, children: [_jsx("input", { type: "time", className: styles.stdInput, value: draft, onChange: e => setDraft(e.target.value), disabled: busy !== null }), _jsx("button", { type: "button", className: styles.btn, onClick: onSet, disabled: busy !== null || !/^\d{2}:\d{2}$/.test(draft), children: busy === "set" ? "SETTING…" : "SET" }), std.source === "manual" && (_jsx("button", { type: "button", className: `${styles.btn} ${styles.btnDanger}`, onClick: onClear, disabled: busy !== null, children: busy === "clear" ? "CLEARING…" : "CLEAR" }))] }))] }));
+}
+// ISO-8601 → "HH:MM" in UTC.
+function formatHHMMUtc(iso) {
+    const d = new Date(iso);
+    if (isNaN(d.getTime()))
+        return "—";
+    const hh = String(d.getUTCHours()).padStart(2, "0");
+    const mm = String(d.getUTCMinutes()).padStart(2, "0");
+    return `${hh}:${mm}`;
+}
+// "HH:MM" (interpreted as UTC) + today's UTC date → ISO-8601 string.
+// The timing service compares time-of-day only, so the date doesn't
+// affect the trigger logic — we just need a valid DateTime to round-
+// trip through System.Text.Json.
+function hhmmToIsoUtcToday(hhmm) {
+    const m = /^(\d{2}):(\d{2})$/.exec(hhmm);
+    if (!m)
+        return null;
+    const h = parseInt(m[1], 10);
+    const min = parseInt(m[2], 10);
+    if (h > 23 || min > 59)
+        return null;
+    const now = new Date();
+    const utc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), h, min, 0, 0));
+    return utc.toISOString();
 }
 function LoadsheetCard({ label, dto, finalErrorBorder }) {
     const tone = dto.status === "received" ? "ok" :

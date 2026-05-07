@@ -204,8 +204,71 @@
   background: #dc4040;
 }
 
+/* STD control row — sits between the title bar and the cards. Shows
+   the current effective STD and (when no OFP is loaded) a time picker
+   for the manual fallback. */
+.stdRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 6px);
+}
+
+.stdLabel {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  font-weight: 600;
+  color: var(--category-text);
+}
+
+.stdValue {
+  font-family: var(--font-mono, monospace);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  min-width: 56px;
+}
+
+.stdSource {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.stdInputWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.stdInput {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 4px 8px;
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  border-radius: var(--radius-sm, 4px);
+}
+
+.stdInput:focus {
+  outline: none;
+  border-color: var(--accent, #4a90e2);
+}
+
 @media (max-width: 700px) {
   .cards {
     grid-template-columns: 1fr;
+  }
+
+  .stdInputWrap {
+    margin-left: 0;
+    width: 100%;
   }
 }

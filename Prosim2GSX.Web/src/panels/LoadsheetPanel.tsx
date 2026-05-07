@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useApi } from "../api/useApi";
 import { useAppState } from "../state/AppStateContext";
-import { LoadsheetDto, LoadsheetSnapshotDto } from "../types";
+import { LoadsheetDto, LoadsheetSnapshotDto, StdResponse } from "../types";
 import { getStoredToken, signalAuthFailure } from "../auth/auth";
 import styles from "./LoadsheetPanel.module.css";
 
@@ -109,12 +109,137 @@ export function LoadsheetPanel() {
         </div>
       </div>
 
+      <StdControl />
+
       <div className={styles.cards}>
         <LoadsheetCard label="PRELIM" dto={ls.prelim} />
         <LoadsheetCard label="FINAL"  dto={ls.final}  finalErrorBorder />
       </div>
     </div>
   );
+}
+
+// STD control — shows the current effective STD and lets the user set
+// (or clear) a manual override when no OFP is loaded. OFP-derived STD
+// is read-only here; the INIT tab is where you change it.
+function StdControl() {
+  const { get, post } = useApi();
+  const [std, setStd] = useState<StdResponse>({ std: null, source: "none" });
+  const [draft, setDraft] = useState<string>(""); // HH:MM in UTC
+  const [busy, setBusy] = useState<"set" | "clear" | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await get<StdResponse>("/loadsheet/std");
+        if (!cancelled) {
+          setStd(r);
+          if (r.source === "manual" && r.std) {
+            setDraft(formatHHMMUtc(r.std));
+          }
+        }
+      } catch {
+        /* useApi handled 401 */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [get]);
+
+  const onSet = async () => {
+    if (!/^\d{2}:\d{2}$/.test(draft)) return;
+    const iso = hhmmToIsoUtcToday(draft);
+    if (!iso) return;
+    setBusy("set");
+    try {
+      const r = await post<StdResponse>("/loadsheet/set-std", { std: iso });
+      setStd(r);
+    } catch {
+      /* ignore */
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const onClear = async () => {
+    setBusy("clear");
+    try {
+      const r = await post<StdResponse>("/loadsheet/set-std", { std: null });
+      setStd(r);
+      setDraft("");
+    } catch {
+      /* ignore */
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div className={styles.stdRow}>
+      <span className={styles.stdLabel}>STD (UTC)</span>
+      <span className={styles.stdValue}>
+        {std.std ? formatHHMMUtc(std.std) + "Z" : "—"}
+      </span>
+      <span className={styles.stdSource}>
+        {std.source === "ofp" ? "from OFP" : std.source === "manual" ? "manual" : "not set"}
+      </span>
+
+      {std.source !== "ofp" && (
+        <span className={styles.stdInputWrap}>
+          <input
+            type="time"
+            className={styles.stdInput}
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            disabled={busy !== null}
+          />
+          <button
+            type="button"
+            className={styles.btn}
+            onClick={onSet}
+            disabled={busy !== null || !/^\d{2}:\d{2}$/.test(draft)}
+          >
+            {busy === "set" ? "SETTING…" : "SET"}
+          </button>
+          {std.source === "manual" && (
+            <button
+              type="button"
+              className={`${styles.btn} ${styles.btnDanger}`}
+              onClick={onClear}
+              disabled={busy !== null}
+            >
+              {busy === "clear" ? "CLEARING…" : "CLEAR"}
+            </button>
+          )}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ISO-8601 → "HH:MM" in UTC.
+function formatHHMMUtc(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "—";
+  const hh = String(d.getUTCHours()).padStart(2, "0");
+  const mm = String(d.getUTCMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+// "HH:MM" (interpreted as UTC) + today's UTC date → ISO-8601 string.
+// The timing service compares time-of-day only, so the date doesn't
+// affect the trigger logic — we just need a valid DateTime to round-
+// trip through System.Text.Json.
+function hhmmToIsoUtcToday(hhmm: string): string | null {
+  const m = /^(\d{2}):(\d{2})$/.exec(hhmm);
+  if (!m) return null;
+  const h = parseInt(m[1], 10);
+  const min = parseInt(m[2], 10);
+  if (h > 23 || min > 59) return null;
+  const now = new Date();
+  const utc = new Date(Date.UTC(
+    now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), h, min, 0, 0));
+  return utc.toISOString();
 }
 
 interface CardProps {

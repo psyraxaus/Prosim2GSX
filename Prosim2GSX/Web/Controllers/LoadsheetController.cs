@@ -1,6 +1,7 @@
 using CFIT.AppLogger;
 using Microsoft.AspNetCore.Mvc;
 using Prosim2GSX.Web.Contracts;
+using System;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -70,6 +71,60 @@ namespace Prosim2GSX.Web.Controllers
             });
             Logger.Information("Loadsheet slots reset via web API");
             return Ok();
+        }
+
+        // GET /api/loadsheet/std — current effective STD with its source.
+        // OFP-derived value wins when an OFP is loaded; manual override is
+        // returned only as a fallback.
+        [HttpGet("std")]
+        public async Task<ActionResult<StdResponse>> GetStd()
+        {
+            var resp = await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                var ofpStd = _app?.EfbFlightPlan?.CurrentOfp?.Std;
+                var manual = _app?.LoadsheetTimingService?.ResolveStd();
+                if (ofpStd.HasValue) return new StdResponse { Std = ofpStd, Source = "ofp" };
+                if (manual.HasValue) return new StdResponse { Std = manual, Source = "manual" };
+                return new StdResponse { Std = null, Source = "none" };
+            });
+            return Ok(resp);
+        }
+
+        // POST /api/loadsheet/set-std — sets (or clears) the manual STD
+        // override on the timing service. Body: { std: ISO-8601 | null }.
+        // OFP-derived STD always wins; this is a fallback for OFP-less
+        // workflows.
+        [HttpPost("set-std")]
+        public async Task<ActionResult<StdResponse>> SetStd([FromBody] SetStdRequest req)
+        {
+            if (req == null) return BadRequest("Missing body");
+
+            var resp = await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                var svc = _app?.LoadsheetTimingService;
+                if (svc == null) return new StdResponse { Std = null, Source = "none" };
+
+                if (req.Std.HasValue) svc.SetStd(req.Std.Value);
+                else svc.ClearManualStd();
+
+                var ofpStd = _app?.EfbFlightPlan?.CurrentOfp?.Std;
+                var manual = svc.ResolveStd();
+                if (ofpStd.HasValue) return new StdResponse { Std = ofpStd, Source = "ofp" };
+                if (manual.HasValue) return new StdResponse { Std = manual, Source = "manual" };
+                return new StdResponse { Std = null, Source = "none" };
+            });
+            return Ok(resp);
+        }
+
+        public class SetStdRequest
+        {
+            public DateTime? Std { get; set; }
+        }
+
+        public class StdResponse
+        {
+            public DateTime? Std { get; set; }
+            public string Source { get; set; } = "none"; // "ofp" | "manual" | "none"
         }
     }
 }

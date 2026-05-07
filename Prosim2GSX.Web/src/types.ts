@@ -746,6 +746,20 @@ export interface LoadsheetSnapshotDto {
   final: LoadsheetDto;
 }
 
+// Manual STD override surface — POST /api/loadsheet/set-std and
+// GET /api/loadsheet/std. OFP-derived STD wins when an OFP is loaded;
+// the manual value is a fallback for OFP-less workflows.
+export type StdSource = "ofp" | "manual" | "none";
+
+export interface StdResponse {
+  std: string | null;
+  source: StdSource;
+}
+
+export interface SetStdRequest {
+  std: string | null;
+}
+
 // ──────────────────────────────────────────────────────────────────────────
 // EFB Flight Planning (INIT tab)
 // ──────────────────────────────────────────────────────────────────────────
