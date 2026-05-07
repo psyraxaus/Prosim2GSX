@@ -100,9 +100,18 @@ namespace Prosim2GSX.Services
                 wbState.CargoBulkCapacityKg = ReadDouble(sdk, ProsimConstants.RefCargoBulkCapacity);
                 wbState.CargoPlannedKg = ReadDouble(sdk, ProsimConstants.RefEfbPlannedCargoKg);
 
-                // Cargo doors.
+                // Cargo doors. Bulk is read regardless of whether the airframe
+                // has a bulk hold — the panel gates display on
+                // CargoBulkCapacityKg > 0 so a non-bulk airframe shows N/A.
                 wbState.FwdCargoDoorOpen = ReadBool(sdk, ProsimConstants.RefDoorCargoForward);
                 wbState.AftCargoDoorOpen = ReadBool(sdk, ProsimConstants.RefDoorCargoAft);
+                wbState.BulkCargoDoorOpen = ReadBool(sdk, ProsimConstants.RefDoorCargoBulk);
+
+                // Departure readiness — mirrors the GSX state machine's
+                // Aircraft.HasOpenDoors predicate (covers entry + cargo +
+                // bulk) so the banner reflects what would actually gate
+                // CloseAllDoors() on final.
+                wbState.AllDoorsClosed = !(_app?.GsxService?.AircraftInterface?.HasOpenDoors ?? false);
 
                 // Passengers — capacities are static per aircraft, but reading
                 // each tick is cheap (SDK-side cache) and adapts when the

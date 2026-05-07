@@ -31,6 +31,11 @@ namespace Prosim2GSX.Web.Contracts
 
         public bool FwdCargoDoorOpen { get; set; }
         public bool AftCargoDoorOpen { get; set; }
+        public bool BulkCargoDoorOpen { get; set; }
+
+        // Mirror of !Aircraft.HasOpenDoors. Drives the W&B tab's
+        // departure-readiness banner; covers all doors (entry + cargo).
+        public bool AllDoorsClosed { get; set; } = true;
 
         public double MactowPercent { get; set; }
         public bool MacTowError { get; set; }
@@ -94,6 +99,8 @@ namespace Prosim2GSX.Web.Contracts
                 SeatOccupation = s.SeatOccupation ?? "",
                 FwdCargoDoorOpen = s.FwdCargoDoorOpen,
                 AftCargoDoorOpen = s.AftCargoDoorOpen,
+                BulkCargoDoorOpen = s.BulkCargoDoorOpen,
+                AllDoorsClosed = s.AllDoorsClosed,
                 MactowPercent = s.MactowPercent,
                 MacTowError = s.MacTowError,
                 MacTowSource = s.MacTowSource ?? "computed",

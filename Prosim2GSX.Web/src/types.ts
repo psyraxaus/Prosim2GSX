@@ -685,6 +685,8 @@ export interface WeightBalanceDto {
 
   fwdCargoDoorOpen: boolean;
   aftCargoDoorOpen: boolean;
+  bulkCargoDoorOpen: boolean;
+  allDoorsClosed: boolean;
 
   mactowPercent: number;
   macTowError: boolean;

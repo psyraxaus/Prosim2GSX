@@ -52,9 +52,19 @@ namespace Prosim2GSX.State
         [ObservableProperty] private int _Zone4Capacity;
         [ObservableProperty] private string _SeatOccupation = "";
 
-        // Cargo door state — drives door-open warnings on the chart.
+        // Cargo door state — drives the cargo-doors silhouette on the W&B
+        // tab. Bulk is read even on airframes without a bulk hold; the panel
+        // gates display on CargoBulkCapacityKg > 0.
         [ObservableProperty] private bool _FwdCargoDoorOpen;
         [ObservableProperty] private bool _AftCargoDoorOpen;
+        [ObservableProperty] private bool _BulkCargoDoorOpen;
+
+        // Departure-readiness mirror of !Aircraft.HasOpenDoors. Covers all
+        // doors (entry + cargo + bulk) per the GSX state machine, which uses
+        // the same predicate to gate CloseAllDoors() on final. Default true
+        // so the readiness banner reads "ALL DOORS CLOSED" before the first
+        // poll lands.
+        [ObservableProperty] private bool _AllDoorsClosed = true;
 
         // Take-off MAC% — resolved each tick by MactowValidationService from
         // the loadsheet (final → prelim → live computed) so both UIs see the
