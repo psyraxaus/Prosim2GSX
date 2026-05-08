@@ -2,6 +2,7 @@ using CFIT.AppFramework.UI.ViewModels;
 using CommunityToolkit.Mvvm.Input;
 using Prosim2GSX.Services;
 using Prosim2GSX.State;
+using Prosim2GSX.Web.Contracts;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -179,6 +180,16 @@ namespace Prosim2GSX.UI.Views.WeightBalance
         {
             if (State != null)
                 State.PropertyChanged += OnStatePropertyChanged;
+
+            // Pull the cached manifest from the service so a tab close/reopen
+            // (or a full WPF restart while the service kept its in-memory
+            // cache) brings back the same names. Mirrors the React panel's
+            // mount-time GET /api/passengers/manifest.
+            var existing = AppService?.PassengerSimulationService?.GetManifest();
+            if (existing != null && existing.TotalPassengers > 0)
+            {
+                Manifest = existing;
+            }
         }
 
         protected virtual void OnStatePropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -765,6 +776,272 @@ namespace Prosim2GSX.UI.Views.WeightBalance
             _flashTimer.Tick -= OnFlashTimerTick;
             FmsSyncFlash = "idle";
             FmsSyncMessage = "";
+        }
+
+        // ── Passenger simulation ────────────────────────────────────────────
+        // Always-visible inline form on the WPF side: COUNT input + GENERATE
+        // + CLEAR. The React panel keeps a SIMULATE/× toggle because flex
+        // layout absorbs the horizontal width gracefully; the WPF column is
+        // narrow enough that the toggle wasn't worth the extra states. SDK
+        // write writes seatOccupation.string directly; the silhouette's seat
+        // overlay updates through the W&B store tick. Manifest is cached
+        // server-side so a tab close/reopen brings back the same name set.
+        private string _simulateCount = "";
+        private string _simulateFlash = "idle";
+        private string _simulateMessage = "";
+        private bool _isSimulating;
+        private bool _isManifestOpen;
+        private PassengerManifestDto _manifest;
+        private readonly DispatcherTimer _simFlashTimer =
+            new() { Interval = TimeSpan.FromSeconds(3) };
+
+        // Two-way bound to the COUNT TextBox. Empty string means "fill to
+        // capacity" — same convention as the web panel.
+        public virtual string SimulateCount
+        {
+            get => _simulateCount;
+            set
+            {
+                if (_simulateCount == value) return;
+                _simulateCount = value ?? "";
+                NotifyPropertyChanged(nameof(SimulateCount));
+            }
+        }
+
+        public virtual bool IsSimulating
+        {
+            get => _isSimulating;
+            protected set
+            {
+                if (_isSimulating == value) return;
+                _isSimulating = value;
+                NotifyPropertyChanged(nameof(IsSimulating));
+                NotifyPropertyChanged(nameof(IsSimulateEnabled));
+                NotifyPropertyChanged(nameof(GenerateButtonText));
+                GenerateCommand?.NotifyCanExecuteChanged();
+                ClearPaxCommand?.NotifyCanExecuteChanged();
+            }
+        }
+
+        public virtual bool IsSimulateEnabled => !IsSimulating;
+
+        public virtual string GenerateButtonText => IsSimulating ? "…" : "GENERATE";
+
+        public virtual string SimulateFlash
+        {
+            get => _simulateFlash;
+            protected set
+            {
+                if (_simulateFlash == value) return;
+                _simulateFlash = value;
+                NotifyPropertyChanged(nameof(SimulateFlash));
+                NotifyPropertyChanged(nameof(SimulateFlashBrush));
+                NotifyPropertyChanged(nameof(SimulateMessageBrush));
+            }
+        }
+
+        public virtual string SimulateMessage
+        {
+            get => _simulateMessage;
+            protected set
+            {
+                if (_simulateMessage == value) return;
+                _simulateMessage = value;
+                NotifyPropertyChanged(nameof(SimulateMessage));
+                NotifyPropertyChanged(nameof(SimulateMessageVisibility));
+            }
+        }
+
+        public virtual Visibility SimulateMessageVisibility =>
+            string.IsNullOrEmpty(SimulateMessage) ? Visibility.Collapsed : Visibility.Visible;
+
+        // Background colour for the GENERATE button during the flash window.
+        // Idle = transparent (button keeps its default chrome), success = green,
+        // error = red. Hex matches the React simulate flash classes.
+        public virtual Brush SimulateFlashBrush => SimulateFlash switch
+        {
+            "success" => new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50)),
+            "error"   => new SolidColorBrush(Color.FromRgb(0xE5, 0x39, 0x35)),
+            _         => Brushes.Transparent,
+        };
+
+        // Foreground for the inline status message text.
+        public virtual Brush SimulateMessageBrush => SimulateFlash switch
+        {
+            "success" => new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50)),
+            "error"   => new SolidColorBrush(Color.FromRgb(0xE5, 0x39, 0x35)),
+            _         => new SolidColorBrush(Color.FromRgb(0xCF, 0xD5, 0xE6)),
+        };
+
+        // Manifest panel state.
+        public virtual PassengerManifestDto Manifest
+        {
+            get => _manifest;
+            protected set
+            {
+                if (ReferenceEquals(_manifest, value)) return;
+                _manifest = value;
+                NotifyPropertyChanged(nameof(Manifest));
+                NotifyPropertyChanged(nameof(ManifestPassengers));
+                NotifyPropertyChanged(nameof(ManifestSectionVisibility));
+                NotifyPropertyChanged(nameof(ManifestToggleText));
+                NotifyPropertyChanged(nameof(ManifestWarnVisibility));
+            }
+        }
+
+        public virtual List<PassengerEntryDto> ManifestPassengers =>
+            _manifest?.Passengers ?? new List<PassengerEntryDto>();
+
+        public virtual bool IsManifestOpen
+        {
+            get => _isManifestOpen;
+            protected set
+            {
+                if (_isManifestOpen == value) return;
+                _isManifestOpen = value;
+                NotifyPropertyChanged(nameof(IsManifestOpen));
+                NotifyPropertyChanged(nameof(ManifestTableVisibility));
+                NotifyPropertyChanged(nameof(ManifestToggleText));
+            }
+        }
+
+        public virtual Visibility ManifestSectionVisibility =>
+            (_manifest != null && _manifest.TotalPassengers > 0)
+                ? Visibility.Visible : Visibility.Collapsed;
+        public virtual Visibility ManifestTableVisibility =>
+            IsManifestOpen ? Visibility.Visible : Visibility.Collapsed;
+        public virtual Visibility ManifestWarnVisibility =>
+            (_manifest != null && _manifest.TotalPassengers > 0 && !_manifest.SeatOccupationWritten)
+                ? Visibility.Visible : Visibility.Collapsed;
+
+        public virtual string ManifestToggleText
+        {
+            get
+            {
+                int total = _manifest?.TotalPassengers ?? 0;
+                string arrow = IsManifestOpen ? "▾" : "▸";
+                return $"{arrow} MANIFEST ({total})";
+            }
+        }
+
+        // ── Commands ─────────────────────────────────────────────────────────
+
+        [RelayCommand]
+        protected virtual void ToggleManifest() => IsManifestOpen = !IsManifestOpen;
+
+        // The SDK write is fast (single dataref) but we still hop to a Task
+        // to keep the call shape consistent with the FMS sync flow and to
+        // avoid blocking the dispatcher if the SDK ever stalls.
+        [RelayCommand(CanExecute = nameof(IsSimulateEnabled))]
+        protected virtual async Task GenerateAsync()
+        {
+            if (IsSimulating) return;
+
+            int? parsedCount = null;
+            var trimmed = SimulateCount?.Trim() ?? "";
+            if (trimmed.Length > 0)
+            {
+                if (!int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) || n < 0)
+                {
+                    StartSimFlash("error", "Invalid count", TimeSpan.FromSeconds(4));
+                    return;
+                }
+                parsedCount = n;
+            }
+
+            var svc = AppService?.PassengerSimulationService;
+            if (svc == null)
+            {
+                StartSimFlash("error", "Passenger simulation service unavailable", TimeSpan.FromSeconds(5));
+                return;
+            }
+
+            IsSimulating = true;
+            SimulateMessage = "";
+            SimulateFlash = "idle";
+            try
+            {
+                var result = await Task.Run(() => svc.Simulate(parsedCount));
+                if (result?.Success == true && result.Manifest != null)
+                {
+                    Manifest = result.Manifest;
+                    IsManifestOpen = true;
+                    StartSimFlash("success", $"Generated {result.Manifest.TotalPassengers} pax", TimeSpan.FromSeconds(3));
+                }
+                else
+                {
+                    StartSimFlash("error",
+                        string.IsNullOrEmpty(result?.ErrorMessage) ? "Generation failed" : result.ErrorMessage,
+                        TimeSpan.FromSeconds(5));
+                }
+            }
+            catch (Exception ex)
+            {
+                StartSimFlash("error", ex.Message ?? "Generation failed", TimeSpan.FromSeconds(5));
+            }
+            finally
+            {
+                IsSimulating = false;
+            }
+        }
+
+        [RelayCommand(CanExecute = nameof(IsSimulateEnabled))]
+        protected virtual async Task ClearPaxAsync()
+        {
+            if (IsSimulating) return;
+
+            var svc = AppService?.PassengerSimulationService;
+            if (svc == null)
+            {
+                StartSimFlash("error", "Passenger simulation service unavailable", TimeSpan.FromSeconds(5));
+                return;
+            }
+
+            IsSimulating = true;
+            SimulateMessage = "";
+            SimulateFlash = "idle";
+            try
+            {
+                var result = await Task.Run(() => svc.Clear());
+                if (result?.Success == true)
+                {
+                    Manifest = null;
+                    StartSimFlash("success", "Cabin cleared", TimeSpan.FromSeconds(2));
+                }
+                else
+                {
+                    StartSimFlash("error",
+                        string.IsNullOrEmpty(result?.ErrorMessage) ? "Clear failed" : result.ErrorMessage,
+                        TimeSpan.FromSeconds(5));
+                }
+            }
+            catch (Exception ex)
+            {
+                StartSimFlash("error", ex.Message ?? "Clear failed", TimeSpan.FromSeconds(5));
+            }
+            finally
+            {
+                IsSimulating = false;
+            }
+        }
+
+        private void StartSimFlash(string flash, string message, TimeSpan duration)
+        {
+            SimulateFlash = flash;
+            SimulateMessage = message;
+            _simFlashTimer.Stop();
+            _simFlashTimer.Interval = duration;
+            _simFlashTimer.Tick -= OnSimFlashTick;
+            _simFlashTimer.Tick += OnSimFlashTick;
+            _simFlashTimer.Start();
+        }
+
+        private void OnSimFlashTick(object sender, EventArgs e)
+        {
+            _simFlashTimer.Stop();
+            _simFlashTimer.Tick -= OnSimFlashTick;
+            SimulateFlash = "idle";
+            SimulateMessage = "";
         }
     }
 

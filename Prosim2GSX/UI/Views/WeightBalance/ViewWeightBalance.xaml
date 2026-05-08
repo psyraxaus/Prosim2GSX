@@ -364,34 +364,82 @@
                 <!-- PASSENGERS -->
                 <TextBlock Style="{StaticResource CategoryHeader}" Text="PASSENGERS"/>
                 <Border Style="{StaticResource SectionCardBorder}">
-                    <Grid Margin="6,4,6,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" SharedSizeGroup="WbLabelCol"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
+                    <StackPanel Margin="6,4,6,4">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="WbLabelCol"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0" Grid.ColumnSpan="3" TextWrapping="Wrap"
-                                   Foreground="{DynamicResource CategoryTextBrush}" FontSize="11">
-                            <Run Text="CAPACITY: "/>
-                            <Run Text="{Binding PassengersTotalCapacity, Mode=OneWay}"/>
-                            <Run Text=" ECONOMY"/>
-                        </TextBlock>
+                            <TextBlock Grid.Row="0" Grid.ColumnSpan="3" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource CategoryTextBrush}" FontSize="11">
+                                <Run Text="CAPACITY: "/>
+                                <Run Text="{Binding PassengersTotalCapacity, Mode=OneWay}"/>
+                                <Run Text=" ECONOMY"/>
+                            </TextBlock>
 
-                        <Label Grid.Row="1" Grid.Column="1" Foreground="{DynamicResource CategoryTextBrush}">PLANNED</Label>
-                        <Label Grid.Row="1" Grid.Column="2" Foreground="{DynamicResource CategoryTextBrush}">BOARDED</Label>
+                            <Label Grid.Row="1" Grid.Column="1" Foreground="{DynamicResource CategoryTextBrush}">PLANNED</Label>
+                            <Label Grid.Row="1" Grid.Column="2" Foreground="{DynamicResource CategoryTextBrush}">BOARDED</Label>
 
-                        <Label Grid.Row="2" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">Pax</Label>
-                        <TextBlock Grid.Row="2" Grid.Column="1" FontWeight="Bold" VerticalAlignment="Center" Margin="5,0,0,0"
-                                   Text="{Binding PassengersPlanned}"/>
-                        <TextBlock Grid.Row="2" Grid.Column="2" FontWeight="Bold" VerticalAlignment="Center" Margin="5,0,0,0"
-                                   Text="{Binding PassengersBoarded}"/>
-                    </Grid>
+                            <Label Grid.Row="2" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">Pax</Label>
+                            <TextBlock Grid.Row="2" Grid.Column="1" FontWeight="Bold" VerticalAlignment="Center" Margin="5,0,0,0"
+                                       Text="{Binding PassengersPlanned}"/>
+                            <TextBlock Grid.Row="2" Grid.Column="2" FontWeight="Bold" VerticalAlignment="Center" Margin="5,0,0,0"
+                                       Text="{Binding PassengersBoarded}"/>
+                        </Grid>
+
+                        <!-- Passenger simulation. Always-visible inline form
+                             so the WPF column width never has to fit a long
+                             horizontal action row. Row 1 = COUNT + TextBox +
+                             GENERATE; row 2 = CLEAR alone; status message
+                             flashes briefly under the buttons. SDK write goes
+                             straight to seatOccupation.string and the
+                             silhouette's seat overlay picks it up on the next
+                             StateUpdateWorker tick. -->
+                        <Border BorderBrush="#FFE0E0E0" BorderThickness="0,1,0,0"
+                                Margin="0,8,0,0" Padding="0,8,0,0">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <TextBlock Text="COUNT" Foreground="{DynamicResource CategoryTextBrush}"
+                                               FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <TextBox Text="{Binding SimulateCount, UpdateSourceTrigger=PropertyChanged}"
+                                             Width="70" Padding="4,2,4,2"
+                                             FontFamily="Consolas" FontWeight="Bold"
+                                             VerticalAlignment="Center" TextAlignment="Right"/>
+                                    <Button Content="{Binding GenerateButtonText}"
+                                            Command="{Binding GenerateCommand}"
+                                            Background="{Binding SimulateFlashBrush}"
+                                            BorderBrush="{Binding SimulateFlashBrush}"
+                                            Margin="8,0,0,0" Padding="12,4,12,4"
+                                            FontSize="11" FontWeight="Bold" MinWidth="90"/>
+                                    <Button Content="CLEAR"
+                                            Command="{Binding ClearPaxCommand}"
+                                            Margin="6,0,0,0" Padding="12,4,12,4"
+                                            FontSize="11" FontWeight="Bold"/>
+                                </StackPanel>
+
+                                <TextBlock Text="{Binding SimulateMessage}"
+                                           Foreground="{Binding SimulateMessageBrush}"
+                                           Visibility="{Binding SimulateMessageVisibility}"
+                                           FontSize="11" FontWeight="Bold"
+                                           Margin="0,2,0,2"/>
+
+                                <!-- Per Option A: always shown so the user knows
+                                     SIMULATE doesn't survive an active GSX
+                                     boarding cycle. -->
+                                <TextBlock Text="SIMULATE works for headless cabins; GSX boarding will overwrite."
+                                           Foreground="{DynamicResource CategoryTextBrush}"
+                                           FontSize="10" FontStyle="Italic"
+                                           Margin="0,2,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
                 </Border>
 
                 <!-- CARGO -->
@@ -663,6 +711,68 @@
                             <TextBlock Text="{Binding ReadinessBannerText}"
                                        Foreground="#FFFFFF" FontWeight="Bold" FontSize="13"
                                        HorizontalAlignment="Center"/>
+                        </Border>
+
+                        <!-- MANIFEST — names + seat assignments backing the
+                             current SIMULATE output. Whole section collapses
+                             when no manifest exists; otherwise the toggle
+                             button expands a 10-row scrollable table. ⚠
+                             marker calls out a failed seatOccupation write
+                             without blocking the manifest display. -->
+                        <Border BorderBrush="#FFE0E0E0" BorderThickness="0,1,0,0"
+                                Margin="0,10,0,0" Padding="0,8,0,0"
+                                Visibility="{Binding ManifestSectionVisibility}">
+                            <StackPanel>
+                                <DockPanel LastChildFill="True">
+                                    <TextBlock DockPanel.Dock="Right" Text="⚠"
+                                               Foreground="#F5A623" FontSize="14"
+                                               Visibility="{Binding ManifestWarnVisibility}"
+                                               ToolTip="seatOccupation write failed"/>
+                                    <Button Content="{Binding ManifestToggleText}"
+                                            Command="{Binding ToggleManifestCommand}"
+                                            HorizontalContentAlignment="Left"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Padding="4,2,4,2"
+                                            FontSize="11" FontWeight="Bold"
+                                            Foreground="{DynamicResource CategoryTextBrush}"/>
+                                </DockPanel>
+
+                                <!-- Capped at ~220 px (≈10 rows) — overflow
+                                     scrolls vertically. DataGrid keeps the
+                                     header sticky while scrolling without
+                                     the manual sticky-header CSS the React
+                                     side needs. -->
+                                <Border BorderBrush="#FFE0E0E0" BorderThickness="1"
+                                        CornerRadius="3" Margin="0,6,0,0"
+                                        Visibility="{Binding ManifestTableVisibility}">
+                                    <DataGrid ItemsSource="{Binding ManifestPassengers}"
+                                              AutoGenerateColumns="False" IsReadOnly="True"
+                                              HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                              CanUserAddRows="False" CanUserDeleteRows="False"
+                                              CanUserResizeRows="False" CanUserReorderColumns="False"
+                                              CanUserSortColumns="False"
+                                              MaxHeight="220" FontSize="11"
+                                              Background="Transparent" RowBackground="Transparent">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="SEAT" Binding="{Binding SeatNumber}" Width="60"/>
+                                            <DataGridTextColumn Header="NAME" Width="*">
+                                                <DataGridTextColumn.Binding>
+                                                    <MultiBinding StringFormat="{}{0} {1}">
+                                                        <Binding Path="FirstName"/>
+                                                        <Binding Path="LastName"/>
+                                                    </MultiBinding>
+                                                </DataGridTextColumn.Binding>
+                                            </DataGridTextColumn>
+                                            <DataGridTextColumn Header="ZONE" Width="60">
+                                                <DataGridTextColumn.Binding>
+                                                    <Binding Path="Zone" StringFormat="Z{0}"/>
+                                                </DataGridTextColumn.Binding>
+                                            </DataGridTextColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Border>
+                            </StackPanel>
                         </Border>
 
                     </StackPanel>
