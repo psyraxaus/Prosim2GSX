@@ -114,7 +114,6 @@
     <Resource Include="UI\Icons\settings.png" />
     <Resource Include="UI\Icons\upload.png" />
     <Resource Include="UI\Icons\volume.png" />
-    <Resource Include="UI\Views\WeightBalance\Resources\wandb.png" />
   </ItemGroup>
 
   <ItemGroup>

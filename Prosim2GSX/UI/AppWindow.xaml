@@ -50,11 +50,7 @@
                 <Style TargetType="TabItem" BasedOn="{StaticResource EfbTabItem}"/>
             </TabControl.Resources>
             <TabItem Header="FLIGHT STATUS"/>
-            <TabItem Header="INIT"/>
             <TabItem Header="OFP"/>
-            <TabItem Header="LOADSHEET"/>
-            <TabItem Header="W&amp;B"/>
-            <TabItem Header="FUEL"/>
             <TabItem Header="CHECKLISTS"/>
             <TabItem Header="GSX SETTINGS"/>
             <TabItem Header="AIRCRAFT PROFILES"/>
