@@ -260,6 +260,10 @@
 
             <!-- WEB INTERFACE -->
             <TextBlock Style="{StaticResource CategoryHeader}" Text="WEB INTERFACE"/>
+            <TextBlock Foreground="{DynamicResource CategoryTextBrush}"
+                       FontSize="11" FontStyle="Italic"
+                       TextWrapping="Wrap" Margin="0,0,0,4"
+                       Text="INIT, Loadsheet, W&amp;B and Fuel are only accessible through the web interface — enable below to use them."/>
             <Border Style="{StaticResource SectionCardBorder}">
                 <Grid>
                     <Grid.ColumnDefinitions>
