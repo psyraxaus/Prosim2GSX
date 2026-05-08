@@ -7,13 +7,15 @@ Full and proper GSX Integration and Automation for the ProSim A320! <br/>
 - **Ground Equipment** (GPU, Chocks, PCA) is automatically set or removed
 - All **Service Calls** can be automated — including **Pushback Direction** (cockpit-style Korry buttons on the OFP tab) and **De-Icing** (auto-answer + fluid selection)
 - **Arrival Gate** can be assigned from the OFP tab — Prosim2GSX drives both ATC (via SayIntentions) and GSX (via an in-sim Stackless Python handler installed automatically)
-- **Flight Plan loading** via the **INIT tab** — enter Departure / Arrival on the MCDU *or* hit **FETCH OFP** in the app; Prosim2GSX pulls the OFP from SimBrief and writes it into ProSim. Replaces the legacy ProSim-EFB import workflow and is the only path with per-field overrides (ZFW / Block Fuel / Pax / Cargo)
+- **Flight Plan loading** via the **INIT page on the web interface** — enter Departure / Arrival on the MCDU *or* hit **FETCH OFP** in the web UI; Prosim2GSX pulls the OFP from SimBrief and writes it into ProSim. Replaces the legacy ProSim-EFB import workflow and is the only path with per-field overrides (ZFW / Block Fuel / Pax / Cargo)
 - Using the **INT/RAD** Switch as a Shortcut for certain GSX Interactions (i.e. call / confirm Pushback)
 - **GSX Audio** and **ATC Volume** can be controlled via the **INT/VHF1-Knob** from the ACP in the Cockpit (driven directly from ProSim datarefs — no LVAR poller, no separate startup-state to configure)
 - Applications can be **freely mapped** to Audio-Channels — either via **CoreAudio** (per-process) or **VoiceMeeter Remote API** (per-strip/bus), selectable per install
 - Can be used, within certain Limits, with the native Integration
 - Supports to use the Volume Control without having GSX installed or running (or to solely use the native Integration)
-- **Embedded Web Interface** — mirrors the WPF UI in any LAN browser (phone, tablet, second PC). QR-code onboarding, bearer-token auth, loopback-only by default. Designed for **headless sim-PC** setups where the WPF window isn't reachable.
+- **Embedded Web Interface** — full operational surface (INIT, LOADSHEET, W&B, FUEL, OFP, CHECKLISTS, settings) in any LAN browser (phone, tablet, second PC). QR-code onboarding, bearer-token auth, loopback-only by default. Designed for **headless sim-PC** setups where the WPF window isn't reachable.
+
+> **Where to find each feature.** The WPF window covers Flight Status, OFP (with a read-only flight-plan summary), Checklists, GSX Settings, Aircraft Profiles, Audio Settings, and App Settings. The advanced EFB features — **INIT** (flight-plan fetch + per-field overrides), **LOADSHEET**, **W&B**, and **FUEL** — live on the embedded web interface (Section 3). Enable the web server in App Settings to use them.
 
 <br/><br/>
 
@@ -234,21 +236,21 @@ By default, Prosim2GSX saves the FOB per Aircraft Registration upon Arrival. Whe
 
 <br/><br/>
 
-#### 2.3.2 - INIT (EFB Flight Planning)
+#### 2.3.2 - INIT (EFB Flight Planning) — Web Interface only
 
-The **INIT tab** is the canonical place to load a SimBrief OFP into ProSim. It replaces the import button in the ProSim EFB — you can keep using the EFB if you prefer, but INIT is the recommended path going forward and is the only path with per-field override support.
+The **INIT page** is the canonical place to load a SimBrief OFP into ProSim. It replaces the import button in the ProSim EFB — you can keep using the EFB if you prefer, but INIT is the recommended path going forward and is the only path with per-field override support.
 
 Two entry points feed the same fetch logic:
 - **MCDU** — entering Departure / Arrival on the MCDU (`aircraft.fms.origin` / `aircraft.fms.destination`) automatically triggers a SimBrief fetch using the user ID configured in ProSim's EFB.
-- **FETCH OFP** button on the INIT tab — manual fetch on demand. Useful when the OFP changed on simbrief.com and you want to pull the new copy without re-typing the route into the MCDU.
+- **FETCH OFP** button on the INIT page — manual fetch on demand. Useful when the OFP changed on simbrief.com and you want to pull the new copy without re-typing the route into the MCDU.
 
 Either path:
 1. Calls SimBrief with your user ID
 2. Parses the returned OFP
 3. Writes the planned values to the ProSim EFB datarefs (planned pax, planned cargo, planned fuel) so downstream systems (W&B, loadsheet, GSX) see the right numbers
-4. Caches the parsed OFP in-memory and broadcasts to all open INIT panels (WPF + web)
+4. Caches the parsed OFP in-memory and broadcasts on the WS feed
 
-The tab is laid out FMS-style in two columns:
+The page is laid out FMS-style in two columns:
 - **Left ("ACTIVE / INIT")** — flight info: FLT NBR, FROM / TO / ALTN, RWY OUT/IN, CALLSIGN, CRZ FL, CI, CPNY RTE, STD, ETA, status indicator with the OFP source (MCDU / MANUAL / SIMBRIEF).
 - **Right ("DATA / STATUS")** — aircraft type, registration, weights and fuels: ZFW, OEW, FUEL RAMP / TRIP / MIN / EXTRA, PAX, CARGO. Override-active fields render in amber-orange; unmodified OFP values in green.
 
@@ -260,15 +262,17 @@ Action buttons:
 
 Per-field overrides (ZFW / Fuel Ramp / Pax / Cargo) write to the matching ProSim dataref the moment they're committed — explicit pilot intent, no SYNC TO FMS click required. Clearing an override re-writes the SimBrief value back. Other displayed fields (trip / contingency / min / extra fuel etc.) are display-only — there are no FMS init datarefs to push them to.
 
-App Settings flags that affect this tab:
+A **read-only summary** of whichever OFP is currently loaded is mirrored on the WPF **OFP tab** (Section 2.3.3) so desktop users see the same situational awareness without launching a browser. Fetching, override management, and SYNC TO FMS remain web-only.
+
+App Settings flags that affect the INIT page:
 - **Auto-sync FMS on fetch** (default off) — when on, ZFW + block fuel are pushed to the FMS init datarefs the moment a fetch completes. Off by default to give the pilot positive control via the manual SYNC TO FMS button.
-- **Lock fields from OFP** (default on) — drives the locked-row UX in the web panel (click a row to unlock and edit).
+- **Lock fields from OFP** (default on) — drives the locked-row UX (click a row to unlock and edit).
 
 <br/><br/>
 
 #### 2.3.3 - OFP
 
-The OFP tab covers gate assignment, weather, and pushback preference. Flight info (departure / arrival / flight number / runways / fuel / time / pax / distance) lives on the INIT tab (Section 2.3.2) and is no longer duplicated here.
+The OFP tab covers a read-only **FLIGHT PLAN** summary, gate assignment, weather, and pushback preference. The summary shows whichever OFP is currently loaded — flight number, route, runways, aircraft, STD/ETA, ZFW, block fuel, pax, cargo — sourced live from the EFB flight-plan store. Fetching, per-field overrides, and SYNC TO FMS are managed exclusively on the **INIT page** of the web interface (Section 2.3.2 / 3.4).
 
 <img src="img/OFP Tab.png" width="600"/>
 
@@ -534,15 +538,19 @@ The web UI is responsive and is intended to be used on small screens.
 
 ### 3.4 - What's in the Web UI
 
-Seven tabs, mirroring the WPF UI in the same order:
+Eleven pages cover every operational and configuration surface:
 
 1. **Flight Status** — split-flap header (FLT NO / UTC / DATE), Sim/GSX/App state indicators, flight-phase progress bar, message log tail.
-2. **OFP** — full parity with the WPF OFP tab: route details, three Korry pushback-direction buttons, arrival gate Confirm / Send Now, ATIS / METAR.
-3. **GSX Settings** — left-rail navigation by section, sticky save bar, full parity with the WPF GSX Settings tab.
-4. **Aircraft Profiles** — full CRUD against the Profiles list, including the active-profile selector.
-5. **Audio Settings** — full parity with the WPF Audio Settings tab: backend selector (CoreAudio / VoiceMeeter), VoiceMeeter DLL-path card with status warning, App Mappings (CoreAudio) with running-process autocomplete and elevated banner, VoiceMeeter Channel Mappings (per-strip/bus), Device Blacklist.
-6. **App Settings** — global app settings (excluding the Web Interface card itself, which is WPF-only by design so you can never lock yourself out).
-7. **Checklists** — full parity with the WPF Checklists tab: per-profile checklist file, ECAM-style green-when-complete C/L COMPLETE button, sequential gating + retreat + past-progress freeze, manual-tick fallback for unreachable datarefs (see Section 2.3.7 for the engine semantics and authoring guide).
+2. **INIT** — the canonical flight-planning surface (web-only). SimBrief OFP fetch on MCDU origin/destination entry or via the **FETCH OFP** button, FMS-style two-column layout, per-field overrides on ZFW / FUEL RAMP / PAX / CARGO, **SYNC TO FMS** / **CLEAR OVERRIDES** / **RESET FLIGHT** actions. See Section 2.3.2 for the full feature description.
+3. **OFP** — route details, three Korry pushback-direction buttons, arrival gate Confirm / Send Now, ATIS / METAR.
+4. **LOADSHEET** (web-only) — preliminary and final loadsheets parsed from the SDK datarefs, ICAO-aligned envelope display, MACTOW + FMS sync staleness, RESEND placeholder.
+5. **W&B** (web-only) — live weight & balance with the CG envelope chart, MACTOW resolution chip (FINAL / PRELIM / COMPUTED), SYNC TO FMS button, departure-readiness banner, the Aircraft Status silhouette (132-seat overlay + 8 entry doors + 3 cargo doors), and the SIMULATE / CLEAR / MANIFEST passenger-simulation surface.
+6. **FUEL** (web-only) — per-tank breakdown bars, planned vs in-tanks delta, kg / L mirror, over/under flags.
+7. **CHECKLISTS** — per-profile checklist file, ECAM-style green-when-complete C/L COMPLETE button, sequential gating + retreat + past-progress freeze, manual-tick fallback for unreachable datarefs (see Section 2.3.7 for the engine semantics and authoring guide).
+8. **GSX Settings** — left-rail navigation by section, sticky save bar, full parity with the WPF GSX Settings tab.
+9. **Aircraft Profiles** — full CRUD against the Profiles list, including the active-profile selector.
+10. **Audio Settings** — full parity with the WPF Audio Settings tab: backend selector (CoreAudio / VoiceMeeter), VoiceMeeter DLL-path card with status warning, App Mappings (CoreAudio) with running-process autocomplete and elevated banner, VoiceMeeter Channel Mappings (per-strip/bus), Device Blacklist.
+11. **App Settings** — global app settings (excluding the Web Interface card itself, which is WPF-only by design so you can never lock yourself out).
 
 ### 3.5 - Limits
 
