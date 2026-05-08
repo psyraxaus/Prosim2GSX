@@ -19,6 +19,127 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="12,8,12,8">
 
+            <!-- FLIGHT PLAN — read-only summary of EfbFlightPlanState.CurrentOfp.
+                 Fetching, MCDU auto-fetch, and per-field overrides live on the
+                 web INIT page; this card just shows whichever OFP is currently
+                 loaded so the desktop user has the same situational awareness
+                 without launching a browser. Two-column layout: identification
+                 + routing on the left, loadout + timing on the right. -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="FLIGHT PLAN" Margin="0,0,0,4"/>
+            <Border Style="{StaticResource SectionCardBorder}">
+                <StackPanel>
+                    <Grid Visibility="{Binding HasFlightPlan, Converter={StaticResource BoolVisibilityConverter}}" Margin="6,4,6,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- LEFT: identification + routing -->
+                        <Grid Grid.Column="0" Margin="0,0,8,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">FLT NBR</Label>
+                            <TextBlock Grid.Row="0" Grid.Column="1" FontWeight="Bold" VerticalAlignment="Center" Text="{Binding FlightNumber}"/>
+
+                            <Label Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">CALLSIGN</Label>
+                            <TextBlock Grid.Row="1" Grid.Column="1" FontWeight="Bold" VerticalAlignment="Center" Text="{Binding Callsign}"/>
+
+                            <Label Grid.Row="2" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">FROM/TO</Label>
+                            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock FontWeight="Bold" Text="{Binding FpDeparture}"/>
+                                <TextBlock Foreground="{DynamicResource CategoryTextBrush}" Text=" → "/>
+                                <TextBlock FontWeight="Bold" Text="{Binding FpArrival}"/>
+                                <TextBlock Foreground="{DynamicResource CategoryTextBrush}" Text="   ALTN "/>
+                                <TextBlock FontWeight="Bold" Text="{Binding FpAlternate}"/>
+                            </StackPanel>
+
+                            <Label Grid.Row="3" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">RWY OUT/IN</Label>
+                            <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock FontWeight="Bold" Text="{Binding DeparturePlanRwy}"/>
+                                <TextBlock Foreground="{DynamicResource CategoryTextBrush}" Text=" / "/>
+                                <TextBlock FontWeight="Bold" Text="{Binding ArrivalPlanRwy}"/>
+                            </StackPanel>
+
+                            <Label Grid.Row="4" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">ACFT</Label>
+                            <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock FontWeight="Bold" Text="{Binding AircraftType}"/>
+                                <TextBlock Foreground="{DynamicResource CategoryTextBrush}" Text="   REG "/>
+                                <TextBlock FontWeight="Bold" Text="{Binding AircraftReg}"/>
+                            </StackPanel>
+
+                            <Label Grid.Row="5" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">CRZ FL</Label>
+                            <TextBlock Grid.Row="5" Grid.Column="1" FontWeight="Bold" VerticalAlignment="Center" Text="{Binding CruiseFlText}"/>
+                        </Grid>
+
+                        <!-- RIGHT: timing + loadout -->
+                        <Grid Grid.Column="1" Margin="8,0,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Label Grid.Row="0" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">STD</Label>
+                            <TextBlock Grid.Row="0" Grid.Column="1" FontWeight="Bold" VerticalAlignment="Center" Text="{Binding StdZulu}"/>
+
+                            <Label Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">ETA</Label>
+                            <TextBlock Grid.Row="1" Grid.Column="1" FontWeight="Bold" VerticalAlignment="Center" Text="{Binding EtaZulu}"/>
+
+                            <Label Grid.Row="2" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">ZFW</Label>
+                            <TextBlock Grid.Row="2" Grid.Column="1" FontWeight="Bold" VerticalAlignment="Center" Text="{Binding ZfwKgText}"/>
+
+                            <Label Grid.Row="3" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">BLOCK FUEL</Label>
+                            <TextBlock Grid.Row="3" Grid.Column="1" FontWeight="Bold" VerticalAlignment="Center" Text="{Binding BlockFuelKgText}"/>
+
+                            <Label Grid.Row="4" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">PAX</Label>
+                            <TextBlock Grid.Row="4" Grid.Column="1" FontWeight="Bold" VerticalAlignment="Center" Text="{Binding PaxCountText}"/>
+
+                            <Label Grid.Row="5" Grid.Column="0" Foreground="{DynamicResource CategoryTextBrush}">CARGO</Label>
+                            <TextBlock Grid.Row="5" Grid.Column="1" FontWeight="Bold" VerticalAlignment="Center" Text="{Binding CargoKgText}"/>
+                        </Grid>
+                    </Grid>
+
+                    <!-- Footer line — fetched-at timestamp + a hint pointing the
+                         user at the web INIT page when they want to fetch / edit. -->
+                    <DockPanel Visibility="{Binding HasFlightPlan, Converter={StaticResource BoolVisibilityConverter}}"
+                               Margin="6,2,6,4">
+                        <TextBlock DockPanel.Dock="Right"
+                                   FontSize="11" FontStyle="Italic"
+                                   Foreground="{DynamicResource CategoryTextBrush}"
+                                   Text="Fetch &amp; overrides on the web INIT page"/>
+                        <TextBlock FontSize="11"
+                                   Foreground="{DynamicResource CategoryTextBrush}"
+                                   Text="{Binding FetchedAtText}"/>
+                    </DockPanel>
+
+                    <TextBlock Text="No flight plan loaded — enter origin/destination on the MCDU, or fetch an OFP from the INIT page on the web interface."
+                               FontStyle="Italic"
+                               Foreground="{DynamicResource CategoryTextBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="6,8,6,8"
+                               TextWrapping="Wrap"
+                               Visibility="{Binding HasNoFlightPlan, Converter={StaticResource BoolVisibilityConverter}}"/>
+                </StackPanel>
+            </Border>
+
             <!-- PUSHBACK DIRECTION -->
             <TextBlock Style="{StaticResource CategoryHeader}" Text="PUSHBACK DIRECTION" Margin="0,8,0,4"/>
             <Border Style="{StaticResource SectionCardBorder}">
