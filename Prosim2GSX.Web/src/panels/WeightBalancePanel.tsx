@@ -90,22 +90,31 @@ const SEAT_RECTS: { x: number; y: number; zone: number }[] = (() => {
 // Same coordinate space as the cargo doors. Source HIGH y is the
 // starboard edge (R doors), source LOW y is the port edge (L doors).
 // L1/R1 sit forward of zone 1 cabin start; L2/R2 + L3/R3 are at the
-// overwing exit stations between zones 2/3 and within zone 3; L4/R4 sit
-// aft of zone 4. Rect size (18x10) is smaller than the cargo doors
-// (41x14) so the silhouette reads correctly at a glance — pax doors are
-// visibly narrower than cargo doors in real life.
-const DOOR_ENTRY_W = 18;
-const DOOR_ENTRY_H = 10;
-const ENTRY_DOORS = [
-  { id: "L1", x: 540, y: 348, side: "port" },
-  { id: "L2", x: 440, y: 348, side: "port" },
-  { id: "L3", x: 350, y: 348, side: "port" },
-  { id: "L4", x: 215, y: 348, side: "port" },
-  { id: "R1", x: 540, y: 392, side: "starboard" },
-  { id: "R2", x: 440, y: 392, side: "starboard" },
-  { id: "R3", x: 350, y: 392, side: "starboard" },
-  { id: "R4", x: 215, y: 392, side: "starboard" },
-] as const;
+// overwing exit stations within the wing band; L4/R4 sit aft of zone 4
+// where the tail begins to taper, so they're rotated slightly to follow
+// the fuselage edge. Rect size (18×10) is smaller than the cargo doors
+// (41×14) so the silhouette reads correctly at a glance — pax doors are
+// visibly narrower than cargo doors in real life. Coords + rotations
+// match ViewWeightBalance.xaml exactly so the WPF + web silhouettes
+// stay aligned.
+const DOOR_ENTRY_W = 13;
+const DOOR_ENTRY_H = 7;
+type EntryDoor = {
+  id: "L1" | "R1" | "L2" | "R2" | "L3" | "R3" | "L4" | "R4";
+  x: number;
+  y: number;
+  rotate?: number;
+};
+const ENTRY_DOORS: readonly EntryDoor[] = [
+  { id: "L1", x: 563, y: 348 },
+  { id: "L2", x: 415, y: 348 },
+  { id: "L3", x: 400, y: 348 },
+  { id: "L4", x: 215, y: 352, rotate: -8.374 },
+  { id: "R1", x: 563, y: 395 },
+  { id: "R2", x: 415, y: 395 },
+  { id: "R3", x: 400, y: 395 },
+  { id: "R4", x: 215, y: 392, rotate:  8.902 },
+];
 
 // Read-only Weight & Balance panel. Initial REST load on mount; live
 // updates arrive through the WebSocket "weightBalance" channel and are
@@ -773,10 +782,10 @@ export function WeightBalancePanel() {
                   axis runs along source X (fore-aft) and becomes
                   vertical in display. Coords match ViewWeightBalance.xaml
                   exactly so WPF + web stay aligned. */}
-              <rect x={498} y={389} width={41} height={14}
+              <rect x={498} y={403} width={41} height={14}
                     fill={doorColor(wb.fwdCargoDoorOpen)}
                     stroke="#FFFFFF" strokeWidth={1.2} />
-              <rect x={293} y={389} width={41} height={14}
+              <rect x={293} y={403} width={41} height={14}
                     fill={doorColor(wb.aftCargoDoorOpen)}
                     stroke="#FFFFFF" strokeWidth={1.2} />
               {/* BULK is always rendered so the silhouette reads
@@ -784,8 +793,8 @@ export function WeightBalancePanel() {
                   when CargoBulkCapacityKg = 0, mirroring the WPF
                   BulkDoorBrush. Status text below still reads "N/A"
                   in that case. */}
-              <rect x={255} y={392} width={20} height={11}
-                    transform="rotate(-0.265 265 397.5)"
+              <rect x={255} y={403} width={20} height={11}
+                    transform="rotate(-0.265 265 408.5)"
                     fill={doorColor(wb.bulkCargoDoorOpen, wb.cargoBulkCapacityKg > 0)}
                     stroke="#FFFFFF" strokeWidth={1.2} />
 
@@ -793,7 +802,11 @@ export function WeightBalancePanel() {
                   upper fuselage edge (source LOW y), starboard doors on
                   the lower edge (source HIGH y). Smaller than cargo
                   rects so the silhouette reads at a glance: pax doors
-                  are visibly narrower than cargo doors in real life. */}
+                  are visibly narrower than cargo doors in real life.
+                  L4/R4 carry a small rotation matching the tail taper
+                  in ViewWeightBalance.xaml so the rect aligns with the
+                  fuselage edge. The rotation pivots around the rect's
+                  centre to mirror WPF's RenderTransformOrigin="0.5,0.5". */}
               {ENTRY_DOORS.map(d => {
                 const open =
                   d.id === "L1" ? wb.door1LOpen :
@@ -804,10 +817,16 @@ export function WeightBalancePanel() {
                   d.id === "R3" ? wb.door3ROpen :
                   d.id === "L4" ? wb.door4LOpen :
                                   wb.door4ROpen;
+                const cx = d.x + DOOR_ENTRY_W / 2;
+                const cy = d.y + DOOR_ENTRY_H / 2;
+                const transform = d.rotate !== undefined
+                  ? `rotate(${d.rotate} ${cx} ${cy})`
+                  : undefined;
                 return (
                   <rect key={`entry-${d.id}`}
                         x={d.x} y={d.y}
                         width={DOOR_ENTRY_W} height={DOOR_ENTRY_H}
+                        transform={transform}
                         fill={doorColor(open)}
                         stroke="#FFFFFF" strokeWidth={1} />
                 );

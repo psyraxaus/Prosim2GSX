@@ -451,7 +451,7 @@
                      both surfaces. Door rectangles are placed in the SVG's
                      750×750 viewBox; the Viewbox scales the whole canvas
                      to whatever width the right column ends up at. -->
-                <TextBlock Style="{StaticResource CategoryHeader}" Text="CARGO DOORS" Margin="0,8,0,0"/>
+                <TextBlock Style="{StaticResource CategoryHeader}" Text="AIRCRAFT STATUS" Margin="0,8,0,0"/>
                 <Border Style="{StaticResource SectionCardBorder}">
                     <StackPanel Margin="6,4,6,4">
 
@@ -485,19 +485,51 @@
                                         <RotateTransform Angle="-180" CenterX="375" CenterY="375"/>
                                     </Canvas.LayoutTransform>
 
-                                <!-- Aircraft outline. Filled mid-grey so it
+                                    <!-- Aircraft outline. Filled mid-grey so it
                                      reads as a silhouette; stroke is a thin
                                      edge in the same family for definition
                                      against the dark card background. -->
-                                <Path Data="{x:Static local:ModelWeightBalance.A320OutlineGeometry}"
+                                    <Path Data="{x:Static local:ModelWeightBalance.A320OutlineGeometry}"
                                       Fill="#3F3F3F" Stroke="#7A7A7A" StrokeThickness="2"/>
 
-                                <!-- Door rectangles in SOURCE (nose-right)
-                                     coords. After -90° rotation:
-                                     source HIGH x → display TOP (nose),
-                                     source LOW  x → display BOTTOM (tail),
-                                     source LOW  y → display LEFT (port),
-                                     source HIGH y → display RIGHT (starboard).
+                                    <!-- 132-seat cabin overlay. Each seat is a
+                                     small Rectangle positioned via Canvas
+                                     attached props on the inner Canvas
+                                     panel; Fill toggles green/dark based on
+                                     the seatOccupation dataref. The list
+                                     rebuilds each tick when SeatRects
+                                     re-fires PropertyChanged. Reuses
+                                     TickContainerStyle (same Left/Top
+                                     property shape as ChartTick). Width/
+                                     Height match the parent Canvas so the
+                                     ItemsPanel's child Canvas can lay out
+                                     across the full 750×750 source space. -->
+                                    <ItemsControl ItemsSource="{Binding SeatRects}"
+                                              Width="750" Height="750"
+                                              ItemContainerStyle="{StaticResource TickContainerStyle}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <Canvas/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type local:SeatRect}">
+                                                <Rectangle
+                                                Width="{Binding Width}"
+                                                Height="{Binding Height}"
+                                                Fill="{Binding Fill}"
+                                                Stroke="{Binding Stroke}"
+                                                StrokeThickness="0.4"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <!-- Door rectangles in SOURCE (nose-right)
+                                     coords. After -180° rotation:
+                                     source HIGH x → display LEFT (nose),
+                                     source LOW  x → display RIGHT (tail),
+                                     source LOW  y → display ABOVE centre (port),
+                                     source HIGH y → display BELOW centre (starboard).
                                      All three cargo doors sit on STARBOARD
                                      (source HIGH y) to match the real
                                      A320 — fwd, aft, and bulk are all on
@@ -505,20 +537,20 @@
                                      life. Long axis along source X
                                      (fore-aft) becomes vertical in display. -->
 
-                                <!-- Forward cargo door — starboard edge,
+                                    <!-- Forward cargo door — starboard edge,
                                      forward of wing root (high source X =
                                      closer to the nose at right). -->
-                                <Rectangle Canvas.Left="498" Canvas.Top="389" Width="41" Height="14"
+                                    <Rectangle Canvas.Left="498" Canvas.Top="403" Width="41" Height="14"
                                            Fill="{Binding FwdDoorBrush}"
-                                           Stroke="#FFFFFF" StrokeThickness="1.2" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                           Stroke="#FFFFFF" StrokeThickness="1.2" HorizontalAlignment="Center" VerticalAlignment="Top"/>
 
-                                <!-- Aft cargo door — starboard edge, aft of
+                                    <!-- Aft cargo door — starboard edge, aft of
                                      wing trailing edge (mid-low source X). -->
-                                <Rectangle Canvas.Left="293" Canvas.Top="389" Width="41" Height="14"
+                                    <Rectangle Canvas.Left="293" Canvas.Top="403" Width="41" Height="14"
                                            Fill="{Binding AftDoorBrush}"
-                                           Stroke="#FFFFFF" StrokeThickness="1.2" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                           Stroke="#FFFFFF" StrokeThickness="1.2" HorizontalAlignment="Center" VerticalAlignment="Top"/>
 
-                                <!-- Bulk cargo door — starboard edge, far
+                                    <!-- Bulk cargo door — starboard edge, far
                                      aft (low source X, between aft cargo
                                      and tail). Always rendered so the
                                      silhouette reads consistently across
@@ -526,19 +558,60 @@
                                      when CargoBulkCapacityKg = 0. Status
                                      text below the silhouette still reads
                                      "N/A" in that case. -->
-                                <Rectangle Canvas.Left="255" Canvas.Top="392" Width="20" Height="11"
+                                    <Rectangle Canvas.Left="255" Canvas.Top="403" Width="20" Height="11"
                                            Fill="{Binding BulkDoorBrush}"
                                            Stroke="#FFFFFF" StrokeThickness="1.2"
-                                           HorizontalAlignment="Left" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
-                                    <Rectangle.RenderTransform>
-                                        <TransformGroup>
-                                            <ScaleTransform/>
-                                            <SkewTransform/>
-                                            <RotateTransform Angle="-0.265"/>
-                                            <TranslateTransform/>
-                                        </TransformGroup>
-                                    </Rectangle.RenderTransform>
-                                </Rectangle>
+                                           HorizontalAlignment="Center" VerticalAlignment="Top" RenderTransformOrigin="0.5,0.5">
+                                        <Rectangle.RenderTransform>
+                                            <TransformGroup>
+                                                <ScaleTransform/>
+                                                <SkewTransform/>
+                                                <RotateTransform Angle="-0.265"/>
+                                                <TranslateTransform/>
+                                            </TransformGroup>
+                                        </Rectangle.RenderTransform>
+                                    </Rectangle>
+
+                                    <!-- Entry / overwing doors L1..R4 — port
+                                     edge (source LOW y=348) and starboard
+                                     edge (source HIGH y=392). Smaller than
+                                     cargo rects so the silhouette reads at
+                                     a glance: pax doors are visibly
+                                     narrower than cargo doors in real life. -->
+                                    <Rectangle Canvas.Left="563" Canvas.Top="348" Width="13" Height="7"
+                                           Fill="{Binding Door1LBrush}" Stroke="#FFFFFF" StrokeThickness="1" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                    <Rectangle Canvas.Left="415" Canvas.Top="348" Width="13" Height="7"
+                                           Fill="{Binding Door2LBrush}" Stroke="#FFFFFF" StrokeThickness="1" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                    <Rectangle Canvas.Left="400" Canvas.Top="348" Width="13" Height="7"
+                                           Fill="{Binding Door3LBrush}" Stroke="#FFFFFF" StrokeThickness="1" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                    <Rectangle Canvas.Left="215" Canvas.Top="352" Width="13" Height="7"
+                                           Fill="{Binding Door4LBrush}" Stroke="#FFFFFF" StrokeThickness="1" RenderTransformOrigin="0.5,0.5" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Rectangle.RenderTransform>
+                                            <TransformGroup>
+                                                <ScaleTransform/>
+                                                <SkewTransform/>
+                                                <RotateTransform Angle="-8.374"/>
+                                                <TranslateTransform/>
+                                            </TransformGroup>
+                                        </Rectangle.RenderTransform>
+                                    </Rectangle>
+                                    <Rectangle Canvas.Left="563" Canvas.Top="395" Width="13" Height="7"
+                                           Fill="{Binding Door1RBrush}" Stroke="#FFFFFF" StrokeThickness="1" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                    <Rectangle Canvas.Left="415" Canvas.Top="395" Width="13" Height="7"
+                                           Fill="{Binding Door2RBrush}" Stroke="#FFFFFF" StrokeThickness="1" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                    <Rectangle Canvas.Left="400" Canvas.Top="395" Width="13" Height="7"
+                                           Fill="{Binding Door3RBrush}" Stroke="#FFFFFF" StrokeThickness="1" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                    <Rectangle Canvas.Left="215" Canvas.Top="392" Width="13" Height="7"
+                                           Fill="{Binding Door4RBrush}" Stroke="#FFFFFF" StrokeThickness="1" RenderTransformOrigin="0.5,0.5" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                        <Rectangle.RenderTransform>
+                                            <TransformGroup>
+                                                <ScaleTransform/>
+                                                <SkewTransform/>
+                                                <RotateTransform Angle="8.902"/>
+                                                <TranslateTransform/>
+                                            </TransformGroup>
+                                        </Rectangle.RenderTransform>
+                                    </Rectangle>
                                 </Canvas>
                             </Border>
                         </Viewbox>

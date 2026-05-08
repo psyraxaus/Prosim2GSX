@@ -142,6 +142,30 @@ namespace Prosim2GSX.UI.Views.WeightBalance
         public List<ChartLabel> LimitAnnotations { get; }
         public List<ChartLabel> EnvelopeAnnotations { get; }
 
+        // ── Seat overlay layout (source SVG coords, identical to web panel) ──
+        // Cabin tube runs source x=216..552 (aft → forward), y=358..392 (port
+        // → starboard) with a visual aisle gap at y=375. The -180° rotation
+        // applied by the parent Canvas flips this so the displayed cabin
+        // reads nose-LEFT — same orientation the cargo doors already use.
+        // Zone breakdown is fixed by ProsimConstants.PaxZoneLimits {24, 30,
+        // 36, 42}; six seats per row split 3+3 around the aisle.
+        protected static readonly int[] SeatRowsPerZone = { 4, 5, 6, 7 };
+        protected const double SeatRowPitch = 15;
+        protected const double SeatRectW    = 11;
+        protected const double SeatRectH    = 4;
+        protected const double SeatXFwd     = 552;
+        protected static readonly double[] SeatYByCol = { 358, 364, 370, 380, 386, 392 };
+
+        // Seat overlay brushes. Filled seats use the same green as a closed
+        // door for tonal consistency; empty seats use a darker neutral so the
+        // cabin reads as "empty by default" rather than "broken / N/A".
+        protected static readonly Brush SeatOccupiedBrush =
+            new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50));
+        protected static readonly Brush SeatEmptyBrush =
+            new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x2A));
+        protected static readonly Brush SeatStrokeBrush =
+            new SolidColorBrush(Color.FromRgb(0x1A, 0x1A, 0x1A));
+
         public ModelWeightBalance(AppService appService) : base(appService)
         {
             XAxisLabels         = BuildXAxisLabels();
@@ -197,6 +221,15 @@ namespace Prosim2GSX.UI.Views.WeightBalance
             NotifyPropertyChanged(nameof(FwdDoorStatusText));
             NotifyPropertyChanged(nameof(AftDoorStatusText));
             NotifyPropertyChanged(nameof(BulkDoorStatusText));
+            NotifyPropertyChanged(nameof(Door1LBrush));
+            NotifyPropertyChanged(nameof(Door1RBrush));
+            NotifyPropertyChanged(nameof(Door2LBrush));
+            NotifyPropertyChanged(nameof(Door2RBrush));
+            NotifyPropertyChanged(nameof(Door3LBrush));
+            NotifyPropertyChanged(nameof(Door3RBrush));
+            NotifyPropertyChanged(nameof(Door4LBrush));
+            NotifyPropertyChanged(nameof(Door4RBrush));
+            NotifyPropertyChanged(nameof(SeatRects));
             NotifyPropertyChanged(nameof(ReadinessBannerText));
             NotifyPropertyChanged(nameof(ReadinessBannerBrush));
             NotifyPropertyChanged(nameof(PassengersPlanned));
@@ -394,6 +427,76 @@ namespace Prosim2GSX.UI.Views.WeightBalance
         public virtual string AftDoorStatusText  => AftCargoDoorOpen ? "OPEN" : "CLOSED";
         public virtual string BulkDoorStatusText =>
             !BulkFitted ? "N/A" : (BulkCargoDoorOpen ? "OPEN" : "CLOSED");
+
+        // Entry / overwing door brushes — green when closed, amber when open.
+        // L1/R1 = forward pax, L2/R2 + L3/R3 = overwing exits, L4/R4 = aft
+        // pax. Forwarded straight through from the W&B store (polled each
+        // tick by WeightBalanceService).
+        public virtual Brush Door1LBrush => (State?.Door1LOpen ?? false) ? DoorOpenBrush : DoorClosedBrush;
+        public virtual Brush Door1RBrush => (State?.Door1ROpen ?? false) ? DoorOpenBrush : DoorClosedBrush;
+        public virtual Brush Door2LBrush => (State?.Door2LOpen ?? false) ? DoorOpenBrush : DoorClosedBrush;
+        public virtual Brush Door2RBrush => (State?.Door2ROpen ?? false) ? DoorOpenBrush : DoorClosedBrush;
+        public virtual Brush Door3LBrush => (State?.Door3LOpen ?? false) ? DoorOpenBrush : DoorClosedBrush;
+        public virtual Brush Door3RBrush => (State?.Door3ROpen ?? false) ? DoorOpenBrush : DoorClosedBrush;
+        public virtual Brush Door4LBrush => (State?.Door4LOpen ?? false) ? DoorOpenBrush : DoorClosedBrush;
+        public virtual Brush Door4RBrush => (State?.Door4ROpen ?? false) ? DoorOpenBrush : DoorClosedBrush;
+
+        // Seat overlay — list of 132 SeatRect POCOs sized + positioned in
+        // source coords, with Fill toggled per-seat off the comma-separated
+        // seatOccupation string. Rebuilt on every state change (NotifyAll
+        // refires SeatRects), so the ItemsControl in XAML rerenders cheaply.
+        // 132 small allocations per tick is well within budget.
+        public virtual List<SeatRect> SeatRects => BuildSeatRects(State?.SeatOccupation);
+
+        protected static List<SeatRect> BuildSeatRects(string seatOccupation)
+        {
+            var occupied = ParseSeatOccupation(seatOccupation);
+            var list = new List<SeatRect>(132);
+            int rowOffset = 0;
+            int seatIdx = 0;
+            for (int zone = 0; zone < SeatRowsPerZone.Length; zone++)
+            {
+                int rowsInZone = SeatRowsPerZone[zone];
+                for (int r = 0; r < rowsInZone; r++)
+                {
+                    int globalRow = rowOffset + r;
+                    double x = SeatXFwd - globalRow * SeatRowPitch;
+                    for (int col = 0; col < 6; col++)
+                    {
+                        bool isOccupied = seatIdx < occupied.Count && occupied[seatIdx];
+                        list.Add(new SeatRect
+                        {
+                            Left   = x,
+                            Top    = SeatYByCol[col] - SeatRectH / 2,
+                            Width  = SeatRectW,
+                            Height = SeatRectH,
+                            Fill   = isOccupied ? SeatOccupiedBrush : SeatEmptyBrush,
+                            Stroke = SeatStrokeBrush,
+                        });
+                        seatIdx++;
+                    }
+                }
+                rowOffset += rowsInZone;
+            }
+            return list;
+        }
+
+        // Parse the comma-separated "true,false,..." seatOccupation string
+        // into a bool list. Tolerates "1"/"0" and case-insensitive "true"
+        // matching, mirroring WeightBalanceService.CountTrueChars but
+        // preserving per-seat granularity.
+        protected static List<bool> ParseSeatOccupation(string s)
+        {
+            var result = new List<bool>(132);
+            if (string.IsNullOrEmpty(s)) return result;
+            var parts = s.Split(',');
+            foreach (var p in parts)
+            {
+                var v = p.Trim();
+                result.Add(v.Equals("true", StringComparison.OrdinalIgnoreCase) || v == "1");
+            }
+            return result;
+        }
 
         // Readiness banner mirrors !Aircraft.HasOpenDoors (covers entry +
         // cargo + bulk). Same predicate the GSX state machine uses to gate
@@ -686,6 +789,20 @@ namespace Prosim2GSX.UI.Views.WeightBalance
         public double Left  { get; set; }
         public double Top   { get; set; }
         public double Width { get; set; }
+    }
+
+    // POCO for one seat in the cabin overlay. Left/Top is the absolute
+    // top-left in source SVG coords; Fill flips between occupied / empty
+    // each time the seatOccupation string changes. Stroke is shared so the
+    // 132 rects read as a faint grid even when the cabin is empty.
+    public class SeatRect
+    {
+        public double Left   { get; set; }
+        public double Top    { get; set; }
+        public double Width  { get; set; }
+        public double Height { get; set; }
+        public Brush  Fill   { get; set; } = Brushes.Transparent;
+        public Brush  Stroke { get; set; } = Brushes.Transparent;
     }
 
     // Converter used inside the chart label DataTemplates: takes a width or

@@ -80,21 +80,24 @@ const SEAT_RECTS = (() => {
 // Same coordinate space as the cargo doors. Source HIGH y is the
 // starboard edge (R doors), source LOW y is the port edge (L doors).
 // L1/R1 sit forward of zone 1 cabin start; L2/R2 + L3/R3 are at the
-// overwing exit stations between zones 2/3 and within zone 3; L4/R4 sit
-// aft of zone 4. Rect size (18x10) is smaller than the cargo doors
-// (41x14) so the silhouette reads correctly at a glance — pax doors are
-// visibly narrower than cargo doors in real life.
-const DOOR_ENTRY_W = 18;
-const DOOR_ENTRY_H = 10;
+// overwing exit stations within the wing band; L4/R4 sit aft of zone 4
+// where the tail begins to taper, so they're rotated slightly to follow
+// the fuselage edge. Rect size (18×10) is smaller than the cargo doors
+// (41×14) so the silhouette reads correctly at a glance — pax doors are
+// visibly narrower than cargo doors in real life. Coords + rotations
+// match ViewWeightBalance.xaml exactly so the WPF + web silhouettes
+// stay aligned.
+const DOOR_ENTRY_W = 13;
+const DOOR_ENTRY_H = 7;
 const ENTRY_DOORS = [
-    { id: "L1", x: 540, y: 348, side: "port" },
-    { id: "L2", x: 440, y: 348, side: "port" },
-    { id: "L3", x: 350, y: 348, side: "port" },
-    { id: "L4", x: 215, y: 348, side: "port" },
-    { id: "R1", x: 540, y: 392, side: "starboard" },
-    { id: "R2", x: 440, y: 392, side: "starboard" },
-    { id: "R3", x: 350, y: 392, side: "starboard" },
-    { id: "R4", x: 215, y: 392, side: "starboard" },
+    { id: "L1", x: 563, y: 348 },
+    { id: "L2", x: 415, y: 348 },
+    { id: "L3", x: 400, y: 348 },
+    { id: "L4", x: 215, y: 352, rotate: -8.374 },
+    { id: "R1", x: 563, y: 395 },
+    { id: "R2", x: 415, y: 395 },
+    { id: "R3", x: 400, y: 395 },
+    { id: "R4", x: 215, y: 392, rotate: 8.902 },
 ];
 // Read-only Weight & Balance panel. Initial REST load on mount; live
 // updates arrive through the WebSocket "weightBalance" channel and are
@@ -412,7 +415,7 @@ export function WeightBalancePanel() {
                                             simStatus === "error" ? styles.simulateMessageError : "", children: simMessage }))] }), simOpen && (_jsx("p", { className: styles.simulateNote, children: "SIMULATE works for headless cabins; GSX boarding will overwrite." }))] }), _jsx("h2", { className: styles.colHeading, children: "Cargo" }), _jsxs("div", { className: styles.dataCard, children: [_jsxs("div", { className: styles.capacity, children: ["CAPACITY:\u00A0", wb.cargoFwdCapacityKg.toLocaleString(), " KG FWD,\u00A0", wb.cargoAftCapacityKg.toLocaleString(), " KG AFT,\u00A0", wb.cargoBulkCapacityKg.toLocaleString(), " KG BULK"] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "Cargo" }), _jsx("span", { className: styles.headerCell, children: "PLANNED (KG)" }), _jsx("span", { className: styles.headerCell, children: "LOADED (KG)" })] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "\u00A0" }), _jsx("span", { className: styles.value, children: wb.cargoPlannedKg.toLocaleString(undefined, { maximumFractionDigits: 0 }) }), _jsx("span", { className: styles.value, children: cargoLoadedTotal.toLocaleString(undefined, { maximumFractionDigits: 0 }) })] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "FWD / AFT" }), _jsx("span", { className: styles.value, children: "\u00A0" }), _jsxs("span", { className: styles.subValue, children: [wb.cargoFwdLoadedKg.toLocaleString(undefined, { maximumFractionDigits: 0 }), " / ", wb.cargoAftLoadedKg.toLocaleString(undefined, { maximumFractionDigits: 0 })] })] })] }), _jsx("h2", { className: styles.colHeading, children: "Aircraft Status" }), _jsxs("div", { className: styles.dataCard, children: [_jsx("svg", { viewBox: "0 270 750 210", className: styles.silhouetteSvg, children: _jsxs("g", { transform: "rotate(-180 375 375)", children: [_jsx("path", { d: A320_OUTLINE_PATH, fill: "#3F3F3F", stroke: "#7A7A7A", strokeWidth: 2 }), (() => {
                                             const occupied = parseSeatOccupation(wb.seatOccupation);
                                             return SEAT_RECTS.map((s, i) => (_jsx("rect", { x: s.x, y: s.y, width: SEAT_RECT_W, height: SEAT_RECT_H, fill: occupied[i] ? SEAT_OCCUPIED_COLOR : SEAT_EMPTY_COLOR, stroke: "#1A1A1A", strokeWidth: 0.4 }, `seat-${i}`)));
-                                        })(), _jsx("rect", { x: 498, y: 389, width: 41, height: 14, fill: doorColor(wb.fwdCargoDoorOpen), stroke: "#FFFFFF", strokeWidth: 1.2 }), _jsx("rect", { x: 293, y: 389, width: 41, height: 14, fill: doorColor(wb.aftCargoDoorOpen), stroke: "#FFFFFF", strokeWidth: 1.2 }), _jsx("rect", { x: 255, y: 392, width: 20, height: 11, transform: "rotate(-0.265 265 397.5)", fill: doorColor(wb.bulkCargoDoorOpen, wb.cargoBulkCapacityKg > 0), stroke: "#FFFFFF", strokeWidth: 1.2 }), ENTRY_DOORS.map(d => {
+                                        })(), _jsx("rect", { x: 498, y: 403, width: 41, height: 14, fill: doorColor(wb.fwdCargoDoorOpen), stroke: "#FFFFFF", strokeWidth: 1.2 }), _jsx("rect", { x: 293, y: 403, width: 41, height: 14, fill: doorColor(wb.aftCargoDoorOpen), stroke: "#FFFFFF", strokeWidth: 1.2 }), _jsx("rect", { x: 255, y: 403, width: 20, height: 11, transform: "rotate(-0.265 265 408.5)", fill: doorColor(wb.bulkCargoDoorOpen, wb.cargoBulkCapacityKg > 0), stroke: "#FFFFFF", strokeWidth: 1.2 }), ENTRY_DOORS.map(d => {
                                             const open = d.id === "L1" ? wb.door1LOpen :
                                                 d.id === "R1" ? wb.door1ROpen :
                                                     d.id === "L2" ? wb.door2LOpen :
@@ -421,7 +424,12 @@ export function WeightBalancePanel() {
                                                                 d.id === "R3" ? wb.door3ROpen :
                                                                     d.id === "L4" ? wb.door4LOpen :
                                                                         wb.door4ROpen;
-                                            return (_jsx("rect", { x: d.x, y: d.y, width: DOOR_ENTRY_W, height: DOOR_ENTRY_H, fill: doorColor(open), stroke: "#FFFFFF", strokeWidth: 1 }, `entry-${d.id}`));
+                                            const cx = d.x + DOOR_ENTRY_W / 2;
+                                            const cy = d.y + DOOR_ENTRY_H / 2;
+                                            const transform = d.rotate !== undefined
+                                                ? `rotate(${d.rotate} ${cx} ${cy})`
+                                                : undefined;
+                                            return (_jsx("rect", { x: d.x, y: d.y, width: DOOR_ENTRY_W, height: DOOR_ENTRY_H, transform: transform, fill: doorColor(open), stroke: "#FFFFFF", strokeWidth: 1 }, `entry-${d.id}`));
                                         })] }) }), _jsxs("div", { className: styles.doorStatusGrid, children: [_jsxs("div", { className: styles.doorStatusCell, children: [_jsx("span", { className: styles.doorStatusLabel, children: "FWD" }), _jsx("span", { className: styles.doorStatusValue, style: { color: doorColor(wb.fwdCargoDoorOpen) }, children: doorStatus(wb.fwdCargoDoorOpen) })] }), _jsxs("div", { className: styles.doorStatusCell, children: [_jsx("span", { className: styles.doorStatusLabel, children: "AFT" }), _jsx("span", { className: styles.doorStatusValue, style: { color: doorColor(wb.aftCargoDoorOpen) }, children: doorStatus(wb.aftCargoDoorOpen) })] }), _jsxs("div", { className: styles.doorStatusCell, children: [_jsx("span", { className: styles.doorStatusLabel, children: "BULK" }), _jsx("span", { className: styles.doorStatusValue, style: { color: doorColor(wb.bulkCargoDoorOpen, wb.cargoBulkCapacityKg > 0) }, children: doorStatus(wb.bulkCargoDoorOpen, wb.cargoBulkCapacityKg > 0) })] })] }), _jsx("div", { className: [
                                     styles.readinessBanner,
                                     wb.allDoorsClosed ? styles.readinessOk : styles.readinessOpen,
