@@ -686,6 +686,17 @@ export interface WeightBalanceDto {
   fwdCargoDoorOpen: boolean;
   aftCargoDoorOpen: boolean;
   bulkCargoDoorOpen: boolean;
+  // Entry / overwing doors L1..R4 — render on the Aircraft Status
+  // silhouette alongside the cargo doors. Naming mirrors the backend
+  // WeightBalanceState.Door{1..4}{L|R}Open fields.
+  door1LOpen: boolean;
+  door1ROpen: boolean;
+  door2LOpen: boolean;
+  door2ROpen: boolean;
+  door3LOpen: boolean;
+  door3ROpen: boolean;
+  door4LOpen: boolean;
+  door4ROpen: boolean;
   allDoorsClosed: boolean;
 
   mactowPercent: number;

@@ -5,13 +5,19 @@ import { FmsSyncResultDto, WeightBalanceDto } from "../types";
 import { A320_OUTLINE_PATH } from "./a320Silhouette";
 import styles from "./WeightBalancePanel.module.css";
 
-// Cargo-doors section colours — matching the WPF model's brushes so the
-// two surfaces read identically. Bulk on a non-fitted airframe falls
+// Aircraft Status section colours — matching the WPF model's brushes so
+// the two surfaces read identically. Bulk on a non-fitted airframe falls
 // back to a neutral grey; the rect is hidden, but the brush stays
 // defined for the status text colour.
 const DOOR_CLOSED_COLOR = "#4CAF50"; // green
 const DOOR_OPEN_COLOR   = "#F5A623"; // amber
 const DOOR_NA_COLOR     = "#555555"; // grey
+
+// Seat overlay colours. Filled seats use the same green as a closed door
+// for tonal consistency; empty seats use a darker neutral so the cabin
+// reads as "empty by default" rather than "broken / N/A".
+const SEAT_OCCUPIED_COLOR = "#4CAF50";
+const SEAT_EMPTY_COLOR    = "#2A2A2A";
 
 function doorColor(open: boolean, fitted = true): string {
   if (!fitted) return DOOR_NA_COLOR;
@@ -22,6 +28,79 @@ function doorStatus(open: boolean, fitted = true): string {
   if (!fitted) return "N/A";
   return open ? "OPEN" : "CLOSED";
 }
+
+// Parse the comma-separated seatOccupation string ("true,false,...") into
+// a 132-bool array. Mirrors WeightBalanceService.CountTrueChars but keeps
+// per-seat granularity for the cabin overlay. Tolerates the "1"/"0" shape
+// some legacy producers used; case-insensitive.
+function parseSeatOccupation(s: string | undefined | null): boolean[] {
+  if (!s) return [];
+  return s.split(",").map(t => {
+    const v = t.trim().toLowerCase();
+    return v === "true" || v === "1";
+  });
+}
+
+// ── Seat layout (source SVG coords, identical to door coords) ────────────
+// Cabin tube runs source x=216..552 (aft → forward), y=355..395 (port →
+// starboard) with the aisle at y=375. The -180° rotation around (375,
+// 375) on the parent <g> flips this so the displayed cabin reads
+// nose-LEFT, with port doors on the upper edge and starboard doors on
+// the lower edge — same orientation the cargo doors already use.
+//
+// Zone breakdown is fixed by the A320 standard layout written into
+// ProsimConstants.PaxZoneLimits {24, 30, 36, 42}. The seatOccupation
+// string is indexed forward → aft, so seat index 0 is in zone 1 (most
+// forward) and index 131 is in zone 4 (most aft). Each zone holds 6
+// seats per row (3 port + aisle + 3 starboard).
+const SEAT_ROWS_PER_ZONE = [4, 5, 6, 7]; // 24/6, 30/6, 36/6, 42/6 = 22 rows
+const SEAT_ROW_PITCH     = 15;            // source-x distance between rows
+const SEAT_RECT_W        = 11;            // source-x rect length
+const SEAT_RECT_H        = 4;             // source-y rect height
+const SEAT_X_FWD         = 552;           // source x of the forward-most row's leading edge
+// Per-column source-y centres. A/B/C are port (low source y); D/E/F are
+// starboard (high source y). Spacing leaves a visible aisle gap at y=375.
+const SEAT_Y_BY_COL = [358, 364, 370, 380, 386, 392];
+
+// Pre-computed per-seat rect coords. Index = global seat number 0..131.
+// Computed once at module load so the render loop stays cheap.
+const SEAT_RECTS: { x: number; y: number; zone: number }[] = (() => {
+  const out: { x: number; y: number; zone: number }[] = [];
+  let rowOffset = 0;
+  for (let zone = 0; zone < SEAT_ROWS_PER_ZONE.length; zone++) {
+    const rowsInZone = SEAT_ROWS_PER_ZONE[zone];
+    for (let r = 0; r < rowsInZone; r++) {
+      const globalRow = rowOffset + r;
+      const x = SEAT_X_FWD - globalRow * SEAT_ROW_PITCH;
+      for (let col = 0; col < 6; col++) {
+        out.push({ x, y: SEAT_Y_BY_COL[col] - SEAT_RECT_H / 2, zone: zone + 1 });
+      }
+    }
+    rowOffset += rowsInZone;
+  }
+  return out;
+})();
+
+// ── Entry / overwing door positions (source SVG coords) ──────────────────
+// Same coordinate space as the cargo doors. Source HIGH y is the
+// starboard edge (R doors), source LOW y is the port edge (L doors).
+// L1/R1 sit forward of zone 1 cabin start; L2/R2 + L3/R3 are at the
+// overwing exit stations between zones 2/3 and within zone 3; L4/R4 sit
+// aft of zone 4. Rect size (18x10) is smaller than the cargo doors
+// (41x14) so the silhouette reads correctly at a glance — pax doors are
+// visibly narrower than cargo doors in real life.
+const DOOR_ENTRY_W = 18;
+const DOOR_ENTRY_H = 10;
+const ENTRY_DOORS = [
+  { id: "L1", x: 540, y: 348, side: "port" },
+  { id: "L2", x: 440, y: 348, side: "port" },
+  { id: "L3", x: 350, y: 348, side: "port" },
+  { id: "L4", x: 215, y: 348, side: "port" },
+  { id: "R1", x: 540, y: 392, side: "starboard" },
+  { id: "R2", x: 440, y: 392, side: "starboard" },
+  { id: "R3", x: 350, y: 392, side: "starboard" },
+  { id: "R4", x: 215, y: 392, side: "starboard" },
+] as const;
 
 // Read-only Weight & Balance panel. Initial REST load on mount; live
 // updates arrive through the WebSocket "weightBalance" channel and are
@@ -491,35 +570,52 @@ export function WeightBalancePanel() {
           </div>
         </div>
 
-        {/* CARGO DOORS — top-down silhouette + per-door state +
-            departure-readiness banner. Source SVG is in nose-right
-            orientation, so a -90° rotation around (375, 375) wraps both
-            the silhouette and the door rects to display nose-up. The
-            same path data + door coords are used by the WPF view, so
-            the two surfaces stay aligned. The readiness banner mirrors
-            !Aircraft.HasOpenDoors (covers entry + cargo) — same predicate
-            the GSX state machine uses to gate CloseAllDoors() on final,
-            so a banner saying "DOORS OPEN" can mean a pax door is open
-            even when the cargo silhouette is all green. */}
-        <h2 className={styles.colHeading}>Cargo Doors</h2>
+        {/* AIRCRAFT STATUS — top-down silhouette combining: 132-seat
+            cabin overlay (fed by wb.seatOccupation), 8 pax/overwing
+            doors L1..R4, 3 cargo doors (FWD/AFT/BULK), and a
+            departure-readiness banner. All elements share one SVG
+            in source coords + a -180° rotation around (375, 375) on
+            the parent <g>, so the WPF tab and React panel stay
+            visually identical (same A320_OUTLINE_PATH on both sides).
+            The readiness banner mirrors !Aircraft.HasOpenDoors —
+            same predicate the GSX state machine uses to gate
+            CloseAllDoors() on final, so it can read "DOORS OPEN"
+            even when only a pax door is open. */}
+        <h2 className={styles.colHeading}>Aircraft Status</h2>
         <div className={styles.dataCard}>
           {/* viewBox crops to the central horizontal band (source y=270..480
               = fuselage + engines + inner wing) so the silhouette renders
               wide and short, filling the card's wider axis. The -180°
               rotation puts source-RIGHT (nose) on display-LEFT, giving a
               horizontal aircraft with fuselage along the card width.
-              Door positions stay the same in source coords; they rotate
-              with the path. */}
+              Door positions and seat positions stay the same in source
+              coords; they rotate with the path. */}
           <svg viewBox="0 270 750 210" className={styles.silhouetteSvg}>
             <g transform="rotate(-180 375 375)">
               <path d={A320_OUTLINE_PATH} fill="#3F3F3F" stroke="#7A7A7A" strokeWidth={2} />
 
-              {/* All three doors sit on the starboard fuselage edge
-                  (source HIGH y) to match the real A320 layout — fwd,
-                  aft, and bulk are all on the right side of the
-                  airframe in real life. Long axis runs along source X
-                  (fore-aft) and becomes vertical in display. Coords
-                  match ViewWeightBalance.xaml exactly. */}
+              {/* Seat overlay — 132 small rects, source coords inside the
+                  fuselage tube. Indexing matches the seatOccupation
+                  string: index 0 is forward-most port window in zone 1,
+                  index 131 is aft-most starboard window in zone 4.
+                  When seatOccupation is shorter or missing (null SDK)
+                  every seat reads as empty, which matches reality. */}
+              {(() => {
+                const occupied = parseSeatOccupation(wb.seatOccupation);
+                return SEAT_RECTS.map((s, i) => (
+                  <rect key={`seat-${i}`} x={s.x} y={s.y}
+                        width={SEAT_RECT_W} height={SEAT_RECT_H}
+                        fill={occupied[i] ? SEAT_OCCUPIED_COLOR : SEAT_EMPTY_COLOR}
+                        stroke="#1A1A1A" strokeWidth={0.4} />
+                ));
+              })()}
+
+              {/* Cargo doors — three on the starboard fuselage edge
+                  (source HIGH y) matching the real A320: fwd, aft, and
+                  bulk all sit on the right side of the airframe. Long
+                  axis runs along source X (fore-aft) and becomes
+                  vertical in display. Coords match ViewWeightBalance.xaml
+                  exactly so WPF + web stay aligned. */}
               <rect x={498} y={389} width={41} height={14}
                     fill={doorColor(wb.fwdCargoDoorOpen)}
                     stroke="#FFFFFF" strokeWidth={1.2} />
@@ -535,6 +631,30 @@ export function WeightBalancePanel() {
                     transform="rotate(-0.265 265 397.5)"
                     fill={doorColor(wb.bulkCargoDoorOpen, wb.cargoBulkCapacityKg > 0)}
                     stroke="#FFFFFF" strokeWidth={1.2} />
+
+              {/* Entry / overwing doors L1..R4 — port doors on the
+                  upper fuselage edge (source LOW y), starboard doors on
+                  the lower edge (source HIGH y). Smaller than cargo
+                  rects so the silhouette reads at a glance: pax doors
+                  are visibly narrower than cargo doors in real life. */}
+              {ENTRY_DOORS.map(d => {
+                const open =
+                  d.id === "L1" ? wb.door1LOpen :
+                  d.id === "R1" ? wb.door1ROpen :
+                  d.id === "L2" ? wb.door2LOpen :
+                  d.id === "R2" ? wb.door2ROpen :
+                  d.id === "L3" ? wb.door3LOpen :
+                  d.id === "R3" ? wb.door3ROpen :
+                  d.id === "L4" ? wb.door4LOpen :
+                                  wb.door4ROpen;
+                return (
+                  <rect key={`entry-${d.id}`}
+                        x={d.x} y={d.y}
+                        width={DOOR_ENTRY_W} height={DOOR_ENTRY_H}
+                        fill={doorColor(open)}
+                        stroke="#FFFFFF" strokeWidth={1} />
+                );
+              })}
             </g>
           </svg>
 

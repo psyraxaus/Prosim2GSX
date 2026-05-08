@@ -4,13 +4,18 @@ import { useApi } from "../api/useApi";
 import { useAppState } from "../state/AppStateContext";
 import { A320_OUTLINE_PATH } from "./a320Silhouette";
 import styles from "./WeightBalancePanel.module.css";
-// Cargo-doors section colours — matching the WPF model's brushes so the
-// two surfaces read identically. Bulk on a non-fitted airframe falls
+// Aircraft Status section colours — matching the WPF model's brushes so
+// the two surfaces read identically. Bulk on a non-fitted airframe falls
 // back to a neutral grey; the rect is hidden, but the brush stays
 // defined for the status text colour.
 const DOOR_CLOSED_COLOR = "#4CAF50"; // green
 const DOOR_OPEN_COLOR = "#F5A623"; // amber
 const DOOR_NA_COLOR = "#555555"; // grey
+// Seat overlay colours. Filled seats use the same green as a closed door
+// for tonal consistency; empty seats use a darker neutral so the cabin
+// reads as "empty by default" rather than "broken / N/A".
+const SEAT_OCCUPIED_COLOR = "#4CAF50";
+const SEAT_EMPTY_COLOR = "#2A2A2A";
 function doorColor(open, fitted = true) {
     if (!fitted)
         return DOOR_NA_COLOR;
@@ -21,6 +26,76 @@ function doorStatus(open, fitted = true) {
         return "N/A";
     return open ? "OPEN" : "CLOSED";
 }
+// Parse the comma-separated seatOccupation string ("true,false,...") into
+// a 132-bool array. Mirrors WeightBalanceService.CountTrueChars but keeps
+// per-seat granularity for the cabin overlay. Tolerates the "1"/"0" shape
+// some legacy producers used; case-insensitive.
+function parseSeatOccupation(s) {
+    if (!s)
+        return [];
+    return s.split(",").map(t => {
+        const v = t.trim().toLowerCase();
+        return v === "true" || v === "1";
+    });
+}
+// ── Seat layout (source SVG coords, identical to door coords) ────────────
+// Cabin tube runs source x=216..552 (aft → forward), y=355..395 (port →
+// starboard) with the aisle at y=375. The -180° rotation around (375,
+// 375) on the parent <g> flips this so the displayed cabin reads
+// nose-LEFT, with port doors on the upper edge and starboard doors on
+// the lower edge — same orientation the cargo doors already use.
+//
+// Zone breakdown is fixed by the A320 standard layout written into
+// ProsimConstants.PaxZoneLimits {24, 30, 36, 42}. The seatOccupation
+// string is indexed forward → aft, so seat index 0 is in zone 1 (most
+// forward) and index 131 is in zone 4 (most aft). Each zone holds 6
+// seats per row (3 port + aisle + 3 starboard).
+const SEAT_ROWS_PER_ZONE = [4, 5, 6, 7]; // 24/6, 30/6, 36/6, 42/6 = 22 rows
+const SEAT_ROW_PITCH = 15; // source-x distance between rows
+const SEAT_RECT_W = 11; // source-x rect length
+const SEAT_RECT_H = 4; // source-y rect height
+const SEAT_X_FWD = 552; // source x of the forward-most row's leading edge
+// Per-column source-y centres. A/B/C are port (low source y); D/E/F are
+// starboard (high source y). Spacing leaves a visible aisle gap at y=375.
+const SEAT_Y_BY_COL = [358, 364, 370, 380, 386, 392];
+// Pre-computed per-seat rect coords. Index = global seat number 0..131.
+// Computed once at module load so the render loop stays cheap.
+const SEAT_RECTS = (() => {
+    const out = [];
+    let rowOffset = 0;
+    for (let zone = 0; zone < SEAT_ROWS_PER_ZONE.length; zone++) {
+        const rowsInZone = SEAT_ROWS_PER_ZONE[zone];
+        for (let r = 0; r < rowsInZone; r++) {
+            const globalRow = rowOffset + r;
+            const x = SEAT_X_FWD - globalRow * SEAT_ROW_PITCH;
+            for (let col = 0; col < 6; col++) {
+                out.push({ x, y: SEAT_Y_BY_COL[col] - SEAT_RECT_H / 2, zone: zone + 1 });
+            }
+        }
+        rowOffset += rowsInZone;
+    }
+    return out;
+})();
+// ── Entry / overwing door positions (source SVG coords) ──────────────────
+// Same coordinate space as the cargo doors. Source HIGH y is the
+// starboard edge (R doors), source LOW y is the port edge (L doors).
+// L1/R1 sit forward of zone 1 cabin start; L2/R2 + L3/R3 are at the
+// overwing exit stations between zones 2/3 and within zone 3; L4/R4 sit
+// aft of zone 4. Rect size (18x10) is smaller than the cargo doors
+// (41x14) so the silhouette reads correctly at a glance — pax doors are
+// visibly narrower than cargo doors in real life.
+const DOOR_ENTRY_W = 18;
+const DOOR_ENTRY_H = 10;
+const ENTRY_DOORS = [
+    { id: "L1", x: 540, y: 348, side: "port" },
+    { id: "L2", x: 440, y: 348, side: "port" },
+    { id: "L3", x: 350, y: 348, side: "port" },
+    { id: "L4", x: 215, y: 348, side: "port" },
+    { id: "R1", x: 540, y: 392, side: "starboard" },
+    { id: "R2", x: 440, y: 392, side: "starboard" },
+    { id: "R3", x: 350, y: 392, side: "starboard" },
+    { id: "R4", x: 215, y: 392, side: "starboard" },
+];
 // Read-only Weight & Balance panel. Initial REST load on mount; live
 // updates arrive through the WebSocket "weightBalance" channel and are
 // merged into AppState by the default reducer branch.
@@ -236,7 +311,20 @@ export function WeightBalancePanel() {
                                                 return verb + suffix;
                                             })() }), syncMessage && (_jsx("span", { className: syncStatus === "success"
                                             ? styles.fmsSyncMessageOk
-                                            : styles.fmsSyncMessageError, children: syncMessage }))] })] })] }), _jsxs("section", { className: styles.dataCol, children: [_jsx("h2", { className: styles.colHeading, children: "Passengers" }), _jsxs("div", { className: styles.dataCard, children: [_jsxs("div", { className: styles.capacity, children: ["CAPACITY: ", totalCapacity, " ECONOMY"] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "Pax" }), _jsx("span", { className: styles.headerCell, children: "PLANNED" }), _jsx("span", { className: styles.headerCell, children: "BOARDED" })] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "\u00A0" }), _jsx("span", { className: styles.value, children: wb.passengersPlanned }), _jsx("span", { className: styles.value, children: wb.passengersBoarded })] })] }), _jsx("h2", { className: styles.colHeading, children: "Cargo" }), _jsxs("div", { className: styles.dataCard, children: [_jsxs("div", { className: styles.capacity, children: ["CAPACITY:\u00A0", wb.cargoFwdCapacityKg.toLocaleString(), " KG FWD,\u00A0", wb.cargoAftCapacityKg.toLocaleString(), " KG AFT,\u00A0", wb.cargoBulkCapacityKg.toLocaleString(), " KG BULK"] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "Cargo" }), _jsx("span", { className: styles.headerCell, children: "PLANNED (KG)" }), _jsx("span", { className: styles.headerCell, children: "LOADED (KG)" })] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "\u00A0" }), _jsx("span", { className: styles.value, children: wb.cargoPlannedKg.toLocaleString(undefined, { maximumFractionDigits: 0 }) }), _jsx("span", { className: styles.value, children: cargoLoadedTotal.toLocaleString(undefined, { maximumFractionDigits: 0 }) })] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "FWD / AFT" }), _jsx("span", { className: styles.value, children: "\u00A0" }), _jsxs("span", { className: styles.subValue, children: [wb.cargoFwdLoadedKg.toLocaleString(undefined, { maximumFractionDigits: 0 }), " / ", wb.cargoAftLoadedKg.toLocaleString(undefined, { maximumFractionDigits: 0 })] })] })] }), _jsx("h2", { className: styles.colHeading, children: "Cargo Doors" }), _jsxs("div", { className: styles.dataCard, children: [_jsx("svg", { viewBox: "0 270 750 210", className: styles.silhouetteSvg, children: _jsxs("g", { transform: "rotate(-180 375 375)", children: [_jsx("path", { d: A320_OUTLINE_PATH, fill: "#3F3F3F", stroke: "#7A7A7A", strokeWidth: 2 }), _jsx("rect", { x: 498, y: 389, width: 41, height: 14, fill: doorColor(wb.fwdCargoDoorOpen), stroke: "#FFFFFF", strokeWidth: 1.2 }), _jsx("rect", { x: 293, y: 389, width: 41, height: 14, fill: doorColor(wb.aftCargoDoorOpen), stroke: "#FFFFFF", strokeWidth: 1.2 }), _jsx("rect", { x: 255, y: 392, width: 20, height: 11, transform: "rotate(-0.265 265 397.5)", fill: doorColor(wb.bulkCargoDoorOpen, wb.cargoBulkCapacityKg > 0), stroke: "#FFFFFF", strokeWidth: 1.2 })] }) }), _jsxs("div", { className: styles.doorStatusGrid, children: [_jsxs("div", { className: styles.doorStatusCell, children: [_jsx("span", { className: styles.doorStatusLabel, children: "FWD" }), _jsx("span", { className: styles.doorStatusValue, style: { color: doorColor(wb.fwdCargoDoorOpen) }, children: doorStatus(wb.fwdCargoDoorOpen) })] }), _jsxs("div", { className: styles.doorStatusCell, children: [_jsx("span", { className: styles.doorStatusLabel, children: "AFT" }), _jsx("span", { className: styles.doorStatusValue, style: { color: doorColor(wb.aftCargoDoorOpen) }, children: doorStatus(wb.aftCargoDoorOpen) })] }), _jsxs("div", { className: styles.doorStatusCell, children: [_jsx("span", { className: styles.doorStatusLabel, children: "BULK" }), _jsx("span", { className: styles.doorStatusValue, style: { color: doorColor(wb.bulkCargoDoorOpen, wb.cargoBulkCapacityKg > 0) }, children: doorStatus(wb.bulkCargoDoorOpen, wb.cargoBulkCapacityKg > 0) })] })] }), _jsx("div", { className: [
+                                            : styles.fmsSyncMessageError, children: syncMessage }))] })] })] }), _jsxs("section", { className: styles.dataCol, children: [_jsx("h2", { className: styles.colHeading, children: "Passengers" }), _jsxs("div", { className: styles.dataCard, children: [_jsxs("div", { className: styles.capacity, children: ["CAPACITY: ", totalCapacity, " ECONOMY"] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "Pax" }), _jsx("span", { className: styles.headerCell, children: "PLANNED" }), _jsx("span", { className: styles.headerCell, children: "BOARDED" })] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "\u00A0" }), _jsx("span", { className: styles.value, children: wb.passengersPlanned }), _jsx("span", { className: styles.value, children: wb.passengersBoarded })] })] }), _jsx("h2", { className: styles.colHeading, children: "Cargo" }), _jsxs("div", { className: styles.dataCard, children: [_jsxs("div", { className: styles.capacity, children: ["CAPACITY:\u00A0", wb.cargoFwdCapacityKg.toLocaleString(), " KG FWD,\u00A0", wb.cargoAftCapacityKg.toLocaleString(), " KG AFT,\u00A0", wb.cargoBulkCapacityKg.toLocaleString(), " KG BULK"] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "Cargo" }), _jsx("span", { className: styles.headerCell, children: "PLANNED (KG)" }), _jsx("span", { className: styles.headerCell, children: "LOADED (KG)" })] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "\u00A0" }), _jsx("span", { className: styles.value, children: wb.cargoPlannedKg.toLocaleString(undefined, { maximumFractionDigits: 0 }) }), _jsx("span", { className: styles.value, children: cargoLoadedTotal.toLocaleString(undefined, { maximumFractionDigits: 0 }) })] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "FWD / AFT" }), _jsx("span", { className: styles.value, children: "\u00A0" }), _jsxs("span", { className: styles.subValue, children: [wb.cargoFwdLoadedKg.toLocaleString(undefined, { maximumFractionDigits: 0 }), " / ", wb.cargoAftLoadedKg.toLocaleString(undefined, { maximumFractionDigits: 0 })] })] })] }), _jsx("h2", { className: styles.colHeading, children: "Aircraft Status" }), _jsxs("div", { className: styles.dataCard, children: [_jsx("svg", { viewBox: "0 270 750 210", className: styles.silhouetteSvg, children: _jsxs("g", { transform: "rotate(-180 375 375)", children: [_jsx("path", { d: A320_OUTLINE_PATH, fill: "#3F3F3F", stroke: "#7A7A7A", strokeWidth: 2 }), (() => {
+                                            const occupied = parseSeatOccupation(wb.seatOccupation);
+                                            return SEAT_RECTS.map((s, i) => (_jsx("rect", { x: s.x, y: s.y, width: SEAT_RECT_W, height: SEAT_RECT_H, fill: occupied[i] ? SEAT_OCCUPIED_COLOR : SEAT_EMPTY_COLOR, stroke: "#1A1A1A", strokeWidth: 0.4 }, `seat-${i}`)));
+                                        })(), _jsx("rect", { x: 498, y: 389, width: 41, height: 14, fill: doorColor(wb.fwdCargoDoorOpen), stroke: "#FFFFFF", strokeWidth: 1.2 }), _jsx("rect", { x: 293, y: 389, width: 41, height: 14, fill: doorColor(wb.aftCargoDoorOpen), stroke: "#FFFFFF", strokeWidth: 1.2 }), _jsx("rect", { x: 255, y: 392, width: 20, height: 11, transform: "rotate(-0.265 265 397.5)", fill: doorColor(wb.bulkCargoDoorOpen, wb.cargoBulkCapacityKg > 0), stroke: "#FFFFFF", strokeWidth: 1.2 }), ENTRY_DOORS.map(d => {
+                                            const open = d.id === "L1" ? wb.door1LOpen :
+                                                d.id === "R1" ? wb.door1ROpen :
+                                                    d.id === "L2" ? wb.door2LOpen :
+                                                        d.id === "R2" ? wb.door2ROpen :
+                                                            d.id === "L3" ? wb.door3LOpen :
+                                                                d.id === "R3" ? wb.door3ROpen :
+                                                                    d.id === "L4" ? wb.door4LOpen :
+                                                                        wb.door4ROpen;
+                                            return (_jsx("rect", { x: d.x, y: d.y, width: DOOR_ENTRY_W, height: DOOR_ENTRY_H, fill: doorColor(open), stroke: "#FFFFFF", strokeWidth: 1 }, `entry-${d.id}`));
+                                        })] }) }), _jsxs("div", { className: styles.doorStatusGrid, children: [_jsxs("div", { className: styles.doorStatusCell, children: [_jsx("span", { className: styles.doorStatusLabel, children: "FWD" }), _jsx("span", { className: styles.doorStatusValue, style: { color: doorColor(wb.fwdCargoDoorOpen) }, children: doorStatus(wb.fwdCargoDoorOpen) })] }), _jsxs("div", { className: styles.doorStatusCell, children: [_jsx("span", { className: styles.doorStatusLabel, children: "AFT" }), _jsx("span", { className: styles.doorStatusValue, style: { color: doorColor(wb.aftCargoDoorOpen) }, children: doorStatus(wb.aftCargoDoorOpen) })] }), _jsxs("div", { className: styles.doorStatusCell, children: [_jsx("span", { className: styles.doorStatusLabel, children: "BULK" }), _jsx("span", { className: styles.doorStatusValue, style: { color: doorColor(wb.bulkCargoDoorOpen, wb.cargoBulkCapacityKg > 0) }, children: doorStatus(wb.bulkCargoDoorOpen, wb.cargoBulkCapacityKg > 0) })] })] }), _jsx("div", { className: [
                                     styles.readinessBanner,
                                     wb.allDoorsClosed ? styles.readinessOk : styles.readinessOpen,
                                 ].join(" "), children: wb.allDoorsClosed ? "ALL DOORS CLOSED" : "DOORS OPEN" })] }), _jsx("h2", { className: styles.colHeading, children: "Fuel" }), _jsxs("div", { className: styles.dataCard, children: [_jsxs("div", { className: styles.capacity, children: ["CAPACITY USABLE ", wb.fuelCapacityKg.toLocaleString(undefined, { maximumFractionDigits: 0 }), " KG \u2014 SG: 0.80"] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "Fuel" }), _jsx("span", { className: styles.headerCell, children: "PLANNED (KG)" }), _jsx("span", { className: styles.headerCell, children: "IN TANKS (KG)" })] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "\u00A0" }), _jsx("span", { className: styles.value, children: wb.fuelPlannedKg.toLocaleString(undefined, { maximumFractionDigits: 0 }) }), _jsx("span", { className: styles.value, children: wb.fuelInTanksKg.toLocaleString(undefined, { maximumFractionDigits: 0 }) })] })] })] })] }));
