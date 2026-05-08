@@ -1,7 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useApi } from "../api/useApi";
 import { useAppState } from "../state/AppStateContext";
-import { FmsSyncResultDto, WeightBalanceDto } from "../types";
+import {
+  FmsSyncResultDto,
+  PassengerManifestDto,
+  PassengerSimulationResultDto,
+  WeightBalanceDto,
+} from "../types";
 import { A320_OUTLINE_PATH } from "./a320Silhouette";
 import styles from "./WeightBalancePanel.module.css";
 
@@ -171,6 +176,18 @@ export function WeightBalancePanel() {
   const [syncMessage, setSyncMessage] = useState<string>("");
   const syncTimerRef = useRef<number | null>(null);
 
+  // Passenger simulation UI state. Mirrors the FMS-sync flash pattern —
+  // pending while the POST is in flight, success/error on resolution,
+  // cleared by a setTimeout. Manifest persists across the success flash
+  // so the user can see the generated names after the toast clears.
+  const [simOpen, setSimOpen] = useState(false);
+  const [simCount, setSimCount] = useState<string>("");
+  const [simStatus, setSimStatus] = useState<"idle" | "pending" | "success" | "error">("idle");
+  const [simMessage, setSimMessage] = useState<string>("");
+  const [manifest, setManifest] = useState<PassengerManifestDto | null>(null);
+  const [manifestOpen, setManifestOpen] = useState(false);
+  const simTimerRef = useRef<number | null>(null);
+
   // PNG image bounding box. All chart annotations are positioned relative
   // to these four values. Re-measured by ResizeObserver on container size
   // changes; also re-measured on the image's `load` event so the first
@@ -223,7 +240,27 @@ export function WeightBalancePanel() {
       window.clearTimeout(syncTimerRef.current);
       syncTimerRef.current = null;
     }
+    if (simTimerRef.current !== null) {
+      window.clearTimeout(simTimerRef.current);
+      simTimerRef.current = null;
+    }
   }, []);
+
+  // Fetch the cached simulation manifest on mount so a refresh of the
+  // page after a SIMULATE click brings back the same names. Server holds
+  // it in-memory only — non-zero totalPassengers means a manifest exists.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const m = await get<PassengerManifestDto>("/passengers/manifest");
+        if (!cancelled && m && m.totalPassengers > 0) setManifest(m);
+      } catch {
+        /* useApi already handled 401; not having a manifest is fine */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [get]);
 
   const wb = state.weightBalance as unknown as WeightBalanceDto | null;
   if (!wb) {
@@ -239,6 +276,62 @@ export function WeightBalancePanel() {
       setSyncMessage("");
       syncTimerRef.current = null;
     }, durationMs);
+  };
+
+  const triggerSimFlash = (status: "success" | "error", message: string, durationMs: number) => {
+    setSimStatus(status);
+    setSimMessage(message);
+    if (simTimerRef.current !== null) window.clearTimeout(simTimerRef.current);
+    simTimerRef.current = window.setTimeout(() => {
+      setSimStatus("idle");
+      setSimMessage("");
+      simTimerRef.current = null;
+    }, durationMs);
+  };
+
+  const handleSimulate = async () => {
+    if (simStatus === "pending") return;
+    let parsedCount: number | undefined;
+    const trimmed = simCount.trim();
+    if (trimmed !== "") {
+      const n = parseInt(trimmed, 10);
+      if (Number.isNaN(n) || n < 0) {
+        triggerSimFlash("error", "Invalid count", 4000);
+        return;
+      }
+      parsedCount = n;
+    }
+    setSimStatus("pending");
+    setSimMessage("");
+    try {
+      const result = await post<PassengerSimulationResultDto>("/passengers/simulate", { count: parsedCount });
+      if (result?.success && result.manifest) {
+        setManifest(result.manifest);
+        setManifestOpen(true);
+        triggerSimFlash("success", `Generated ${result.manifest.totalPassengers} pax`, 3000);
+      } else {
+        triggerSimFlash("error", result?.errorMessage || "Generation failed", 5000);
+      }
+    } catch (e) {
+      triggerSimFlash("error", (e as Error)?.message || "Generation failed", 5000);
+    }
+  };
+
+  const handleClearPax = async () => {
+    if (simStatus === "pending") return;
+    setSimStatus("pending");
+    setSimMessage("");
+    try {
+      const result = await post<PassengerSimulationResultDto>("/passengers/clear");
+      if (result?.success) {
+        setManifest(null);
+        triggerSimFlash("success", "Cabin cleared", 2000);
+      } else {
+        triggerSimFlash("error", result?.errorMessage || "Clear failed", 5000);
+      }
+    } catch (e) {
+      triggerSimFlash("error", (e as Error)?.message || "Clear failed", 5000);
+    }
   };
 
   const handleSync = async () => {
@@ -539,6 +632,70 @@ export function WeightBalancePanel() {
             <span className={styles.value}>{wb.passengersPlanned}</span>
             <span className={styles.value}>{wb.passengersBoarded}</span>
           </div>
+
+          {/* Passenger simulation. SIMULATE expands an inline form with a
+              count input + GENERATE/CLEAR. Submission writes
+              seatOccupation.string directly via the SDK; the seating map
+              on the Aircraft Status silhouette below picks up the change
+              on the next StateUpdateWorker tick because WeightBalanceService
+              re-reads the dataref unconditionally. */}
+          <div className={styles.simulateRow}>
+            {!simOpen ? (
+              <button type="button"
+                      className={styles.simulateButton}
+                      onClick={() => setSimOpen(true)}>
+                SIMULATE
+              </button>
+            ) : (
+              <>
+                <label className={styles.simulateLabel}>
+                  COUNT
+                  <input
+                    type="number"
+                    min={0}
+                    max={totalCapacity}
+                    value={simCount}
+                    placeholder={String(totalCapacity)}
+                    onChange={e => setSimCount(e.target.value)}
+                    className={styles.simulateInput}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className={[
+                    styles.simulateButton,
+                    styles.simulateGenerate,
+                    simStatus === "success" ? styles.simulateSuccess : "",
+                    simStatus === "error" ? styles.simulateError : "",
+                  ].filter(Boolean).join(" ")}
+                  disabled={simStatus === "pending"}
+                  onClick={handleSimulate}>
+                  {simStatus === "pending" ? "…" : "GENERATE"}
+                </button>
+                <button type="button"
+                        className={styles.simulateButton}
+                        disabled={simStatus === "pending"}
+                        onClick={handleClearPax}>
+                  CLEAR
+                </button>
+                <button type="button"
+                        className={styles.simulateClose}
+                        onClick={() => setSimOpen(false)}
+                        title="Hide controls">×</button>
+              </>
+            )}
+            {simMessage && (
+              <span className={
+                simStatus === "success" ? styles.simulateMessageOk :
+                simStatus === "error"   ? styles.simulateMessageError : ""
+              }>{simMessage}</span>
+            )}
+          </div>
+          {simOpen && (
+            <p className={styles.simulateNote}>
+              SIMULATE works for headless cabins; GSX boarding will overwrite.
+            </p>
+          )}
         </div>
 
         <h2 className={styles.colHeading}>Cargo</h2>
@@ -691,6 +848,46 @@ export function WeightBalancePanel() {
           ].join(" ")}>
             {wb.allDoorsClosed ? "ALL DOORS CLOSED" : "DOORS OPEN"}
           </div>
+
+          {/* MANIFEST — the names + seat assignments backing the current
+              SIMULATE output. Collapsed by default after the success
+              flash clears so the panel stays compact. Empty manifest
+              hides the section entirely. */}
+          {manifest && manifest.totalPassengers > 0 && (
+            <div className={styles.manifestSection}>
+              <button type="button"
+                      className={styles.manifestToggle}
+                      onClick={() => setManifestOpen(o => !o)}
+                      aria-expanded={manifestOpen}>
+                <span>{manifestOpen ? "▾" : "▸"} MANIFEST ({manifest.totalPassengers})</span>
+                {!manifest.seatOccupationWritten && (
+                  <span className={styles.manifestWarn} title="seatOccupation write failed">⚠</span>
+                )}
+              </button>
+              {manifestOpen && (
+                <div className={styles.manifestTableWrap}>
+                  <table className={styles.manifestTable}>
+                    <thead>
+                      <tr>
+                        <th>SEAT</th>
+                        <th>NAME</th>
+                        <th>ZONE</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {manifest.passengers.map(p => (
+                        <tr key={p.seatNumber}>
+                          <td>{p.seatNumber}</td>
+                          <td>{p.firstName} {p.lastName}</td>
+                          <td>Z{p.zone}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <h2 className={styles.colHeading}>Fuel</h2>

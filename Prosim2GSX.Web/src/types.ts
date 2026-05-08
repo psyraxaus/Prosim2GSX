@@ -713,6 +713,30 @@ export interface WeightBalanceDto {
   mzfwLimitKg: number;
 }
 
+// Passenger simulation — used by the Aircraft Status panel's SIMULATE
+// button. The manifest is generated server-side by PassengerSimulationService;
+// the seat overlay updates via the existing WeightBalance WS channel because
+// the simulate write goes straight to seatOccupation.string.
+export interface PassengerEntryDto {
+  seatNumber: number;
+  zone: number;
+  firstName: string;
+  lastName: string;
+}
+
+export interface PassengerManifestDto {
+  totalPassengers: number;
+  generatedAt: string;
+  seatOccupationWritten: boolean;
+  passengers: PassengerEntryDto[];
+}
+
+export interface PassengerSimulationResultDto {
+  success: boolean;
+  errorMessage: string;
+  manifest: PassengerManifestDto | null;
+}
+
 // ──────────────────────────────────────────────────────────────────────────
 // Fuel (read-only — FUEL tab)
 // ──────────────────────────────────────────────────────────────────────────

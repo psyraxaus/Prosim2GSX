@@ -459,6 +459,193 @@
   color: #E53935;
 }
 
+/* ── Passenger simulation controls ── */
+
+.simulateRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.simulateLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--category-text);
+}
+
+.simulateInput {
+  width: 70px;
+  padding: 4px 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--surface-1, #2A2A2A);
+  color: var(--text-primary, #FFFFFF);
+  border: 1px solid #555;
+  border-radius: 3px;
+  text-align: right;
+}
+
+.simulateButton {
+  padding: 6px 12px;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  border: 1px solid #555;
+  border-radius: 3px;
+  cursor: pointer;
+  background: var(--surface-1, #2A2A2A);
+  color: var(--text-primary, #FFFFFF);
+  transition: background 200ms ease, color 200ms ease;
+}
+
+.simulateButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.simulateGenerate {
+  background: #2E7D32;
+  border-color: #2E7D32;
+}
+
+.simulateSuccess {
+  background: #4CAF50 !important;
+  border-color: #4CAF50 !important;
+}
+
+.simulateError {
+  background: #E53935 !important;
+  border-color: #E53935 !important;
+}
+
+.simulateClose {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  background: transparent;
+  color: var(--category-text);
+  border: 1px solid #555;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.simulateMessageOk {
+  font-size: 11px;
+  font-weight: 600;
+  color: #4CAF50;
+}
+
+.simulateMessageError {
+  font-size: 11px;
+  font-weight: 600;
+  color: #E53935;
+}
+
+.simulateNote {
+  margin: 4px 0 0 0;
+  padding: 0;
+  font-size: 10px;
+  font-style: italic;
+  color: var(--category-text);
+}
+
+/* ── Manifest collapsible table ── */
+
+.manifestSection {
+  margin-top: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.manifestToggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--category-text);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.manifestToggle:hover {
+  color: var(--text-primary, #FFFFFF);
+}
+
+.manifestWarn {
+  color: #F5A623;
+  font-size: 14px;
+}
+
+/* Capped at 10 visible rows (10 * 22px row height ≈ 220px) — overflow
+   scrolls vertically. The table itself is full-width to keep columns
+   aligned; sticky header keeps SEAT/NAME/ZONE visible while scrolling. */
+.manifestTableWrap {
+  margin-top: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.manifestTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.manifestTable thead {
+  position: sticky;
+  top: 0;
+  background: var(--bg-card);
+}
+
+.manifestTable th {
+  padding: 4px 8px;
+  font-weight: 600;
+  text-align: left;
+  letter-spacing: 0.06em;
+  color: var(--category-text);
+  border-bottom: 1px solid var(--border);
+}
+
+.manifestTable td {
+  padding: 3px 8px;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-primary, #FFFFFF);
+  border-bottom: 1px solid #2A2A2A;
+}
+
+.manifestTable th:nth-child(1),
+.manifestTable td:nth-child(1) {
+  width: 50px;
+  text-align: right;
+}
+
+.manifestTable th:nth-child(3),
+.manifestTable td:nth-child(3) {
+  width: 50px;
+}
+
+.manifestTable tr:last-child td {
+  border-bottom: none;
+}
+
 /* ── Stack-on-narrow ──
    Below 700px wide (typical phone portrait, narrow tablet) the two
    columns stack vertically so each gets the full panel width. */

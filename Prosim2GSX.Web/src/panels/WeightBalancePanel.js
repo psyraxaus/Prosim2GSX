@@ -155,6 +155,17 @@ export function WeightBalancePanel() {
     const [syncStatus, setSyncStatus] = useState("idle");
     const [syncMessage, setSyncMessage] = useState("");
     const syncTimerRef = useRef(null);
+    // Passenger simulation UI state. Mirrors the FMS-sync flash pattern —
+    // pending while the POST is in flight, success/error on resolution,
+    // cleared by a setTimeout. Manifest persists across the success flash
+    // so the user can see the generated names after the toast clears.
+    const [simOpen, setSimOpen] = useState(false);
+    const [simCount, setSimCount] = useState("");
+    const [simStatus, setSimStatus] = useState("idle");
+    const [simMessage, setSimMessage] = useState("");
+    const [manifest, setManifest] = useState(null);
+    const [manifestOpen, setManifestOpen] = useState(false);
+    const simTimerRef = useRef(null);
     // PNG image bounding box. All chart annotations are positioned relative
     // to these four values. Re-measured by ResizeObserver on container size
     // changes; also re-measured on the image's `load` event so the first
@@ -206,7 +217,28 @@ export function WeightBalancePanel() {
             window.clearTimeout(syncTimerRef.current);
             syncTimerRef.current = null;
         }
+        if (simTimerRef.current !== null) {
+            window.clearTimeout(simTimerRef.current);
+            simTimerRef.current = null;
+        }
     }, []);
+    // Fetch the cached simulation manifest on mount so a refresh of the
+    // page after a SIMULATE click brings back the same names. Server holds
+    // it in-memory only — non-zero totalPassengers means a manifest exists.
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const m = await get("/passengers/manifest");
+                if (!cancelled && m && m.totalPassengers > 0)
+                    setManifest(m);
+            }
+            catch {
+                /* useApi already handled 401; not having a manifest is fine */
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [get]);
     const wb = state.weightBalance;
     if (!wb) {
         return _jsx("div", { className: styles.loading, children: "Loading weight & balance\u2026" });
@@ -221,6 +253,66 @@ export function WeightBalancePanel() {
             setSyncMessage("");
             syncTimerRef.current = null;
         }, durationMs);
+    };
+    const triggerSimFlash = (status, message, durationMs) => {
+        setSimStatus(status);
+        setSimMessage(message);
+        if (simTimerRef.current !== null)
+            window.clearTimeout(simTimerRef.current);
+        simTimerRef.current = window.setTimeout(() => {
+            setSimStatus("idle");
+            setSimMessage("");
+            simTimerRef.current = null;
+        }, durationMs);
+    };
+    const handleSimulate = async () => {
+        if (simStatus === "pending")
+            return;
+        let parsedCount;
+        const trimmed = simCount.trim();
+        if (trimmed !== "") {
+            const n = parseInt(trimmed, 10);
+            if (Number.isNaN(n) || n < 0) {
+                triggerSimFlash("error", "Invalid count", 4000);
+                return;
+            }
+            parsedCount = n;
+        }
+        setSimStatus("pending");
+        setSimMessage("");
+        try {
+            const result = await post("/passengers/simulate", { count: parsedCount });
+            if (result?.success && result.manifest) {
+                setManifest(result.manifest);
+                setManifestOpen(true);
+                triggerSimFlash("success", `Generated ${result.manifest.totalPassengers} pax`, 3000);
+            }
+            else {
+                triggerSimFlash("error", result?.errorMessage || "Generation failed", 5000);
+            }
+        }
+        catch (e) {
+            triggerSimFlash("error", e?.message || "Generation failed", 5000);
+        }
+    };
+    const handleClearPax = async () => {
+        if (simStatus === "pending")
+            return;
+        setSimStatus("pending");
+        setSimMessage("");
+        try {
+            const result = await post("/passengers/clear");
+            if (result?.success) {
+                setManifest(null);
+                triggerSimFlash("success", "Cabin cleared", 2000);
+            }
+            else {
+                triggerSimFlash("error", result?.errorMessage || "Clear failed", 5000);
+            }
+        }
+        catch (e) {
+            triggerSimFlash("error", e?.message || "Clear failed", 5000);
+        }
     };
     const handleSync = async () => {
         if (syncStatus === "pending" || wb.macTowError)
@@ -311,7 +403,13 @@ export function WeightBalancePanel() {
                                                 return verb + suffix;
                                             })() }), syncMessage && (_jsx("span", { className: syncStatus === "success"
                                             ? styles.fmsSyncMessageOk
-                                            : styles.fmsSyncMessageError, children: syncMessage }))] })] })] }), _jsxs("section", { className: styles.dataCol, children: [_jsx("h2", { className: styles.colHeading, children: "Passengers" }), _jsxs("div", { className: styles.dataCard, children: [_jsxs("div", { className: styles.capacity, children: ["CAPACITY: ", totalCapacity, " ECONOMY"] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "Pax" }), _jsx("span", { className: styles.headerCell, children: "PLANNED" }), _jsx("span", { className: styles.headerCell, children: "BOARDED" })] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "\u00A0" }), _jsx("span", { className: styles.value, children: wb.passengersPlanned }), _jsx("span", { className: styles.value, children: wb.passengersBoarded })] })] }), _jsx("h2", { className: styles.colHeading, children: "Cargo" }), _jsxs("div", { className: styles.dataCard, children: [_jsxs("div", { className: styles.capacity, children: ["CAPACITY:\u00A0", wb.cargoFwdCapacityKg.toLocaleString(), " KG FWD,\u00A0", wb.cargoAftCapacityKg.toLocaleString(), " KG AFT,\u00A0", wb.cargoBulkCapacityKg.toLocaleString(), " KG BULK"] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "Cargo" }), _jsx("span", { className: styles.headerCell, children: "PLANNED (KG)" }), _jsx("span", { className: styles.headerCell, children: "LOADED (KG)" })] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "\u00A0" }), _jsx("span", { className: styles.value, children: wb.cargoPlannedKg.toLocaleString(undefined, { maximumFractionDigits: 0 }) }), _jsx("span", { className: styles.value, children: cargoLoadedTotal.toLocaleString(undefined, { maximumFractionDigits: 0 }) })] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "FWD / AFT" }), _jsx("span", { className: styles.value, children: "\u00A0" }), _jsxs("span", { className: styles.subValue, children: [wb.cargoFwdLoadedKg.toLocaleString(undefined, { maximumFractionDigits: 0 }), " / ", wb.cargoAftLoadedKg.toLocaleString(undefined, { maximumFractionDigits: 0 })] })] })] }), _jsx("h2", { className: styles.colHeading, children: "Aircraft Status" }), _jsxs("div", { className: styles.dataCard, children: [_jsx("svg", { viewBox: "0 270 750 210", className: styles.silhouetteSvg, children: _jsxs("g", { transform: "rotate(-180 375 375)", children: [_jsx("path", { d: A320_OUTLINE_PATH, fill: "#3F3F3F", stroke: "#7A7A7A", strokeWidth: 2 }), (() => {
+                                            : styles.fmsSyncMessageError, children: syncMessage }))] })] })] }), _jsxs("section", { className: styles.dataCol, children: [_jsx("h2", { className: styles.colHeading, children: "Passengers" }), _jsxs("div", { className: styles.dataCard, children: [_jsxs("div", { className: styles.capacity, children: ["CAPACITY: ", totalCapacity, " ECONOMY"] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "Pax" }), _jsx("span", { className: styles.headerCell, children: "PLANNED" }), _jsx("span", { className: styles.headerCell, children: "BOARDED" })] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "\u00A0" }), _jsx("span", { className: styles.value, children: wb.passengersPlanned }), _jsx("span", { className: styles.value, children: wb.passengersBoarded })] }), _jsxs("div", { className: styles.simulateRow, children: [!simOpen ? (_jsx("button", { type: "button", className: styles.simulateButton, onClick: () => setSimOpen(true), children: "SIMULATE" })) : (_jsxs(_Fragment, { children: [_jsxs("label", { className: styles.simulateLabel, children: ["COUNT", _jsx("input", { type: "number", min: 0, max: totalCapacity, value: simCount, placeholder: String(totalCapacity), onChange: e => setSimCount(e.target.value), className: styles.simulateInput })] }), _jsx("button", { type: "button", className: [
+                                                    styles.simulateButton,
+                                                    styles.simulateGenerate,
+                                                    simStatus === "success" ? styles.simulateSuccess : "",
+                                                    simStatus === "error" ? styles.simulateError : "",
+                                                ].filter(Boolean).join(" "), disabled: simStatus === "pending", onClick: handleSimulate, children: simStatus === "pending" ? "…" : "GENERATE" }), _jsx("button", { type: "button", className: styles.simulateButton, disabled: simStatus === "pending", onClick: handleClearPax, children: "CLEAR" }), _jsx("button", { type: "button", className: styles.simulateClose, onClick: () => setSimOpen(false), title: "Hide controls", children: "\u00D7" })] })), simMessage && (_jsx("span", { className: simStatus === "success" ? styles.simulateMessageOk :
+                                            simStatus === "error" ? styles.simulateMessageError : "", children: simMessage }))] }), simOpen && (_jsx("p", { className: styles.simulateNote, children: "SIMULATE works for headless cabins; GSX boarding will overwrite." }))] }), _jsx("h2", { className: styles.colHeading, children: "Cargo" }), _jsxs("div", { className: styles.dataCard, children: [_jsxs("div", { className: styles.capacity, children: ["CAPACITY:\u00A0", wb.cargoFwdCapacityKg.toLocaleString(), " KG FWD,\u00A0", wb.cargoAftCapacityKg.toLocaleString(), " KG AFT,\u00A0", wb.cargoBulkCapacityKg.toLocaleString(), " KG BULK"] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "Cargo" }), _jsx("span", { className: styles.headerCell, children: "PLANNED (KG)" }), _jsx("span", { className: styles.headerCell, children: "LOADED (KG)" })] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "\u00A0" }), _jsx("span", { className: styles.value, children: wb.cargoPlannedKg.toLocaleString(undefined, { maximumFractionDigits: 0 }) }), _jsx("span", { className: styles.value, children: cargoLoadedTotal.toLocaleString(undefined, { maximumFractionDigits: 0 }) })] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "FWD / AFT" }), _jsx("span", { className: styles.value, children: "\u00A0" }), _jsxs("span", { className: styles.subValue, children: [wb.cargoFwdLoadedKg.toLocaleString(undefined, { maximumFractionDigits: 0 }), " / ", wb.cargoAftLoadedKg.toLocaleString(undefined, { maximumFractionDigits: 0 })] })] })] }), _jsx("h2", { className: styles.colHeading, children: "Aircraft Status" }), _jsxs("div", { className: styles.dataCard, children: [_jsx("svg", { viewBox: "0 270 750 210", className: styles.silhouetteSvg, children: _jsxs("g", { transform: "rotate(-180 375 375)", children: [_jsx("path", { d: A320_OUTLINE_PATH, fill: "#3F3F3F", stroke: "#7A7A7A", strokeWidth: 2 }), (() => {
                                             const occupied = parseSeatOccupation(wb.seatOccupation);
                                             return SEAT_RECTS.map((s, i) => (_jsx("rect", { x: s.x, y: s.y, width: SEAT_RECT_W, height: SEAT_RECT_H, fill: occupied[i] ? SEAT_OCCUPIED_COLOR : SEAT_EMPTY_COLOR, stroke: "#1A1A1A", strokeWidth: 0.4 }, `seat-${i}`)));
                                         })(), _jsx("rect", { x: 498, y: 389, width: 41, height: 14, fill: doorColor(wb.fwdCargoDoorOpen), stroke: "#FFFFFF", strokeWidth: 1.2 }), _jsx("rect", { x: 293, y: 389, width: 41, height: 14, fill: doorColor(wb.aftCargoDoorOpen), stroke: "#FFFFFF", strokeWidth: 1.2 }), _jsx("rect", { x: 255, y: 392, width: 20, height: 11, transform: "rotate(-0.265 265 397.5)", fill: doorColor(wb.bulkCargoDoorOpen, wb.cargoBulkCapacityKg > 0), stroke: "#FFFFFF", strokeWidth: 1.2 }), ENTRY_DOORS.map(d => {
@@ -327,5 +425,5 @@ export function WeightBalancePanel() {
                                         })] }) }), _jsxs("div", { className: styles.doorStatusGrid, children: [_jsxs("div", { className: styles.doorStatusCell, children: [_jsx("span", { className: styles.doorStatusLabel, children: "FWD" }), _jsx("span", { className: styles.doorStatusValue, style: { color: doorColor(wb.fwdCargoDoorOpen) }, children: doorStatus(wb.fwdCargoDoorOpen) })] }), _jsxs("div", { className: styles.doorStatusCell, children: [_jsx("span", { className: styles.doorStatusLabel, children: "AFT" }), _jsx("span", { className: styles.doorStatusValue, style: { color: doorColor(wb.aftCargoDoorOpen) }, children: doorStatus(wb.aftCargoDoorOpen) })] }), _jsxs("div", { className: styles.doorStatusCell, children: [_jsx("span", { className: styles.doorStatusLabel, children: "BULK" }), _jsx("span", { className: styles.doorStatusValue, style: { color: doorColor(wb.bulkCargoDoorOpen, wb.cargoBulkCapacityKg > 0) }, children: doorStatus(wb.bulkCargoDoorOpen, wb.cargoBulkCapacityKg > 0) })] })] }), _jsx("div", { className: [
                                     styles.readinessBanner,
                                     wb.allDoorsClosed ? styles.readinessOk : styles.readinessOpen,
-                                ].join(" "), children: wb.allDoorsClosed ? "ALL DOORS CLOSED" : "DOORS OPEN" })] }), _jsx("h2", { className: styles.colHeading, children: "Fuel" }), _jsxs("div", { className: styles.dataCard, children: [_jsxs("div", { className: styles.capacity, children: ["CAPACITY USABLE ", wb.fuelCapacityKg.toLocaleString(undefined, { maximumFractionDigits: 0 }), " KG \u2014 SG: 0.80"] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "Fuel" }), _jsx("span", { className: styles.headerCell, children: "PLANNED (KG)" }), _jsx("span", { className: styles.headerCell, children: "IN TANKS (KG)" })] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "\u00A0" }), _jsx("span", { className: styles.value, children: wb.fuelPlannedKg.toLocaleString(undefined, { maximumFractionDigits: 0 }) }), _jsx("span", { className: styles.value, children: wb.fuelInTanksKg.toLocaleString(undefined, { maximumFractionDigits: 0 }) })] })] })] })] }));
+                                ].join(" "), children: wb.allDoorsClosed ? "ALL DOORS CLOSED" : "DOORS OPEN" }), manifest && manifest.totalPassengers > 0 && (_jsxs("div", { className: styles.manifestSection, children: [_jsxs("button", { type: "button", className: styles.manifestToggle, onClick: () => setManifestOpen(o => !o), "aria-expanded": manifestOpen, children: [_jsxs("span", { children: [manifestOpen ? "▾" : "▸", " MANIFEST (", manifest.totalPassengers, ")"] }), !manifest.seatOccupationWritten && (_jsx("span", { className: styles.manifestWarn, title: "seatOccupation write failed", children: "\u26A0" }))] }), manifestOpen && (_jsx("div", { className: styles.manifestTableWrap, children: _jsxs("table", { className: styles.manifestTable, children: [_jsx("thead", { children: _jsxs("tr", { children: [_jsx("th", { children: "SEAT" }), _jsx("th", { children: "NAME" }), _jsx("th", { children: "ZONE" })] }) }), _jsx("tbody", { children: manifest.passengers.map(p => (_jsxs("tr", { children: [_jsx("td", { children: p.seatNumber }), _jsxs("td", { children: [p.firstName, " ", p.lastName] }), _jsxs("td", { children: ["Z", p.zone] })] }, p.seatNumber))) })] }) }))] }))] }), _jsx("h2", { className: styles.colHeading, children: "Fuel" }), _jsxs("div", { className: styles.dataCard, children: [_jsxs("div", { className: styles.capacity, children: ["CAPACITY USABLE ", wb.fuelCapacityKg.toLocaleString(undefined, { maximumFractionDigits: 0 }), " KG \u2014 SG: 0.80"] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "Fuel" }), _jsx("span", { className: styles.headerCell, children: "PLANNED (KG)" }), _jsx("span", { className: styles.headerCell, children: "IN TANKS (KG)" })] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "\u00A0" }), _jsx("span", { className: styles.value, children: wb.fuelPlannedKg.toLocaleString(undefined, { maximumFractionDigits: 0 }) }), _jsx("span", { className: styles.value, children: wb.fuelInTanksKg.toLocaleString(undefined, { maximumFractionDigits: 0 }) })] })] })] })] }));
 }
