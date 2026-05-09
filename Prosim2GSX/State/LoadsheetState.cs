@@ -18,12 +18,18 @@ namespace Prosim2GSX.State
     // receipt.
     public partial class LoadsheetState : ObservableObject
     {
-        // Prelim slot.
+        // Prelim slot. macZfw + zfw mirror the loadsheet's pre-fuel CG &
+        // weight; macTow + tow mirror the take-off snapshot. Both pairs are
+        // surfaced so the W&B page can show a "loadsheet" row alongside the
+        // live aircraft datarefs (the live values can drift after the
+        // loadsheet is signed if pax/cargo move).
         [ObservableProperty] private string _PrelimType = "none";
         [ObservableProperty] private string _PrelimStatus = "pending";
         [ObservableProperty] private double _PrelimMacTow;
         [ObservableProperty] private bool _PrelimMacTowError;
         [ObservableProperty] private double _PrelimTowKg;
+        [ObservableProperty] private double _PrelimMacZfw;
+        [ObservableProperty] private double _PrelimZfwKg;
         [ObservableProperty] private string _PrelimLoadsheetIdent = "";
         [ObservableProperty] private string _PrelimRawJson = "";
         [ObservableProperty] private DateTime? _PrelimReceivedAt;
@@ -34,6 +40,8 @@ namespace Prosim2GSX.State
         [ObservableProperty] private double _FinalMacTow;
         [ObservableProperty] private bool _FinalMacTowError;
         [ObservableProperty] private double _FinalTowKg;
+        [ObservableProperty] private double _FinalMacZfw;
+        [ObservableProperty] private double _FinalZfwKg;
         [ObservableProperty] private string _FinalLoadsheetIdent = "";
         [ObservableProperty] private string _FinalRawJson = "";
         [ObservableProperty] private DateTime? _FinalReceivedAt;

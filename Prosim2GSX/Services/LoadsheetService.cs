@@ -160,9 +160,18 @@ namespace Prosim2GSX.Services
         // Parses the JSON blob and writes the projected fields into the
         // matching slot. Empty/whitespace raw → reset that slot only. Parse
         // failure → Status="error", RawJson preserved for diagnosis.
+        //
+        // Note on "Null": ProSim returns the literal 4-char string "Null"
+        // for unset string datarefs (visible across efb.appState,
+        // efb.bgLastUpdate, efb.chartModeDefault etc. in ProsimDataref.csv).
+        // Treat it as empty so we don't try to JsonDocument.Parse("Null")
+        // on every flight before the first loadsheet is generated — that
+        // would log a parse-failure warning each time the dataref content
+        // toggles, which has been observed flooding the log.
         protected virtual void ApplyLoadsheet(LoadsheetState ls, string type, string raw)
         {
-            if (string.IsNullOrWhiteSpace(raw))
+            if (string.IsNullOrWhiteSpace(raw)
+                || string.Equals(raw, "Null", StringComparison.OrdinalIgnoreCase))
             {
                 ResetSlot(ls, type);
                 return;
@@ -170,6 +179,8 @@ namespace Prosim2GSX.Services
 
             double macTow = 0.0;
             double towKg = 0.0;
+            double macZfw = 0.0;
+            double zfwKg = 0.0;
             bool parseOk = false;
             try
             {
@@ -185,6 +196,19 @@ namespace Prosim2GSX.Services
                     && towVal.ValueKind == JsonValueKind.Number)
                 {
                     towKg = towVal.GetDouble();
+                }
+
+                // macZfw is a flat number alongside macTow on the loadsheet
+                // root. zfw mirrors tow's {value, unit} object shape.
+                if (root.TryGetProperty("macZfw", out var mzEl) && mzEl.ValueKind == JsonValueKind.Number)
+                    macZfw = mzEl.GetDouble();
+
+                if (root.TryGetProperty("zfw", out var zfwEl)
+                    && zfwEl.ValueKind == JsonValueKind.Object
+                    && zfwEl.TryGetProperty("value", out var zfwVal)
+                    && zfwVal.ValueKind == JsonValueKind.Number)
+                {
+                    zfwKg = zfwVal.GetDouble();
                 }
 
                 parseOk = true;
@@ -205,6 +229,8 @@ namespace Prosim2GSX.Services
                 ls.PrelimMacTow = macTow;
                 ls.PrelimMacTowError = macError;
                 ls.PrelimTowKg = towKg;
+                ls.PrelimMacZfw = macZfw;
+                ls.PrelimZfwKg = zfwKg;
                 ls.PrelimLoadsheetIdent = ident;
                 ls.PrelimRawJson = raw;
                 ls.PrelimReceivedAt = DateTime.UtcNow;
@@ -216,6 +242,8 @@ namespace Prosim2GSX.Services
                 ls.FinalMacTow = macTow;
                 ls.FinalMacTowError = macError;
                 ls.FinalTowKg = towKg;
+                ls.FinalMacZfw = macZfw;
+                ls.FinalZfwKg = zfwKg;
                 ls.FinalLoadsheetIdent = ident;
                 ls.FinalRawJson = raw;
                 ls.FinalReceivedAt = DateTime.UtcNow;
@@ -297,6 +325,8 @@ namespace Prosim2GSX.Services
                 ls.PrelimMacTow = 0.0;
                 ls.PrelimMacTowError = false;
                 ls.PrelimTowKg = 0.0;
+                ls.PrelimMacZfw = 0.0;
+                ls.PrelimZfwKg = 0.0;
                 ls.PrelimLoadsheetIdent = "";
                 ls.PrelimRawJson = "";
                 ls.PrelimReceivedAt = null;
@@ -308,6 +338,8 @@ namespace Prosim2GSX.Services
                 ls.FinalMacTow = 0.0;
                 ls.FinalMacTowError = false;
                 ls.FinalTowKg = 0.0;
+                ls.FinalMacZfw = 0.0;
+                ls.FinalZfwKg = 0.0;
                 ls.FinalLoadsheetIdent = "";
                 ls.FinalRawJson = "";
                 ls.FinalReceivedAt = null;
