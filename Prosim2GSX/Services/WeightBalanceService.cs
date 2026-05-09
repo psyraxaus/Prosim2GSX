@@ -142,6 +142,12 @@ namespace Prosim2GSX.Services
                     wbState.MacTowError = false;
                 }
 
+                // Loadsheet mirror — final preferred, prelim if no final.
+                // Surfaces the dispatcher-signed (zfw, macZfw, tow, macTow)
+                // tuple to the W&B panel so the LIVE row and LOADSHEET row
+                // can sit side-by-side. "none" Source greys the row out.
+                ProjectLoadsheetMirror(wbState);
+
                 // Cargo holds.
                 wbState.CargoFwdLoadedKg = ReadDouble(sdk, ProsimConstants.RefCargoForward);
                 wbState.CargoFwdCapacityKg = ReadDouble(sdk, ProsimConstants.RefCargoForwardCapacity);
@@ -210,6 +216,46 @@ namespace Prosim2GSX.Services
             {
                 Logger.LogException(ex);
             }
+        }
+
+        // Mirrors the active loadsheet slot onto WeightBalanceState so the
+        // panel can render "LOADSHEET" alongside the live aircraft datarefs.
+        // Final wins over prelim; both must be Status="received" with
+        // non-zero values to count (a status="error" slot has 0s and is
+        // treated as "no loadsheet"). When neither is received the source
+        // becomes "none" and the values are zeroed so the UI greys the row.
+        protected virtual void ProjectLoadsheetMirror(WeightBalanceState wb)
+        {
+            var ls = _app?.Loadsheet;
+            if (ls != null
+                && string.Equals(ls.FinalStatus, "received", StringComparison.OrdinalIgnoreCase)
+                && ls.FinalZfwKg > 0 && ls.FinalMacZfw > 0)
+            {
+                wb.LoadsheetZfwKg = ls.FinalZfwKg;
+                wb.LoadsheetMaczfwPercent = ls.FinalMacZfw;
+                wb.LoadsheetTowKg = ls.FinalTowKg;
+                wb.LoadsheetMactowPercent = ls.FinalMacTow;
+                wb.LoadsheetSource = "final";
+                return;
+            }
+
+            if (ls != null
+                && string.Equals(ls.PrelimStatus, "received", StringComparison.OrdinalIgnoreCase)
+                && ls.PrelimZfwKg > 0 && ls.PrelimMacZfw > 0)
+            {
+                wb.LoadsheetZfwKg = ls.PrelimZfwKg;
+                wb.LoadsheetMaczfwPercent = ls.PrelimMacZfw;
+                wb.LoadsheetTowKg = ls.PrelimTowKg;
+                wb.LoadsheetMactowPercent = ls.PrelimMacTow;
+                wb.LoadsheetSource = "prelim";
+                return;
+            }
+
+            wb.LoadsheetZfwKg = 0.0;
+            wb.LoadsheetMaczfwPercent = 0.0;
+            wb.LoadsheetTowKg = 0.0;
+            wb.LoadsheetMactowPercent = 0.0;
+            wb.LoadsheetSource = "none";
         }
 
         private static double ReadDouble(ProsimSdkInterface sdk, string dataRef)

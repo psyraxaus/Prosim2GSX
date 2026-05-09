@@ -91,6 +91,19 @@ namespace Prosim2GSX.State
         [ObservableProperty] private bool _MacTowError;
         [ObservableProperty] private string _MacTowSource = "computed";
 
+        // Loadsheet mirror — projected each tick from the active loadsheet
+        // slot (final preferred, prelim if no final yet). Lets the W&B page
+        // render a "LOADSHEET" row alongside the live datarefs so the user
+        // can see where the dispatcher-signed values diverge from the live
+        // aircraft state (e.g. ProSim's prelim macZfw can sit well outside
+        // envelope while live aircraft.zfwcg shows a sensible CG). Source =
+        // "final" / "prelim" / "none" — "none" greys the row out in the UI.
+        [ObservableProperty] private double _LoadsheetZfwKg;
+        [ObservableProperty] private double _LoadsheetMaczfwPercent;
+        [ObservableProperty] private double _LoadsheetTowKg;
+        [ObservableProperty] private double _LoadsheetMactowPercent;
+        [ObservableProperty] private string _LoadsheetSource = "none";
+
         // FMS sync staleness. Set by MactowValidationService on every tick:
         // true when a prior sync exists AND any of MACTOW (>0.1 %MAC),
         // ZFW (>100 kg), or block-fuel (>200 kg) have drifted past their

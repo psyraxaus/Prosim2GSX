@@ -60,6 +60,16 @@ namespace Prosim2GSX.Web.Contracts
         // would actually be written.
         public string MacTowSource { get; set; } = "computed";
 
+        // Loadsheet mirror — projected from the active slot (final → prelim)
+        // so the W&B panel can render a "LOADSHEET" row beneath the LIVE
+        // row. LoadsheetSource = "final" / "prelim" / "none" — "none" tells
+        // the UI to grey the row and show dashes.
+        public double LoadsheetZfwKg { get; set; }
+        public double LoadsheetMaczfwPercent { get; set; }
+        public double LoadsheetTowKg { get; set; }
+        public double LoadsheetMactowPercent { get; set; }
+        public string LoadsheetSource { get; set; } = "none";
+
         // FMS sync staleness signals. FmsSyncStale flips true when the
         // resolved values have drifted past operational thresholds OR the
         // loadsheet source has upgraded since the last sync. Last-synced
@@ -126,6 +136,11 @@ namespace Prosim2GSX.Web.Contracts
                 MactowPercent = s.MactowPercent,
                 MacTowError = s.MacTowError,
                 MacTowSource = s.MacTowSource ?? "computed",
+                LoadsheetZfwKg = s.LoadsheetZfwKg,
+                LoadsheetMaczfwPercent = s.LoadsheetMaczfwPercent,
+                LoadsheetTowKg = s.LoadsheetTowKg,
+                LoadsheetMactowPercent = s.LoadsheetMactowPercent,
+                LoadsheetSource = s.LoadsheetSource ?? "none",
                 FmsSyncStale = s.FmsSyncStale,
                 FmsLastSyncedAt = s.FmsLastSyncedAt,
                 FmsLastSyncedSource = s.FmsLastSyncedSource ?? "",
