@@ -208,14 +208,31 @@ namespace Prosim2GSX.Web
         private void OnGsxChanged(object sender, PropertyChangedEventArgs e)
             => Broadcast(channel: "gsx", e.PropertyName, sender);
 
+        // Probe + broadcast handlers for the per-property channels. The
+        // Logger.Debug calls at the top of each are deliberate: in March 2026
+        // we hit a regression where fuel/weightBalance/audio (and ofp,
+        // loadsheet via the custom handlers below) silently stopped firing
+        // INPC because services were reading from a stale SDK cache. The
+        // probe makes the next occurrence visible in DEBUG logs without
+        // adding any cost in INFO-level operation. Gate on connection count
+        // so the log stays clean when the web UI isn't open.
         private void OnAudioChanged(object sender, PropertyChangedEventArgs e)
-            => Broadcast(channel: "audio", e.PropertyName, sender);
+        {
+            if (!_connections.IsEmpty) Logger.Debug($"WS audio: {e.PropertyName}");
+            Broadcast(channel: "audio", e.PropertyName, sender);
+        }
 
         private void OnWeightBalanceChanged(object sender, PropertyChangedEventArgs e)
-            => Broadcast(channel: "weightBalance", e.PropertyName, sender);
+        {
+            if (!_connections.IsEmpty) Logger.Debug($"WS weightBalance: {e.PropertyName}");
+            Broadcast(channel: "weightBalance", e.PropertyName, sender);
+        }
 
         private void OnFuelChanged(object sender, PropertyChangedEventArgs e)
-            => Broadcast(channel: "fuel", e.PropertyName, sender);
+        {
+            if (!_connections.IsEmpty) Logger.Debug($"WS fuel: {e.PropertyName}");
+            Broadcast(channel: "fuel", e.PropertyName, sender);
+        }
 
         // Loadsheet broadcasts the full Prelim+Final pair on every property
         // change rather than per-property patches — the React panel renders
@@ -226,6 +243,7 @@ namespace Prosim2GSX.Web
         private void OnLoadsheetChanged(object sender, PropertyChangedEventArgs e)
         {
             if (_connections.IsEmpty) return;
+            Logger.Debug($"WS loadsheet: {e.PropertyName}");
             try
             {
                 var snap = LoadsheetSnapshotDto.From(_app);
@@ -265,6 +283,7 @@ namespace Prosim2GSX.Web
             var name = e?.PropertyName ?? "";
             if (string.IsNullOrEmpty(name)) return;
             if (sender is not OfpState ofp) return;
+            Logger.Debug($"WS ofp: {name}");
 
             object value;
             switch (name)
@@ -333,6 +352,7 @@ namespace Prosim2GSX.Web
         private void OnEfbFlightPlanChanged(object sender, PropertyChangedEventArgs e)
         {
             if (_connections.IsEmpty) return;
+            Logger.Debug($"WS efbFlightPlan: {e.PropertyName}");
             try
             {
                 var dto = EfbFlightPlanDto.From(_app);
