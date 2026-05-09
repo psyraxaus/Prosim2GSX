@@ -210,6 +210,34 @@
   font-family: var(--font-mono, monospace);
 }
 
+/* Row-label cell for the LIVE/LOADSHEET column. Narrower than the data
+   columns and uppercased like the column headers so it reads as a
+   header, not a value. */
+.rowLabel {
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: #cfd5e6;
+  width: 56px;
+}
+
+/* Tiny chip after "L/S" showing FIN/PRE so the user can see at a glance
+   which loadsheet slot is being mirrored. Inline with the label cell. */
+.rowLabelTag {
+  font-weight: 500;
+  font-size: 9px;
+  color: #80B7CFD9;
+  margin-left: 2px;
+}
+
+/* Muted row — applied to the LOADSHEET row when no loadsheet has been
+   received yet (loadsheetSource === "none"). Greys the values + dashes
+   so the row reads as "no data" rather than "all zeros". */
+.rowMuted td,
+.rowMuted .rowLabel {
+  color: #6a6f7d;
+}
+
 .note {
   margin: 8px 0 0 0;
   padding: 0;

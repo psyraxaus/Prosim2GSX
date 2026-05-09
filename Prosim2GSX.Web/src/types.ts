@@ -703,6 +703,16 @@ export interface WeightBalanceDto {
   mactowPercent: number;
   macTowError: boolean;
   macTowSource: "final" | "prelim" | "computed";
+
+  // Loadsheet mirror — projected by WeightBalanceService each tick from
+  // the active slot (final → prelim). Drives the LOADSHEET row beneath
+  // the LIVE row in the summary table; "none" greys it out with dashes.
+  loadsheetZfwKg: number;
+  loadsheetMaczfwPercent: number;
+  loadsheetTowKg: number;
+  loadsheetMactowPercent: number;
+  loadsheetSource: "final" | "prelim" | "none";
+
   fmsSyncStale: boolean;
   fmsLastSyncedAt: string | null;
   fmsLastSyncedSource: string;

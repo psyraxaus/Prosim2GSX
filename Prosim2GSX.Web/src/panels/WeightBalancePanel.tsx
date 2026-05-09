@@ -392,17 +392,18 @@ export function WeightBalancePanel() {
     return (clamped - AXIS_MAC_MIN) / (AXIS_MAC_MAX - AXIS_MAC_MIN);
   };
 
-  const zfwDotLeft = macToX(wb.maczfwPercent) - DOT_RADIUS;
-  const zfwDotTop  = weightToY(wb.zfwKg) - DOT_RADIUS;
-  const gwDotLeft  = macToX(wb.macgwPercent) - DOT_RADIUS;
-  const gwDotTop   = weightToY(wb.gwKg) - DOT_RADIUS;
+  // Single live marker at (MACGW, GW) — matches the ProSim EFB style.
+  // The ZFW gauge bar below the chart still uses zfwBarPct, so the
+  // ZFW MAC value retains a visual representation; only the redundant
+  // chart dot was dropped.
+  const gwDotLeft = macToX(wb.macgwPercent) - DOT_RADIUS;
+  const gwDotTop  = weightToY(wb.gwKg) - DOT_RADIUS;
 
   const zfwBarPct = macFraction(wb.maczfwPercent) * 100;
   const gwBarPct  = macFraction(wb.macgwPercent) * 100;
 
-  // Hide dots when there's no data (avoids parking them at a corner).
-  const showZfwDot = wb.zfwKg > 0 && wb.maczfwPercent > 0;
-  const showGwDot  = wb.gwKg > 0 && wb.macgwPercent > 0;
+  // Hide the dot when there's no data (avoids parking it at a corner).
+  const showGwDot = wb.gwKg > 0 && wb.macgwPercent > 0;
 
   const totalCapacity = wb.zone1Capacity + wb.zone2Capacity + wb.zone3Capacity + wb.zone4Capacity;
   const cargoLoadedTotal = wb.cargoFwdLoadedKg + wb.cargoAftLoadedKg;
@@ -475,29 +476,21 @@ export function WeightBalancePanel() {
                 <div className={`${styles.envLabel} ${styles.annot4}`} style={annotPos("zfwL")}>Zfw limit</div>
                 <div className={`${styles.envLabel} ${styles.annot5}`} style={annotPos("tolL")}>Take-Off Limits</div>
 
-                {/* Live ZFW dot — pink quadrant-fill crosshair. */}
-                {showZfwDot && (
-                  <svg
-                    className={styles.dot}
-                    style={{ left: zfwDotLeft, top: zfwDotTop }}
-                    width={DOT_RADIUS * 2} height={DOT_RADIUS * 2} viewBox="0 0 22 22"
-                  >
-                    <circle cx="11" cy="11" r="10" fill="#FFFFFF" stroke="#000" strokeOpacity="0.5" />
-                    <path d="M 11 1 A 10 10 0 0 1 21 11 L 11 11 Z" fill="#E91E63" />
-                    <path d="M 11 21 A 10 10 0 0 1 1 11 L 11 11 Z" fill="#E91E63" />
-                    <line x1="11" y1="-2" x2="11" y2="24" stroke="#FFFFFF" strokeWidth="1.2" />
-                    <line x1="-2" y1="11" x2="24" y2="11" stroke="#FFFFFF" strokeWidth="1.2" />
-                  </svg>
-                )}
-
-                {/* Live GW dot — light-blue with white crosshair. */}
+                {/* Live GW dot — red+white quadrant crosshair. Single
+                    marker matches ProSim EFB exactly: positioned at
+                    (MACGW, GW), styled with the red quadrant-fill +
+                    white crosshair. The previous ZFW dot was dropped to
+                    keep the chart uncluttered (ProSim shows only one
+                    marker; live ZFW reads in the summary table below). */}
                 {showGwDot && (
                   <svg
                     className={styles.dot}
                     style={{ left: gwDotLeft, top: gwDotTop }}
                     width={DOT_RADIUS * 2} height={DOT_RADIUS * 2} viewBox="0 0 22 22"
                   >
-                    <circle cx="11" cy="11" r="10" fill="#80B7CFD9" stroke="#FFFFFF" />
+                    <circle cx="11" cy="11" r="10" fill="#FFFFFF" stroke="#000" strokeOpacity="0.5" />
+                    <path d="M 11 1 A 10 10 0 0 1 21 11 L 11 11 Z" fill="#D81E1E" />
+                    <path d="M 11 21 A 10 10 0 0 1 1 11 L 11 11 Z" fill="#D81E1E" />
                     <line x1="11" y1="-2" x2="11" y2="24" stroke="#FFFFFF" strokeWidth="1.2" />
                     <line x1="-2" y1="11" x2="24" y2="11" stroke="#FFFFFF" strokeWidth="1.2" />
                   </svg>
@@ -514,9 +507,17 @@ export function WeightBalancePanel() {
             <div className={styles.gaugeFillGw} style={{ width: `${gwBarPct}%` }} />
           </div>
 
+          {/* Two-row summary: LIVE reads the aircraft datarefs each tick;
+              LOADSHEET mirrors the dispatcher-signed values (final →
+              prelim). When no loadsheet has been received yet the row is
+              greyed and shows dashes. The "GW/MACGW" columns of the
+              LOADSHEET row are the loadsheet's TOW/MACTOW (ProSim's
+              loadsheet doesn't carry a separate gross-weight at current
+              fuel — TOW is the equivalent take-off snapshot). */}
           <table className={styles.summary}>
             <thead>
               <tr>
+                <th></th>
                 <th>ZFW (KG)</th>
                 <th>MACZFW (%)</th>
                 <th>GW (KG)</th>
@@ -525,15 +526,34 @@ export function WeightBalancePanel() {
             </thead>
             <tbody>
               <tr>
+                <th scope="row" className={styles.rowLabel}>LIVE</th>
                 <td>{wb.zfwKg.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
                 <td>{wb.maczfwPercent.toFixed(1)}</td>
                 <td>{wb.gwKg.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
                 <td>{wb.macgwPercent.toFixed(1)}</td>
               </tr>
+              <tr className={wb.loadsheetSource === "none" ? styles.rowMuted : ""}>
+                <th scope="row" className={styles.rowLabel}>
+                  L/S
+                  {wb.loadsheetSource === "final" && <span className={styles.rowLabelTag}> FIN</span>}
+                  {wb.loadsheetSource === "prelim" && <span className={styles.rowLabelTag}> PRE</span>}
+                </th>
+                <td>{wb.loadsheetSource === "none"
+                      ? "—"
+                      : wb.loadsheetZfwKg.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                <td>{wb.loadsheetSource === "none" ? "—" : wb.loadsheetMaczfwPercent.toFixed(1)}</td>
+                <td>{wb.loadsheetSource === "none"
+                      ? "—"
+                      : wb.loadsheetTowKg.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                <td>{wb.loadsheetSource === "none" ? "—" : wb.loadsheetMactowPercent.toFixed(1)}</td>
+              </tr>
             </tbody>
           </table>
 
-          <p className={styles.note}>NOTE: THE ABOVE FIGURES ARE LIVE.</p>
+          <p className={styles.note}>
+            LIVE reads aircraft datarefs each tick. L/S mirrors the latest
+            loadsheet (final preferred, prelim fallback).
+          </p>
 
           {/* MACTOW row + SYNC TO FMS button. Resolved MACTOW is sourced
               from LoadsheetService (final → prelim → computed) and pushed
