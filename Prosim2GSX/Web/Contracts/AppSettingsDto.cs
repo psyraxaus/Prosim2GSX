@@ -55,6 +55,7 @@ namespace Prosim2GSX.Web.Contracts
 
         // ProSim SDK
         public string ProSimSdkPath { get; set; } = "";
+        public bool DelayProsimConnection { get; set; } = false;
 
         // UI display
         public bool SolariAnimationEnabled { get; set; }
@@ -107,6 +108,7 @@ namespace Prosim2GSX.Web.Contracts
                 OpenAppWindowOnStart = c.OpenAppWindowOnStart,
 
                 ProSimSdkPath = c.ProSimSdkPath ?? "",
+                DelayProsimConnection = c.DelayProsimConnection,
 
                 SolariAnimationEnabled = c.SolariAnimationEnabled,
                 CurrentTheme = c.CurrentTheme ?? "Light",
@@ -153,6 +155,7 @@ namespace Prosim2GSX.Web.Contracts
             c.OpenAppWindowOnStart = OpenAppWindowOnStart;
 
             c.ProSimSdkPath = ProSimSdkPath ?? "";
+            c.DelayProsimConnection = DelayProsimConnection;
 
             c.SolariAnimationEnabled = SolariAnimationEnabled;
 

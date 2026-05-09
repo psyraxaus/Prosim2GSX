@@ -193,7 +193,13 @@ namespace Prosim2GSX.GSX
 
             InitGsxServices();
             Menu.Init();
-            AircraftInterface.Init();
+            // DelayProsimConnection: defer AircraftInterface.Init() so the
+            // initial ProSim SDK Connect (and the AircraftInterface bridges
+            // that subscribe to ProSim datarefs) do not fire while MSFS is
+            // still rendering / on the main menu. DoRun calls Init() itself
+            // after EarlyFireBeforeProsimHandshake completes.
+            if (!Config.DelayProsimConnection)
+                AircraftInterface.Init();
             AutomationController.Init();
             return Task.CompletedTask;
         }
@@ -276,11 +282,20 @@ namespace Prosim2GSX.GSX
             {
                 Menu.Reset();
 
-                while (!AircraftBinary && IsExecutionAllowed && !Token.IsCancellationRequested && !RequestToken.IsCancellationRequested)
-                    await Task.Delay(Config.TimerGsxCheck, Token);
-                Logger.Debug($"ProsimBinary running");
-                if (!IsExecutionAllowed || RequestToken.IsCancellationRequested)
-                    return;
+                // AircraftBinary wait — when DelayProsimConnection is on, skip
+                // this entirely so the early-fire path can run before the
+                // ProSim binary comes up (the typical use case is "MSFS first,
+                // ProSim later"). The IsLoaded wait further down still gates
+                // handshake-dependent work on the SDK actually connecting,
+                // which can't happen until the binary is up regardless.
+                if (!Config.DelayProsimConnection)
+                {
+                    while (!AircraftBinary && IsExecutionAllowed && !Token.IsCancellationRequested && !RequestToken.IsCancellationRequested)
+                        await Task.Delay(Config.TimerGsxCheck, Token);
+                    Logger.Debug($"ProsimBinary running");
+                    if (!IsExecutionAllowed || RequestToken.IsCancellationRequested)
+                        return;
+                }
 
                 if (IsMsfs2024 && SimConnectManager.CameraState == 30)
                 {
@@ -297,7 +312,22 @@ namespace Prosim2GSX.GSX
                     return;
 
                 AutomationController.Reset();
+
+                // DelayProsimConnection: do walkaround skip + GSX gate-menu
+                // open + reposition BEFORE any ProSim contact. Init() (first
+                // SDK Connect) and Run() (timer that polls + reconnects + does
+                // EFB GraphQL queries) are both deferred to AFTER the early
+                // fire so MSFS isn't burdened with ProSim retry traffic while
+                // it's still loading the flight. Without the flag, the boot
+                // order is unchanged: Init() ran in InitReceivers, Run()
+                // starts here, then we wait for IsLoaded.
+                if (Config.DelayProsimConnection)
+                {
+                    await EarlyFireBeforeProsimHandshake();
+                    AircraftInterface.Init();
+                }
                 AircraftInterface.Run();
+
                 while (!AircraftInterface.IsLoaded && IsExecutionAllowed && !Token.IsCancellationRequested && !RequestToken.IsCancellationRequested)
                     await Task.Delay(Config.TimerGsxCheck, Token);
                 if (!IsExecutionAllowed || RequestToken.IsCancellationRequested)
@@ -460,6 +490,113 @@ namespace Prosim2GSX.GSX
         protected virtual bool CheckSessionReady()
         {
             return SimConnectManager.CameraState < 11;
+        }
+
+        // Pre-handshake early-fire path used when Config.DelayProsimConnection
+        // is on. Performs the same walkaround skip + GSX gate-menu open +
+        // reposition that the standard boot path runs after the ProSim SDK
+        // handshake — but here, before AircraftInterface.IsLoaded becomes
+        // true. None of the steps below touch ProSim datarefs; all reads
+        // are SimConnect (IS AVATAR) or GSX state, all writes are GSX menu
+        // sequences and Win32 keystrokes. Safe to run before ProSim is up.
+        protected virtual async Task EarlyFireBeforeProsimHandshake()
+        {
+            Logger.Information("DelayProsimConnection: starting pre-handshake walkaround / menu / reposition");
+
+            // Promote IsActive early so GsxMenu.OnMenuEvent doesn't drop the
+            // GSX menu-state SimVar callbacks (it bails on !Controller.IsActive).
+            // Without this, FirstReadyReceived never flips and the menu-open
+            // loop below runs forever. Post-handshake DoRun re-asserts the
+            // same value, so this is a no-op on the standard path.
+            IsActive = true;
+
+            // Seed IsProcessRunning so the menu loop below can decide whether
+            // it's worth poking Couatl. The post-handshake main loop refreshes
+            // this on each tick; we don't have that loop yet.
+            CheckProcess();
+
+            // 1) Walkaround skip — pure SimConnect read of IS AVATAR plus a
+            //    Win32 SendInput keystroke. The base SkipWalkaround() loops
+            //    internally until !IsWalkaround. We deliberately skip the
+            //    PlaceProsimStairsWalkaround branch from the main loop — that
+            //    would write a ProSim dataref, which is exactly what we're
+            //    avoiding here. Default profile has SkipWalkAround=true so
+            //    this path runs for the typical user.
+            if (AircraftProfile.SkipWalkAround)
+            {
+                while (!SkippedWalkAround && IsExecutionAllowed && !RequestToken.IsCancellationRequested)
+                {
+                    await SkipWalkaround();
+                    if (SkippedWalkAround)
+                        break;
+                    await Task.Delay(Config.TimerGsxCheck, Token);
+                }
+            }
+            if (!IsExecutionAllowed || RequestToken.IsCancellationRequested)
+                return;
+
+            // 2) GSX menu open — wait for Couatl to be running and the gate
+            //    menu to ack READY. Mirrors the cadence of the post-handshake
+            //    loop at the top of DoRun: poll on TimerGsxCheck, only poke
+            //    OpenHide() once per TimerGsxStartupMenuCheck window, escalate
+            //    to RestartGsx after GsxMenuStartupMaxFail consecutive fails.
+            while (!Menu.FirstReadyReceived && IsExecutionAllowed && !RequestToken.IsCancellationRequested)
+            {
+                if (NextMenuStartupCheck <= DateTime.Now)
+                {
+                    CheckProcess();
+                    if (CouatlVarsReceived && CouatlLastStarted == 1 && IsProcessRunning)
+                    {
+                        Logger.Information("DelayProsimConnection: opening GSX menu");
+                        await Menu.OpenHide();
+                        await Task.Delay(1000, RequestToken);
+                    }
+
+                    if (!CouatlVarsValid || !IsProcessRunning)
+                    {
+                        CouatlInvalidCount++;
+                        Logger.Warning($"DelayProsimConnection: GSX menu not starting #{CouatlInvalidCount}");
+                        if (CouatlInvalidCount > Config.GsxMenuStartupMaxFail && Config.RestartGsxStartupFail)
+                        {
+                            Logger.Information("DelayProsimConnection: restarting GSX");
+                            await AppService.Instance.RestartGsx();
+                            CouatlInvalidCount = 0;
+                            await Task.Delay(Config.GsxServiceStartDelay, RequestToken);
+                        }
+                    }
+
+                    NextMenuStartupCheck = DateTime.Now + TimeSpan.FromMilliseconds(Config.TimerGsxStartupMenuCheck);
+                }
+
+                if (!CouatlVarsReceived && IsProcessRunning)
+                    OnCouatlVariable(null, null);
+
+                await Task.Delay(Config.TimerGsxCheck, Token);
+            }
+            if (!IsExecutionAllowed || RequestToken.IsCancellationRequested)
+                return;
+
+            // 3) One-shot reposition. Same gate as RunPreparation:740 minus the
+            //    IsFlightPlanLoaded check (no ProSim → no flight plan yet).
+            //    Sticky-mark via MarkRepositionExecuted so the post-handshake
+            //    RunPreparation skips its own reposition call.
+            if (AircraftProfile.CallReposition
+                && Menu.IsGateMenu
+                && !AutomationController.IsGateConnected
+                && !Menu.WarpedToGate)
+            {
+                Logger.Information("DelayProsimConnection: calling reposition pre-handshake");
+                if (GsxServices.TryGetValue(GsxServiceType.Reposition, out var reposition) && reposition != null)
+                {
+                    await reposition.Call();
+                    await Task.Delay(2000, RequestToken);
+                }
+                AutomationController.MarkRepositionExecuted();
+            }
+            else
+            {
+                Logger.Debug($"DelayProsimConnection: skipping early reposition (CallReposition={AircraftProfile.CallReposition}, IsGateMenu={Menu.IsGateMenu}, IsGateConnected={AutomationController.IsGateConnected}, WarpedToGate={Menu.WarpedToGate})");
+            }
         }
 
         protected virtual async Task SkipWalkaround()

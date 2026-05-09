@@ -346,6 +346,7 @@ export interface AppSettingsDto {
   openAppWindowOnStart: boolean;
 
   proSimSdkPath: string;
+  delayProsimConnection: boolean;
 
   solariAnimationEnabled: boolean;
   currentTheme: string;

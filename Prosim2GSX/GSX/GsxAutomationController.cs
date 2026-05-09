@@ -83,6 +83,11 @@ namespace Prosim2GSX.GSX
         public virtual bool ServicesValid => ServiceStairs.State != GsxServiceState.Unknown || ServiceJetway.State != GsxServiceState.Unknown || !IsOnGround;
 
         public virtual bool ExecutedReposition { get; protected set; } = false;
+
+        // Used by the GsxController early-fire path (DelayProsimConnection)
+        // to mark reposition as already done so RunPreparation doesn't fire
+        // it again after the ProSim handshake completes.
+        public virtual void MarkRepositionExecuted() => ExecutedReposition = true;
         public virtual bool DepartureServicesCompleted { get; protected set; } = false;
         public virtual bool GroundEquipmentPlaced { get; protected set; } = false;
         public virtual bool GroundEquipmentClear => !Aircraft.EquipmentChocks && !Aircraft.EquipmentGpu && !Aircraft.EquipmentPca;

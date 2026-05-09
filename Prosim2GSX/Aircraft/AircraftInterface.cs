@@ -177,6 +177,14 @@ namespace Prosim2GSX.Aircraft
 
         public virtual void FreeResources()
         {
+            // Guard the entire body on IsInitialized: when DelayProsimConnection
+            // is on, Init() is deferred until after EarlyFire completes. If the
+            // user shuts down mid-EarlyFire, none of the subscriptions /
+            // SimStore additions / SDK wiring exist yet, so trying to undo
+            // them throws NRE (notably ProsimInterface.FreeResources nulls).
+            if (!IsInitialized)
+                return;
+
             ProsimInterface.FreeResources();
 
             Controller.WalkaroundWasSkipped -= OnWalkaroundWasSkipped;

@@ -176,9 +176,11 @@ export function AppSettingsPanel() {
           onChange={(v) => update("runAudioService", v)} />
       </Section>
 
-      <Section title="ProSim SDK">
+      <Section title="ProSim SDK" hint="Pre-handshake actions use the 'default' aircraft profile">
         <TextField label="ProSim SDK Path" value={draft.proSimSdkPath} monospace
           onChange={(v) => update("proSimSdkPath", v)} />
+        <BoolField label="Delay ProSim Connection" value={draft.delayProsimConnection}
+          onChange={(v) => update("delayProsimConnection", v)} />
       </Section>
 
       <Section title="Web Interface" hint="Hot-toggle on save">

@@ -234,6 +234,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Path to the ProSim SDK DLL file required for ProSim integration.">ProSim SDK Path:</TextBlock>
@@ -244,8 +245,11 @@
                         </Button>
                     </StackPanel>
 
-                    <TextBlock Grid.Column="0" Grid.Row="1" Margin="6" Style="{StaticResource TextBlockDefault}" VerticalAlignment="Top" ToolTip="The Fuel-on-Board Values currently stored by Prosim2GSX for the various Aircrafts.">Saved Fuel Values:</TextBlock>
-                    <StackPanel Grid.Column="1" Grid.Row="1" Margin="6" Orientation="Horizontal">
+                    <TextBlock Grid.Column="0" Grid.Row="1" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="When enabled, fire the walkaround skip + GSX gate-menu open + reposition before waiting for the ProSim SDK handshake. Use when ProSim runs on a remote machine that starts after MSFS. Pre-handshake actions use the 'default' aircraft profile (the matched profile is not known yet).">Delay ProSim Connection:</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="1" IsChecked="{Binding DelayProsimConnection}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="When enabled, fire the walkaround skip + GSX gate-menu open + reposition before waiting for the ProSim SDK handshake. Use when ProSim runs on a remote machine that starts after MSFS. Pre-handshake actions use the 'default' aircraft profile (the matched profile is not known yet)."/>
+
+                    <TextBlock Grid.Column="0" Grid.Row="2" Margin="6" Style="{StaticResource TextBlockDefault}" VerticalAlignment="Top" ToolTip="The Fuel-on-Board Values currently stored by Prosim2GSX for the various Aircrafts.">Saved Fuel Values:</TextBlock>
+                    <StackPanel Grid.Column="1" Grid.Row="2" Margin="6" Orientation="Horizontal">
                         <ListView MinWidth="228" MaxWidth="384" Height="96" MaxHeight="142"
                                   ScrollViewer.CanContentScroll="True" ScrollViewer.VerticalScrollBarVisibility="Auto"
                                   HorizontalAlignment="Left" HorizontalContentAlignment="Left"

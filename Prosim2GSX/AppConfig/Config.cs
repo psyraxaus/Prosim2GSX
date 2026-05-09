@@ -212,6 +212,16 @@ namespace Prosim2GSX.AppConfig
         public virtual int ProSimSdkConnectionTimeout { get; set; } = 10000; // milliseconds
         public virtual int ProSimSdkMaxReconnectAttempts { get; set; } = 10;
 
+        // When true, GsxController fires the walkaround skip + GSX gate-menu
+        // open + reposition before waiting for the ProSim SDK handshake. This
+        // is opt-in for users running ProSim on a remote machine that comes up
+        // AFTER MSFS, where the standard order (handshake → walkaround → menu
+        // → reposition) lands too late. Off by default — leaves the existing
+        // boot sequence untouched. The pre-handshake path uses the "default"
+        // aircraft profile (the matched profile isn't known yet); profile-
+        // specific reposition / walkaround flags only apply post-handshake.
+        public virtual bool DelayProsimConnection { get; set; } = false;
+
         [JsonIgnore]
         public virtual bool IsProsimLocal
         {
@@ -366,6 +376,11 @@ namespace Prosim2GSX.AppConfig
             // defaults (30 minutes / enabled) take effect for any install
             // that upgrades from <29 — no explicit migration needed since
             // System.Text.Json applies the default to missing keys.
+
+            // v30: DelayProsimConnection added as an opt-in. Default false on
+            // upgrade keeps existing installs on the standard boot order;
+            // users running ProSim on a remote machine that starts after MSFS
+            // enable it via Settings > ProSim SDK & Data.
         }
 
         public virtual void SetFuelFob(string registration, double fuel)

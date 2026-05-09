@@ -149,6 +149,7 @@
   "ProSimSdkAutoReconnect": true,
   "ProSimSdkConnectionTimeout": 10000,
   "ProSimSdkMaxReconnectAttempts": 10,
+  "DelayProsimConnection": false,
   "AircraftProfiles": [
     {
       "Name": "default",
@@ -251,7 +252,7 @@
       }
     }
   ],
-  "ConfigVersion": 29,
+  "ConfigVersion": 30,
   "LogInterval": 3,
   "SizeLimit": 10485760,
   "LogCount": 3,

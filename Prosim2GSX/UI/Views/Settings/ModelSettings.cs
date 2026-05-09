@@ -111,6 +111,7 @@ namespace Prosim2GSX.UI.Views.Settings
         public virtual bool AutoSyncFmsOnFinal { get => Source.AutoSyncFmsOnFinal; set => SetModelValue<bool>(value); }
         public virtual bool OpenAppWindowOnStart { get => Source.OpenAppWindowOnStart; set => SetModelValue<bool>(value); }
         public virtual string ProSimSdkPath { get => Source.ProSimSdkPath; set => SetModelValue<string>(value); }
+        public virtual bool DelayProsimConnection { get => Source.DelayProsimConnection; set => SetModelValue<bool>(value); }
         public virtual bool SolariAnimationEnabled { get => Source.SolariAnimationEnabled; set => SetModelValue<bool>(value); }
 
         // ── Web interface (hot-toggled; WebHostService observes Config) ──────
