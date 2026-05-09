@@ -303,13 +303,19 @@ namespace Prosim2GSX.Services
 
             try
             {
-                var zfw = GetEffectiveDouble("zfwKg", ofp.ZfwKg);
+                var zfwKg = GetEffectiveDouble("zfwKg", ofp.ZfwKg);
                 var ramp = GetEffectiveDouble("fuelRampKg", ofp.FuelRampKg);
-                var block = MactowValidationService.RoundBlockFuelKg(ramp);
+                var blockKg = MactowValidationService.RoundBlockFuelKg(ramp);
 
-                sdk.SetDouble(ProsimConstants.RefFmsInitZfw, zfw);
-                sdk.SetDouble(ProsimConstants.RefFmsInitBlock, block);
-                Logger.Information($"EFB INIT manual sync: zfw={zfw:F0} blockFuel={block:F0}");
+                // MCDU INIT B expects ZFW and BLOCK in TONS (xx.x), not kg —
+                // mirrors the conversion in MactowValidationService.SyncToFms.
+                var zfwTons = zfwKg / 1000.0;
+                var blockTons = blockKg / 1000.0;
+
+                sdk.SetDouble(ProsimConstants.RefFmsInitZfw, zfwTons);
+                sdk.SetDouble(ProsimConstants.RefFmsInitBlock, blockTons);
+                Logger.Information(
+                    $"EFB INIT manual sync: zfw={zfwKg:F0}kg ({zfwTons:F1}t) blockFuel={blockKg:F0}kg ({blockTons:F1}t)");
             }
             catch (Exception ex)
             {
@@ -346,11 +352,15 @@ namespace Prosim2GSX.Services
 
             try
             {
-                sdk.SetDouble(ProsimConstants.RefFmsInitZfw, ofp.ZfwKg);
-                var block = MactowValidationService.RoundBlockFuelKg(ofp.FuelRampKg);
-                sdk.SetDouble(ProsimConstants.RefFmsInitBlock, block);
+                // MCDU INIT B expects ZFW and BLOCK in TONS (xx.x), not kg.
+                var zfwTons = ofp.ZfwKg / 1000.0;
+                var blockKg = MactowValidationService.RoundBlockFuelKg(ofp.FuelRampKg);
+                var blockTons = blockKg / 1000.0;
+
+                sdk.SetDouble(ProsimConstants.RefFmsInitZfw, zfwTons);
+                sdk.SetDouble(ProsimConstants.RefFmsInitBlock, blockTons);
                 Logger.Information(
-                    $"EFB INIT auto-sync: zfw={ofp.ZfwKg:F0} blockFuel={block:F0}");
+                    $"EFB INIT auto-sync: zfw={ofp.ZfwKg:F0}kg ({zfwTons:F1}t) blockFuel={blockKg:F0}kg ({blockTons:F1}t)");
             }
             catch (Exception ex)
             {
@@ -372,13 +382,15 @@ namespace Prosim2GSX.Services
                 switch (field)
                 {
                     case "zfwKg":
+                        // MCDU INIT B expects tons (xx.x), not kg.
                         if (TryToDouble(value, out var zfw))
-                            sdk.SetDouble(ProsimConstants.RefFmsInitZfw, zfw);
+                            sdk.SetDouble(ProsimConstants.RefFmsInitZfw, zfw / 1000.0);
                         break;
                     case "fuelRampKg":
+                        // RoundBlockFuelKg returns kg; convert to tons.
                         if (TryToDouble(value, out var ramp))
                             sdk.SetDouble(ProsimConstants.RefFmsInitBlock,
-                                MactowValidationService.RoundBlockFuelKg(ramp));
+                                MactowValidationService.RoundBlockFuelKg(ramp) / 1000.0);
                         break;
                     case "cargoKg":
                         if (TryToDouble(value, out var cargo))
