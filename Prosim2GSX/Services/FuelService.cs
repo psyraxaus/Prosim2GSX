@@ -25,6 +25,37 @@ namespace Prosim2GSX.Services
     {
         private readonly AppService _app;
 
+        // First-tick priming guard. Subscribe + RegisterPollDataref must run
+        // once per SDK connect so the polling loop refreshes the cache —
+        // without this, ReadDataRef returns the snapshot taken on first read
+        // and never updates, so PropertyChanged never fires and no WS patches
+        // ship. Reset on disconnect so reconnects re-prime.
+        private bool _primed;
+
+        // Every dataref this service consumes. Prime() Subscribes each one
+        // (so the SDK polling loops include it) and RegisterPollDatareffs
+        // them (so the user-poll loop covers any that aren't in a tier
+        // HashSet — idempotent in either direction).
+        private static readonly string[] PolledRefs = new[]
+        {
+            ProsimConstants.RefFuelTotal,
+            ProsimConstants.RefFuelTotalCapacity,
+            ProsimConstants.RefFuelCenter,
+            ProsimConstants.RefFuelLeft,
+            ProsimConstants.RefFuelRight,
+            ProsimConstants.RefFuelCenterCapacity,
+            ProsimConstants.RefFuelLeftCapacity,
+            ProsimConstants.RefFuelRightCapacity,
+            ProsimConstants.RefFuelLeftOuter,
+            ProsimConstants.RefFuelLeftInner,
+            ProsimConstants.RefFuelRightInner,
+            ProsimConstants.RefFuelRightOuter,
+            ProsimConstants.RefFuelLeftOuterCapacity,
+            ProsimConstants.RefFuelLeftInnerCapacity,
+            ProsimConstants.RefFuelRightInnerCapacity,
+            ProsimConstants.RefFuelRightOuterCapacity,
+        };
+
         public FuelService(AppService app)
         {
             _app = app;
@@ -39,7 +70,13 @@ namespace Prosim2GSX.Services
             try
             {
                 var sdk = _app?.GsxService?.AircraftInterface?.ProsimInterface?.SdkInterface;
-                if (sdk == null || !sdk.IsConnected) return;
+                if (sdk == null || !sdk.IsConnected)
+                {
+                    _primed = false;
+                    return;
+                }
+
+                Prime(sdk);
 
                 var fuel = _app.Fuel;
                 if (fuel == null) return;
@@ -120,5 +157,24 @@ namespace Prosim2GSX.Services
                 return 0.0;
             }
         }
+
+        // Subscribe + register-for-poll once per SDK connect. NoOpHandler is
+        // a placeholder — Tick() polls via ReadDouble, so we don't need
+        // event-driven callbacks; the Subscribe call is purely to register
+        // the ref in the SDK's _subscriptions dict so its polling loops
+        // refresh the cache.
+        private void Prime(ProsimSdkInterface sdk)
+        {
+            if (_primed) return;
+            foreach (var r in PolledRefs)
+            {
+                try { sdk.Subscribe(r, NoOpHandler); }
+                catch (Exception ex) { Logger.LogException(ex); }
+                sdk.RegisterPollDataref(r);
+            }
+            _primed = true;
+        }
+
+        private static void NoOpHandler(string name, dynamic newValue, dynamic oldValue) { }
     }
 }

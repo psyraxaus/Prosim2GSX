@@ -27,6 +27,50 @@ namespace Prosim2GSX.Services
     {
         private readonly AppService _app;
 
+        // First-tick priming guard. Subscribe + RegisterPollDataref must run
+        // once per SDK connect so the polling loop refreshes the cache —
+        // without this, ReadDataRef returns the snapshot taken on first read
+        // and never updates, so PropertyChanged never fires and no WS patches
+        // ship. Reset on disconnect so reconnects re-prime.
+        private bool _primed;
+
+        // Every dataref this service consumes. Some overlap with FuelService
+        // (RefFuelTotal, RefFuelTotalCapacity) is intentional — both
+        // services Subscribe; the SDK keeps a single subscription list so
+        // priming twice is harmless and the cache is shared.
+        private static readonly string[] PolledRefs = new[]
+        {
+            // ZFW + ZFW-CG drive the W&B chart.
+            ProsimConstants.RefWeightZfw,
+            ProsimConstants.RefAircraftZfwcg,
+            // Fuel total — sum used to compute GW = ZFW + fuel.
+            ProsimConstants.RefFuelTotal,
+            ProsimConstants.RefFuelTotalCapacity,
+            // Cargo holds.
+            ProsimConstants.RefCargoForward,
+            ProsimConstants.RefCargoForwardCapacity,
+            ProsimConstants.RefCargoRear,
+            ProsimConstants.RefCargoAftCapacity,
+            ProsimConstants.RefCargoBulkCapacity,
+            ProsimConstants.RefEfbPlannedCargoKg,
+            // Cargo doors.
+            ProsimConstants.RefDoorCargoForward,
+            ProsimConstants.RefDoorCargoAft,
+            ProsimConstants.RefDoorCargoBulk,
+            // Entry / overwing doors.
+            ProsimConstants.RefDoor1L, ProsimConstants.RefDoor1R,
+            ProsimConstants.RefDoor2L, ProsimConstants.RefDoor2R,
+            ProsimConstants.RefDoor3L, ProsimConstants.RefDoor3R,
+            ProsimConstants.RefDoor4L, ProsimConstants.RefDoor4R,
+            // Pax-zone capacities + occupation strings.
+            ProsimConstants.RefPaxZone1Capacity,
+            ProsimConstants.RefPaxZone2Capacity,
+            ProsimConstants.RefPaxZone3Capacity,
+            ProsimConstants.RefPaxZone4Capacity,
+            ProsimConstants.RefPaxCurrentString,
+            ProsimConstants.RefPaxBookedString,
+        };
+
         public WeightBalanceService(AppService app)
         {
             _app = app;
@@ -41,7 +85,13 @@ namespace Prosim2GSX.Services
             try
             {
                 var sdk = _app?.GsxService?.AircraftInterface?.ProsimInterface?.SdkInterface;
-                if (sdk == null || !sdk.IsConnected) return;
+                if (sdk == null || !sdk.IsConnected)
+                {
+                    _primed = false;
+                    return;
+                }
+
+                Prime(sdk);
 
                 var wbState = _app.WeightBalance;
                 if (wbState == null) return;
@@ -212,5 +262,24 @@ namespace Prosim2GSX.Services
             }
             return n;
         }
+
+        // Subscribe + register-for-poll once per SDK connect. NoOpHandler is
+        // a placeholder — Tick() polls via ReadDouble/ReadInt/ReadBool, so we
+        // don't need event-driven callbacks; the Subscribe call is purely to
+        // register the ref in the SDK's _subscriptions dict so its polling
+        // loops refresh the cache.
+        private void Prime(ProsimSdkInterface sdk)
+        {
+            if (_primed) return;
+            foreach (var r in PolledRefs)
+            {
+                try { sdk.Subscribe(r, NoOpHandler); }
+                catch (Exception ex) { Logger.LogException(ex); }
+                sdk.RegisterPollDataref(r);
+            }
+            _primed = true;
+        }
+
+        private static void NoOpHandler(string name, dynamic newValue, dynamic oldValue) { }
     }
 }

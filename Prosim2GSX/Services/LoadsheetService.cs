@@ -45,14 +45,22 @@ namespace Prosim2GSX.Services
         private bool _wasOnGround = true;
         private bool _wasEnginesRunning;
 
-        // First-tick subscription guard. The SDK throws DataRefNotFoundException
-        // on direct ReadDataRef/GetString for the EFB loadsheet refs unless
-        // they're explicitly Subscribed first — Subscribe primes the SDK's
-        // internal dataref cache so subsequent reads return the JSON blob
-        // ProSim writes when our GraphQL POSTs land. Callback is a no-op;
-        // LoadsheetService.Tick remains the read path. Reset on disconnect
-        // so reconnects re-subscribe.
-        private bool _subscribed;
+        // First-tick priming guard. Subscribe alone is not enough for the EFB
+        // loadsheet refs: it primes _subscriptions so ReadDataRef stops
+        // throwing, but the SDK's tier-based polling loops won't refresh the
+        // cache unless the ref is in a tier HashSet AND in _subscriptions.
+        // efb.prelimLoadsheet / efb.finalLoadsheet are in neither tier list,
+        // so we additionally call RegisterPollDataref to route them through
+        // the user-poll loop (250 ms FrequentPollInterval). Reset on
+        // disconnect so reconnects re-prime.
+        private bool _primed;
+
+        // The two EFB loadsheet refs this service polls.
+        private static readonly string[] PolledRefs = new[]
+        {
+            ProsimConstants.RefEfbPrelimLoadsheet,
+            ProsimConstants.RefEfbFinalLoadsheet,
+        };
 
         public LoadsheetService(AppService app)
         {
@@ -66,18 +74,11 @@ namespace Prosim2GSX.Services
                 var sdk = _app?.GsxService?.AircraftInterface?.ProsimInterface?.SdkInterface;
                 if (sdk == null || !sdk.IsConnected)
                 {
-                    _subscribed = false;
+                    _primed = false;
                     return;
                 }
 
-                if (!_subscribed)
-                {
-                    try { sdk.Subscribe(ProsimConstants.RefEfbPrelimLoadsheet, NoOpHandler); }
-                    catch (Exception ex) { Logger.LogException(ex); }
-                    try { sdk.Subscribe(ProsimConstants.RefEfbFinalLoadsheet, NoOpHandler); }
-                    catch (Exception ex) { Logger.LogException(ex); }
-                    _subscribed = true;
-                }
+                Prime(sdk);
 
                 var ls = _app.Loadsheet;
                 if (ls == null) return;
@@ -102,6 +103,24 @@ namespace Prosim2GSX.Services
             {
                 Logger.LogException(ex);
             }
+        }
+
+        // Subscribe + register-for-poll once per SDK connect. The two
+        // loadsheet refs aren't in any tier HashSet, so the user-poll loop
+        // (registered via RegisterPollDataref) is what actually refreshes
+        // their cache every 250 ms. Without RegisterPollDataref, Subscribe
+        // alone leaves them dead — ReadDataRef stops throwing but never
+        // gets fresh values.
+        private void Prime(ProsimSdkInterface sdk)
+        {
+            if (_primed) return;
+            foreach (var r in PolledRefs)
+            {
+                try { sdk.Subscribe(r, NoOpHandler); }
+                catch (Exception ex) { Logger.LogException(ex); }
+                sdk.RegisterPollDataref(r);
+            }
+            _primed = true;
         }
 
         // No-op subscription callback. We don't process events here — the
