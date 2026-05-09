@@ -264,7 +264,15 @@ namespace Prosim2GSX.Services
                 var written = new List<string>();
                 var failed = new List<string>();
 
-                if (sdk.SetDouble(ProsimConstants.RefFmsInitZfw, wb.ZfwKg))
+                // The MCDU INIT B page expects ZFW and BLOCK in TONS (xx.x),
+                // not kg. Without the /1000 the FMS displays the raw kg value
+                // (e.g. 56778) instead of the expected 56.8. ZFWCG is %MAC
+                // and stays as-is. The log line keeps kg for ops familiarity.
+                var zfwTons = wb.ZfwKg / 1000.0;
+                var blockKg = RoundBlockFuelKg(wb.FuelPlannedKg);
+                var blockTons = blockKg / 1000.0;
+
+                if (sdk.SetDouble(ProsimConstants.RefFmsInitZfw, zfwTons))
                     written.Add("zfw");
                 else
                     failed.Add("zfw");
@@ -274,8 +282,7 @@ namespace Prosim2GSX.Services
                 else
                     failed.Add("zfwcg");
 
-                var block = RoundBlockFuelKg(wb.FuelPlannedKg);
-                if (sdk.SetDouble(ProsimConstants.RefFmsInitBlock, block))
+                if (sdk.SetDouble(ProsimConstants.RefFmsInitBlock, blockTons))
                     written.Add("blockFuel");
                 else
                     failed.Add("blockFuel");
@@ -287,7 +294,7 @@ namespace Prosim2GSX.Services
                     result.ErrorMessage = failed.Count > 0 ? $"Failed to write: {string.Join(", ", failed)}" : "No fields written";
 
                 Logger.Information(
-                    $"FMS sync: zfw={wb.ZfwKg:F0} zfwcg={wb.MaczfwPercent:F2} block={block:F0} " +
+                    $"FMS sync: zfw={wb.ZfwKg:F0}kg ({zfwTons:F1}t) zfwcg={wb.MaczfwPercent:F2} block={blockKg:F0}kg ({blockTons:F1}t) " +
                     $"source={wb.MacTowSource} " +
                     $"written=[{string.Join(",", written)}] failed=[{string.Join(",", failed)}]");
 
@@ -297,7 +304,7 @@ namespace Prosim2GSX.Services
                     _lastSyncedMacTow = wb.MactowPercent;
                     _lastSyncedZfwKg = wb.ZfwKg;
                     _lastSyncedMaczfwPercent = wb.MaczfwPercent;
-                    _lastSyncedBlockKg = block;
+                    _lastSyncedBlockKg = blockKg;
                     _lastSyncedSource = wb.MacTowSource ?? "";
                     wb.FmsLastSyncedAt = _lastSyncedAt;
                     wb.FmsLastSyncedSource = _lastSyncedSource;

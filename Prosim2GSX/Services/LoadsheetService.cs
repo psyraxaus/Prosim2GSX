@@ -45,6 +45,15 @@ namespace Prosim2GSX.Services
         private bool _wasOnGround = true;
         private bool _wasEnginesRunning;
 
+        // First-tick subscription guard. The SDK throws DataRefNotFoundException
+        // on direct ReadDataRef/GetString for the EFB loadsheet refs unless
+        // they're explicitly Subscribed first — Subscribe primes the SDK's
+        // internal dataref cache so subsequent reads return the JSON blob
+        // ProSim writes when our GraphQL POSTs land. Callback is a no-op;
+        // LoadsheetService.Tick remains the read path. Reset on disconnect
+        // so reconnects re-subscribe.
+        private bool _subscribed;
+
         public LoadsheetService(AppService app)
         {
             _app = app;
@@ -55,7 +64,20 @@ namespace Prosim2GSX.Services
             try
             {
                 var sdk = _app?.GsxService?.AircraftInterface?.ProsimInterface?.SdkInterface;
-                if (sdk == null || !sdk.IsConnected) return;
+                if (sdk == null || !sdk.IsConnected)
+                {
+                    _subscribed = false;
+                    return;
+                }
+
+                if (!_subscribed)
+                {
+                    try { sdk.Subscribe(ProsimConstants.RefEfbPrelimLoadsheet, NoOpHandler); }
+                    catch (Exception ex) { Logger.LogException(ex); }
+                    try { sdk.Subscribe(ProsimConstants.RefEfbFinalLoadsheet, NoOpHandler); }
+                    catch (Exception ex) { Logger.LogException(ex); }
+                    _subscribed = true;
+                }
 
                 var ls = _app.Loadsheet;
                 if (ls == null) return;
@@ -81,6 +103,12 @@ namespace Prosim2GSX.Services
                 Logger.LogException(ex);
             }
         }
+
+        // No-op subscription callback. We don't process events here — the
+        // Tick() polling path is the single read site for both slots. The
+        // Subscribe call exists purely to register the dataref with the SDK
+        // so its internal cache fields the value when ProSim publishes it.
+        private static void NoOpHandler(string name, dynamic newValue, dynamic oldValue) { }
 
         // Resets both slots when the aircraft transitions from
         // running-engines-on-ground to engines-off-on-ground (i.e. shutdown

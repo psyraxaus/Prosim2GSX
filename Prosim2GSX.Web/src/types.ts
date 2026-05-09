@@ -751,10 +751,18 @@ export interface FuelDto {
   fuelCentreKg: number;
   fuelLeftKg: number;
   fuelRightKg: number;
+  fuelLeftOuterKg: number;
+  fuelLeftInnerKg: number;
+  fuelRightInnerKg: number;
+  fuelRightOuterKg: number;
   fuelCapacityKg: number;
   fuelCentreCapacityKg: number;
   fuelLeftCapacityKg: number;
   fuelRightCapacityKg: number;
+  fuelLeftOuterCapacityKg: number;
+  fuelLeftInnerCapacityKg: number;
+  fuelRightInnerCapacityKg: number;
+  fuelRightOuterCapacityKg: number;
   fuelDeltaKg: number;
   isOverFuelled: boolean;
   isUnderFuelled: boolean;

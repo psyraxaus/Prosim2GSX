@@ -61,6 +61,18 @@ namespace Prosim2GSX.Services
                 fuel.FuelLeftCapacityKg = ReadDouble(sdk, ProsimConstants.RefFuelLeftCapacity);
                 fuel.FuelRightCapacityKg = ReadDouble(sdk, ProsimConstants.RefFuelRightCapacity);
 
+                // 5-tank A320 breakdown — inner/outer for each wing. The
+                // wing-aggregate refs above are inner+outer combined; these
+                // expose the individual tanks ProSim's FUEL EFB page shows.
+                fuel.FuelLeftOuterKg = ReadDouble(sdk, ProsimConstants.RefFuelLeftOuter);
+                fuel.FuelLeftInnerKg = ReadDouble(sdk, ProsimConstants.RefFuelLeftInner);
+                fuel.FuelRightInnerKg = ReadDouble(sdk, ProsimConstants.RefFuelRightInner);
+                fuel.FuelRightOuterKg = ReadDouble(sdk, ProsimConstants.RefFuelRightOuter);
+                fuel.FuelLeftOuterCapacityKg = ReadDouble(sdk, ProsimConstants.RefFuelLeftOuterCapacity);
+                fuel.FuelLeftInnerCapacityKg = ReadDouble(sdk, ProsimConstants.RefFuelLeftInnerCapacity);
+                fuel.FuelRightInnerCapacityKg = ReadDouble(sdk, ProsimConstants.RefFuelRightInnerCapacity);
+                fuel.FuelRightOuterCapacityKg = ReadDouble(sdk, ProsimConstants.RefFuelRightOuterCapacity);
+
                 // Planned from the EFB INIT cache. Zero when no OFP loaded.
                 double planned = _app?.EfbFlightPlan?.CurrentOfp?.FuelRampKg ?? 0;
                 fuel.PlannedRampKg = planned;

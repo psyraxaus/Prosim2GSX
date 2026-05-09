@@ -129,8 +129,25 @@ export function FuelPanel() {
       </div>
 
       {/* ── TANK BREAKDOWN ─────────────────────────────────────── */}
+      {/* Order matches the airframe layout (left to right, looking from
+          behind the aircraft): outer wing → inner wing → centre → inner →
+          outer. Rendered top-to-bottom for readability. */}
       <h2 className={styles.colHeading}>Tank Breakdown</h2>
       <div className={styles.dataCard}>
+        <TankRow
+          label="LEFT OUTER"
+          kg={f.fuelLeftOuterKg}
+          capacityKg={f.fuelLeftOuterCapacityKg}
+          ratio={tankRatio(f.fuelLeftOuterKg, f.fuelLeftOuterCapacityKg)}
+          fmtKg={fmtKg}
+        />
+        <TankRow
+          label="LEFT INNER"
+          kg={f.fuelLeftInnerKg}
+          capacityKg={f.fuelLeftInnerCapacityKg}
+          ratio={tankRatio(f.fuelLeftInnerKg, f.fuelLeftInnerCapacityKg)}
+          fmtKg={fmtKg}
+        />
         <TankRow
           label="CENTRE"
           kg={f.fuelCentreKg}
@@ -139,17 +156,17 @@ export function FuelPanel() {
           fmtKg={fmtKg}
         />
         <TankRow
-          label="LEFT"
-          kg={f.fuelLeftKg}
-          capacityKg={f.fuelLeftCapacityKg}
-          ratio={tankRatio(f.fuelLeftKg, f.fuelLeftCapacityKg)}
+          label="RIGHT INNER"
+          kg={f.fuelRightInnerKg}
+          capacityKg={f.fuelRightInnerCapacityKg}
+          ratio={tankRatio(f.fuelRightInnerKg, f.fuelRightInnerCapacityKg)}
           fmtKg={fmtKg}
         />
         <TankRow
-          label="RIGHT"
-          kg={f.fuelRightKg}
-          capacityKg={f.fuelRightCapacityKg}
-          ratio={tankRatio(f.fuelRightKg, f.fuelRightCapacityKg)}
+          label="RIGHT OUTER"
+          kg={f.fuelRightOuterKg}
+          capacityKg={f.fuelRightOuterCapacityKg}
+          ratio={tankRatio(f.fuelRightOuterKg, f.fuelRightOuterCapacityKg)}
           fmtKg={fmtKg}
         />
       </div>

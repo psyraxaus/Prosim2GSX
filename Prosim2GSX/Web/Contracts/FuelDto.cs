@@ -17,10 +17,18 @@ namespace Prosim2GSX.Web.Contracts
         public double FuelCentreKg { get; set; }
         public double FuelLeftKg { get; set; }
         public double FuelRightKg { get; set; }
+        public double FuelLeftOuterKg { get; set; }
+        public double FuelLeftInnerKg { get; set; }
+        public double FuelRightInnerKg { get; set; }
+        public double FuelRightOuterKg { get; set; }
         public double FuelCapacityKg { get; set; }
         public double FuelCentreCapacityKg { get; set; }
         public double FuelLeftCapacityKg { get; set; }
         public double FuelRightCapacityKg { get; set; }
+        public double FuelLeftOuterCapacityKg { get; set; }
+        public double FuelLeftInnerCapacityKg { get; set; }
+        public double FuelRightInnerCapacityKg { get; set; }
+        public double FuelRightOuterCapacityKg { get; set; }
         public double FuelDeltaKg { get; set; }
         public bool IsOverFuelled { get; set; }
         public bool IsUnderFuelled { get; set; }
@@ -48,10 +56,18 @@ namespace Prosim2GSX.Web.Contracts
                 FuelCentreKg = s.FuelCentreKg,
                 FuelLeftKg = s.FuelLeftKg,
                 FuelRightKg = s.FuelRightKg,
+                FuelLeftOuterKg = s.FuelLeftOuterKg,
+                FuelLeftInnerKg = s.FuelLeftInnerKg,
+                FuelRightInnerKg = s.FuelRightInnerKg,
+                FuelRightOuterKg = s.FuelRightOuterKg,
                 FuelCapacityKg = s.FuelCapacityKg,
                 FuelCentreCapacityKg = s.FuelCentreCapacityKg,
                 FuelLeftCapacityKg = s.FuelLeftCapacityKg,
                 FuelRightCapacityKg = s.FuelRightCapacityKg,
+                FuelLeftOuterCapacityKg = s.FuelLeftOuterCapacityKg,
+                FuelLeftInnerCapacityKg = s.FuelLeftInnerCapacityKg,
+                FuelRightInnerCapacityKg = s.FuelRightInnerCapacityKg,
+                FuelRightOuterCapacityKg = s.FuelRightOuterCapacityKg,
                 FuelDeltaKg = s.FuelDeltaKg,
                 IsOverFuelled = s.IsOverFuelled,
                 IsUnderFuelled = s.IsUnderFuelled,

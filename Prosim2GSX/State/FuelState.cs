@@ -8,11 +8,11 @@ namespace Prosim2GSX.State
     // is [ObservableProperty] so per-property WS patches fire only on actual
     // change (the generator emits an equality compare-and-skip in the setter).
     //
-    // Per-tank fields (Centre / Left / Right) are present in full because
-    // ProsimDataref.csv exposes both .amount.kg and .capacity for each tank.
-    // ACT1/ACT2 are intentionally NOT surfaced — A320-family aircraft load
-    // them only in ACT-equipped variants; the spec scope is the three main
-    // tanks, and adding ACT today would render a permanently-empty bar.
+    // Per-tank fields cover the A320 5-tank model: Left Outer, Left Inner,
+    // Centre, Right Inner, Right Outer. The wing-aggregate refs
+    // (`aircraft.fuel.left/right.amount.kg`) are kept as well — they're the
+    // sum of inner+outer per wing and are useful for the WPF compact display
+    // that doesn't show the outer split.
     public partial class FuelState : ObservableObject
     {
         // Planned ramp/block fuel from the EFB INIT cache (CurrentOfp).
@@ -23,19 +23,31 @@ namespace Prosim2GSX.State
         // Total fuel currently in tanks (read from RefFuelTotal, kg).
         [ObservableProperty] private double _FuelInTanksKg;
 
-        // Per-tank current amounts (kg). Centre / Left / Right.
+        // Wing-aggregate amounts (kg). Centre / Left / Right (left/right are
+        // inner+outer combined). Kept for the WPF compact view.
         [ObservableProperty] private double _FuelCentreKg;
         [ObservableProperty] private double _FuelLeftKg;
         [ObservableProperty] private double _FuelRightKg;
 
+        // Per-tank A320 breakdown (kg). Sum of these + Centre = FuelInTanksKg.
+        [ObservableProperty] private double _FuelLeftOuterKg;
+        [ObservableProperty] private double _FuelLeftInnerKg;
+        [ObservableProperty] private double _FuelRightInnerKg;
+        [ObservableProperty] private double _FuelRightOuterKg;
+
         // Total usable fuel capacity (RefFuelTotalCapacity).
         [ObservableProperty] private double _FuelCapacityKg;
 
-        // Per-tank capacities (added to ProsimConstants alongside the
-        // amount refs). Drive per-tank fill-ratio bars on the panels.
+        // Wing-aggregate capacities (drives the WPF compact bars).
         [ObservableProperty] private double _FuelCentreCapacityKg;
         [ObservableProperty] private double _FuelLeftCapacityKg;
         [ObservableProperty] private double _FuelRightCapacityKg;
+
+        // Per-tank capacities for the 5-tank breakdown.
+        [ObservableProperty] private double _FuelLeftOuterCapacityKg;
+        [ObservableProperty] private double _FuelLeftInnerCapacityKg;
+        [ObservableProperty] private double _FuelRightInnerCapacityKg;
+        [ObservableProperty] private double _FuelRightOuterCapacityKg;
 
         // Derived: in-tanks minus planned. Positive = over-fuelled,
         // negative = under-fuelled. Computed by FuelService.Tick() so the
