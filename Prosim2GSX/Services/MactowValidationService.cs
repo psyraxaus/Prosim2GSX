@@ -24,11 +24,18 @@ namespace Prosim2GSX.Services
     // source of truth means a future variant change touches one place.
     //
     // The FMS sync writes three FMS init datarefs:
-    //   aircraft.fms.init.zfw    ← WeightBalance.ZfwKg
-    //   aircraft.fms.init.zfwcg  ← WeightBalance.MaczfwPercent
+    //   aircraft.fms.init.zfw    ← loadsheet zfw (final → prelim → live fallback)
+    //   aircraft.fms.init.zfwcg  ← loadsheet macZfw (final → prelim → live fallback)
     //   aircraft.fms.init.block  ← ceil(WeightBalance.FuelPlannedKg / 100) * 100
     // The block-fuel field is rounded UP to the nearest 100 kg per
     // operational convention (FMS block entries are typically whole hectos).
+    //
+    // ZFW + ZFWCG come from the loadsheet (the dispatcher-signed values)
+    // rather than live aircraft.weight.zfw / aircraft.zfwcg so the FMS
+    // matches what the loadsheet says — even if pax/cargo continue to
+    // settle after the loadsheet was generated. When no loadsheet has
+    // been received yet the resolver falls back to the live datarefs so
+    // the button is still usable for headless / dispatch-less flying.
     //
     // THS / stab-trim is NOT written. The only writable trim dataref in
     // ProsimDataref.csv is aircraft.fms.perf.takeOff.ths, and the EFB's
@@ -157,6 +164,13 @@ namespace Prosim2GSX.Services
         // MacTowSource have been written. Compares the current resolved
         // values against the last-sync snapshot and sets FmsSyncStale.
         // No-op when never synced.
+        //
+        // Drift is checked against the *resolver outputs* (loadsheet → live
+        // fallback) — the same shape Sync would push if pressed now.
+        // Comparing live wb.ZfwKg / wb.MaczfwPercent against a last-synced
+        // snapshot that came from the loadsheet would always look stale
+        // (live values keep moving while the signed loadsheet stays put),
+        // so we re-resolve on each tick instead.
         public virtual void UpdateStaleness()
         {
             try
@@ -170,14 +184,16 @@ namespace Prosim2GSX.Services
                 }
 
                 double currentBlock = RoundBlockFuelKg(wb.FuelPlannedKg);
+                var currentTrio = ResolveCurrentZfwTrio();
+
                 bool sourceUpgraded =
                     string.Equals(_lastSyncedSource, "prelim", StringComparison.OrdinalIgnoreCase)
-                    && string.Equals(wb.MacTowSource, "final", StringComparison.OrdinalIgnoreCase);
+                    && string.Equals(currentTrio.Source, "final", StringComparison.OrdinalIgnoreCase);
 
                 bool drift =
                     Math.Abs(wb.MactowPercent - _lastSyncedMacTow) > StaleThresholdMacPercent
-                    || Math.Abs(wb.ZfwKg - _lastSyncedZfwKg) > StaleThresholdZfwKg
-                    || Math.Abs(wb.MaczfwPercent - _lastSyncedMaczfwPercent) > StaleThresholdMacPercent
+                    || Math.Abs(currentTrio.ZfwKg - _lastSyncedZfwKg) > StaleThresholdZfwKg
+                    || Math.Abs(currentTrio.MaczfwPercent - _lastSyncedMaczfwPercent) > StaleThresholdMacPercent
                     || Math.Abs(currentBlock - _lastSyncedBlockKg) > StaleThresholdBlockKg;
 
                 wb.FmsSyncStale = sourceUpgraded || drift;
@@ -206,6 +222,31 @@ namespace Prosim2GSX.Services
 
             var wb = _app?.WeightBalance;
             return (wb?.MactowPercent ?? 0.0, "computed");
+        }
+
+        // Resolve the (ZFW kg, MACZFW %, source) trio that should be
+        // written to the FMS. The pair is always sourced together so the
+        // FMS gets a consistent ZFW/CG snapshot — mixing live ZFW with
+        // loadsheet MACZFW would be operationally incoherent. Source order
+        // matches ResolveCurrentMacTow: final → prelim → computed (live).
+        // The live fallback uses aircraft.weight.zfw + aircraft.zfwcg
+        // mirrored on WeightBalanceState so the button is still usable
+        // before any loadsheet has been received.
+        public virtual (double ZfwKg, double MaczfwPercent, string Source) ResolveCurrentZfwTrio()
+        {
+            var ls = _app?.Loadsheet;
+            if (ls != null)
+            {
+                if (string.Equals(ls.FinalStatus, "received", StringComparison.OrdinalIgnoreCase)
+                    && ls.FinalZfwKg > 0 && ls.FinalMacZfw > 0)
+                    return (ls.FinalZfwKg, ls.FinalMacZfw, "final");
+                if (string.Equals(ls.PrelimStatus, "received", StringComparison.OrdinalIgnoreCase)
+                    && ls.PrelimZfwKg > 0 && ls.PrelimMacZfw > 0)
+                    return (ls.PrelimZfwKg, ls.PrelimMacZfw, "prelim");
+            }
+
+            var wb = _app?.WeightBalance;
+            return (wb?.ZfwKg ?? 0.0, wb?.MaczfwPercent ?? 0.0, "computed");
         }
 
         // Envelope check using the same bounds the loadsheet parser uses.
@@ -264,11 +305,18 @@ namespace Prosim2GSX.Services
                 var written = new List<string>();
                 var failed = new List<string>();
 
+                // ZFW + ZFWCG are sourced from the loadsheet (final → prelim
+                // → live fallback) so the FMS receives the dispatcher-signed
+                // pair, not the live aircraft state. The pair is resolved
+                // together so we never mix sources (loadsheet ZFW with live
+                // MACZFW would be operationally incoherent).
+                var zfwTrio = ResolveCurrentZfwTrio();
+
                 // The MCDU INIT B page expects ZFW and BLOCK in TONS (xx.x),
                 // not kg. Without the /1000 the FMS displays the raw kg value
                 // (e.g. 56778) instead of the expected 56.8. ZFWCG is %MAC
                 // and stays as-is. The log line keeps kg for ops familiarity.
-                var zfwTons = wb.ZfwKg / 1000.0;
+                var zfwTons = zfwTrio.ZfwKg / 1000.0;
                 var blockKg = RoundBlockFuelKg(wb.FuelPlannedKg);
                 var blockTons = blockKg / 1000.0;
 
@@ -277,7 +325,7 @@ namespace Prosim2GSX.Services
                 else
                     failed.Add("zfw");
 
-                if (sdk.SetDouble(ProsimConstants.RefFmsInitZfwcg, wb.MaczfwPercent))
+                if (sdk.SetDouble(ProsimConstants.RefFmsInitZfwcg, zfwTrio.MaczfwPercent))
                     written.Add("zfwcg");
                 else
                     failed.Add("zfwcg");
@@ -294,18 +342,22 @@ namespace Prosim2GSX.Services
                     result.ErrorMessage = failed.Count > 0 ? $"Failed to write: {string.Join(", ", failed)}" : "No fields written";
 
                 Logger.Information(
-                    $"FMS sync: zfw={wb.ZfwKg:F0}kg ({zfwTons:F1}t) zfwcg={wb.MaczfwPercent:F2} block={blockKg:F0}kg ({blockTons:F1}t) " +
-                    $"source={wb.MacTowSource} " +
+                    $"FMS sync: zfw={zfwTrio.ZfwKg:F0}kg ({zfwTons:F1}t) zfwcg={zfwTrio.MaczfwPercent:F2} ({zfwTrio.Source}) " +
+                    $"block={blockKg:F0}kg ({blockTons:F1}t) mactowSource={wb.MacTowSource} " +
                     $"written=[{string.Join(",", written)}] failed=[{string.Join(",", failed)}]");
 
                 if (result.Success)
                 {
+                    // Track the *resolved* values that were actually written so
+                    // UpdateStaleness compares apples-to-apples on the next
+                    // tick (live ZFW/MACZFW will keep drifting against the
+                    // signed loadsheet — that drift is expected, not stale).
                     _lastSyncedAt = result.Timestamp;
                     _lastSyncedMacTow = wb.MactowPercent;
-                    _lastSyncedZfwKg = wb.ZfwKg;
-                    _lastSyncedMaczfwPercent = wb.MaczfwPercent;
+                    _lastSyncedZfwKg = zfwTrio.ZfwKg;
+                    _lastSyncedMaczfwPercent = zfwTrio.MaczfwPercent;
                     _lastSyncedBlockKg = blockKg;
-                    _lastSyncedSource = wb.MacTowSource ?? "";
+                    _lastSyncedSource = zfwTrio.Source ?? "";
                     wb.FmsLastSyncedAt = _lastSyncedAt;
                     wb.FmsLastSyncedSource = _lastSyncedSource;
                     wb.FmsSyncStale = false;
@@ -328,12 +380,15 @@ namespace Prosim2GSX.Services
 
         protected virtual void PopulateBroadcastFields(FmsSyncResultDto result)
         {
-            var wb = _app?.WeightBalance;
             var (mac, _) = ResolveCurrentMacTow();
+            var trio = ResolveCurrentZfwTrio();
             result.MacTow = mac;
             result.MacTowError = IsOutOfRange(mac);
-            result.ZfwKg = wb?.ZfwKg ?? 0;
-            result.MaczfwPercent = wb?.MaczfwPercent ?? 0;
+            // Report the resolved values that would be / have been written
+            // to the FMS, not the live datarefs — otherwise the toast
+            // shows different numbers than what actually got synced.
+            result.ZfwKg = trio.ZfwKg;
+            result.MaczfwPercent = trio.MaczfwPercent;
         }
 
         protected virtual void BroadcastResult(FmsSyncResultDto result)
