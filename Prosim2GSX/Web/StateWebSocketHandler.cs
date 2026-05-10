@@ -103,6 +103,20 @@ namespace Prosim2GSX.Web
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(aborted, conn.Cts.Token);
                 var writer = WriterLoopAsync(conn, linkedCts.Token);
                 var reader = ReaderLoopAsync(conn, linkedCts.Token);
+
+                // Send the full current state to this client BEFORE awaiting
+                // either loop. Without this, slow-changing channels (Fuel,
+                // W&B, Loadsheet, OFP, EfbFlightPlan, Notifications,
+                // Checklists) would stay at their default values on the
+                // client side because their per-property INPC events fire
+                // only on real-world events (refuel, boarding, OFP import)
+                // and the rising-edge BroadcastSnapshotAll only catches
+                // clients that were already connected at the SDK transition.
+                // Bytes are queued into conn.Outbound, the writer loop drains
+                // them as soon as it starts (Channel<T> buffers — order
+                // between this enqueue and writer-loop start doesn't matter).
+                BroadcastSnapshotAll(target: conn);
+
                 await Task.WhenAny(writer, reader);
                 conn.Cts.Cancel();
                 await Task.WhenAll(writer, reader);
@@ -409,9 +423,9 @@ namespace Prosim2GSX.Web
             }
         }
 
-        private void BroadcastChecklistSnapshot()
+        private void BroadcastChecklistSnapshot(Connection target = null)
         {
-            if (_connections.IsEmpty) return;
+            if (target == null && _connections.IsEmpty) return;
             try
             {
                 var dto = ChecklistDto.From(_app);
@@ -420,7 +434,7 @@ namespace Prosim2GSX.Web
                     channel = "checklists",
                     snapshot = dto,
                 };
-                BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default));
+                BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default), target);
             }
             catch (Exception ex)
             {
@@ -428,13 +442,21 @@ namespace Prosim2GSX.Web
             }
         }
 
-        // Full-state snapshot broadcast for every channel. Triggered on
-        // SDK-connect rising edges (cold-boot under DelayProsimConnection,
-        // mid-flight reconnect after a transient drop) so clients that
-        // subscribed during the disconnected window — when state stores
-        // were holding their default/empty values and INPC was silent —
-        // get the freshly populated state without waiting for individual
-        // properties to next tick over a change threshold.
+        // Full-state snapshot broadcast for every channel. Two callers:
+        //   1. StateUpdateWorker rising-edge detection (target == null) —
+        //      fans out to every connected client when the SDK transitions
+        //      disconnected → connected. Catches clients that subscribed
+        //      during the disconnected window before state stores were
+        //      populated.
+        //   2. HandleAsync on a fresh WebSocket connection (target == conn) —
+        //      sends the full current state to ONE newly-connected client
+        //      so its tabs render with real values immediately, instead of
+        //      sitting at defaults until the next per-property INPC fires.
+        //      Required because slow-changing stores (Fuel, W&B, Loadsheet,
+        //      OFP, EfbFlightPlan, Notifications, Checklists) update only
+        //      on real-world events (refuel, boarding, OFP import) so a
+        //      client that connected mid-session would otherwise never see
+        //      their values until such an event happened to fire.
         //
         // Patch-style channels (weightBalance, fuel, flightStatus, audio,
         // ofp, appSettings, gsx) ship as { channel, patch: <full DTO> } so
@@ -443,31 +465,35 @@ namespace Prosim2GSX.Web
         // notifications, checklists) re-use their existing snapshot
         // helpers so the wire shape is identical to a normal change.
         //
-        // Idempotent and safe to call repeatedly; no-op when no clients
-        // are connected.
-        public void BroadcastSnapshotAll()
+        // Idempotent and safe to call repeatedly; no-op when target is null
+        // and no clients are connected.
+        public void BroadcastSnapshotAll() => BroadcastSnapshotAll(null);
+
+        private void BroadcastSnapshotAll(Connection target)
         {
-            if (_connections.IsEmpty) return;
-            Logger.Information("WS snapshot broadcast — pushing full state to all connected clients (SDK-connect rising edge)");
+            if (target == null && _connections.IsEmpty) return;
+            Logger.Information(target == null
+                ? "WS snapshot broadcast — pushing full state to all connected clients (SDK-connect rising edge)"
+                : "WS snapshot — sending initial state to newly-connected client");
 
             // Patch-style channels with a dedicated DTO.
-            BroadcastDtoAsPatch("weightBalance", WeightBalanceDto.From(_app));
-            BroadcastDtoAsPatch("fuel", FuelDto.From(_app));
-            BroadcastDtoAsPatch("flightStatus", FlightStatusDto.From(_app));
-            BroadcastDtoAsPatch("audio", AudioDto.From(_app));
-            BroadcastDtoAsPatch("ofp", OfpDto.From(_app));
-            BroadcastDtoAsPatch("appSettings", AppSettingsDto.From(_app));
+            BroadcastDtoAsPatch("weightBalance", WeightBalanceDto.From(_app), target);
+            BroadcastDtoAsPatch("fuel", FuelDto.From(_app), target);
+            BroadcastDtoAsPatch("flightStatus", FlightStatusDto.From(_app), target);
+            BroadcastDtoAsPatch("audio", AudioDto.From(_app), target);
+            BroadcastDtoAsPatch("ofp", OfpDto.From(_app), target);
+            BroadcastDtoAsPatch("appSettings", AppSettingsDto.From(_app), target);
 
             // Patch-style "gsx" channel — no DTO (per-property INPC fan-out
             // works directly off GsxState). Reflect over the state object
             // and ship every public scalar property in one envelope so the
             // client gets the same key set it would receive from a tick's
             // worth of per-property patches.
-            BroadcastStateAsPatch("gsx", _app?.Gsx);
+            BroadcastStateAsPatch("gsx", _app?.Gsx, target);
 
             // Snapshot-style channels — re-use the existing helpers so the
             // wire shape stays identical to a property-driven snapshot.
-            BroadcastChecklistSnapshot();
+            BroadcastChecklistSnapshot(target);
 
             try
             {
@@ -481,7 +507,7 @@ namespace Prosim2GSX.Web
                         ["final"] = lsSnap.Final,
                     },
                 };
-                BroadcastBytes(Serialize(lsEnvelope));
+                BroadcastBytes(Serialize(lsEnvelope), target);
             }
             catch (Exception ex) { Logger.LogException(ex); }
 
@@ -492,7 +518,7 @@ namespace Prosim2GSX.Web
                     channel = "notifications",
                     snapshot = NotificationsSnapshotDto.From(_app),
                 };
-                BroadcastBytes(Serialize(notifEnvelope));
+                BroadcastBytes(Serialize(notifEnvelope), target);
             }
             catch (Exception ex) { Logger.LogException(ex); }
 
@@ -503,7 +529,7 @@ namespace Prosim2GSX.Web
                     channel = "efbFlightPlan",
                     snapshot = EfbFlightPlanDto.From(_app),
                 };
-                BroadcastBytes(Serialize(efbEnvelope));
+                BroadcastBytes(Serialize(efbEnvelope), target);
             }
             catch (Exception ex) { Logger.LogException(ex); }
         }
@@ -512,13 +538,14 @@ namespace Prosim2GSX.Web
         // applies WebJsonOptions camelCase naming so the patch keys match
         // the per-property broadcast shape and the client's reducer merges
         // them into the existing channel state without any special handling.
-        private void BroadcastDtoAsPatch(string channel, object dto)
+        // When `target` is non-null, sends to that connection only.
+        private void BroadcastDtoAsPatch(string channel, object dto, Connection target = null)
         {
             if (dto == null) return;
             try
             {
                 var envelope = new { channel, patch = dto };
-                BroadcastBytes(Serialize(envelope));
+                BroadcastBytes(Serialize(envelope), target);
             }
             catch (Exception ex) { Logger.LogException(ex); }
         }
@@ -526,8 +553,9 @@ namespace Prosim2GSX.Web
         // Reflection-based snapshot for channels that don't have a dedicated
         // DTO (currently just "gsx"). Mirrors what an exhaustive sequence of
         // per-property INPC broadcasts would produce: every public readable
-        // scalar, camelCased, packed into one patch envelope.
-        private void BroadcastStateAsPatch(string channel, object stateObject)
+        // scalar, camelCased, packed into one patch envelope. When `target`
+        // is non-null, sends to that connection only.
+        private void BroadcastStateAsPatch(string channel, object stateObject, Connection target = null)
         {
             if (stateObject == null) return;
             try
@@ -545,7 +573,7 @@ namespace Prosim2GSX.Web
                     catch { }
                 }
                 var envelope = new { channel, patch = dict };
-                BroadcastBytes(Serialize(envelope));
+                BroadcastBytes(Serialize(envelope), target);
             }
             catch (Exception ex) { Logger.LogException(ex); }
         }
@@ -639,11 +667,20 @@ namespace Prosim2GSX.Web
         private static byte[] SerializeLogAdd(string msg)
             => JsonSerializer.SerializeToUtf8Bytes(new { channel = "flightStatus", logAdded = msg }, WebJsonOptions.Default);
 
-        private void BroadcastBytes(byte[] frame)
+        private void BroadcastBytes(byte[] frame, Connection target = null)
         {
-            // Best-effort enqueue per connection. If a writer is overwhelmed
-            // the channel write may fail — drop and let the reader loop
-            // detect the dead socket.
+            // Best-effort enqueue. Two modes:
+            //   target == null → fan out to every connected client
+            //   target != null → send to that one connection only (used by
+            //                    the on-connect initial-snapshot path)
+            // If a writer is overwhelmed the channel write may fail — drop
+            // and let the reader loop detect the dead socket.
+            if (target != null)
+            {
+                if (!target.Outbound.Writer.TryWrite(frame))
+                    target.Cts.Cancel();
+                return;
+            }
             foreach (var conn in _connections.Values)
             {
                 if (!conn.Outbound.Writer.TryWrite(frame))
