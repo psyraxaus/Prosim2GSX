@@ -63,9 +63,14 @@ const SEAT_ROW_PITCH     = 15;            // source-x distance between rows
 const SEAT_RECT_W        = 11;            // source-x rect length
 const SEAT_RECT_H        = 4;             // source-y rect height
 const SEAT_X_FWD         = 552;           // source x of the forward-most row's leading edge
-// Per-column source-y centres. A/B/C are port (low source y); D/E/F are
-// starboard (high source y). Spacing leaves a visible aisle gap at y=375.
-const SEAT_Y_BY_COL = [358, 364, 370, 380, 386, 392];
+// Per-column source-y centres. ProSim's seat-string convention indexes
+// each row STARBOARD-first: column 0 sits on the starboard side of the
+// fuselage and column 5 on the port side. Mapping the columns to this
+// y-array (after the parent <g> rotation flips the source frame) puts
+// seat-string index 0 on the starboard half, so the cabin-fill
+// animation runs starboard→port matching ProSim's own EFB. Spacing
+// leaves a visible aisle gap at y=375.
+const SEAT_Y_BY_COL = [392, 386, 380, 370, 364, 358];
 
 // Pre-computed per-seat rect coords. Index = global seat number 0..131.
 // Computed once at module load so the render loop stays cheap.
@@ -745,14 +750,18 @@ export function WeightBalancePanel() {
             <span className={styles.value}>{wb.cargoPlannedKg.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
             <span className={styles.value}>{cargoLoadedTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
           </div>
+          {/* FWD/AFT split row — label sits in the Cargo column, the
+              split values sit aligned under PLANNED so the per-hold
+              numbers read as a refinement of the planned total above
+              them rather than as a separate trailing footer. */}
           <div className={styles.dataRow}>
             <span className={styles.label}>FWD / AFT</span>
-            <span className={styles.value}>&nbsp;</span>
             <span className={styles.subValue}>
               {wb.cargoFwdLoadedKg.toLocaleString(undefined, { maximumFractionDigits: 0 })}
               {" / "}
               {wb.cargoAftLoadedKg.toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </span>
+            <span className={styles.value}>&nbsp;</span>
           </div>
         </div>
 
