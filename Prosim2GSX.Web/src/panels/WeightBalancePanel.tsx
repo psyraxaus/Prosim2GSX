@@ -349,7 +349,7 @@ export function WeightBalancePanel() {
   };
 
   const handleSync = async () => {
-    if (syncStatus === "pending" || wb.macTowError) return;
+    if (syncStatus === "pending" || wb.maczfwResolvedError) return;
     setSyncStatus("pending");
     setSyncMessage("");
     try {
@@ -560,41 +560,41 @@ export function WeightBalancePanel() {
             loadsheet (final preferred, prelim fallback).
           </p>
 
-          {/* MACTOW row + SYNC TO FMS button. Resolved MACTOW is sourced
-              from LoadsheetService (final → prelim → computed) and pushed
-              into wb.mactowPercent each tick by WeightBalanceService. The
-              button is disabled while syncing OR when MACTOW is out of
-              range; the flash background follows syncStatus and clears on
-              a 3s/5s timer matching the WPF parity. */}
+          {/* MACZFW row + SYNC TO FMS button. Resolved MACZFW is sourced
+              from FmsSyncService (final → prelim → computed) and pushed
+              into wb.maczfwResolvedPercent each tick by WeightBalanceService.
+              The button is disabled while syncing OR when MACZFW is out of
+              envelope; the flash background follows syncStatus and clears
+              on a 3s/5s timer matching the WPF parity. */}
           <div className={styles.mactowRow}>
             <div className={styles.mactowLine}>
-              <span className={styles.mactowLabel}>MACTOW (%):</span>
-              <span className={wb.macTowError ? styles.mactowValueError : styles.mactowValueOk}>
-                {wb.mactowPercent.toFixed(1)}
+              <span className={styles.mactowLabel}>MACZFW (%):</span>
+              <span className={wb.maczfwResolvedError ? styles.mactowValueError : styles.mactowValueOk}>
+                {wb.maczfwResolvedPercent.toFixed(1)}
               </span>
-              {wb.macTowError && (
+              {wb.maczfwResolvedError && (
                 <span className={styles.mactowWarn} aria-label="out of range">⚠</span>
               )}
               {/* Resolution-source chip: FINAL LS / PRELIM LS / COMPUTED. */}
               <span
                 className={[
                   styles.sourceChip,
-                  wb.macTowSource === "final" ? styles.sourceChipFinal : "",
-                  wb.macTowSource === "prelim" ? styles.sourceChipPrelim : "",
-                  wb.macTowSource === "computed" ? styles.sourceChipComputed : "",
+                  wb.maczfwResolvedSource === "final" ? styles.sourceChipFinal : "",
+                  wb.maczfwResolvedSource === "prelim" ? styles.sourceChipPrelim : "",
+                  wb.maczfwResolvedSource === "computed" ? styles.sourceChipComputed : "",
                 ].filter(Boolean).join(" ")}
                 title={
-                  wb.macTowSource === "final"
-                    ? "MACTOW from final loadsheet (authoritative)"
-                    : wb.macTowSource === "prelim"
-                    ? "MACTOW from preliminary loadsheet (will upgrade when final arrives)"
-                    : "No loadsheet received yet — value is live W&B computed mirror"
+                  wb.maczfwResolvedSource === "final"
+                    ? "MACZFW from final loadsheet (authoritative)"
+                    : wb.maczfwResolvedSource === "prelim"
+                    ? "MACZFW from preliminary loadsheet (will upgrade when final arrives)"
+                    : "No loadsheet received yet — value is live aircraft.zfwcg mirror"
                 }
               >
-                {wb.macTowSource === "final" ? "FINAL LS" : wb.macTowSource === "prelim" ? "PRELIM LS" : "COMPUTED"}
+                {wb.maczfwResolvedSource === "final" ? "FINAL LS" : wb.maczfwResolvedSource === "prelim" ? "PRELIM LS" : "COMPUTED"}
               </span>
             </div>
-            {wb.macTowError && (
+            {wb.maczfwResolvedError && (
               <div className={styles.mactowRange}>
                 VALID RANGE: {wb.minMacTow.toFixed(1)} – {wb.maxMacTow.toFixed(1)}
               </div>
@@ -619,8 +619,8 @@ export function WeightBalancePanel() {
                 syncStatus === "success" ? styles.fmsSyncSuccess : "",
                 syncStatus === "error" ? styles.fmsSyncError : "",
               ].filter(Boolean).join(" ")}
-              disabled={syncStatus === "pending" || wb.macTowError}
-              title={wb.macTowError ? "MACTOW out of range" : ""}
+              disabled={syncStatus === "pending" || wb.maczfwResolvedError}
+              title={wb.maczfwResolvedError ? "MACZFW out of range" : ""}
               onClick={handleSync}
             >
               {syncStatus === "pending"
@@ -628,8 +628,8 @@ export function WeightBalancePanel() {
                 : (() => {
                     const verb = wb.fmsSyncStale ? "RESYNC TO FMS" : "SYNC TO FMS";
                     const suffix =
-                      wb.macTowSource === "final" ? " (FINAL)" :
-                      wb.macTowSource === "prelim" ? " (PRELIM)" :
+                      wb.maczfwResolvedSource === "final" ? " (FINAL)" :
+                      wb.maczfwResolvedSource === "prelim" ? " (PRELIM)" :
                       " (COMPUTED)";
                     return verb + suffix;
                   })()}

@@ -700,9 +700,13 @@ export interface WeightBalanceDto {
   door4ROpen: boolean;
   allDoorsClosed: boolean;
 
-  mactowPercent: number;
-  macTowError: boolean;
-  macTowSource: "final" | "prelim" | "computed";
+  // Headline MACZFW% displayed next to the SYNC TO FMS button — the
+  // value the sync writes to aircraft.fms.init.zfwcg. Resolved server-side
+  // from the loadsheet (final → prelim) with a live aircraft.zfwcg
+  // fallback when no loadsheet has been received yet.
+  maczfwResolvedPercent: number;
+  maczfwResolvedError: boolean;
+  maczfwResolvedSource: "final" | "prelim" | "computed";
 
   // Loadsheet mirror — projected by WeightBalanceService each tick from
   // the active slot (final → prelim). Drives the LOADSHEET row beneath
@@ -790,8 +794,9 @@ export interface FmsSyncResultDto {
   failedFields: string[];
   skippedFields: string[];
   errorMessage: string;
-  macTow: number;
-  macTowError: boolean;
+  // Headline MACZFW% that was just synced (final → prelim → live).
+  maczfwResolvedPercent: number;
+  maczfwResolvedError: boolean;
   zfwKg: number;
   maczfwPercent: number;
   timestamp: string;

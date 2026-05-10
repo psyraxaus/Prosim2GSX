@@ -55,9 +55,14 @@ const SEAT_ROW_PITCH = 15; // source-x distance between rows
 const SEAT_RECT_W = 11; // source-x rect length
 const SEAT_RECT_H = 4; // source-y rect height
 const SEAT_X_FWD = 552; // source x of the forward-most row's leading edge
-// Per-column source-y centres. A/B/C are port (low source y); D/E/F are
-// starboard (high source y). Spacing leaves a visible aisle gap at y=375.
-const SEAT_Y_BY_COL = [358, 364, 370, 380, 386, 392];
+// Per-column source-y centres. ProSim's seat-string convention indexes
+// each row STARBOARD-first: column 0 sits on the starboard side of the
+// fuselage and column 5 on the port side. Mapping the columns to this
+// y-array (after the parent <g> rotation flips the source frame) puts
+// seat-string index 0 on the starboard half, so the cabin-fill
+// animation runs starboard→port matching ProSim's own EFB. Spacing
+// leaves a visible aisle gap at y=375.
+const SEAT_Y_BY_COL = [392, 386, 380, 370, 364, 358];
 // Pre-computed per-seat rect coords. Index = global seat number 0..131.
 // Computed once at module load so the render loop stays cheap.
 const SEAT_RECTS = (() => {
@@ -318,7 +323,7 @@ export function WeightBalancePanel() {
         }
     };
     const handleSync = async () => {
-        if (syncStatus === "pending" || wb.macTowError)
+        if (syncStatus === "pending" || wb.maczfwResolvedError)
             return;
         setSyncStatus("pending");
         setSyncMessage("");
@@ -388,25 +393,25 @@ export function WeightBalancePanel() {
                                                             ? "—"
                                                             : wb.loadsheetZfwKg.toLocaleString(undefined, { maximumFractionDigits: 0 }) }), _jsx("td", { children: wb.loadsheetSource === "none" ? "—" : wb.loadsheetMaczfwPercent.toFixed(1) }), _jsx("td", { children: wb.loadsheetSource === "none"
                                                             ? "—"
-                                                            : wb.loadsheetTowKg.toLocaleString(undefined, { maximumFractionDigits: 0 }) }), _jsx("td", { children: wb.loadsheetSource === "none" ? "—" : wb.loadsheetMactowPercent.toFixed(1) })] })] })] }), _jsx("p", { className: styles.note, children: "LIVE reads aircraft datarefs each tick. L/S mirrors the latest loadsheet (final preferred, prelim fallback)." }), _jsxs("div", { className: styles.mactowRow, children: [_jsxs("div", { className: styles.mactowLine, children: [_jsx("span", { className: styles.mactowLabel, children: "MACTOW (%):" }), _jsx("span", { className: wb.macTowError ? styles.mactowValueError : styles.mactowValueOk, children: wb.mactowPercent.toFixed(1) }), wb.macTowError && (_jsx("span", { className: styles.mactowWarn, "aria-label": "out of range", children: "\u26A0" })), _jsx("span", { className: [
+                                                            : wb.loadsheetTowKg.toLocaleString(undefined, { maximumFractionDigits: 0 }) }), _jsx("td", { children: wb.loadsheetSource === "none" ? "—" : wb.loadsheetMactowPercent.toFixed(1) })] })] })] }), _jsx("p", { className: styles.note, children: "LIVE reads aircraft datarefs each tick. L/S mirrors the latest loadsheet (final preferred, prelim fallback)." }), _jsxs("div", { className: styles.mactowRow, children: [_jsxs("div", { className: styles.mactowLine, children: [_jsx("span", { className: styles.mactowLabel, children: "MACZFW (%):" }), _jsx("span", { className: wb.maczfwResolvedError ? styles.mactowValueError : styles.mactowValueOk, children: wb.maczfwResolvedPercent.toFixed(1) }), wb.maczfwResolvedError && (_jsx("span", { className: styles.mactowWarn, "aria-label": "out of range", children: "\u26A0" })), _jsx("span", { className: [
                                                     styles.sourceChip,
-                                                    wb.macTowSource === "final" ? styles.sourceChipFinal : "",
-                                                    wb.macTowSource === "prelim" ? styles.sourceChipPrelim : "",
-                                                    wb.macTowSource === "computed" ? styles.sourceChipComputed : "",
-                                                ].filter(Boolean).join(" "), title: wb.macTowSource === "final"
-                                                    ? "MACTOW from final loadsheet (authoritative)"
-                                                    : wb.macTowSource === "prelim"
-                                                        ? "MACTOW from preliminary loadsheet (will upgrade when final arrives)"
-                                                        : "No loadsheet received yet — value is live W&B computed mirror", children: wb.macTowSource === "final" ? "FINAL LS" : wb.macTowSource === "prelim" ? "PRELIM LS" : "COMPUTED" })] }), wb.macTowError && (_jsxs("div", { className: styles.mactowRange, children: ["VALID RANGE: ", wb.minMacTow.toFixed(1), " \u2013 ", wb.maxMacTow.toFixed(1)] })), wb.fmsSyncStale && (_jsxs("div", { className: styles.fmsStale, children: ["FMS OUT OF DATE", wb.fmsLastSyncedAt && (_jsxs(_Fragment, { children: [" \u2014 last sync ", new Date(wb.fmsLastSyncedAt).toLocaleTimeString(), " ", wb.fmsLastSyncedSource && `(${wb.fmsLastSyncedSource.toUpperCase()})`] }))] }))] }), _jsxs("div", { className: styles.fmsSyncRow, children: [_jsx("button", { type: "button", className: [
+                                                    wb.maczfwResolvedSource === "final" ? styles.sourceChipFinal : "",
+                                                    wb.maczfwResolvedSource === "prelim" ? styles.sourceChipPrelim : "",
+                                                    wb.maczfwResolvedSource === "computed" ? styles.sourceChipComputed : "",
+                                                ].filter(Boolean).join(" "), title: wb.maczfwResolvedSource === "final"
+                                                    ? "MACZFW from final loadsheet (authoritative)"
+                                                    : wb.maczfwResolvedSource === "prelim"
+                                                        ? "MACZFW from preliminary loadsheet (will upgrade when final arrives)"
+                                                        : "No loadsheet received yet — value is live aircraft.zfwcg mirror", children: wb.maczfwResolvedSource === "final" ? "FINAL LS" : wb.maczfwResolvedSource === "prelim" ? "PRELIM LS" : "COMPUTED" })] }), wb.maczfwResolvedError && (_jsxs("div", { className: styles.mactowRange, children: ["VALID RANGE: ", wb.minMacTow.toFixed(1), " \u2013 ", wb.maxMacTow.toFixed(1)] })), wb.fmsSyncStale && (_jsxs("div", { className: styles.fmsStale, children: ["FMS OUT OF DATE", wb.fmsLastSyncedAt && (_jsxs(_Fragment, { children: [" \u2014 last sync ", new Date(wb.fmsLastSyncedAt).toLocaleTimeString(), " ", wb.fmsLastSyncedSource && `(${wb.fmsLastSyncedSource.toUpperCase()})`] }))] }))] }), _jsxs("div", { className: styles.fmsSyncRow, children: [_jsx("button", { type: "button", className: [
                                             styles.fmsSyncButton,
                                             syncStatus === "success" ? styles.fmsSyncSuccess : "",
                                             syncStatus === "error" ? styles.fmsSyncError : "",
-                                        ].filter(Boolean).join(" "), disabled: syncStatus === "pending" || wb.macTowError, title: wb.macTowError ? "MACTOW out of range" : "", onClick: handleSync, children: syncStatus === "pending"
+                                        ].filter(Boolean).join(" "), disabled: syncStatus === "pending" || wb.maczfwResolvedError, title: wb.maczfwResolvedError ? "MACZFW out of range" : "", onClick: handleSync, children: syncStatus === "pending"
                                             ? "SYNCING…"
                                             : (() => {
                                                 const verb = wb.fmsSyncStale ? "RESYNC TO FMS" : "SYNC TO FMS";
-                                                const suffix = wb.macTowSource === "final" ? " (FINAL)" :
-                                                    wb.macTowSource === "prelim" ? " (PRELIM)" :
+                                                const suffix = wb.maczfwResolvedSource === "final" ? " (FINAL)" :
+                                                    wb.maczfwResolvedSource === "prelim" ? " (PRELIM)" :
                                                         " (COMPUTED)";
                                                 return verb + suffix;
                                             })() }), syncMessage && (_jsx("span", { className: syncStatus === "success"
@@ -417,7 +422,7 @@ export function WeightBalancePanel() {
                                                     simStatus === "success" ? styles.simulateSuccess : "",
                                                     simStatus === "error" ? styles.simulateError : "",
                                                 ].filter(Boolean).join(" "), disabled: simStatus === "pending", onClick: handleSimulate, children: simStatus === "pending" ? "…" : "GENERATE" }), _jsx("button", { type: "button", className: styles.simulateButton, disabled: simStatus === "pending", onClick: handleClearPax, children: "CLEAR" }), _jsx("button", { type: "button", className: styles.simulateClose, onClick: () => setSimOpen(false), title: "Hide controls", children: "\u00D7" })] })), simMessage && (_jsx("span", { className: simStatus === "success" ? styles.simulateMessageOk :
-                                            simStatus === "error" ? styles.simulateMessageError : "", children: simMessage }))] }), simOpen && (_jsx("p", { className: styles.simulateNote, children: "SIMULATE works for headless cabins; GSX boarding will overwrite." }))] }), _jsx("h2", { className: styles.colHeading, children: "Cargo" }), _jsxs("div", { className: styles.dataCard, children: [_jsxs("div", { className: styles.capacity, children: ["CAPACITY:\u00A0", wb.cargoFwdCapacityKg.toLocaleString(), " KG FWD,\u00A0", wb.cargoAftCapacityKg.toLocaleString(), " KG AFT,\u00A0", wb.cargoBulkCapacityKg.toLocaleString(), " KG BULK"] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "Cargo" }), _jsx("span", { className: styles.headerCell, children: "PLANNED (KG)" }), _jsx("span", { className: styles.headerCell, children: "LOADED (KG)" })] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "\u00A0" }), _jsx("span", { className: styles.value, children: wb.cargoPlannedKg.toLocaleString(undefined, { maximumFractionDigits: 0 }) }), _jsx("span", { className: styles.value, children: cargoLoadedTotal.toLocaleString(undefined, { maximumFractionDigits: 0 }) })] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "FWD / AFT" }), _jsx("span", { className: styles.value, children: "\u00A0" }), _jsxs("span", { className: styles.subValue, children: [wb.cargoFwdLoadedKg.toLocaleString(undefined, { maximumFractionDigits: 0 }), " / ", wb.cargoAftLoadedKg.toLocaleString(undefined, { maximumFractionDigits: 0 })] })] })] }), _jsx("h2", { className: styles.colHeading, children: "Aircraft Status" }), _jsxs("div", { className: styles.dataCard, children: [_jsx("svg", { viewBox: "0 270 750 210", className: styles.silhouetteSvg, children: _jsxs("g", { transform: "rotate(-180 375 375)", children: [_jsx("path", { d: A320_OUTLINE_PATH, fill: "#3F3F3F", stroke: "#7A7A7A", strokeWidth: 2 }), (() => {
+                                            simStatus === "error" ? styles.simulateMessageError : "", children: simMessage }))] }), simOpen && (_jsx("p", { className: styles.simulateNote, children: "SIMULATE works for headless cabins; GSX boarding will overwrite." }))] }), _jsx("h2", { className: styles.colHeading, children: "Cargo" }), _jsxs("div", { className: styles.dataCard, children: [_jsxs("div", { className: styles.capacity, children: ["CAPACITY:\u00A0", wb.cargoFwdCapacityKg.toLocaleString(), " KG FWD,\u00A0", wb.cargoAftCapacityKg.toLocaleString(), " KG AFT,\u00A0", wb.cargoBulkCapacityKg.toLocaleString(), " KG BULK"] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "Cargo" }), _jsx("span", { className: styles.headerCell, children: "PLANNED (KG)" }), _jsx("span", { className: styles.headerCell, children: "LOADED (KG)" })] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "\u00A0" }), _jsx("span", { className: styles.value, children: wb.cargoPlannedKg.toLocaleString(undefined, { maximumFractionDigits: 0 }) }), _jsx("span", { className: styles.value, children: cargoLoadedTotal.toLocaleString(undefined, { maximumFractionDigits: 0 }) })] }), _jsxs("div", { className: styles.dataRow, children: [_jsx("span", { className: styles.label, children: "FWD / AFT" }), _jsxs("span", { className: styles.subValue, children: [wb.cargoFwdLoadedKg.toLocaleString(undefined, { maximumFractionDigits: 0 }), " / ", wb.cargoAftLoadedKg.toLocaleString(undefined, { maximumFractionDigits: 0 })] }), _jsx("span", { className: styles.value, children: "\u00A0" })] })] }), _jsx("h2", { className: styles.colHeading, children: "Aircraft Status" }), _jsxs("div", { className: styles.dataCard, children: [_jsx("svg", { viewBox: "0 270 750 210", className: styles.silhouetteSvg, children: _jsxs("g", { transform: "rotate(-180 375 375)", children: [_jsx("path", { d: A320_OUTLINE_PATH, fill: "#3F3F3F", stroke: "#7A7A7A", strokeWidth: 2 }), (() => {
                                             const occupied = parseSeatOccupation(wb.seatOccupation);
                                             return SEAT_RECTS.map((s, i) => (_jsx("rect", { x: s.x, y: s.y, width: SEAT_RECT_W, height: SEAT_RECT_H, fill: occupied[i] ? SEAT_OCCUPIED_COLOR : SEAT_EMPTY_COLOR, stroke: "#1A1A1A", strokeWidth: 0.4 }, `seat-${i}`)));
                                         })(), _jsx("rect", { x: 498, y: 403, width: 41, height: 14, fill: doorColor(wb.fwdCargoDoorOpen), stroke: "#FFFFFF", strokeWidth: 1.2 }), _jsx("rect", { x: 293, y: 403, width: 41, height: 14, fill: doorColor(wb.aftCargoDoorOpen), stroke: "#FFFFFF", strokeWidth: 1.2 }), _jsx("rect", { x: 255, y: 403, width: 20, height: 11, transform: "rotate(-0.265 265 408.5)", fill: doorColor(wb.bulkCargoDoorOpen, wb.cargoBulkCapacityKg > 0), stroke: "#FFFFFF", strokeWidth: 1.2 }), ENTRY_DOORS.map(d => {
