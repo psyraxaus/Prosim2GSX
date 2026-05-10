@@ -51,14 +51,18 @@ namespace Prosim2GSX.Web.Contracts
         // departure-readiness banner; covers all doors (entry + cargo).
         public bool AllDoorsClosed { get; set; } = true;
 
-        public double MactowPercent { get; set; }
-        public bool MacTowError { get; set; }
+        // Headline MACZFW% displayed next to the SYNC TO FMS button. This
+        // is the value the sync writes to aircraft.fms.init.zfwcg, sourced
+        // from the loadsheet (final → prelim) with a live aircraft.zfwcg
+        // fallback when no loadsheet has been received yet.
+        public double MaczfwResolvedPercent { get; set; }
+        public bool MaczfwResolvedError { get; set; }
 
-        // Resolution source for the displayed MACTOW: "final" | "prelim" |
+        // Resolution source for the displayed MACZFW: "final" | "prelim" |
         // "computed". Drives the chip next to the value and changes the
         // SYNC TO FMS button's label so the user knows which dataset
         // would actually be written.
-        public string MacTowSource { get; set; } = "computed";
+        public string MaczfwResolvedSource { get; set; } = "computed";
 
         // Loadsheet mirror — projected from the active slot (final → prelim)
         // so the W&B panel can render a "LOADSHEET" row beneath the LIVE
@@ -133,9 +137,9 @@ namespace Prosim2GSX.Web.Contracts
                 Door4LOpen = s.Door4LOpen,
                 Door4ROpen = s.Door4ROpen,
                 AllDoorsClosed = s.AllDoorsClosed,
-                MactowPercent = s.MactowPercent,
-                MacTowError = s.MacTowError,
-                MacTowSource = s.MacTowSource ?? "computed",
+                MaczfwResolvedPercent = s.MaczfwResolvedPercent,
+                MaczfwResolvedError = s.MaczfwResolvedError,
+                MaczfwResolvedSource = s.MaczfwResolvedSource ?? "computed",
                 LoadsheetZfwKg = s.LoadsheetZfwKg,
                 LoadsheetMaczfwPercent = s.LoadsheetMaczfwPercent,
                 LoadsheetTowKg = s.LoadsheetTowKg,

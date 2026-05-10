@@ -25,9 +25,11 @@ namespace Prosim2GSX.Web.Contracts
         public string ErrorMessage { get; set; } = "";
 
         // Broadcast extras — sent on the "fmsSync" WS channel so listeners
-        // can update without a follow-up REST call.
-        public double MacTow { get; set; }
-        public bool MacTowError { get; set; }
+        // can update without a follow-up REST call. MaczfwResolvedPercent
+        // is the headline value that was just synced (final → prelim →
+        // live), and MaczfwResolvedError is its envelope check.
+        public double MaczfwResolvedPercent { get; set; }
+        public bool MaczfwResolvedError { get; set; }
         public double ZfwKg { get; set; }
         public double MaczfwPercent { get; set; }
         public DateTime Timestamp { get; set; }

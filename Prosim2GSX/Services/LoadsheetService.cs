@@ -149,7 +149,7 @@ namespace Prosim2GSX.Services
                 // flight starts clean — without this the user would see
                 // "RESYNC TO FMS" persist across flights even after the
                 // loadsheet reset.
-                _app?.MactowValidationService?.ResetSyncTracking();
+                _app?.FmsSyncService?.ResetSyncTracking();
                 Logger.Information("Loadsheet slots reset on flight-cycle shutdown");
             }
 

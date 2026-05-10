@@ -120,26 +120,29 @@ namespace Prosim2GSX.Services
                     idx = WeightBalanceState.ZfwcgAdjArray.Length - 1;
                 wbState.MacgwPercent = wbState.MaczfwPercent + WeightBalanceState.ZfwcgAdjArray[idx];
 
-                // MACTOW resolves to the loadsheet value when available
-                // (final → prelim) and falls back to the live MACGW mirror
-                // otherwise. MacTowError is computed against the A320
-                // envelope bounds (LoadsheetState.MinMacTow/MaxMacTow). The
-                // live mirror is written first so the resolver can read it
-                // as the "computed" fallback in the same tick.
-                wbState.MactowPercent = wbState.MacgwPercent;
-                wbState.MacTowSource = "computed";
-                var mactowSvc = _app?.MactowValidationService;
-                if (mactowSvc != null)
+                // MACZFW resolves to the loadsheet value when available
+                // (final → prelim) and falls back to the live aircraft.zfwcg
+                // mirror otherwise. MaczfwResolvedError is computed against
+                // the A320 envelope bounds (LoadsheetState.MinMacTow /
+                // MaxMacTow — operationally MACTOW limits but they apply to
+                // MACZFW too because the two values track together within
+                // the airframe's CG envelope). The live mirror is written
+                // first so the resolver can read it as the "computed"
+                // fallback in the same tick.
+                wbState.MaczfwResolvedPercent = wbState.MaczfwPercent;
+                wbState.MaczfwResolvedSource = "computed";
+                var fmsSync = _app?.FmsSyncService;
+                if (fmsSync != null)
                 {
-                    var (resolved, source) = mactowSvc.ResolveCurrentMacTow();
-                    wbState.MactowPercent = resolved;
-                    wbState.MacTowSource = source;
-                    wbState.MacTowError = mactowSvc.IsOutOfRange(resolved);
-                    mactowSvc.UpdateStaleness();
+                    var (resolved, source) = fmsSync.ResolveCurrentMaczfw();
+                    wbState.MaczfwResolvedPercent = resolved;
+                    wbState.MaczfwResolvedSource = source;
+                    wbState.MaczfwResolvedError = fmsSync.IsOutOfRange(resolved);
+                    fmsSync.UpdateStaleness();
                 }
                 else
                 {
-                    wbState.MacTowError = false;
+                    wbState.MaczfwResolvedError = false;
                 }
 
                 // Loadsheet mirror — final preferred, prelim if no final.

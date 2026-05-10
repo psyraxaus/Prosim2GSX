@@ -428,10 +428,132 @@ namespace Prosim2GSX.Web
             }
         }
 
+        // Full-state snapshot broadcast for every channel. Triggered on
+        // SDK-connect rising edges (cold-boot under DelayProsimConnection,
+        // mid-flight reconnect after a transient drop) so clients that
+        // subscribed during the disconnected window — when state stores
+        // were holding their default/empty values and INPC was silent —
+        // get the freshly populated state without waiting for individual
+        // properties to next tick over a change threshold.
+        //
+        // Patch-style channels (weightBalance, fuel, flightStatus, audio,
+        // ofp, appSettings, gsx) ship as { channel, patch: <full DTO> } so
+        // the existing client-side reducer's merge path picks them up
+        // unchanged. Snapshot-style channels (loadsheet, efbFlightPlan,
+        // notifications, checklists) re-use their existing snapshot
+        // helpers so the wire shape is identical to a normal change.
+        //
+        // Idempotent and safe to call repeatedly; no-op when no clients
+        // are connected.
+        public void BroadcastSnapshotAll()
+        {
+            if (_connections.IsEmpty) return;
+            Logger.Information("WS snapshot broadcast — pushing full state to all connected clients (SDK-connect rising edge)");
+
+            // Patch-style channels with a dedicated DTO.
+            BroadcastDtoAsPatch("weightBalance", WeightBalanceDto.From(_app));
+            BroadcastDtoAsPatch("fuel", FuelDto.From(_app));
+            BroadcastDtoAsPatch("flightStatus", FlightStatusDto.From(_app));
+            BroadcastDtoAsPatch("audio", AudioDto.From(_app));
+            BroadcastDtoAsPatch("ofp", OfpDto.From(_app));
+            BroadcastDtoAsPatch("appSettings", AppSettingsDto.From(_app));
+
+            // Patch-style "gsx" channel — no DTO (per-property INPC fan-out
+            // works directly off GsxState). Reflect over the state object
+            // and ship every public scalar property in one envelope so the
+            // client gets the same key set it would receive from a tick's
+            // worth of per-property patches.
+            BroadcastStateAsPatch("gsx", _app?.Gsx);
+
+            // Snapshot-style channels — re-use the existing helpers so the
+            // wire shape stays identical to a property-driven snapshot.
+            BroadcastChecklistSnapshot();
+
+            try
+            {
+                var lsSnap = LoadsheetSnapshotDto.From(_app);
+                var lsEnvelope = new
+                {
+                    channel = "loadsheet",
+                    patch = new Dictionary<string, object>
+                    {
+                        ["prelim"] = lsSnap.Prelim,
+                        ["final"] = lsSnap.Final,
+                    },
+                };
+                BroadcastBytes(Serialize(lsEnvelope));
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
+
+            try
+            {
+                var notifEnvelope = new
+                {
+                    channel = "notifications",
+                    snapshot = NotificationsSnapshotDto.From(_app),
+                };
+                BroadcastBytes(Serialize(notifEnvelope));
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
+
+            try
+            {
+                var efbEnvelope = new
+                {
+                    channel = "efbFlightPlan",
+                    snapshot = EfbFlightPlanDto.From(_app),
+                };
+                BroadcastBytes(Serialize(efbEnvelope));
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
+        }
+
+        // Wraps a DTO as a { channel, patch: <dto> } envelope. JsonSerializer
+        // applies WebJsonOptions camelCase naming so the patch keys match
+        // the per-property broadcast shape and the client's reducer merges
+        // them into the existing channel state without any special handling.
+        private void BroadcastDtoAsPatch(string channel, object dto)
+        {
+            if (dto == null) return;
+            try
+            {
+                var envelope = new { channel, patch = dto };
+                BroadcastBytes(Serialize(envelope));
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
+        }
+
+        // Reflection-based snapshot for channels that don't have a dedicated
+        // DTO (currently just "gsx"). Mirrors what an exhaustive sequence of
+        // per-property INPC broadcasts would produce: every public readable
+        // scalar, camelCased, packed into one patch envelope.
+        private void BroadcastStateAsPatch(string channel, object stateObject)
+        {
+            if (stateObject == null) return;
+            try
+            {
+                var dict = new Dictionary<string, object>();
+                foreach (var prop in stateObject.GetType().GetProperties())
+                {
+                    if (prop.GetIndexParameters().Length > 0) continue;
+                    if (!prop.CanRead) continue;
+                    try
+                    {
+                        var camel = JsonNamingPolicy.CamelCase.ConvertName(prop.Name);
+                        dict[camel] = prop.GetValue(stateObject);
+                    }
+                    catch { }
+                }
+                var envelope = new { channel, patch = dict };
+                BroadcastBytes(Serialize(envelope));
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
+        }
+
         // FMS sync result → "fmsSync" channel snapshot. Fired only after a
         // POST /api/fms/sync attempt — this is a one-shot broadcast (not
         // per-property), so listeners can drive a flash + label transition
-        // without subscribing to W&B deltas. Caller is MactowValidationService.
+        // without subscribing to W&B deltas. Caller is FmsSyncService.
         public void BroadcastFmsSync(FmsSyncResultDto result)
         {
             if (_connections.IsEmpty || result == null) return;

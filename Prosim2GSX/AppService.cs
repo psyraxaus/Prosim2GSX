@@ -115,11 +115,12 @@ namespace Prosim2GSX
         // no SDK simply leaves both slots at "none"/"pending".
         public virtual LoadsheetService LoadsheetService { get; protected set; }
 
-        // Resolves the active MACTOW (loadsheet → live mirror), validates
+        // Resolves the active MACZFW (loadsheet → live mirror), validates
         // it against the A320 envelope, and writes the FMS init datarefs on
         // demand. Read by WeightBalanceService each tick to populate
-        // MactowPercent/MacTowError; called from FmsController for sync.
-        public virtual MactowValidationService MactowValidationService { get; protected set; }
+        // MaczfwResolvedPercent / MaczfwResolvedError; called from
+        // FmsController for sync.
+        public virtual FmsSyncService FmsSyncService { get; protected set; }
 
         // Owns the EFB Flight Planning (INIT) tab workflow: manual SimBrief
         // fetch, MCDU auto-fetch observation, and per-field override
@@ -227,14 +228,14 @@ namespace Prosim2GSX
             // loadsheet datarefs. Same Tick() contract as the W&B service.
             LoadsheetService = new LoadsheetService(this);
 
-            // MACTOW validation + FMS sync. Constructed AFTER WeightBalance
-            // and Loadsheet so its resolver can read both stores. The
-            // service itself is null-safe under degraded SDK; the FMS sync
-            // path short-circuits with an error result rather than throwing.
+            // FMS sync orchestration. Constructed AFTER WeightBalance and
+            // Loadsheet so its resolver can read both stores. The service
+            // itself is null-safe under degraded SDK; the FMS sync path
+            // short-circuits with an error result rather than throwing.
             // Attach() wires the auto-sync subscription onto LoadsheetState
             // (no-op when AutoSyncFmsOnFinal is disabled in config).
-            MactowValidationService = new MactowValidationService(this);
-            MactowValidationService.Attach();
+            FmsSyncService = new FmsSyncService(this);
+            FmsSyncService.Attach();
 
             // EFB Flight Planning service — picks up MCDU-triggered SDK
             // fetches each tick and exposes the manual fetch + override API

@@ -27,6 +27,16 @@ namespace Prosim2GSX.State
         private readonly DispatcherTimer _timer;
         private volatile bool _isUpdating;
 
+        // SDK-connect edge tracking. Detects the false→true transition of
+        // ProsimSdkInterface.IsConnected so we can fire a one-shot WS
+        // snapshot AFTER the first connected tick has populated all state
+        // stores. Required because under DelayProsimConnection the worker
+        // ticks for ~10–15s before the SDK comes up — during that window
+        // the per-service Tick() methods early-return without writing to
+        // state, no INPC fires, and any web client that subscribed in the
+        // meantime never receives an initial patch.
+        private bool _sdkWasConnected;
+
         public StateUpdateWorker(AppService app)
         {
             _app = app;
@@ -73,6 +83,25 @@ namespace Prosim2GSX.State
                     try { _app?.LoadsheetService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
                     try { _app?.EfbFlightPlanService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
                     try { _app?.LoadsheetTimingService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
+
+                    // SDK-connect rising edge → push a full WS snapshot to
+                    // every connected client. Runs AFTER the service ticks
+                    // so the state stores hold their freshly-populated
+                    // values rather than the defaults the disconnect-window
+                    // ticks left them in. INPC events from this same tick
+                    // already pushed per-property patches, but the snapshot
+                    // covers any property whose value didn't change (and
+                    // therefore didn't fire an event) — important for
+                    // clients that connected with default zeros and never
+                    // saw a transition into the current value.
+                    try
+                    {
+                        bool nowConnected = _app?.GsxService?.AircraftInterface?.ProsimInterface?.SdkInterface?.IsConnected ?? false;
+                        if (nowConnected && !_sdkWasConnected)
+                            _app?.WebSocketHandler?.BroadcastSnapshotAll();
+                        _sdkWasConnected = nowConnected;
+                    }
+                    catch (Exception ex) { Logger.LogException(ex); }
                 });
             }
             finally

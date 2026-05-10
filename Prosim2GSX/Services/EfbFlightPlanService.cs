@@ -305,10 +305,10 @@ namespace Prosim2GSX.Services
             {
                 var zfwKg = GetEffectiveDouble("zfwKg", ofp.ZfwKg);
                 var ramp = GetEffectiveDouble("fuelRampKg", ofp.FuelRampKg);
-                var blockKg = MactowValidationService.RoundBlockFuelKg(ramp);
+                var blockKg = FmsSyncService.RoundBlockFuelKg(ramp);
 
                 // MCDU INIT B expects ZFW and BLOCK in TONS (xx.x), not kg —
-                // mirrors the conversion in MactowValidationService.SyncToFms.
+                // mirrors the conversion in FmsSyncService.SyncToFms.
                 var zfwTons = zfwKg / 1000.0;
                 var blockTons = blockKg / 1000.0;
 
@@ -341,7 +341,7 @@ namespace Prosim2GSX.Services
 
         // Writes ZFW + block fuel to the FMS init datarefs from the supplied
         // OFP. ZFW CG is intentionally skipped — the OFP doesn't carry it,
-        // and MactowValidationService writes it on final-loadsheet receipt
+        // and FmsSyncService writes it on final-loadsheet receipt
         // from the W&B-computed value. Cargo + pax + planned fuel are
         // already written by the SDK's import path.
         protected virtual void WriteFmsInitFromOfp(OFPData ofp)
@@ -354,7 +354,7 @@ namespace Prosim2GSX.Services
             {
                 // MCDU INIT B expects ZFW and BLOCK in TONS (xx.x), not kg.
                 var zfwTons = ofp.ZfwKg / 1000.0;
-                var blockKg = MactowValidationService.RoundBlockFuelKg(ofp.FuelRampKg);
+                var blockKg = FmsSyncService.RoundBlockFuelKg(ofp.FuelRampKg);
                 var blockTons = blockKg / 1000.0;
 
                 sdk.SetDouble(ProsimConstants.RefFmsInitZfw, zfwTons);
@@ -390,7 +390,7 @@ namespace Prosim2GSX.Services
                         // RoundBlockFuelKg returns kg; convert to tons.
                         if (TryToDouble(value, out var ramp))
                             sdk.SetDouble(ProsimConstants.RefFmsInitBlock,
-                                MactowValidationService.RoundBlockFuelKg(ramp) / 1000.0);
+                                FmsSyncService.RoundBlockFuelKg(ramp) / 1000.0);
                         break;
                     case "cargoKg":
                         if (TryToDouble(value, out var cargo))

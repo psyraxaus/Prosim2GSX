@@ -21,14 +21,14 @@ namespace Prosim2GSX.Web.Controllers
         [HttpPost("sync")]
         public async Task<ActionResult<FmsSyncResultDto>> Sync()
         {
-            var svc = _app?.MactowValidationService;
+            var svc = _app?.FmsSyncService;
             if (svc == null)
             {
-                Logger.Warning("FMS sync requested but MactowValidationService is unavailable");
+                Logger.Warning("FMS sync requested but FmsSyncService is unavailable");
                 return Ok(new FmsSyncResultDto
                 {
                     Success = false,
-                    ErrorMessage = "MACTOW validation service not available",
+                    ErrorMessage = "FMS sync service not available",
                 });
             }
 

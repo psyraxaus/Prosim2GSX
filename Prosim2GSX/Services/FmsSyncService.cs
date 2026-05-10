@@ -8,20 +8,21 @@ using System.ComponentModel;
 
 namespace Prosim2GSX.Services
 {
-    // Resolves the "current" MACTOW value, validates it against the A320
-    // envelope, and writes the FMS init datarefs on demand.
+    // Resolves the "current" MACZFW value (the headline figure displayed
+    // next to the SYNC TO FMS button) and writes the FMS init datarefs on
+    // demand.
     //
     // Resolution chain (final → prelim → computed) mirrors how the EFB
-    // surfaces MACTOW through the flight workflow: the final loadsheet is
+    // surfaces MACZFW through the flight workflow: the final loadsheet is
     // authoritative once issued, the prelim is the planned value before
-    // boarding completes, and the live W&B mirror (MACGW until a separate
-    // take-off computation lands) is the last-resort fallback so the panel
-    // always shows something usable.
+    // boarding completes, and the live aircraft.zfwcg dataref is the
+    // last-resort fallback so the panel always shows something usable.
     //
     // Validation bounds are sourced from LoadsheetState.MinMacTow /
-    // MaxMacTow (10.5 / 45.0 — the same constants the loadsheet parser
-    // already applies to PrelimMacTow / FinalMacTow). Keeping a single
-    // source of truth means a future variant change touches one place.
+    // MaxMacTow (10.5 / 45.0). The bounds are operationally a MACTOW
+    // envelope but apply to MACZFW too — any out-of-envelope MACTOW
+    // implies a suspect ZFW CG, so we use the same gate to disable the
+    // SYNC TO FMS button.
     //
     // The FMS sync writes three FMS init datarefs:
     //   aircraft.fms.init.zfw    ← loadsheet zfw (final → prelim → live fallback)
@@ -43,7 +44,7 @@ namespace Prosim2GSX.Services
     // derivation logic (confirmed by user inspection). Guessing a THS value
     // would violate the dataref-first principle, so the field is reported
     // as Skipped in the result rather than written or silently ignored.
-    public class MactowValidationService
+    public class FmsSyncService
     {
         // Operational tolerances for "FMS out of date" detection. Match
         // A320 dispatch practice: ZFWCG is entered to 0.1 %MAC, ZFW to
@@ -62,9 +63,8 @@ namespace Prosim2GSX.Services
         // "untouched", so FmsSyncStale stays false until the user actually
         // pushes once.
         private DateTime? _lastSyncedAt;
-        private double _lastSyncedMacTow;
+        private double _lastSyncedMaczfw;
         private double _lastSyncedZfwKg;
-        private double _lastSyncedMaczfwPercent;
         private double _lastSyncedBlockKg;
         private string _lastSyncedSource = "";
 
@@ -74,7 +74,7 @@ namespace Prosim2GSX.Services
         private DateTime? _autoSyncFiredForFinalAt;
         private LoadsheetState _attachedLoadsheet;
 
-        public MactowValidationService(AppService app)
+        public FmsSyncService(AppService app)
         {
             _app = app;
         }
@@ -121,6 +121,10 @@ namespace Prosim2GSX.Services
                 if (_autoSyncFiredForFinalAt.HasValue && _autoSyncFiredForFinalAt.Value == receivedAt.Value)
                     return;
 
+                // Final loadsheet's MACTOW envelope check still gates the
+                // auto-sync — a loadsheet whose MACTOW is out-of-envelope
+                // is suspect overall, so we don't push its ZFW/MACZFW into
+                // the FMS automatically.
                 if (ls.FinalMacTowError)
                 {
                     Logger.Warning("FMS auto-sync skipped — final loadsheet MACTOW out of envelope");
@@ -144,9 +148,8 @@ namespace Prosim2GSX.Services
         public virtual void ResetSyncTracking()
         {
             _lastSyncedAt = null;
-            _lastSyncedMacTow = 0;
+            _lastSyncedMaczfw = 0;
             _lastSyncedZfwKg = 0;
-            _lastSyncedMaczfwPercent = 0;
             _lastSyncedBlockKg = 0;
             _lastSyncedSource = "";
             _autoSyncFiredForFinalAt = null;
@@ -160,10 +163,10 @@ namespace Prosim2GSX.Services
             }
         }
 
-        // Called from WeightBalanceService.Tick AFTER MactowPercent /
-        // MacTowSource have been written. Compares the current resolved
-        // values against the last-sync snapshot and sets FmsSyncStale.
-        // No-op when never synced.
+        // Called from WeightBalanceService.Tick AFTER MaczfwResolvedPercent /
+        // MaczfwResolvedSource have been written. Compares the current
+        // resolved values against the last-sync snapshot and sets
+        // FmsSyncStale. No-op when never synced.
         //
         // Drift is checked against the *resolver outputs* (loadsheet → live
         // fallback) — the same shape Sync would push if pressed now.
@@ -191,9 +194,8 @@ namespace Prosim2GSX.Services
                     && string.Equals(currentTrio.Source, "final", StringComparison.OrdinalIgnoreCase);
 
                 bool drift =
-                    Math.Abs(wb.MactowPercent - _lastSyncedMacTow) > StaleThresholdMacPercent
+                    Math.Abs(currentTrio.MaczfwPercent - _lastSyncedMaczfw) > StaleThresholdMacPercent
                     || Math.Abs(currentTrio.ZfwKg - _lastSyncedZfwKg) > StaleThresholdZfwKg
-                    || Math.Abs(currentTrio.MaczfwPercent - _lastSyncedMaczfwPercent) > StaleThresholdMacPercent
                     || Math.Abs(currentBlock - _lastSyncedBlockKg) > StaleThresholdBlockKg;
 
                 wb.FmsSyncStale = sourceUpgraded || drift;
@@ -204,31 +206,31 @@ namespace Prosim2GSX.Services
             }
         }
 
-        // Resolve the current MACTOW. Source order: FinalStatus="received"
-        // → PrelimStatus="received" → live computed value on
-        // WeightBalanceState.MactowPercent (currently mirrors MACGW). The
-        // out param is informational — useful for diagnostics and the WS
-        // payload — but not part of the validation logic.
-        public virtual (double MacTow, string Source) ResolveCurrentMacTow()
+        // Resolve the current MACZFW. Source order: FinalStatus="received"
+        // → PrelimStatus="received" → live aircraft.zfwcg mirrored on
+        // WeightBalanceState.MaczfwPercent. The Source out param is
+        // informational — drives the panel's "FINAL LS / PRELIM LS /
+        // COMPUTED" chip and the SYNC TO FMS button label.
+        public virtual (double Maczfw, string Source) ResolveCurrentMaczfw()
         {
             var ls = _app?.Loadsheet;
             if (ls != null)
             {
-                if (string.Equals(ls.FinalStatus, "received", StringComparison.OrdinalIgnoreCase) && ls.FinalMacTow > 0)
-                    return (ls.FinalMacTow, "final");
-                if (string.Equals(ls.PrelimStatus, "received", StringComparison.OrdinalIgnoreCase) && ls.PrelimMacTow > 0)
-                    return (ls.PrelimMacTow, "prelim");
+                if (string.Equals(ls.FinalStatus, "received", StringComparison.OrdinalIgnoreCase) && ls.FinalMacZfw > 0)
+                    return (ls.FinalMacZfw, "final");
+                if (string.Equals(ls.PrelimStatus, "received", StringComparison.OrdinalIgnoreCase) && ls.PrelimMacZfw > 0)
+                    return (ls.PrelimMacZfw, "prelim");
             }
 
             var wb = _app?.WeightBalance;
-            return (wb?.MactowPercent ?? 0.0, "computed");
+            return (wb?.MaczfwPercent ?? 0.0, "computed");
         }
 
         // Resolve the (ZFW kg, MACZFW %, source) trio that should be
         // written to the FMS. The pair is always sourced together so the
         // FMS gets a consistent ZFW/CG snapshot — mixing live ZFW with
         // loadsheet MACZFW would be operationally incoherent. Source order
-        // matches ResolveCurrentMacTow: final → prelim → computed (live).
+        // matches ResolveCurrentMaczfw: final → prelim → computed (live).
         // The live fallback uses aircraft.weight.zfw + aircraft.zfwcg
         // mirrored on WeightBalanceState so the button is still usable
         // before any loadsheet has been received.
@@ -250,8 +252,11 @@ namespace Prosim2GSX.Services
         }
 
         // Envelope check using the same bounds the loadsheet parser uses.
-        // Zero/negative MACTOW counts as in-range (no data to flag) so the
+        // Zero/negative MAC counts as in-range (no data to flag) so the
         // SYNC TO FMS button isn't disabled before any source is available.
+        // Bounds are LoadsheetState.MinMacTow / MaxMacTow — operationally
+        // a MACTOW envelope but it applies to MACZFW too because the two
+        // values are bounded together by the airframe's CG limits.
         public virtual bool IsOutOfRange(double mac)
         {
             if (mac <= 0) return false;
@@ -343,7 +348,7 @@ namespace Prosim2GSX.Services
 
                 Logger.Information(
                     $"FMS sync: zfw={zfwTrio.ZfwKg:F0}kg ({zfwTons:F1}t) zfwcg={zfwTrio.MaczfwPercent:F2} ({zfwTrio.Source}) " +
-                    $"block={blockKg:F0}kg ({blockTons:F1}t) mactowSource={wb.MacTowSource} " +
+                    $"block={blockKg:F0}kg ({blockTons:F1}t) " +
                     $"written=[{string.Join(",", written)}] failed=[{string.Join(",", failed)}]");
 
                 if (result.Success)
@@ -353,9 +358,8 @@ namespace Prosim2GSX.Services
                     // tick (live ZFW/MACZFW will keep drifting against the
                     // signed loadsheet — that drift is expected, not stale).
                     _lastSyncedAt = result.Timestamp;
-                    _lastSyncedMacTow = wb.MactowPercent;
                     _lastSyncedZfwKg = zfwTrio.ZfwKg;
-                    _lastSyncedMaczfwPercent = zfwTrio.MaczfwPercent;
+                    _lastSyncedMaczfw = zfwTrio.MaczfwPercent;
                     _lastSyncedBlockKg = blockKg;
                     _lastSyncedSource = zfwTrio.Source ?? "";
                     wb.FmsLastSyncedAt = _lastSyncedAt;
@@ -380,13 +384,12 @@ namespace Prosim2GSX.Services
 
         protected virtual void PopulateBroadcastFields(FmsSyncResultDto result)
         {
-            var (mac, _) = ResolveCurrentMacTow();
             var trio = ResolveCurrentZfwTrio();
-            result.MacTow = mac;
-            result.MacTowError = IsOutOfRange(mac);
             // Report the resolved values that would be / have been written
             // to the FMS, not the live datarefs — otherwise the toast
             // shows different numbers than what actually got synced.
+            result.MaczfwResolvedPercent = trio.MaczfwPercent;
+            result.MaczfwResolvedError = IsOutOfRange(trio.MaczfwPercent);
             result.ZfwKg = trio.ZfwKg;
             result.MaczfwPercent = trio.MaczfwPercent;
         }

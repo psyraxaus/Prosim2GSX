@@ -80,16 +80,19 @@ namespace Prosim2GSX.State
         // poll lands.
         [ObservableProperty] private bool _AllDoorsClosed = true;
 
-        // Take-off MAC% — resolved each tick by MactowValidationService from
-        // the loadsheet (final → prelim → live computed) so both UIs see the
-        // same authoritative value. MacTowSource records which path produced
-        // the value so the panel can show "FINAL LS" / "PRELIM LS" /
-        // "COMPUTED" chips and adjust the SYNC TO FMS button label
-        // accordingly. MacTowError is the envelope check against
-        // LoadsheetState.MinMacTow / MaxMacTow.
-        [ObservableProperty] private double _MactowPercent;
-        [ObservableProperty] private bool _MacTowError;
-        [ObservableProperty] private string _MacTowSource = "computed";
+        // Resolved MACZFW% — the headline value displayed next to the SYNC
+        // TO FMS button and the value the sync writes to the FMS. Resolved
+        // each tick by FmsSyncService from the loadsheet (final → prelim →
+        // live aircraft.zfwcg) so both UIs see the same authoritative
+        // figure. MaczfwResolvedSource records which path produced the
+        // value so the panel can show "FINAL LS" / "PRELIM LS" /
+        // "COMPUTED" chips. MaczfwResolvedError is the envelope check
+        // against LoadsheetState.MinMacTow / MaxMacTow (the bounds are
+        // operationally MACTOW limits but apply to MACZFW too because
+        // any out-of-envelope MACTOW implies a suspect ZFW CG).
+        [ObservableProperty] private double _MaczfwResolvedPercent;
+        [ObservableProperty] private bool _MaczfwResolvedError;
+        [ObservableProperty] private string _MaczfwResolvedSource = "computed";
 
         // Loadsheet mirror — projected each tick from the active loadsheet
         // slot (final preferred, prelim if no final yet). Lets the W&B page
@@ -104,8 +107,8 @@ namespace Prosim2GSX.State
         [ObservableProperty] private double _LoadsheetMactowPercent;
         [ObservableProperty] private string _LoadsheetSource = "none";
 
-        // FMS sync staleness. Set by MactowValidationService on every tick:
-        // true when a prior sync exists AND any of MACTOW (>0.1 %MAC),
+        // FMS sync staleness. Set by FmsSyncService on every tick:
+        // true when a prior sync exists AND any of MACZFW (>0.1 %MAC),
         // ZFW (>100 kg), or block-fuel (>200 kg) have drifted past their
         // operational tolerance, OR the loadsheet source has upgraded
         // (prelim → final). Drives the "RESYNC TO FMS" button label and a
