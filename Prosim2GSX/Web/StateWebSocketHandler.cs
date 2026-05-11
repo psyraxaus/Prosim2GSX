@@ -476,19 +476,33 @@ namespace Prosim2GSX.Web
                 ? "WS snapshot broadcast — pushing full state to all connected clients (SDK-connect rising edge)"
                 : "WS snapshot — sending initial state to newly-connected client");
 
-            // Patch-style channels with a dedicated DTO.
-            BroadcastDtoAsPatch("weightBalance", WeightBalanceDto.From(_app), target);
-            BroadcastDtoAsPatch("fuel", FuelDto.From(_app), target);
-            BroadcastDtoAsPatch("flightStatus", FlightStatusDto.From(_app), target);
-            BroadcastDtoAsPatch("audio", AudioDto.From(_app), target);
-            BroadcastDtoAsPatch("ofp", OfpDto.From(_app), target);
+            // Full-DTO channels — shipped as { channel, snapshot: <DTO> } so
+            // the client dispatches a "set" (replace-the-whole-channel), which
+            // also bootstraps the channel out of its initial null. A "patch"
+            // here would be silently dropped on a fresh client whose channel
+            // hasn't yet been populated by a panel-mount REST fetch — exactly
+            // the DelayProsimConnection case this snapshot exists to fix.
+            // Per-property change broadcasts continue to ship as patches and
+            // merge into the now-non-null channel.
+            BroadcastDtoAsSnapshot("weightBalance", WeightBalanceDto.From(_app), target);
+            BroadcastDtoAsSnapshot("fuel", FuelDto.From(_app), target);
+            BroadcastDtoAsSnapshot("flightStatus", FlightStatusDto.From(_app), target);
+            BroadcastDtoAsSnapshot("audio", AudioDto.From(_app), target);
+            BroadcastDtoAsSnapshot("ofp", OfpDto.From(_app), target);
+
+            // appSettings stays a patch — the React app pre-fetches it via
+            // REST on load (App.tsx), so its channel is reliably non-null by
+            // the time any snapshot arrives, and the per-property OnConfigChanged
+            // broadcasts already use this shape.
             BroadcastDtoAsPatch("appSettings", AppSettingsDto.From(_app), target);
 
             // Patch-style "gsx" channel — no DTO (per-property INPC fan-out
-            // works directly off GsxState). Reflect over the state object
-            // and ship every public scalar property in one envelope so the
-            // client gets the same key set it would receive from a tick's
-            // worth of per-property patches.
+            // works directly off GsxState) and it nests under flightStatus.gsx
+            // on the client, so it can't be a top-level "set". Reflect over the
+            // state object and ship every public scalar property in one envelope
+            // so the client gets the same key set a tick's worth of per-property
+            // patches would produce. (flightStatus is set just above, so the
+            // client's gsx-patch branch finds a non-null flightStatus to nest into.)
             BroadcastStateAsPatch("gsx", _app?.Gsx, target);
 
             // Snapshot-style channels — re-use the existing helpers so the
@@ -501,7 +515,7 @@ namespace Prosim2GSX.Web
                 var lsEnvelope = new
                 {
                     channel = "loadsheet",
-                    patch = new Dictionary<string, object>
+                    snapshot = new Dictionary<string, object>
                     {
                         ["prelim"] = lsSnap.Prelim,
                         ["final"] = lsSnap.Final,
@@ -545,6 +559,23 @@ namespace Prosim2GSX.Web
             try
             {
                 var envelope = new { channel, patch = dto };
+                BroadcastBytes(Serialize(envelope), target);
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
+        }
+
+        // Wraps a DTO as a { channel, snapshot: <dto> } envelope. Used by the
+        // full-state broadcast so the client treats it as a wholesale channel
+        // replace ("set"), which also bootstraps the channel from null — a
+        // plain "patch" is dropped client-side until the channel has been
+        // populated by something else. When `target` is non-null, sends to
+        // that connection only.
+        private void BroadcastDtoAsSnapshot(string channel, object dto, Connection target = null)
+        {
+            if (dto == null) return;
+            try
+            {
+                var envelope = new { channel, snapshot = dto };
                 BroadcastBytes(Serialize(envelope), target);
             }
             catch (Exception ex) { Logger.LogException(ex); }

@@ -121,6 +121,12 @@ namespace Prosim2GSX.Services
                 sdk.RegisterPollDataref(r);
             }
             _primed = true;
+            // Diagnostic: confirms the service reached its populate path after
+            // an SDK connect (notably under DelayProsimConnection, where the
+            // SDK comes up ~10–15 s into the session). If this line is absent
+            // from a delay-mode log yet the Loadsheet tab still shows defaults,
+            // the gap is upstream of the store, not in the WS layer.
+            Logger.Debug($"LoadsheetService primed {PolledRefs.Length} datarefs — SDK connected, polling efb.prelim/finalLoadsheet from this tick on");
         }
 
         // No-op subscription callback. We don't process events here — the
