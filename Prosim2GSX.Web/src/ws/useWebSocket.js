@@ -45,15 +45,22 @@ export function useWebSocket(dispatch) {
                         return;
                     }
                     if ("snapshot" in env && env.channel) {
-                        // Snapshot envelopes only land on channels that are also valid
-                        // StateChannels (currently "checklists"). Narrow with a runtime
-                        // check rather than expanding StateChannel to include "gsx",
-                        // which is a patch-only channel that nests under flightStatus.
+                        // A snapshot envelope carries a full channel DTO — dispatch as a
+                        // "set" so the channel is replaced wholesale AND bootstrapped out
+                        // of its initial null (a "patch" on a null channel is silently
+                        // dropped by the reducer, which is exactly what broke the
+                        // DelayProsimConnection case: the server's on-connect /
+                        // SDK-rising-edge full-state broadcast couldn't land). Every
+                        // channel except "gsx" arrives this way; "gsx" is a patch-only
+                        // channel that nests under flightStatus on the client.
                         if (env.channel === "flightStatus" ||
                             env.channel === "audio" ||
                             env.channel === "appSettings" ||
                             env.channel === "ofp" ||
                             env.channel === "checklists" ||
+                            env.channel === "weightBalance" ||
+                            env.channel === "loadsheet" ||
+                            env.channel === "fuel" ||
                             env.channel === "efbFlightPlan" ||
                             env.channel === "notifications") {
                             dispatch({ type: "set", channel: env.channel, state: env.snapshot });
