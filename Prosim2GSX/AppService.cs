@@ -136,6 +136,18 @@ namespace Prosim2GSX
         // a manual override fallback for OFP-less workflows).
         public virtual LoadsheetTimingService LoadsheetTimingService { get; protected set; }
 
+        // Takeoff perf reader/orchestrator. Owns the proxy to the gateway's
+        // /efb/calculate/vspeeds endpoint, the runway/METAR lookups for the
+        // TAKEOFF tab, and the FMS uplink action that writes V1/VR/V2 +
+        // flaps + flex + THS + shift into aircraft.fms.perf.takeOff.*.
+        public virtual TakeoffPerfService TakeoffPerfService { get; protected set; }
+
+        // Landing perf reader/orchestrator. Owns the proxy to
+        // /efb/calculate/ldr, the runway/METAR lookups for the LANDING tab,
+        // and the client-side LDA / wind-component / colour-class
+        // derivations consumed by both UIs.
+        public virtual LandingPerfService LandingPerfService { get; protected set; }
+
         // Synthetic passenger manifest generator — fills the cabin on demand
         // from the Aircraft Status panel without going through GSX. Writes
         // aircraft.passengers.seatOccupation.string directly via the SDK so
@@ -249,6 +261,13 @@ namespace Prosim2GSX
             // dataref. Constructed after EfbFlightPlanService and Loadsheet
             // so its resolver and state checks see the latest stores.
             LoadsheetTimingService = new LoadsheetTimingService(this);
+
+            // Takeoff + landing perf orchestrators. Constructed after the
+            // loadsheet/W&B services since TakeoffPerfService.SyncFromLoadsheet
+            // reads LoadsheetState. Both services are null-safe under
+            // degraded SDK — Tick early-returns when the SDK isn't up yet.
+            TakeoffPerfService = new TakeoffPerfService(this);
+            LandingPerfService = new LandingPerfService(this);
 
             // Passenger simulation — writes a synthetic manifest's
             // seatOccupation.string to ProSim on demand. Independent of the
