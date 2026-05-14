@@ -56,6 +56,8 @@ namespace Prosim2GSX
         public virtual FuelState Fuel { get; } = new();
         public virtual EfbFlightPlanState EfbFlightPlan { get; } = new();
         public virtual NotificationsState Notifications { get; } = new();
+        public virtual TakeoffPerfState TakeoffPerf { get; } = new();
+        public virtual LandingPerfState LandingPerf { get; } = new();
         // Settings is an alias for the existing Config singleton — Config already
         // implements INotifyPropertyChanged and persists itself, so it serves as
         // the AppSettingsState surface unchanged.
