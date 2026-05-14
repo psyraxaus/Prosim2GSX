@@ -29,6 +29,8 @@ export interface AppState {
   efbFlightPlan: Record<string, unknown> | null;
   notifications: Record<string, unknown> | null;
   fuel: Record<string, unknown> | null;
+  takeoffPerf: Record<string, unknown> | null;
+  landingPerf: Record<string, unknown> | null;
   connection: ConnectionStatus;
 }
 
@@ -50,6 +52,8 @@ const initialState: AppState = {
   efbFlightPlan: null,
   notifications: null,
   fuel: null,
+  takeoffPerf: null,
+  landingPerf: null,
   connection: "closed",
 };
 

@@ -20,6 +20,8 @@ const initialState = {
     efbFlightPlan: null,
     notifications: null,
     fuel: null,
+    takeoffPerf: null,
+    landingPerf: null,
     connection: "closed",
 };
 function reducer(state, action) {

@@ -13,9 +13,9 @@
 
 export type ConnectionStatus = "connecting" | "open" | "reconnecting" | "closed";
 
-export type WsChannel = "flightStatus" | "gsx" | "audio" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet" | "efbFlightPlan" | "notifications" | "fuel";
+export type WsChannel = "flightStatus" | "gsx" | "audio" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet" | "efbFlightPlan" | "notifications" | "fuel" | "takeoffPerf" | "landingPerf";
 
-export type StateChannel = "flightStatus" | "audio" | "gsxSettings" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet" | "efbFlightPlan" | "notifications" | "fuel";
+export type StateChannel = "flightStatus" | "audio" | "gsxSettings" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet" | "efbFlightPlan" | "notifications" | "fuel" | "takeoffPerf" | "landingPerf";
 
 export interface PatchEnvelope {
   channel: WsChannel;
@@ -948,4 +948,161 @@ export interface NotificationDto {
 
 export interface NotificationsSnapshotDto {
   items: NotificationDto[];
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Performance — Takeoff & Landing tabs
+// Mirrors Prosim2GSX/Web/Contracts/PerfDtos.cs.
+// ──────────────────────────────────────────────────────────────────────────
+
+export interface RunwayIntersectionDto {
+  name: string;
+  toraFt: number;
+}
+
+export interface RunwayDto {
+  runwayId: string;
+  lengthFt: number;
+  dtFt: number;
+  qdm: number;
+  intersections: RunwayIntersectionDto[];
+}
+
+// Wire-string unions. The server tolerates case mismatches on the
+// inbound `/inputs` partial-update side (state setters take whatever
+// the client sends and the calc layer normalises), so these are
+// declared as the canonical values the UI should emit.
+export type TakeoffSurface = "DRY" | "WET";
+export type TakeoffFlap = "opt" | "1+F" | "2" | "3";
+export type TakeoffAntiIce = "OFF" | "ENG" | "ENG+WING";
+export type TakeoffPacks = "OFF" | "ON";
+export type EngineVariant = "CFM" | "IAE";
+
+export interface TakeoffPerfStateDto {
+  // Inputs
+  icao: string;
+  runwayId: string;
+  intersectionName: string;
+  surface: TakeoffSurface;
+  flap: TakeoffFlap;
+  antiIce: TakeoffAntiIce;
+  packs: TakeoffPacks;
+  forceToga: boolean;
+  towKg: number;
+  mactowPercent: number;
+  oatC: number;
+  qnhHpa: number;
+  windDir: string;            // "VRB" or "DDD"
+  windKt: number;
+  engineVariant: EngineVariant;
+
+  // Lookups
+  runways: RunwayDto[];
+  metarText: string;
+  metarFetchedAt: string | null;
+
+  // Result
+  hasResult: boolean;
+  v1: number;
+  vr: number;
+  v2: number;
+  flapSettings: number;       // 1 | 2 | 3 (1 = CONF 1+F)
+  flexOutputC: number;        // 0 = TOGA
+  thsValue: number;           // signed: + = UP, − = DN
+  trimDir: "UP" | "DN" | "";
+  toplKg: number;
+  toplLimited: boolean;
+  forceTogaResult: boolean;
+  hwCompKt: number;           // signed: + = headwind, − = tailwind
+  greenDot: number | null;
+  shiftM: number;
+  calculationError: string;
+
+  // Status
+  isBusy: boolean;
+  lastError: string;
+  isUplinked: boolean;
+  uplinkedAt: string | null;
+}
+
+// All fields optional — caller sends only what changed.
+export interface TakeoffInputsDto {
+  icao?: string;
+  runwayId?: string;
+  intersectionName?: string;
+  surface?: string;
+  flap?: string;
+  antiIce?: string;
+  packs?: string;
+  forceToga?: boolean;
+  towKg?: number;
+  mactowPercent?: number;
+  oatC?: number;
+  qnhHpa?: number;
+  windDir?: string;
+  windKt?: number;
+}
+
+export type LandingBrakeMode = "LOW" | "MED" | "MAX";
+export type LandingRevMode = "idle" | "max";
+export type LandingAutoMode = "auto" | "manual";
+export type LandingFlapConfig = "FULL" | "3";
+export type WindClass = "normal" | "red";
+export type VisualDistClass = "normal" | "red" | "red-margin";
+
+export interface LandingPerfStateDto {
+  // Inputs
+  icao: string;
+  runwayId: string;
+  rwySurfaceCode: number;     // 1–6 (6 = Dry, 1 = Poor)
+  ldgWeightTons: number;
+  aircraftSpeedKt: number | null;
+  brakeMode: LandingBrakeMode;
+  revMode: LandingRevMode;
+  autolandMode: LandingAutoMode;
+  flapConfig: LandingFlapConfig;
+  athr: "0" | "1";
+  oatC: number;
+  qnhHpa: number;
+  windDir: string;
+  windKt: number;
+
+  // Lookups
+  runways: RunwayDto[];
+  metarText: string;
+  metarFetchedAt: string | null;
+
+  // Output (server-derived)
+  hasResult: boolean;
+  isNoData: boolean;
+  retreatFlap: boolean;
+  ldrM: number;
+  ldr15M: number;
+  ldaM: number;
+  hwKt: number;               // signed
+  xwKt: number;               // signed
+  hwClass: WindClass;
+  xwClass: WindClass;
+  visualDistClass: VisualDistClass;
+
+  // Status
+  isBusy: boolean;
+  lastError: string;
+}
+
+export interface LandingInputsDto {
+  icao?: string;
+  runwayId?: string;
+  rwySurfaceCode?: number;
+  ldgWeightTons?: number;
+  aircraftSpeedKt?: number;
+  brakeMode?: string;
+  revMode?: string;
+  autolandMode?: string;
+  flapConfig?: string;
+  athr?: string;
+  oatC?: number;
+  qnhHpa?: number;
+  windDir?: string;
+  windKt?: number;
 }

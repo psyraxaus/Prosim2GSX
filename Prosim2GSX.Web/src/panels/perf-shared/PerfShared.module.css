@@ -1,0 +1,108 @@
+/*
+ * Shared perf-tab styling — EFB Airbus palette.
+ * - #181a1f panel bg, #118cff border accent, monochrome amber labels.
+ *
+ * Lives next to the perf panels so future tweaks don't ripple through
+ * unrelated tabs (per the full-bleed-panels feedback memory: cancel main
+ * padding locally, never edit App.module.css).
+ */
+
+/* ── Tokens ───────────────────────────────────────────────────────── */
+.scope {
+  --efb-bg: #181a1f;
+  --efb-bg-soft: #20242b;
+  --efb-border: #118cff;
+  --efb-border-dim: #1d3b5e;
+  --efb-text: #e8edf3;
+  --efb-text-dim: #97a4b6;
+  --efb-amber: #ffb84d;
+  --efb-cyan: #00e0ff;
+  --efb-green: #67d97b;
+  --efb-red: #ff5b62;
+  --efb-red-soft: #2a0d10;
+  --efb-amber-soft: #2a1d0a;
+}
+
+/* ── Runway dropdown ──────────────────────────────────────────────── */
+.runwayDropdown {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.runwayDropdown select {
+  background: var(--efb-bg-soft);
+  color: var(--efb-text);
+  border: 1px solid var(--efb-border-dim);
+  padding: 6px 10px;
+  font: inherit;
+  min-width: 110px;
+}
+.runwayDropdown select:focus {
+  outline: 1px solid var(--efb-border);
+  outline-offset: -1px;
+}
+
+/* ── METAR strip ──────────────────────────────────────────────────── */
+.metarStrip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  background: var(--efb-bg-soft);
+  border-left: 3px solid var(--efb-border);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  color: var(--efb-text);
+}
+.metarHeader {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  font-size: 0.75rem;
+  color: var(--efb-text-dim);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.metarText {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.35;
+}
+.metarMissing {
+  color: var(--efb-text-dim);
+  font-style: italic;
+}
+
+/* ── Keyboard number input ────────────────────────────────────────── */
+.kbdNumber {
+  display: inline-flex;
+  align-items: stretch;
+  background: var(--efb-bg-soft);
+  border: 1px solid var(--efb-border-dim);
+  height: 28px;
+}
+.kbdNumber:focus-within {
+  border-color: var(--efb-border);
+}
+.kbdNumber input {
+  background: transparent;
+  color: var(--efb-text);
+  border: 0;
+  padding: 0 8px;
+  width: 5ch;
+  font: inherit;
+  text-align: right;
+}
+.kbdNumber input:focus {
+  outline: none;
+}
+.kbdNumber .unit {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  background: var(--efb-bg);
+  color: var(--efb-text-dim);
+  border-left: 1px solid var(--efb-border-dim);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

@@ -73,7 +73,9 @@ export function useWebSocket(dispatch: Dispatch<AppAction>) {
               env.channel === "loadsheet" ||
               env.channel === "fuel" ||
               env.channel === "efbFlightPlan" ||
-              env.channel === "notifications"
+              env.channel === "notifications" ||
+              env.channel === "takeoffPerf" ||
+              env.channel === "landingPerf"
             ) {
               dispatch({ type: "set", channel: env.channel, state: env.snapshot });
             }
