@@ -66,6 +66,8 @@ namespace Prosim2GSX.Web
             _app.Loadsheet.PropertyChanged += OnLoadsheetChanged;
             _app.EfbFlightPlan.PropertyChanged += OnEfbFlightPlanChanged;
             _app.Notifications.PropertyChanged += OnNotificationsChanged;
+            _app.TakeoffPerf.PropertyChanged += OnTakeoffPerfChanged;
+            _app.LandingPerf.PropertyChanged += OnLandingPerfChanged;
             HookChecklistItems(_app.Checklist);
             _app.FlightStatus.MessageLog.CollectionChanged += OnMessageLogChanged;
 
@@ -383,6 +385,52 @@ namespace Prosim2GSX.Web
             }
         }
 
+        // Takeoff + landing perf broadcasts: full-snapshot per change. Both
+        // panels render their inputs / result / status fields atomically;
+        // per-property patches would be cheaper on the wire but invite the
+        // partial-update bugs that bit fuel/W&B in March 2026. Snapshot
+        // envelopes also fix the DelayProsimConnection edge — a patch
+        // arriving before the channel exists on the client is silently
+        // dropped, but a snapshot bootstraps the channel out of null
+        // (project_ws_on_connect_snapshot memory).
+        private void OnTakeoffPerfChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (_connections.IsEmpty) return;
+            Logger.Debug($"WS takeoffPerf: {e.PropertyName}");
+            try
+            {
+                var envelope = new
+                {
+                    channel = "takeoffPerf",
+                    snapshot = TakeoffPerfStateDto.From(_app),
+                };
+                BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+        }
+
+        private void OnLandingPerfChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (_connections.IsEmpty) return;
+            Logger.Debug($"WS landingPerf: {e.PropertyName}");
+            try
+            {
+                var envelope = new
+                {
+                    channel = "landingPerf",
+                    snapshot = LandingPerfStateDto.From(_app),
+                };
+                BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+        }
+
         // ── Checklists channel ───────────────────────────────────────────────
         // The checklist wire surface is whole-snapshot per change. Per-item
         // IsChecked changes happen on individual ChecklistItemRuntime objects
@@ -544,6 +592,32 @@ namespace Prosim2GSX.Web
                     snapshot = EfbFlightPlanDto.From(_app),
                 };
                 BroadcastBytes(Serialize(efbEnvelope), target);
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
+
+            // takeoffPerf + landingPerf — ship as snapshot envelopes so they
+            // bootstrap on a fresh client (a patch lands before the channel
+            // exists and gets dropped). Matches the efbFlightPlan / loadsheet
+            // convention.
+            try
+            {
+                var toEnvelope = new
+                {
+                    channel = "takeoffPerf",
+                    snapshot = TakeoffPerfStateDto.From(_app),
+                };
+                BroadcastBytes(Serialize(toEnvelope), target);
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
+
+            try
+            {
+                var ldgEnvelope = new
+                {
+                    channel = "landingPerf",
+                    snapshot = LandingPerfStateDto.From(_app),
+                };
+                BroadcastBytes(Serialize(ldgEnvelope), target);
             }
             catch (Exception ex) { Logger.LogException(ex); }
         }
