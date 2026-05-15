@@ -19,6 +19,7 @@ import { WeightBalancePanel } from "./panels/WeightBalancePanel";
 import { FuelPanel } from "./panels/FuelPanel";
 import { ChecklistsPanel } from "./panels/ChecklistsPanel";
 import { AircraftProfilesPanel } from "./panels/AircraftProfilesPanel";
+import { TakeoffPerfPanel } from "./panels/TakeoffPerfPanel";
 import { AppSettingsDto } from "./types";
 import styles from "./App.module.css";
 
@@ -92,6 +93,7 @@ function AppShell() {
         {tab === "loadsheet" && <LoadsheetPanel />}
         {tab === "weightBalance" && <WeightBalancePanel />}
         {tab === "fuel" && <FuelPanel />}
+        {tab === "takeoff" && <TakeoffPerfPanel />}
         {tab === "checklists" && <ChecklistsPanel />}
         {tab === "gsxSettings" && <GsxSettingsPanel />}
         {tab === "aircraftProfiles" && <AircraftProfilesPanel />}

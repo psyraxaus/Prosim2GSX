@@ -20,6 +20,7 @@ import { WeightBalancePanel } from "./panels/WeightBalancePanel";
 import { FuelPanel } from "./panels/FuelPanel";
 import { ChecklistsPanel } from "./panels/ChecklistsPanel";
 import { AircraftProfilesPanel } from "./panels/AircraftProfilesPanel";
+import { TakeoffPerfPanel } from "./panels/TakeoffPerfPanel";
 import styles from "./App.module.css";
 export function App() {
     // The auth gate is shown until a token is in localStorage. Re-checked
@@ -68,5 +69,5 @@ function AppShell() {
     const themeName = state.appSettings?.currentTheme ?? null;
     useTheme(themeName);
     const [tab, setTab] = useState("flightStatus");
-    return (_jsxs("div", { className: styles.app, children: [_jsx(Header, {}), _jsx(NotificationBanner, {}), _jsx(TabBar, { active: tab, onSelect: setTab }), _jsxs("main", { className: styles.main, children: [tab === "flightStatus" && _jsx(FlightStatusPanel, {}), tab === "init" && _jsx(InitPanel, {}), tab === "ofp" && _jsx(OfpPanel, {}), tab === "loadsheet" && _jsx(LoadsheetPanel, {}), tab === "weightBalance" && _jsx(WeightBalancePanel, {}), tab === "fuel" && _jsx(FuelPanel, {}), tab === "checklists" && _jsx(ChecklistsPanel, {}), tab === "gsxSettings" && _jsx(GsxSettingsPanel, {}), tab === "aircraftProfiles" && _jsx(AircraftProfilesPanel, {}), tab === "audioSettings" && _jsx(AudioSettingsPanel, {}), tab === "appSettings" && _jsx(AppSettingsPanel, {})] })] }));
+    return (_jsxs("div", { className: styles.app, children: [_jsx(Header, {}), _jsx(NotificationBanner, {}), _jsx(TabBar, { active: tab, onSelect: setTab }), _jsxs("main", { className: styles.main, children: [tab === "flightStatus" && _jsx(FlightStatusPanel, {}), tab === "init" && _jsx(InitPanel, {}), tab === "ofp" && _jsx(OfpPanel, {}), tab === "loadsheet" && _jsx(LoadsheetPanel, {}), tab === "weightBalance" && _jsx(WeightBalancePanel, {}), tab === "fuel" && _jsx(FuelPanel, {}), tab === "takeoff" && _jsx(TakeoffPerfPanel, {}), tab === "checklists" && _jsx(ChecklistsPanel, {}), tab === "gsxSettings" && _jsx(GsxSettingsPanel, {}), tab === "aircraftProfiles" && _jsx(AircraftProfilesPanel, {}), tab === "audioSettings" && _jsx(AudioSettingsPanel, {}), tab === "appSettings" && _jsx(AppSettingsPanel, {})] })] }));
 }
