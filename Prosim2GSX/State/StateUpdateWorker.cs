@@ -98,10 +98,20 @@ namespace Prosim2GSX.State
                     // saw a transition into the current value.
                     try
                     {
-                        bool nowConnected = _app?.GsxService?.AircraftInterface?.ProsimInterface?.SdkInterface?.IsConnected ?? false;
+                        var sdk = _app?.GsxService?.AircraftInterface?.ProsimInterface?.SdkInterface;
+                        bool nowConnected = sdk?.IsConnected ?? false;
                         if (nowConnected && !_sdkWasConnected)
                             _app?.WebSocketHandler?.BroadcastSnapshotAll();
                         _sdkWasConnected = nowConnected;
+
+                        // Phase 3 additive: in push mode the SDK requests a
+                        // coalesced snapshot after a completed variable batch
+                        // (rate-limited inside ProsimSdkInterface). Consume it
+                        // here so a client that connected mid-stream gets full
+                        // state even when no per-property INPC fired. Always
+                        // false in poll mode → no behavioural change there.
+                        if (nowConnected && sdk?.ConsumeBatchSnapshotRequest() == true)
+                            _app?.WebSocketHandler?.BroadcastSnapshotAll();
                     }
                     catch (Exception ex) { Logger.LogException(ex); }
                 });

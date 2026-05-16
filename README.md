@@ -13,9 +13,9 @@ Full and proper GSX Integration and Automation for the ProSim A320! <br/>
 - Applications can be **freely mapped** to Audio-Channels — either via **CoreAudio** (per-process) or **VoiceMeeter Remote API** (per-strip/bus), selectable per install
 - Can be used, within certain Limits, with the native Integration
 - Supports to use the Volume Control without having GSX installed or running (or to solely use the native Integration)
-- **Embedded Web Interface** — full operational surface (INIT, LOADSHEET, W&B, FUEL, OFP, CHECKLISTS, settings) in any LAN browser (phone, tablet, second PC). QR-code onboarding, bearer-token auth, loopback-only by default. Designed for **headless sim-PC** setups where the WPF window isn't reachable.
+- **Embedded Web Interface** — full operational surface (INIT, LOADSHEET, W&B, FUEL, TAKEOFF, LANDING, OFP, CHECKLISTS, settings) in any LAN browser (phone, tablet, second PC). QR-code onboarding, bearer-token auth, loopback-only by default. Designed for **headless sim-PC** setups where the WPF window isn't reachable.
 
-> **Where to find each feature.** The WPF window covers Flight Status, OFP (with a read-only flight-plan summary), Checklists, GSX Settings, Aircraft Profiles, Audio Settings, and App Settings. The advanced EFB features — **INIT** (flight-plan fetch + per-field overrides), **LOADSHEET**, **W&B**, and **FUEL** — live on the embedded web interface (Section 3). Enable the web server in App Settings to use them.
+> **Where to find each feature.** The WPF window covers Flight Status, OFP (with a read-only flight-plan summary), Checklists, GSX Settings, Aircraft Profiles, Audio Settings, and App Settings. The advanced EFB features — **INIT** (flight-plan fetch + per-field overrides), **LOADSHEET**, **W&B**, **FUEL**, **TAKEOFF** (Airbus-style V-speed calculator with one-click FMS uplink), and **LANDING** (landing-distance calculator) — live on the embedded web interface (Section 3). Enable the web server in App Settings to use them.
 
 <br/><br/>
 
