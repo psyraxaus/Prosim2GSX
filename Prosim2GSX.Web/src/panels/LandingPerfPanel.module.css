@@ -83,7 +83,8 @@
   border: 1px solid var(--efb-border-dim);
   padding: 6px 10px;
   font: inherit;
-  width: 6ch;
+  width: 10ch;
+  text-align: center;
   text-transform: uppercase;
 }
 .icaoInput:focus {

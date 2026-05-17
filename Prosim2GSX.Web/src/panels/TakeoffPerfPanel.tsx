@@ -200,6 +200,7 @@ export function TakeoffPerfPanel() {
 
           <FieldRow label="ICAO">
             <input
+              key={to.icao}
               type="text"
               className={styles.icaoInput}
               defaultValue={to.icao}

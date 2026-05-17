@@ -151,6 +151,7 @@ export function LandingPerfPanel() {
 
           <FieldRow label="ICAO">
             <input
+              key={ld.icao}
               type="text"
               className={styles.icaoInput}
               defaultValue={ld.icao}

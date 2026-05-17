@@ -92,7 +92,8 @@
   outline-offset: -1px;
 }
 .icaoInput {
-  width: 6ch;
+  width: 10ch;
+  text-align: center;
   text-transform: uppercase;
 }
 
