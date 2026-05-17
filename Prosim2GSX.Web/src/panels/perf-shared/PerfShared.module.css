@@ -7,14 +7,23 @@
  * padding locally, never edit App.module.css).
  */
 
-/* ── Tokens ───────────────────────────────────────────────────────── */
+/* ── Tokens ───────────────────────────────────────────────────────────
+ * Chrome aliases ride on the app theme tokens so the perf tabs recolour
+ * with the airline theme like every other tab. The instrument-readout +
+ * state colours below are deliberately FIXED — same rationale as
+ * --success/--warning/--danger: they convey instrument state, not theme.
+ */
 .scope {
-  --efb-bg: #181a1f;
-  --efb-bg-soft: #20242b;
-  --efb-border: #118cff;
-  --efb-border-dim: #1d3b5e;
-  --efb-text: #e8edf3;
-  --efb-text-dim: #97a4b6;
+  /* Theme-aware chrome */
+  --efb-bg: var(--bg-card);
+  --efb-bg-soft: var(--bg-input);
+  --efb-border: var(--accent);
+  --efb-border-dim: var(--border);
+  --efb-text: var(--text-primary);
+  --efb-text-dim: var(--text-secondary);
+  --efb-heading: var(--category-text);
+
+  /* Fixed instrument-readout + state colours (NOT themed) */
   --efb-amber: #ffb84d;
   --efb-cyan: #00e0ff;
   --efb-green: #67d97b;

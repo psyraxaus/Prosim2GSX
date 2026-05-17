@@ -4,29 +4,29 @@
  */
 
 .panel {
-  /* Cancel the App.module.css `.main { padding: 16px 0 }` locally so the
-     EFB chrome runs flush. Per feedback_full_bleed_panels — never edit
-     the shared App.module.css. */
-  margin: -16px 0;
-  background: var(--efb-bg);
+  /* Standard padded panel frame — matches OFP / Fuel / Loadsheet so the
+     perf tabs sit in the same outer margin as every other tab. */
+  padding: 16px 18px;
+  max-width: 1200px;
+  margin: 0 auto;
   color: var(--efb-text);
-  min-height: 100%;
   display: flex;
   flex-direction: column;
 }
 
 .header {
-  padding: 12px 20px;
+  padding: 0 0 10px 0;
   display: flex;
   align-items: baseline;
   gap: 16px;
-  border-bottom: 1px solid var(--efb-border-dim);
 }
 .title {
-  font-size: 0.9rem;
-  letter-spacing: 0.16em;
-  color: var(--efb-amber);
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--efb-heading);
   text-transform: uppercase;
+  font-weight: 600;
 }
 .flightInfo {
   margin-left: auto;
@@ -39,13 +39,18 @@
   flex: 1 1 auto;
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 1px;
-  background: var(--efb-border-dim);
-  padding: 1px;
+  gap: 14px;
+}
+@media (max-width: 900px) {
+  .body {
+    grid-template-columns: 1fr;
+  }
 }
 .column {
   background: var(--efb-bg);
-  padding: 16px 20px;
+  border: 1px solid var(--efb-border-dim);
+  border-radius: var(--radius-md, 6px);
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -54,7 +59,7 @@
   font-size: 0.75rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--efb-amber);
+  color: var(--efb-heading);
   border-bottom: 1px dashed var(--efb-border-dim);
   padding-bottom: 6px;
   margin-bottom: 4px;
@@ -163,7 +168,8 @@
 .dashedValue::after { content: "----"; }
 
 .footer {
-  padding: 12px 20px 16px;
+  margin-top: 14px;
+  padding: 14px 0 0 0;
   border-top: 1px solid var(--efb-border-dim);
   display: flex;
   flex-direction: column;
