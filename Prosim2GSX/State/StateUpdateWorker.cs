@@ -4,9 +4,7 @@ using Prosim2GSX.GSX.Services;
 using Prosim2GSX.UI.Views.Checklists;
 using ProsimInterface;
 using System;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Threading;
+using System.Threading;
 
 namespace Prosim2GSX.State
 {
@@ -16,15 +14,23 @@ namespace Prosim2GSX.State
     // while the Monitor tab was active. Lifting it here means the web/WS layer
     // and any other consumer always sees current state.
     //
-    // The DispatcherTimer ticks on the WPF dispatcher; the actual polling work is
-    // offloaded via Task.Run so blocking framework calls (SimConnect WaitSimLoop
-    // locks, etc.) never stall the UI thread. Property writes on the [ObservableProperty]
-    // backed state classes therefore happen on a background thread — WPF tolerates
-    // this for scalar bindings, matching the prior pattern.
+    // Runs on a System.Threading.Timer (thread-pool callback), NOT a
+    // DispatcherTimer. The earlier DispatcherTimer implementation tied this
+    // permanent ~500 ms loop to the WPF UI thread for the entire process
+    // lifetime — including the long headless stretches the window spends
+    // hidden to the tray. That, together with MessageLogDrainWorker, kept the
+    // UI thread's shared Win32 message queue from draining and eventually hit
+    // the per-thread PostMessage limit (ERROR_NOT_ENOUGH_QUOTA crash in
+    // HwndTarget.UpdateWindowSettings on the next window restore). Property
+    // writes on the [ObservableProperty]-backed stores already happened on a
+    // background thread here (the prior code wrapped the work in Task.Run);
+    // moving the timer itself off the dispatcher removes the last UI-thread
+    // dependency so headless operation never touches the WPF message pump.
     public class StateUpdateWorker
     {
         private readonly AppService _app;
-        private readonly DispatcherTimer _timer;
+        private readonly Timer _timer;
+        private readonly int _intervalMs;
         private volatile bool _isUpdating;
 
         // SDK-connect edge tracking. Detects the false→true transition of
@@ -41,80 +47,65 @@ namespace Prosim2GSX.State
         {
             _app = app;
 
-            int interval = Math.Max(100, app?.Config?.UiRefreshInterval ?? 500);
-            var dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
-            _timer = new DispatcherTimer(DispatcherPriority.Background, dispatcher)
-            {
-                Interval = TimeSpan.FromMilliseconds(interval),
-            };
-            _timer.Tick += OnTick;
+            _intervalMs = Math.Max(100, app?.Config?.UiRefreshInterval ?? 500);
+            // Created stopped; Start() arms it. Periodic with an _isUpdating
+            // re-entrancy guard preserves the prior "skip this tick if the
+            // previous one is still running" behaviour.
+            _timer = new Timer(OnTick, null, Timeout.Infinite, Timeout.Infinite);
         }
 
         public virtual void Start()
-        {
-            // Start can be called from any thread (e.g. AppService init); marshal
-            // to the timer's dispatcher because DispatcherTimer.Start requires it.
-            var d = _timer.Dispatcher;
-            if (d.CheckAccess()) _timer.Start();
-            else d.InvokeAsync(_timer.Start);
-        }
+            => _timer.Change(_intervalMs, _intervalMs);
 
         public virtual void Stop()
-        {
-            var d = _timer.Dispatcher;
-            if (d.CheckAccess()) _timer.Stop();
-            else d.InvokeAsync(_timer.Stop);
-        }
+            => _timer.Change(Timeout.Infinite, Timeout.Infinite);
 
-        protected virtual async void OnTick(object? sender, EventArgs e)
+        protected virtual void OnTick(object? state)
         {
             if (_isUpdating) return;
             _isUpdating = true;
             try
             {
-                await Task.Run(() =>
+                try { UpdateSim(); } catch (Exception ex) { Logger.LogException(ex); }
+                try { UpdateGsx(); } catch { }
+                try { UpdateApp(); } catch { }
+                try { UpdateChecklist(); } catch (Exception ex) { Logger.LogException(ex); }
+                try { _app?.WeightBalanceService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
+                try { _app?.FuelService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
+                try { _app?.LoadsheetService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
+                try { _app?.EfbFlightPlanService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
+                try { _app?.LoadsheetTimingService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
+                try { _app?.TakeoffPerfService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
+                try { _app?.LandingPerfService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
+
+                // SDK-connect rising edge → push a full WS snapshot to
+                // every connected client. Runs AFTER the service ticks
+                // so the state stores hold their freshly-populated
+                // values rather than the defaults the disconnect-window
+                // ticks left them in. INPC events from this same tick
+                // already pushed per-property patches, but the snapshot
+                // covers any property whose value didn't change (and
+                // therefore didn't fire an event) — important for
+                // clients that connected with default zeros and never
+                // saw a transition into the current value.
+                try
                 {
-                    try { UpdateSim(); } catch (Exception ex) { Logger.LogException(ex); }
-                    try { UpdateGsx(); } catch { }
-                    try { UpdateApp(); } catch { }
-                    try { UpdateChecklist(); } catch (Exception ex) { Logger.LogException(ex); }
-                    try { _app?.WeightBalanceService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
-                    try { _app?.FuelService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
-                    try { _app?.LoadsheetService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
-                    try { _app?.EfbFlightPlanService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
-                    try { _app?.LoadsheetTimingService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
-                    try { _app?.TakeoffPerfService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
-                    try { _app?.LandingPerfService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
+                    var sdk = _app?.GsxService?.AircraftInterface?.ProsimInterface?.SdkInterface;
+                    bool nowConnected = sdk?.IsConnected ?? false;
+                    if (nowConnected && !_sdkWasConnected)
+                        _app?.WebSocketHandler?.BroadcastSnapshotAll();
+                    _sdkWasConnected = nowConnected;
 
-                    // SDK-connect rising edge → push a full WS snapshot to
-                    // every connected client. Runs AFTER the service ticks
-                    // so the state stores hold their freshly-populated
-                    // values rather than the defaults the disconnect-window
-                    // ticks left them in. INPC events from this same tick
-                    // already pushed per-property patches, but the snapshot
-                    // covers any property whose value didn't change (and
-                    // therefore didn't fire an event) — important for
-                    // clients that connected with default zeros and never
-                    // saw a transition into the current value.
-                    try
-                    {
-                        var sdk = _app?.GsxService?.AircraftInterface?.ProsimInterface?.SdkInterface;
-                        bool nowConnected = sdk?.IsConnected ?? false;
-                        if (nowConnected && !_sdkWasConnected)
-                            _app?.WebSocketHandler?.BroadcastSnapshotAll();
-                        _sdkWasConnected = nowConnected;
-
-                        // Phase 3 additive: in push mode the SDK requests a
-                        // coalesced snapshot after a completed variable batch
-                        // (rate-limited inside ProsimSdkInterface). Consume it
-                        // here so a client that connected mid-stream gets full
-                        // state even when no per-property INPC fired. Always
-                        // false in poll mode → no behavioural change there.
-                        if (nowConnected && sdk?.ConsumeBatchSnapshotRequest() == true)
-                            _app?.WebSocketHandler?.BroadcastSnapshotAll();
-                    }
-                    catch (Exception ex) { Logger.LogException(ex); }
-                });
+                    // Phase 3 additive: in push mode the SDK requests a
+                    // coalesced snapshot after a completed variable batch
+                    // (rate-limited inside ProsimSdkInterface). Consume it
+                    // here so a client that connected mid-stream gets full
+                    // state even when no per-property INPC fired. Always
+                    // false in poll mode → no behavioural change there.
+                    if (nowConnected && sdk?.ConsumeBatchSnapshotRequest() == true)
+                        _app?.WebSocketHandler?.BroadcastSnapshotAll();
+                }
+                catch (Exception ex) { Logger.LogException(ex); }
             }
             finally
             {

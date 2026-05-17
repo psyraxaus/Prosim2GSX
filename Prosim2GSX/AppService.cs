@@ -69,6 +69,12 @@ namespace Prosim2GSX
         protected virtual StateUpdateWorker StateUpdateWorker { get; set; }
         protected virtual MessageLogDrainWorker MessageLogDrainWorker { get; set; }
 
+        // Always-on resource telemetry (USER/GDI/handle counts + CFIT log queue
+        // depth). Lives here rather than on AppWindow because the headless
+        // scenario — window never shown — is exactly the one that crashed, and
+        // the AppWindow-hosted heartbeat never ran in that case.
+        protected virtual ResourceDiagnosticsWorker ResourceDiagnosticsWorker { get; set; }
+
         // Embedded Kestrel host for the LAN browser interface. Constructed
         // unconditionally so it can react to Config.WebServerEnabled changes
         // at runtime; only Start()s when Config.WebServerEnabled is true.
@@ -201,8 +207,10 @@ namespace Prosim2GSX
             // until controllers come up.
             StateUpdateWorker = new StateUpdateWorker(this);
             MessageLogDrainWorker = new MessageLogDrainWorker(FlightStatus, Config);
+            ResourceDiagnosticsWorker = new ResourceDiagnosticsWorker(Config);
             StateUpdateWorker.Start();
             MessageLogDrainWorker.Start();
+            ResourceDiagnosticsWorker.Start();
 
             // Web host follows Config.WebServerEnabled — constructed always so
             // it can react to runtime toggles, only Start()s when enabled.
@@ -478,6 +486,7 @@ namespace Prosim2GSX
 
             try { StateUpdateWorker?.Stop(); } catch { }
             try { MessageLogDrainWorker?.Stop(); } catch { }
+            try { ResourceDiagnosticsWorker?.Stop(); } catch { }
             try { WebHost?.Stop(); } catch { }
             try { OfpAutoSend?.Detach(); } catch { }
 

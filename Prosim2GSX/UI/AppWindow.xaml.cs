@@ -1,4 +1,3 @@
-using CFIT.AppLogger;
 using CFIT.AppTools;
 using Prosim2GSX.UI.Views.Audio;
 using Prosim2GSX.UI.Views.Checklists;
@@ -7,9 +6,7 @@ using Prosim2GSX.UI.Views.Monitor;
 using Prosim2GSX.UI.Views.Profiles;
 using Prosim2GSX.UI.Views.Settings;
 using System;
-using System.Diagnostics;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -29,13 +26,6 @@ namespace Prosim2GSX.UI
         public static UiIconLoader IconLoader { get; } = new(Assembly.GetExecutingAssembly(), IconLoadSource.Embedded, "Prosim2GSX.UI.Icons.");
 
         private int _previousTabIndex = -1;
-        private DispatcherTimer _logTrimTimer;
-        private DispatcherTimer _resourceHeartbeatTimer;
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern uint GetGuiResources(IntPtr hProcess, uint uiFlags);
-        private const uint GR_GDIOBJECTS = 0;
-        private const uint GR_USEROBJECTS = 1;
 
         public AppWindow()
         {
@@ -44,7 +34,6 @@ namespace Prosim2GSX.UI
             this.Loaded += OnWindowLoaded;
             this.IsVisibleChanged += OnVisibleChanged;
             this.SizeChanged += OnWindowSizeChanged;
-            this.Closed += OnWindowClosed;
 
             // Show SDK warning banner if running in degraded mode
             if (!Prosim2GSX.Instance.IsSdkAvailable)
@@ -130,84 +119,9 @@ namespace Prosim2GSX.UI
                     DispatcherPriority.Background,
                     new Action(() => ((MainTabControl.Items[0] as TabItem)?.Content as IView)?.Start()));
             }
-
-            StartLogTrimTimer();
-            StartResourceHeartbeat();
-        }
-
-        // Diagnostic: log USER / GDI / Handle counts for our own process every 60s.
-        // USER objects: windows, menus, hooks, popups, tooltips. GDI objects: pens,
-        // brushes, fonts, bitmaps, regions. A steady climb here points to a leak in
-        // this process; flat counts during a session-wide ERROR_NOT_ENOUGH_QUOTA
-        // crash points to another process (often MSFS) exhausting the desktop pool.
-        private void StartResourceHeartbeat()
-        {
-            _resourceHeartbeatTimer = new DispatcherTimer(DispatcherPriority.Background)
-            {
-                Interval = TimeSpan.FromSeconds(60),
-            };
-            _resourceHeartbeatTimer.Tick += OnResourceHeartbeatTick;
-            _resourceHeartbeatTimer.Start();
-            // Fire one immediately so we have a baseline at startup.
-            OnResourceHeartbeatTick(this, EventArgs.Empty);
-        }
-
-        private bool _resourceHeartbeatErrorReported = false;
-
-        private void OnResourceHeartbeatTick(object sender, EventArgs e)
-        {
-            try
-            {
-                using var proc = Process.GetCurrentProcess();
-                uint user = GetGuiResources(proc.Handle, GR_USEROBJECTS);
-                uint gdi = GetGuiResources(proc.Handle, GR_GDIOBJECTS);
-                int handles = proc.HandleCount;
-                Logger.Debug($"Resource heartbeat: USER={user}, GDI={gdi}, Handles={handles}");
-            }
-            catch (Exception ex) when (!_resourceHeartbeatErrorReported)
-            {
-                _resourceHeartbeatErrorReported = true;
-                Logger.LogException(ex);
-            }
-        }
-
-        // Periodic safety net: trims Logger.Messages while the Monitor tab is not
-        // actively draining it (e.g. user spent hours on Settings). Without this, the
-        // CFIT logger's in-memory queue is unbounded and grows for every Information+
-        // log message until the app is closed or returns to the Monitor tab.
-        private void StartLogTrimTimer()
-        {
-            _logTrimTimer = new DispatcherTimer(DispatcherPriority.Background)
-            {
-                Interval = TimeSpan.FromSeconds(10),
-            };
-            _logTrimTimer.Tick += OnLogTrimTick;
-            _logTrimTimer.Start();
-        }
-
-        private bool _logTrimErrorReported = false;
-
-        private void OnLogTrimTick(object sender, EventArgs e)
-        {
-            try
-            {
-                int cap = Math.Max(1, Prosim2GSX.Instance?.AppService?.Config?.UiLogMaxMessages ?? 200);
-                while (Logger.Messages.Count > cap)
-                    Logger.Messages.TryDequeue(out _);
-            }
-            catch (Exception ex) when (!_logTrimErrorReported)
-            {
-                _logTrimErrorReported = true;
-                Logger.LogException(ex);
-            }
-        }
-
-        private void OnWindowClosed(object sender, EventArgs e)
-        {
-            _logTrimTimer?.Stop();
-            _logTrimTimer = null;
-            _resourceHeartbeatTimer?.Stop();
-            _resourceHeartbeatTimer = null;
+            // Resource heartbeat + CFIT log-queue trim now live on
+            // AppService.ResourceDiagnosticsWorker so they run even when this
+            // window is never shown (the headless crash scenario).
         }
 
         private static UIElement CreateDegradedPlaceholder()

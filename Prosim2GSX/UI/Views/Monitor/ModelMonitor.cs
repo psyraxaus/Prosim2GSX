@@ -249,9 +249,28 @@ namespace Prosim2GSX.UI.Views.Monitor
             if (e.Action != NotifyCollectionChangedAction.Add || e.NewItems == null)
                 return;
 
-            foreach (var item in e.NewItems)
+            // The store's MessageLog is now mutated by MessageLogDrainWorker on
+            // a background (thread-pool) thread, so this event arrives off the
+            // UI thread. MessageLog here is bound to the Monitor ListView, so
+            // its mutation must happen on the dispatcher — marshal when we're
+            // not already on it (the Start()/SyncMessageLogFromStore path is
+            // on the UI thread and runs inline).
+            var newMessages = new string[e.NewItems.Count];
+            for (int i = 0; i < e.NewItems.Count; i++)
+                newMessages[i] = e.NewItems[i] as string;
+
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher == null || dispatcher.CheckAccess())
+                ApplyNewMessages(newMessages);
+            else
+                dispatcher.BeginInvoke((Action)(() => ApplyNewMessages(newMessages)));
+        }
+
+        private void ApplyNewMessages(string[] messages)
+        {
+            foreach (var msg in messages)
             {
-                if (item is string msg)
+                if (msg != null)
                     MessageLog.Add(msg);
             }
             TrimToVisualLines();
