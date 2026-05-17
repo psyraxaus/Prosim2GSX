@@ -36,6 +36,13 @@ namespace Prosim2GSX.Services
         // loop so GetString reads land warm values. Reset on disconnect.
         private bool _primed;
 
+        // One-shot guard for the tick-driven runway auto-load. Holds the
+        // ICAO we last kicked an auto-load for so we don't re-fire every
+        // tick (Tick runs each StateUpdateWorker beat). Cleared on reset so
+        // a re-prefill to the same airport reloads; cleared on a failed
+        // load so a later tick can retry once the EFB gateway is ready.
+        private string _autoLoadedRunwaysForIcao = "";
+
         private static readonly string[] PolledRefs = new[]
         {
             ProsimConstants.RefFmsOrigin,
@@ -85,6 +92,12 @@ namespace Prosim2GSX.Services
                 // Leap collapses to CFM. Empty or unknown falls back to CFM
                 // with a one-shot warning (D7).
                 st.EngineVariant = ResolveEngineVariant(sdk);
+
+                // Once an ICAO is present (prefilled above or set by the
+                // user) but no runways have been loaded for it yet, kick a
+                // one-shot runway load so the dropdown is populated without
+                // the user having to re-commit the ICAO field.
+                MaybeAutoLoadRunways(st);
             }
             catch (Exception ex)
             {
@@ -136,11 +149,40 @@ namespace Prosim2GSX.Services
             if (nowOnGround && _wasEnginesRunning && !nowEnginesRunning)
             {
                 st.Reset();
+                _autoLoadedRunwaysForIcao = "";
                 Logger.Information("TakeoffPerfState reset on flight-cycle shutdown");
             }
 
             _wasOnGround = nowOnGround;
             _wasEnginesRunning = nowEnginesRunning;
+        }
+
+        // Fire-and-forget runway load triggered from the tick path. The
+        // per-ICAO guard is set synchronously before launching so a second
+        // tick can't double-fire while the load is in flight; it's released
+        // on failure so a later tick retries once the EFB gateway is up.
+        private void MaybeAutoLoadRunways(TakeoffPerfState st)
+        {
+            if (st.IsBusy) return;
+            var icao = st.Icao;
+            if (string.IsNullOrWhiteSpace(icao) || icao.Length != 4) return;
+            if (st.Runways.Count > 0) return;
+            if (string.Equals(_autoLoadedRunwaysForIcao, icao, StringComparison.OrdinalIgnoreCase)) return;
+
+            _autoLoadedRunwaysForIcao = icao;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    bool ok = await LoadRunwaysAsync(icao);
+                    if (!ok) _autoLoadedRunwaysForIcao = "";
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogException(ex);
+                    _autoLoadedRunwaysForIcao = "";
+                }
+            });
         }
 
         // -----------------------------------------------------------------
@@ -493,6 +535,7 @@ namespace Prosim2GSX.Services
         public virtual void Reset()
         {
             _app?.TakeoffPerf?.Reset();
+            _autoLoadedRunwaysForIcao = "";
         }
     }
 }
