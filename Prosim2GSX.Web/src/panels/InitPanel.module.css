@@ -3,41 +3,44 @@
  * polish slice; this v1 covers the colours, monospace font, sharp
  * borders, and two-column layout. */
 
+/* Chrome aliases ride on the app theme tokens so the INIT tab recolours
+ * with the airline theme like every other tab. The FMS readout + state
+ * colours below are deliberately FIXED — same rationale as the perf
+ * tabs' instrument readouts: they convey FMS state, not theme. */
 .panel {
-  --fms-bg:           #0a0e1a;
-  --fms-bg-section:   #0d1220;
-  --fms-cyan:         #00d4e8;
-  --fms-green:        #39ff6e;
-  --fms-amber:        #ffaa00;
-  --fms-white:        #d8dce8;
-  --fms-grey:         #4a5268;
-  --fms-btn-bg:       #1e2535;
-  --fms-btn-border:   #3a4558;
-  --fms-warn:         #ff4444;
-  --fms-override:     #ff8c00;
-  --fms-font:         'Courier New', 'Lucida Console', monospace;
+  /* Theme-aware chrome */
+  --fms-bg-section: var(--bg-card);
+  --fms-btn-bg:     var(--bg-button);
+  --fms-btn-border: var(--border);
+  --fms-grey:       var(--border);
+  --fms-white:      var(--text-primary);
+  --fms-heading:    var(--category-text);
 
-  background: var(--fms-bg);
-  color: var(--fms-white);
+  /* Fixed FMS readout / state colours (NOT themed) */
+  --fms-cyan:       #00d4e8;
+  --fms-green:      #39ff6e;
+  --fms-amber:      #ffaa00;
+  --fms-override:   #ff8c00;
+  --fms-warn:       #ff4444;
+  --fms-font:       'Courier New', 'Lucida Console', monospace;
+
+  /* Standard padded panel frame — matches OFP / Fuel / Loadsheet so the
+   * INIT tab sits in the same outer margin as every other tab. The
+   * monospace + uppercase + letter-spacing is kept: it's the FMS
+   * readout identity (unify chrome, keep readouts). */
+  color: var(--text-primary);
   font-family: var(--fms-font);
   font-size: 13px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  /* Cancel main's vertical padding so the FMS background runs to the
-   * top edge. Main has no horizontal padding (App.module.css: padding:
-   * 16px 0), so horizontal margin stays 0 — anything else creates a
-   * horizontal scrollbar at the document level. The dark background
-   * covers the whole window; the content within is capped via .inner. */
-  margin: -16px 0 0 0;
-  padding: 14px;
-  min-height: calc(100vh - 110px);
+  padding: 16px 18px;
+  max-width: 1100px;
+  margin: 0 auto;
   box-sizing: border-box;
-  overflow-x: hidden;
 }
 
 .inner {
-  max-width: 1100px;
-  margin: 0 auto;
+  min-width: 0;
 }
 
 .columns {
@@ -56,15 +59,16 @@
 .column {
   background: var(--fms-bg-section);
   border: 1px solid var(--fms-grey);
-  padding: 14px;
+  border-radius: var(--radius-md, 6px);
+  padding: 14px 16px;
   min-width: 0; /* allow column to shrink inside the grid */
 }
 
 .title {
-  color: var(--fms-cyan);
-  font-weight: bold;
-  font-size: 13px;
-  letter-spacing: 0.1em;
+  color: var(--fms-heading);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.18em;
   margin: 0 0 8px 0;
 }
 
@@ -303,7 +307,7 @@
 }
 
 .fetchedAt {
-  color: var(--fms-grey);
+  color: var(--text-muted);
   font-size: 11px;
   text-align: right;
   margin-top: 4px;
@@ -319,8 +323,8 @@
 .btn {
   background: var(--fms-btn-bg);
   border: 1px solid var(--fms-btn-border);
-  color: var(--fms-white);
-  border-radius: 0;
+  color: var(--text-primary);
+  border-radius: var(--radius-sm, 4px);
   padding: 6px 14px;
   font-family: var(--fms-font);
   font-size: 11px;
@@ -332,8 +336,8 @@
 }
 
 .btn:hover:not(:disabled) {
-  border-color: var(--fms-cyan);
-  color: var(--fms-cyan);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .btn:disabled {
@@ -342,18 +346,18 @@
 }
 
 .btnPrimary {
-  border-color: var(--fms-cyan);
-  color: var(--fms-cyan);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .btnAmber {
-  border-color: var(--fms-amber);
-  color: var(--fms-amber);
+  border-color: var(--warning);
+  color: var(--warning);
 }
 
 .btnWarn {
-  border-color: var(--fms-warn);
-  color: var(--fms-warn);
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 .loading {
