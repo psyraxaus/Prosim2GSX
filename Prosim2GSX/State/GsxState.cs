@@ -57,5 +57,12 @@ namespace Prosim2GSX.State
         // SetGate_Name/Number/Suffix LVARs; mirrored on OfpState for the OFP
         // panel which broadcasts on a separate WS channel.
         [ObservableProperty] private string _AssignedArrivalGate = "";
+
+        // Last event pushed by the in-sim GSX handler script (gsx_handler.py)
+        // via GET /api/gsxmenu/events. Formatted "<event>[:<reason>] @ HH:mm:ss"
+        // (or "" before any event). Phase-1 observability: establishes and
+        // proves the handler→app event pipe before the automation core is
+        // rewired to consume these in place of fragile LVAR polling.
+        [ObservableProperty] private string _LastHandlerEvent = "";
     }
 }

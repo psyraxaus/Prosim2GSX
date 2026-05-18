@@ -10,34 +10,42 @@
 # loader would only see the class + instance as top-level names, never
 # the methods), so it is deliberately not used here.
 #
-# Purpose: auto-assign the user-confirmed arrival gate from the OFP panel.
-#   onSelectGateInFlight - aircraft handler hook; fires when the user
-#       picks an airport from the in-flight "nearby airports" list. Best
-#       moment to pre-assign the gate and skip the gate menu entirely.
-#   onAircraftEngaged    - aircraft handler hook; fires when GSX engages
-#       the parked aircraft. Replaces the pre-v4 onEnterAirport, which in
-#       v4.0.0 is an AIRPORT-tier-only callback and would never fire from
-#       this per-aircraft script.
+# Two responsibilities:
+#  1. Auto-assign the user-confirmed arrival gate from the OFP panel:
+#       onSelectGateInFlight - fires when the user picks an airport from
+#           the in-flight "nearby airports" list; best moment to pre-assign
+#           the gate and skip the gate menu entirely.
+#       onAircraftEngaged    - fires when GSX engages the parked aircraft.
+#           Replaces the pre-v4 onEnterAirport, which in v4.0.0 is an
+#           AIRPORT-tier-only callback and would never fire from this
+#           per-aircraft script.
+#  2. Event bridge: push lifecycle/service hook events to Prosim2GSX so
+#     the app gets precise timing instead of only fragile LVAR polling.
+#     Each hook runs the built-in (_super_) logic first — guarded so we
+#     never suppress real stock behaviour — then fire-and-forget reports
+#     the event. The sandbox has no HTTP POST, so events are GET-encoded.
 #
 # Constraints: no 'import' beyond what GSX provides, no file I/O, no
 # threading. GSX-provided globals only: fetchJson, selectGate, getGate,
-# showMessage, hasStockBehavior, runAsync, wait, executeCalculatorCode.
+# showMessage, hasStockBehavior, getattr, runAsync, wait,
+# executeCalculatorCode.
 #
-# Endpoint: GET http://127.0.0.1:5001/api/gsxmenu/pending-gate
-# Returns the gate name as a JSON string ("C3") or JSON null when none is
-# pending. Loopback-only, no auth - exempted from the bearer middleware
-# because the Couatl Python runtime here has no token.
+# Endpoints (loopback, no auth — the Couatl Python runtime has no token,
+# and /api/gsxmenu/* is exempt from Prosim2GSX's bearer middleware):
+#   GET /api/gsxmenu/pending-gate     -> "C3" | null
+#   GET /api/gsxmenu/events?e=&r=&ts= -> null  (event push)
 #
 # If you've changed Prosim2GSX's WebServerPort from the default 5001, edit
 # PROSIM2GSX_PORT below to match (Prosim2GSX rewrites this automatically
 # on config change via GsxHandlerSync).
 
 PROSIM2GSX_PORT = 5001
-PROSIM2GSX_URL = "http://127.0.0.1:" + str(PROSIM2GSX_PORT) + "/api/gsxmenu/pending-gate"
+PROSIM2GSX_BASE = "http://127.0.0.1:" + str(PROSIM2GSX_PORT) + "/api/gsxmenu"
+PROSIM2GSX_URL = PROSIM2GSX_BASE + "/pending-gate"
 
-# Loopback fetch budget (seconds). The endpoint is local and instant; cap
-# it low so a missing or hung Prosim2GSX degrades gracefully instead of
-# blocking the GSX tasklet that called the handler hook.
+# Loopback fetch budget (seconds). The endpoints are local and instant;
+# cap it low so a missing or hung Prosim2GSX degrades gracefully instead
+# of blocking the GSX tasklet that called the handler hook.
 _FETCH_TIMEOUT = 2
 
 
@@ -67,6 +75,29 @@ def _apply_gate(gate):
         showMessage("Prosim2GSX: arrival gate " + str(gate) + " assigned")
 
 
+def _emit(event, reason=None):
+    # Fire-and-forget. Event names and GSX reason tokens are fixed
+    # url-safe identifiers, so no escaping is needed. Swallow everything:
+    # a reporting failure must never disrupt a ground operation.
+    try:
+        url = PROSIM2GSX_BASE + "/events?e=" + event
+        if reason:
+            url = url + "&r=" + str(reason)
+        fetchJson(url, timeout=_FETCH_TIMEOUT)
+    except Exception as ex:
+        print("[Prosim2GSX] event emit failed (" + str(event) + "): " + str(ex))
+
+
+def _run_super(self, name, *args):
+    # Run the built-in implementation only when the stock handler actually
+    # has one (many hooks are just `pass`). Preserves real behaviour such
+    # as PMDG/Fenix door automation that lives in onBoardingRequested etc.
+    if hasStockBehavior(name):
+        getattr(self, "_super_" + name)(*args)
+
+
+# ── Gate assignment ────────────────────────────────────────────────────
+
 def onSelectGateInFlight(self):
     gate = _fetch_pending_gate()
     if gate:
@@ -74,13 +105,74 @@ def onSelectGateInFlight(self):
 
 
 def onAircraftEngaged(self):
-    # Let the built-in engagement logic run first if the stock handler
-    # has any, then apply our pending gate. At engagement the aircraft is
-    # always at a parking, so the pre-v4 "skip if getGate()" guard is
-    # meaningless here; GSX's own user-revoke protection covers the
-    # don't-override case (selectGate returns False, reported by _apply_gate).
-    if hasStockBehavior('onAircraftEngaged'):
-        self._super_onAircraftEngaged()
+    # Built-in engagement logic first, then apply our pending gate. At
+    # engagement the aircraft is always at a parking, so the pre-v4
+    # "skip if getGate()" guard is meaningless; GSX's own user-revoke
+    # protection covers the don't-override case (selectGate returns False).
+    _run_super(self, 'onAircraftEngaged')
     gate = _fetch_pending_gate()
     if gate:
         _apply_gate(gate)
+    _emit('aircraftEngaged')
+
+
+def onAircraftDisengaged(self):
+    _run_super(self, 'onAircraftDisengaged')
+    _emit('aircraftDisengaged')
+
+
+# ── Event bridge ───────────────────────────────────────────────────────
+
+def onGateReset(self, reason):
+    _run_super(self, 'onGateReset', reason)
+    _emit('gateReset', reason)
+
+
+def onBoardingRequested(self):
+    _run_super(self, 'onBoardingRequested')
+    _emit('boardingRequested')
+
+
+def onDeboardingRequested(self):
+    _run_super(self, 'onDeboardingRequested')
+    _emit('deboardingRequested')
+
+
+def onRefuelingRequested(self):
+    _run_super(self, 'onRefuelingRequested')
+    _emit('refuelingRequested')
+
+
+def onCateringRequested(self):
+    _run_super(self, 'onCateringRequested')
+    _emit('cateringRequested')
+
+
+def onDepartureRequested(self):
+    _run_super(self, 'onDepartureRequested')
+    _emit('departureRequested')
+
+
+def onJetwayConnected(self):
+    _run_super(self, 'onJetwayConnected')
+    _emit('jetwayConnected')
+
+
+def onJetwayDisconnected(self):
+    _run_super(self, 'onJetwayDisconnected')
+    _emit('jetwayDisconnected')
+
+
+def onBypassPinConnected(self):
+    _run_super(self, 'onBypassPinConnected')
+    _emit('bypassPinConnected')
+
+
+def onBypassPinDisconnected(self):
+    _run_super(self, 'onBypassPinDisconnected')
+    _emit('bypassPinDisconnected')
+
+
+def onDeicingAction(self):
+    _run_super(self, 'onDeicingAction')
+    _emit('deicingAction')
