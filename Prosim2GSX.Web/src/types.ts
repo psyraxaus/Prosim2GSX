@@ -368,6 +368,8 @@ export interface AppSettingsDto {
   resetGsxStateVarsFlight: boolean;
   restartGsxOnTaxiIn: boolean;
   restartGsxStartupFail: boolean;
+  gsxSuppressDoorMessages: boolean;
+  gsxRemoteControlExperimental: boolean;
   gsxMenuStartupMaxFail: number;
 
   runGsxService: boolean;

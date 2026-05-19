@@ -43,6 +43,8 @@ namespace Prosim2GSX.Web.Contracts
         public bool ResetGsxStateVarsFlight { get; set; }
         public bool RestartGsxOnTaxiIn { get; set; }
         public bool RestartGsxStartupFail { get; set; }
+        public bool GsxSuppressDoorMessages { get; set; }
+        public bool GsxRemoteControlExperimental { get; set; }
         public int GsxMenuStartupMaxFail { get; set; }
 
         // Subsystem toggles
@@ -98,6 +100,8 @@ namespace Prosim2GSX.Web.Contracts
                 ResetGsxStateVarsFlight = c.ResetGsxStateVarsFlight,
                 RestartGsxOnTaxiIn = c.RestartGsxOnTaxiIn,
                 RestartGsxStartupFail = c.RestartGsxStartupFail,
+                GsxSuppressDoorMessages = c.GsxSuppressDoorMessages,
+                GsxRemoteControlExperimental = c.GsxRemoteControlExperimental,
                 GsxMenuStartupMaxFail = c.GsxMenuStartupMaxFail,
 
                 RunGsxService = c.RunGsxService,
@@ -145,6 +149,8 @@ namespace Prosim2GSX.Web.Contracts
             c.ResetGsxStateVarsFlight = ResetGsxStateVarsFlight;
             c.RestartGsxOnTaxiIn = RestartGsxOnTaxiIn;
             c.RestartGsxStartupFail = RestartGsxStartupFail;
+            c.GsxSuppressDoorMessages = GsxSuppressDoorMessages;
+            c.GsxRemoteControlExperimental = GsxRemoteControlExperimental;
             c.GsxMenuStartupMaxFail = GsxMenuStartupMaxFail;
 
             c.RunGsxService = RunGsxService;

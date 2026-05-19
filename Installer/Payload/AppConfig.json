@@ -27,6 +27,8 @@
   "RestartGsxOnTaxiIn": false,
   "PushbackPreferenceReapplyOnChange": true,
   "AutoDeiceEnabled": false,
+  "GsxSuppressDoorMessages": false,
+  "GsxRemoteControlExperimental": false,
   "AutoDeiceFluid": 4,
   "RunAudioService": true,
   "UseSayIntentions": false,

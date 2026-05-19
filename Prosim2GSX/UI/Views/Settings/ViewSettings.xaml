@@ -200,6 +200,8 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Reset the GSX Service State Variables to 1 (callable) when switching to the Flight Phase.">Reset GSX Vars in Flight:</TextBlock>
@@ -220,6 +222,12 @@
 
                     <TextBlock Grid.Column="0" Grid.Row="4" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Enable / Disable the Audio Controller for App Volume Control.">Run Audio Controller:</TextBlock>
                     <CheckBox Grid.Column="1" Grid.Row="4" IsChecked="{Binding RunAudioService}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Enable / Disable the Audio Controller for App Volume Control."/>
+
+                    <TextBlock Grid.Column="0" Grid.Row="5" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Suppress GSX's 'waiting for your action' door prompt messages — the bridge handles doors, so they're redundant (useful for headless setups).">Suppress GSX Door Messages:</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="5" IsChecked="{Binding GsxSuppressDoorMessages}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Suppress GSX's 'waiting for your action' door prompt messages — the bridge handles doors, so they're redundant (useful for headless setups)."/>
+
+                    <TextBlock Grid.Column="0" Grid.Row="6" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="EXPERIMENTAL. Place GSX under Remote Control (no in-sim pop-up menu / notifications) for headless operation. Auto-disabled during the pushback/taxi-out window. Verify by flight log before relying on it.">Remote-Control GSX (experimental):</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="6" IsChecked="{Binding GsxRemoteControlExperimental}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="EXPERIMENTAL. Place GSX under Remote Control (no in-sim pop-up menu / notifications) for headless operation. Auto-disabled during the pushback/taxi-out window. Verify by flight log before relying on it."/>
                 </Grid>
             </Border>
 

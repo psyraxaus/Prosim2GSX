@@ -103,6 +103,8 @@ namespace Prosim2GSX.UI.Views.Settings
         public virtual bool ResetGsxStateVarsFlight { get => Source.ResetGsxStateVarsFlight; set => SetModelValue<bool>(value); }
         public virtual bool RestartGsxOnTaxiIn { get => Source.RestartGsxOnTaxiIn; set => SetModelValue<bool>(value); }
         public virtual bool RestartGsxStartupFail { get => Source.RestartGsxStartupFail; set => SetModelValue<bool>(value); }
+        public virtual bool GsxSuppressDoorMessages { get => Source.GsxSuppressDoorMessages; set => SetModelValue<bool>(value); }
+        public virtual bool GsxRemoteControlExperimental { get => Source.GsxRemoteControlExperimental; set => SetModelValue<bool>(value); }
         public virtual int GsxMenuStartupMaxFail { get => Source.GsxMenuStartupMaxFail; set => SetModelValue<int>(value); }
         public virtual bool RunGsxService { get => Source.RunGsxService; set => SetModelValue<bool>(value); }
         public virtual bool RunAudioService { get => Source.RunAudioService; set => SetModelValue<bool>(value); }

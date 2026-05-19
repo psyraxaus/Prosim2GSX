@@ -174,6 +174,10 @@ export function AppSettingsPanel() {
           onChange={(v) => update("runGsxService", v)} />
         <BoolField label="Run Audio Service" value={draft.runAudioService}
           onChange={(v) => update("runAudioService", v)} />
+        <BoolField label="Suppress GSX Door Messages" value={draft.gsxSuppressDoorMessages}
+          onChange={(v) => update("gsxSuppressDoorMessages", v)} />
+        <BoolField label="Remote-Control GSX (experimental, headless)" value={draft.gsxRemoteControlExperimental}
+          onChange={(v) => update("gsxRemoteControlExperimental", v)} />
       </Section>
 
       <Section title="ProSim SDK" hint="Pre-handshake actions use the 'default' aircraft profile">

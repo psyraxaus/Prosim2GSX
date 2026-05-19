@@ -190,6 +190,8 @@ namespace Prosim2GSX.GSX
             SimStore.AddVariable(GsxConstants.VarSetProgFuel);
             SimStore.AddVariable(GsxConstants.VarSetCustFuel);
             SimStore.AddVariable(GsxConstants.VarSetAutoMode);
+            SimStore.AddVariable(GsxConstants.VarDisableDoorsMsg);
+            SimStore.AddVariable(GsxConstants.VarSetRemoteControl);
 
             // Applied de-icing fluid type — read on demand by
             // DeiceHoldoverService when GSX deicing completes.
@@ -427,6 +429,11 @@ namespace Prosim2GSX.GSX
                         SetCouatlConf();
                         CouatlConfigSet = true;
                     }
+
+                    // Re-evaluated every tick (change-gated writes) so it
+                    // tracks the config toggles live and the REMOTECONTROL
+                    // pushback-window auto-disable follows AutomationState.
+                    ApplyExternalControlLvars();
 
                     if (!AutomationController.IsStarted && CanAutomationRun && !AutomationController.RunFlag)
                         _ = AutomationController.Run();
@@ -668,6 +675,52 @@ namespace Prosim2GSX.GSX
             //SimStore[GsxConstants.VarSetProgFuel].WriteValue(-1);
             //SimStore[GsxConstants.VarSetCustFuel].WriteValue(-1);
             SimStore[GsxConstants.VarSetAutoMode].WriteValue(-1);
+
+            // Couatl (re)started → GSX has reset our external-control LVARs
+            // to 0. Drop the change-trackers so ApplyExternalControlLvars
+            // re-asserts them on the next tick.
+            _lastDoorsMsgWritten = null;
+            _lastRemoteControlWritten = null;
+        }
+
+        // Change-trackers for the external-control LVARs (null = unknown /
+        // needs (re)assert). GSX zeroes both on a Couatl restart; SetCouatlConf
+        // resets these so we re-write.
+        private int? _lastDoorsMsgWritten;
+        private int? _lastRemoteControlWritten;
+
+        // Drives FSDT_GSX_DISABLE_DOORS_MSG and (experimental)
+        // FSDT_GSX_SET_REMOTECONTROL from Config. Writes only on change.
+        // REMOTECONTROL is force-disabled during the Departure/PushBack/
+        // TaxiOut window so the user can still interact with GSX when it
+        // needs input (manual's own recommended workflow + our pushback
+        // sequence needs the menu).
+        protected virtual void ApplyExternalControlLvars()
+        {
+            if (!IsGsxRunning || !Menu.FirstReadyReceived || !AircraftInterface.IsLoaded)
+                return;
+
+            int doorsMsg = Config.GsxSuppressDoorMessages ? 1 : 0;
+            if (_lastDoorsMsgWritten != doorsMsg)
+            {
+                SimStore[GsxConstants.VarDisableDoorsMsg].WriteValue(doorsMsg);
+                _lastDoorsMsgWritten = doorsMsg;
+                Logger.Debug($"FSDT_GSX_DISABLE_DOORS_MSG = {doorsMsg}");
+            }
+
+            var phase = AutomationState;
+            bool pushbackWindow = phase is AutomationState.Departure
+                or AutomationState.PushBack
+                or AutomationState.TaxiOut;
+            int remote = (Config.GsxRemoteControlExperimental && !pushbackWindow) ? 1 : 0;
+            if (_lastRemoteControlWritten != remote)
+            {
+                SimStore[GsxConstants.VarSetRemoteControl].WriteValue(remote);
+                _lastRemoteControlWritten = remote;
+                Logger.Information(
+                    $"FSDT_GSX_SET_REMOTECONTROL = {remote} (phase={phase}, "
+                    + $"experimental={Config.GsxRemoteControlExperimental})");
+            }
         }
 
         public virtual async Task<bool> SetArrivalParkingAsync(string gate)

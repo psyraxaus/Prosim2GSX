@@ -24,6 +24,14 @@
         public static string VarSetCustFuel { get; } = "L:FSDT_GSX_SET_DETECT_CUST_REFUEL";
         public static string VarReadAutoMode { get; } = "L:FSDT_GSX_SETTINGS_AUTOMODE";
         public static string VarSetAutoMode { get; } = "L:FSDT_GSX_SET_AUTOMODE";
+        // Headless-friendly external-control LVARs. Both reset to 0 on a
+        // Couatl restart / aircraft change, so they're re-asserted from the
+        // controller tick. DISABLE_DOORS_MSG silences GSX's "waiting for
+        // your action" door prompts (the bridge handles doors).
+        // SET_REMOTECONTROL suppresses the in-sim pop-up menu entirely —
+        // experimental, opt-in, auto-disabled around the pushback window.
+        public static string VarDisableDoorsMsg { get; } = "L:FSDT_GSX_DISABLE_DOORS_MSG";
+        public static string VarSetRemoteControl { get; } = "L:FSDT_GSX_SET_REMOTECONTROL";
         public static string VarServiceJetway { get; } = "L:FSDT_GSX_JETWAY";
         public static string VarServiceJetwayOperation { get; } = "L:FSDT_GSX_OPERATEJETWAYS_STATE";
         public static string VarServiceStairs { get; } = "L:FSDT_GSX_STAIRS";

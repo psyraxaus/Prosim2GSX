@@ -49,6 +49,17 @@ namespace Prosim2GSX.AppConfig
         public virtual bool RestartGsxOnTaxiIn { get; set; } = false;
         public virtual bool PushbackPreferenceReapplyOnChange { get; set; } = true;
         public virtual bool AutoDeiceEnabled { get; set; } = false;
+        // Suppress GSX's "waiting for your action" door prompt messages —
+        // the bridge handles doors, so the beeps are redundant noise
+        // (especially for headless setups). Low risk.
+        public virtual bool GsxSuppressDoorMessages { get; set; } = false;
+        // EXPERIMENTAL: place GSX under Remote Control (no in-sim pop-up
+        // menu / notifications) for headless operation. Auto-disabled
+        // during the pushback/taxi-out window so the user can still
+        // interact when GSX needs input. Verify by flight log before
+        // relying on it — our menu engine also scrapes an undocumented
+        // menu file whose behaviour under remote control is unconfirmed.
+        public virtual bool GsxRemoteControlExperimental { get; set; } = false;
         public virtual GSX.AutoDeiceFluid AutoDeiceFluid { get; set; } = GSX.AutoDeiceFluid.TypeIV100;
         public virtual bool RunAudioService { get; set; } = true;
         public virtual bool UseSayIntentions { get; set; } = false;
