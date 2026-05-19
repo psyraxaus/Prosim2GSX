@@ -13,7 +13,7 @@
 
 export type ConnectionStatus = "connecting" | "open" | "reconnecting" | "closed";
 
-export type WsChannel = "flightStatus" | "gsx" | "audio" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet" | "efbFlightPlan" | "notifications" | "fuel" | "takeoffPerf" | "landingPerf";
+export type WsChannel = "flightStatus" | "gsx" | "deiceHoldover" | "audio" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet" | "efbFlightPlan" | "notifications" | "fuel" | "takeoffPerf" | "landingPerf";
 
 export type StateChannel = "flightStatus" | "audio" | "gsxSettings" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet" | "efbFlightPlan" | "notifications" | "fuel" | "takeoffPerf" | "landingPerf";
 
@@ -180,7 +180,38 @@ export interface FlightStatusDto {
   utcDate: string;
 
   gsx: GsxLiveDto;
+  deiceHoldover: DeiceHoldoverDto;
   messageLog: string[];
+}
+
+// Deice holdover-time card. Patched on the "deiceHoldover" WS channel,
+// nested under flightStatus client-side (same scheme as gsx). Precip/oatC
+// are crew inputs POSTed to /api/deice. HotPrecip values are the C# enum
+// names (string enums on the wire).
+export type HotPrecip =
+  | "None"
+  | "ActiveFrost"
+  | "FreezingFog"
+  | "Snow"
+  | "FreezingDrizzleLight"
+  | "FreezingDrizzleModerate"
+  | "LightFreezingRain"
+  | "RainOnColdSoakedWing";
+
+export interface DeiceHoldoverDto {
+  active: boolean;
+  expired: boolean;
+  fluidType: number;
+  fluidLabel: string;
+  concentration: number;
+  precip: HotPrecip;
+  oatC: number;
+  oatUserSet: boolean;
+  lowMinutes: number;
+  highMinutes: number;
+  remainingLowSeconds: number;
+  remainingHighSeconds: number;
+  status: string;
 }
 
 // ──────────────────────────────────────────────────────────────────────────

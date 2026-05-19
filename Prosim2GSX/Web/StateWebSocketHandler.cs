@@ -57,6 +57,7 @@ namespace Prosim2GSX.Web
 
             _app.FlightStatus.PropertyChanged += OnFlightStatusChanged;
             _app.Gsx.PropertyChanged += OnGsxChanged;
+            _app.DeiceHoldover.PropertyChanged += OnDeiceHoldoverChanged;
             _app.Audio.PropertyChanged += OnAudioChanged;
             _app.Config.PropertyChanged += OnConfigChanged;
             _app.Ofp.PropertyChanged += OnOfpChanged;
@@ -223,6 +224,11 @@ namespace Prosim2GSX.Web
 
         private void OnGsxChanged(object sender, PropertyChangedEventArgs e)
             => Broadcast(channel: "gsx", e.PropertyName, sender);
+
+        // Same nesting scheme as "gsx": patch-only channel that the client
+        // merges into flightStatus.deiceHoldover.
+        private void OnDeiceHoldoverChanged(object sender, PropertyChangedEventArgs e)
+            => Broadcast(channel: "deiceHoldover", e.PropertyName, sender);
 
         // Probe + broadcast handlers for the per-property channels. The
         // Logger.Debug calls at the top of each are deliberate: in March 2026
@@ -552,6 +558,10 @@ namespace Prosim2GSX.Web
             // patches would produce. (flightStatus is set just above, so the
             // client's gsx-patch branch finds a non-null flightStatus to nest into.)
             BroadcastStateAsPatch("gsx", _app?.Gsx, target);
+
+            // Same scheme as "gsx" — patch-only, nests under
+            // flightStatus.deiceHoldover on the client.
+            BroadcastStateAsPatch("deiceHoldover", _app?.DeiceHoldover, target);
 
             // Snapshot-style channels — re-use the existing helpers so the
             // wire shape stays identical to a property-driven snapshot.

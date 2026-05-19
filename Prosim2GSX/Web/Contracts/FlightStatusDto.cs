@@ -48,6 +48,10 @@ namespace Prosim2GSX.Web.Contracts
         // Live GSX runtime sub-section
         public GsxLiveDto Gsx { get; set; } = new();
 
+        // Deice holdover-time card. Patched on its own "deiceHoldover" WS
+        // channel that nests here client-side (same scheme as "gsx").
+        public DeiceHoldoverDto DeiceHoldover { get; set; } = new();
+
         // Recent log tail (most recent last). Bounded by MessageLogTailSize.
         public List<string> MessageLog { get; set; } = new();
 
@@ -84,6 +88,7 @@ namespace Prosim2GSX.Web.Contracts
                 UtcTime = fs.UtcTime,
                 UtcDate = fs.UtcDate,
                 Gsx = GsxLiveDto.From(app.Gsx),
+                DeiceHoldover = DeiceHoldoverDto.From(app.DeiceHoldover),
                 MessageLog = SafeMessageLogTail(fs.MessageLog, MessageLogTailSize),
             };
         }
