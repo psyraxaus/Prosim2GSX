@@ -149,6 +149,7 @@ export interface GsxLiveDto {
   appAutomationDepartureServices: string;
 
   assignedArrivalGate: string;
+  lastHandlerEvent: string;
 }
 
 export interface FlightStatusDto {
