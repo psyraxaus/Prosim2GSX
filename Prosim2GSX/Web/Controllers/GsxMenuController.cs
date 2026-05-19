@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Prosim2GSX.Web.Contracts;
 
 namespace Prosim2GSX.Web.Controllers
 {
@@ -48,6 +49,19 @@ namespace Prosim2GSX.Web.Controllers
         {
             GsxHandlerEventSink.Process(_app, e, r);
             return Ok((string)null);
+        }
+
+        // Canonical flight identity for the handler to render on the gate
+        // VDGS via addVdgsMessage(). Returns JSON null when no flight is
+        // loaded (or no meaningful identity yet) so the handler clears its
+        // VDGS message instead of showing a blank/stale page.
+        [HttpGet("flight-info")]
+        public ActionResult<FlightInfoDto> FlightInfo()
+        {
+            var dto = FlightInfoDto.From(_app);
+            if (dto == null || !dto.HasContent)
+                return Ok((FlightInfoDto)null);
+            return Ok(dto);
         }
     }
 }

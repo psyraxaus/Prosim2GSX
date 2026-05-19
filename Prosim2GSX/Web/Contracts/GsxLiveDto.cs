@@ -47,6 +47,10 @@ namespace Prosim2GSX.Web.Contracts
         // GSX SetGate readback — formatted display ("C3", "Gate 12", or "").
         public string AssignedArrivalGate { get; set; } = "";
 
+        // Last event pushed by the in-sim handler script via
+        // /api/gsxmenu/events ("<event>[:<reason>] @ HH:mm:ss", or "").
+        public string LastHandlerEvent { get; set; } = "";
+
         public static GsxLiveDto From(State.GsxState s) => new()
         {
             GsxRunning = s.GsxRunning,
@@ -77,6 +81,7 @@ namespace Prosim2GSX.Web.Contracts
             AppAutomationState = s.AppAutomationState,
             AppAutomationDepartureServices = s.AppAutomationDepartureServices,
             AssignedArrivalGate = s.AssignedArrivalGate,
+            LastHandlerEvent = s.LastHandlerEvent,
         };
     }
 }

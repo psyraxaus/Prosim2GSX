@@ -66,19 +66,51 @@ namespace Prosim2GSX.Web
 
                 // gateReset carries the reason GSX is dropping/changing the
                 // gate (user_revoked / user_changed / taxied_away /
-                // airport_exit / reposition). Logged prominently because the
-                // Phase-1b behaviour (stop re-asserting our pending gate when
-                // the user deliberately revoked it) keys off this signal.
+                // airport_exit / reposition).
                 if (evt == "gateReset")
+                {
                     Logger.Information($"GSX handler: gate reset (reason={reason ?? "unknown"})");
+                    HandleGateReset(app, reason);
+                }
                 else
+                {
                     Logger.Debug($"GSX handler event: {evt}");
+                }
             }
             catch (Exception ex)
             {
                 Logger.Warning("GsxHandlerEventSink: failed to process handler event");
                 Logger.LogException(ex);
             }
+        }
+
+        // Stop the handler re-asserting the OFP arrival gate once the user
+        // has made a *deliberate* gate decision in the GSX menu:
+        //   user_revoked — chose "Revoke parking services"
+        //   user_changed — manually selected a different gate
+        // The situational reasons (taxied_away / airport_exit / reposition)
+        // are intentionally NOT cleared: taxiing away from the gate after
+        // pushback, a go-around, or a diversion would otherwise wipe a still-
+        // valid pending assignment. Clearing PendingArrivalGate also stops
+        // OfpAutoSendService from re-firing (it short-circuits on empty), and
+        // the SetGate-LVAR readback (AssignedArrivalGate) continues to show
+        // whatever the user actually picked.
+        private static void HandleGateReset(AppService app, string reason)
+        {
+            if (reason != "user_revoked" && reason != "user_changed")
+                return;
+
+            var ofp = app.Ofp;
+            if (ofp == null || string.IsNullOrWhiteSpace(ofp.PendingArrivalGate))
+                return;
+
+            string cleared = ofp.PendingArrivalGate;
+            ofp.PendingArrivalGate = "";
+            ofp.GsxAssignmentStatus = reason == "user_revoked"
+                ? $"Cleared — parking services revoked in GSX (was {cleared})."
+                : $"Cleared — gate changed manually in GSX (was {cleared}).";
+            Logger.Information(
+                $"GSX handler: cleared pending arrival gate '{cleared}' (reason={reason})");
         }
     }
 }

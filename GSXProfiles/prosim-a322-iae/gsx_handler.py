@@ -24,16 +24,20 @@
 #     Each hook runs the built-in (_super_) logic first — guarded so we
 #     never suppress real stock behaviour — then fire-and-forget reports
 #     the event. The sandbox has no HTTP POST, so events are GET-encoded.
+#  3. VDGS flight display: render the canonical Prosim2GSX flight identity
+#     on the gate's VDGS via addVdgsMessage() (replace-by-id, re-pushed on
+#     engage/boarding/departure, cleared on disengage).
 #
 # Constraints: no 'import' beyond what GSX provides, no file I/O, no
 # threading. GSX-provided globals only: fetchJson, selectGate, getGate,
-# showMessage, hasStockBehavior, getattr, runAsync, wait,
-# executeCalculatorCode.
+# showMessage, hasStockBehavior, getattr, addVdgsMessage,
+# removeVdgsMessage, runAsync, wait, executeCalculatorCode.
 #
 # Endpoints (loopback, no auth — the Couatl Python runtime has no token,
 # and /api/gsxmenu/* is exempt from Prosim2GSX's bearer middleware):
 #   GET /api/gsxmenu/pending-gate     -> "C3" | null
 #   GET /api/gsxmenu/events?e=&r=&ts= -> null  (event push)
+#   GET /api/gsxmenu/flight-info      -> {callsign,...} | null
 #
 # If you've changed Prosim2GSX's WebServerPort from the default 5001, edit
 # PROSIM2GSX_PORT below to match (Prosim2GSX rewrites this automatically
@@ -88,6 +92,71 @@ def _emit(event, reason=None):
         print("[Prosim2GSX] event emit failed (" + str(event) + "): " + str(ex))
 
 
+# ── VDGS flight display ────────────────────────────────────────────────
+#
+# Render the canonical Prosim2GSX flight identity on the gate's VDGS via
+# addVdgsMessage(). No companion JSON file and no background tasklet:
+# replace-by-id makes repeated calls idempotent, so we just re-push on the
+# natural milestone hooks (engage / boarding / departure) and clear on
+# disengage. Lines respect the per-display char limits (narrow 6, wide 9,
+# x 10) from the GSX VGDS spec.
+
+_VDGS_MSG_ID = "prosim2gsx_flight"
+
+
+def _clip(s, n):
+    return (s or "")[:n]
+
+
+def _build_vdgs_message(info):
+    cs = (info.get("callsign") or "").strip()
+    fn = (info.get("flightNumber") or "").strip()
+    o = (info.get("origin") or "").strip()
+    d = (info.get("destination") or "").strip()
+    ident = cs or fn or "PROSIM2GSX"
+    route = (o + "-" + d) if (o and d) else (d or o or "----")
+    return {
+        "id": _VDGS_MSG_ID,
+        "display": {
+            "narrow": {"pages": [{
+                "lines": ["FLT", _clip(ident, 6), "DEST", _clip(d, 6) or "----"],
+                "duration": 5000}]},
+            "wide": {"pages": [{
+                "lines": ["FLIGHT", _clip(ident, 9), "ROUTE", _clip(route, 9)],
+                "duration": 5000}]},
+            "x": {"pages": [{
+                "lines": ["FLIGHT", _clip(ident, 10), "ROUTE", _clip(route, 10)],
+                "duration": 5000}]},
+        },
+    }
+
+
+def _push_flight_info():
+    try:
+        info = fetchJson(PROSIM2GSX_BASE + "/flight-info", timeout=_FETCH_TIMEOUT)
+    except Exception as ex:
+        print("[Prosim2GSX] flight-info fetch failed: " + str(ex))
+        return
+    if not info:
+        # No OFP loaded (or nothing meaningful yet) — clear any stale page.
+        try:
+            removeVdgsMessage(_VDGS_MSG_ID)
+        except Exception:
+            pass
+        return
+    try:
+        addVdgsMessage(_build_vdgs_message(info))
+    except Exception as ex:
+        print("[Prosim2GSX] addVdgsMessage failed: " + str(ex))
+
+
+def _clear_flight_info():
+    try:
+        removeVdgsMessage(_VDGS_MSG_ID)
+    except Exception:
+        pass
+
+
 def _run_super(self, name, *args):
     # Run the built-in implementation only when the stock handler actually
     # has one (many hooks are just `pass`). Preserves real behaviour such
@@ -113,11 +182,13 @@ def onAircraftEngaged(self):
     gate = _fetch_pending_gate()
     if gate:
         _apply_gate(gate)
+    _push_flight_info()
     _emit('aircraftEngaged')
 
 
 def onAircraftDisengaged(self):
     _run_super(self, 'onAircraftDisengaged')
+    _clear_flight_info()
     _emit('aircraftDisengaged')
 
 
@@ -130,6 +201,7 @@ def onGateReset(self, reason):
 
 def onBoardingRequested(self):
     _run_super(self, 'onBoardingRequested')
+    _push_flight_info()
     _emit('boardingRequested')
 
 
@@ -150,6 +222,7 @@ def onCateringRequested(self):
 
 def onDepartureRequested(self):
     _run_super(self, 'onDepartureRequested')
+    _push_flight_info()
     _emit('departureRequested')
 
 

@@ -184,6 +184,8 @@ namespace Prosim2GSX.UI.Views.Monitor
 
         public string AssignedArrivalGate => Gsx.AssignedArrivalGate;
 
+        public string LastHandlerEvent => Gsx.LastHandlerEvent;
+
         public bool AppOnGround => FlightStatus.AppOnGround;
         public bool AppEnginesRunning => FlightStatus.AppEnginesRunning;
         public bool AppInMotion => FlightStatus.AppInMotion;
