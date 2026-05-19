@@ -106,6 +106,12 @@ namespace Prosim2GSX.GSX
         public virtual ISimResourceSubscription SubDoorToggleCargo2 { get; protected set; }
         public virtual ISimResourceSubscription SubDoorToggleService1 { get; protected set; }
         public virtual ISimResourceSubscription SubDoorToggleService2 { get; protected set; }
+        public virtual ISimResourceSubscription SubDeiceType { get; protected set; }
+
+        // Applied de-icing fluid type (1=Type I .. 4=Type IV), 0 if none /
+        // not yet read. Concentration is NOT exposed by GSX — that comes
+        // from Config.AutoDeiceFluid in DeiceHoldoverService.
+        public virtual int CurrentDeiceTypeRaw => (int)(SubDeiceType?.GetNumber() ?? 0d);
 
         public GsxController(Config config) : base(config)
         {
@@ -184,6 +190,10 @@ namespace Prosim2GSX.GSX
             SimStore.AddVariable(GsxConstants.VarSetProgFuel);
             SimStore.AddVariable(GsxConstants.VarSetCustFuel);
             SimStore.AddVariable(GsxConstants.VarSetAutoMode);
+
+            // Applied de-icing fluid type — read on demand by
+            // DeiceHoldoverService when GSX deicing completes.
+            SubDeiceType = SimStore.AddVariable(GsxConstants.VarDeiceType);
 
             // SetGate readback — polled by StateUpdateWorker into
             // OfpState/GsxState.AssignedArrivalGate. No callback needed.

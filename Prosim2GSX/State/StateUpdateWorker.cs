@@ -77,6 +77,7 @@ namespace Prosim2GSX.State
                 try { _app?.LoadsheetTimingService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
                 try { _app?.TakeoffPerfService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
                 try { _app?.LandingPerfService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
+                try { _app?.DeiceHoldoverService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
 
                 // SDK-connect rising edge → push a full WS snapshot to
                 // every connected client. Runs AFTER the service ticks

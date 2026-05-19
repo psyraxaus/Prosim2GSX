@@ -58,6 +58,7 @@ namespace Prosim2GSX
         public virtual NotificationsState Notifications { get; } = new();
         public virtual TakeoffPerfState TakeoffPerf { get; } = new();
         public virtual LandingPerfState LandingPerf { get; } = new();
+        public virtual DeiceHoldoverState DeiceHoldover { get; } = new();
         // Settings is an alias for the existing Config singleton — Config already
         // implements INotifyPropertyChanged and persists itself, so it serves as
         // the AppSettingsState surface unchanged.
@@ -129,6 +130,11 @@ namespace Prosim2GSX
         // MaczfwResolvedPercent / MaczfwResolvedError; called from
         // FmsController for sync.
         public virtual FmsSyncService FmsSyncService { get; protected set; }
+
+        // Deice holdover-time card. Captures the GSX deice-complete edge,
+        // looks up the HOT window from fluid/conc/OAT/precip, and ticks the
+        // countdown. Readout only — never writes a ProSim dataref.
+        public virtual DeiceHoldoverService DeiceHoldoverService { get; protected set; }
 
         // Owns the EFB Flight Planning (INIT) tab workflow: manual SimBrief
         // fetch, MCDU auto-fetch observation, and per-field override
@@ -269,6 +275,11 @@ namespace Prosim2GSX
             // dataref. Constructed after EfbFlightPlanService and Loadsheet
             // so its resolver and state checks see the latest stores.
             LoadsheetTimingService = new LoadsheetTimingService(this);
+
+            // Deice holdover — watches the GSX deice-complete edge and
+            // ticks the HOT countdown. Constructed here with the other
+            // tick-driven services; null-safe under degraded SDK.
+            DeiceHoldoverService = new DeiceHoldoverService(this);
 
             // Takeoff + landing perf orchestrators. Constructed after the
             // loadsheet/W&B services since TakeoffPerfService.SyncFromLoadsheet

@@ -43,6 +43,12 @@
         public static string VarVehiclePushbackState { get; } = "L:FSDT_GSX_VEHICLE_PUSHBACK_STATE";
         public static string VarBypassPin { get; } = "L:FSDT_GSX_BYPASS_PIN";
         public static string VarServiceDeice { get; } = "L:FSDT_GSX_DEICING_STATE";
+        // Applied de-icing fluid type the user picked at the GSX deice
+        // crew (1=Type I .. 4=Type IV). GSX exposes the type but NOT the
+        // concentration — concentration comes from Config.AutoDeiceFluid,
+        // which is what Prosim2GSX drove into the menu. Read by
+        // DeiceHoldoverService to seed the holdover-time lookup.
+        public static string VarDeiceType { get; } = "L:FSDT_GSX_DEICING_TYPE";
         public static string VarServiceLavatory { get; } = "L:FSDT_GSX_LAVATORY_STATE";
         public static string VarServiceWater { get; } = "L:FSDT_GSX_WATER_STATE";
         public static string VarServiceCleaning { get; } = "L:FSDT_GSX_CLEANING_STATE";
