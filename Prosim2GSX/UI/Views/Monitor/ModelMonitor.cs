@@ -36,6 +36,7 @@ namespace Prosim2GSX.UI.Views.Monitor
         protected virtual Config Config => this.Source.Config;
         protected virtual FlightStatusState FlightStatus => this.Source.FlightStatus;
         protected virtual GsxState Gsx => this.Source.Gsx;
+        protected virtual DeiceHoldoverState DeiceHoldover => this.Source.DeiceHoldover;
 
         // Solari board blink timer (~600ms per side, full cycle ~1.2s). View-only
         // animation state — does not belong on the long-lived state stores.
@@ -75,6 +76,7 @@ namespace Prosim2GSX.UI.Views.Monitor
             SyncMessageLogFromStore();
             FlightStatus.PropertyChanged += OnFlightStatusStateChanged;
             Gsx.PropertyChanged += OnGsxStateChanged;
+            DeiceHoldover.PropertyChanged += OnDeiceHoldoverStateChanged;
             FlightStatus.MessageLog.CollectionChanged += OnStoreMessageLogChanged;
             SolariTimer.Start();
             // Force a one-shot refresh so all bindings re-read from the stores.
@@ -89,6 +91,7 @@ namespace Prosim2GSX.UI.Views.Monitor
             SolariTimer?.Stop();
             FlightStatus.PropertyChanged -= OnFlightStatusStateChanged;
             Gsx.PropertyChanged -= OnGsxStateChanged;
+            DeiceHoldover.PropertyChanged -= OnDeiceHoldoverStateChanged;
             FlightStatus.MessageLog.CollectionChanged -= OnStoreMessageLogChanged;
         }
 
@@ -186,6 +189,11 @@ namespace Prosim2GSX.UI.Views.Monitor
 
         public string LastHandlerEvent => Gsx.LastHandlerEvent;
 
+        // Compact deice holdover one-liner (e.g. "Type IV 75% · snow ·
+        // 12:30–25:00 remaining" / "HOLDOVER EXPIRED…"); "" when no
+        // holdover is active. Interactive precip/OAT entry is web-only.
+        public string DeiceHoldoverStatus => DeiceHoldover.Status;
+
         public bool AppOnGround => FlightStatus.AppOnGround;
         public bool AppEnginesRunning => FlightStatus.AppEnginesRunning;
         public bool AppInMotion => FlightStatus.AppInMotion;
@@ -239,6 +247,14 @@ namespace Prosim2GSX.UI.Views.Monitor
                     NotifyPropertyChanged(nameof(ServiceStairsConnectedColor));
                     break;
             }
+        }
+
+        protected virtual void OnDeiceHoldoverStateChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            // Only the rolled-up Status string is surfaced on the Monitor;
+            // the interactive precip/OAT inputs are web-only.
+            if (e?.PropertyName == nameof(DeiceHoldoverState.Status))
+                NotifyPropertyChanged(nameof(DeiceHoldoverStatus));
         }
 
         // ── Message log mirror ───────────────────────────────────────────────
