@@ -231,9 +231,18 @@ namespace Prosim2GSX.Web.Contracts
             profile.ChimeOnDeboardComplete = ChimeOnDeboardComplete;
 
             // DepartureServices: array order becomes the SortedDictionary key.
-            profile.DepartureServices.Clear();
+            // Build a NEW dictionary and swap the reference rather than
+            // Clear()+mutate in place. The GSX automation runs on its own
+            // thread and may be mid-enumeration over the live instance
+            // (GsxAutomationController.DepartureServicesEnumerator); an
+            // in-place structural change bumps the SortedDictionary version
+            // and throws "Collection was modified" on its next MoveNext().
+            // The atomic reference swap lets the active turnaround finish on
+            // the old config; the edit takes effect from the next cycle.
+            var rebuiltDepartureServices = new SortedDictionary<int, ServiceConfig>();
             for (int i = 0; i < DepartureServices.Count; i++)
-                profile.DepartureServices[i] = DepartureServices[i].ToServiceConfig();
+                rebuiltDepartureServices[i] = DepartureServices[i].ToServiceConfig();
+            profile.DepartureServices = rebuiltDepartureServices;
 
             profile.RefuelMethod = RefuelMethod;
             profile.RefuelRateKgSec = RefuelRateKgSec;

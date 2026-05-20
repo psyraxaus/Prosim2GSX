@@ -88,7 +88,10 @@
         public static string MenuGate { get; } = "Activate Services at";
         public static string MenuParkingSelect { get; } = "Select Position at";
         public static string MenuParkingChange { get; } = "Change parking or service";
-        public static string MenuAdditionalServices { get; } = "Activate Ground Services";
+        // GSX Pro v4.0.0 renamed this submenu from "Activate Ground Services"
+        // to "Additional Services". Title-matched (StartsWith) by the GPU /
+        // Deice / Lavatory / Water / Cleaning call sequences.
+        public static string MenuAdditionalServices { get; } = "Additional Services";
         public static string MenuOperatorHandling { get; } = "Select handling operator";
         public static string MenuOperatorCater { get; } = "Select catering operator";
         public static string MenuTugAttach { get; } = "Attach Pushback Tug"; 
