@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useApi } from "../api/useApi";
 import { Section } from "../components/forms/Section";
-import { BoolField, SelectField } from "../components/forms/Field";
+import { RadioField, SelectField } from "../components/forms/Field";
 import { PrimaryButton } from "../components/forms/PrimaryButton";
 import {
   ACP_SIDE_OPTIONS,
@@ -9,10 +9,15 @@ import {
   AudioChannel,
   AudioDto,
   AudioMappingDto,
+  AudioSessionSuggestionDto,
   DATA_FLOW_OPTIONS,
   DEVICE_STATE_OPTIONS,
+  VoiceMeeterMappingDto,
+  VoiceMeeterStripDto,
 } from "../types";
 import styles from "./AudioSettingsPanel.module.css";
+
+const ELEVATED_SUFFIX = " — elevated";
 
 export function AudioSettingsPanel() {
   const { get, post } = useApi();
@@ -20,6 +25,8 @@ export function AudioSettingsPanel() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<AudioSessionSuggestionDto[]>([]);
+  const [strips, setStrips] = useState<VoiceMeeterStripDto[]>([]);
 
   async function reload() {
     setError(null);
@@ -30,7 +37,23 @@ export function AudioSettingsPanel() {
       setError((e as Error).message ?? "Failed to load");
     }
   }
-  useEffect(() => { reload(); }, []);
+  async function reloadSuggestions() {
+    try {
+      const list = await get<AudioSessionSuggestionDto[]>("/audio/process-suggestions");
+      setSuggestions(list ?? []);
+    } catch { /* leave whatever we had; field still accepts free text */ }
+  }
+  async function reloadStrips() {
+    try {
+      const list = await get<VoiceMeeterStripDto[]>("/voicemeeter/strips");
+      setStrips(list ?? []);
+    } catch { setStrips([]); }
+  }
+  useEffect(() => {
+    reload();
+    reloadSuggestions();
+    reloadStrips();
+  }, []);
 
   async function save() {
     if (!draft) return;
@@ -93,19 +116,69 @@ export function AudioSettingsPanel() {
     setDraft((d) => (d ? { ...d, blacklist: d.blacklist.filter((_, i) => i !== idx) } : d));
   }
 
-  function setStartupVolume(channel: AudioChannel, raw: string) {
-    // Convention: -1.0 means "do not set". Empty input is also "do not set".
-    const val = raw === "" ? -1 : Number(raw);
+  function updateVmMapping(idx: number, partial: Partial<VoiceMeeterMappingDto>) {
     setDraft((d) => {
       if (!d) return d;
-      return { ...d, startupVolumes: { ...d.startupVolumes, [channel]: val } };
+      const list = d.voiceMeeterMappings.map((m, i) => (i === idx ? { ...m, ...partial } : m));
+      return { ...d, voiceMeeterMappings: list };
     });
   }
-  function toggleStartupUnmute(channel: AudioChannel, value: boolean) {
+  function removeVmMapping(idx: number) {
+    setDraft((d) => (d ? { ...d, voiceMeeterMappings: d.voiceMeeterMappings.filter((_, i) => i !== idx) } : d));
+  }
+  function addVmMapping() {
     setDraft((d) => {
       if (!d) return d;
-      return { ...d, startupUnmute: { ...d.startupUnmute, [channel]: value } };
+      const fresh: VoiceMeeterMappingDto = {
+        channel: "VHF1",
+        stripIndex: 0,
+        isBus: false,
+        useLatch: true,
+      };
+      return { ...d, voiceMeeterMappings: [...d.voiceMeeterMappings, fresh] };
     });
+  }
+  function setVmMappingTargetFromKey(idx: number, key: string) {
+    if (!key) return;
+    const colon = key.indexOf(":");
+    if (colon <= 0) return;
+    const isBus = key.slice(0, colon) === "bus";
+    const stripIdx = parseInt(key.slice(colon + 1), 10);
+    if (Number.isNaN(stripIdx)) return;
+    updateVmMapping(idx, { stripIndex: stripIdx, isBus });
+  }
+  function vmMappingKey(m: VoiceMeeterMappingDto) {
+    return `${m.isBus ? "bus" : "strip"}:${m.stripIndex}`;
+  }
+
+  // Per-mapping elevated-status derived from suggestions: matching binary
+  // entry that is currently NOT accessible. Mirrors the WPF Status column /
+  // banner without needing a transient field on the DTO.
+  const suggestionByName = new Map(
+    suggestions.map((s) => [s.processName.toLowerCase(), s]),
+  );
+  const elevatedBinaries = Array.from(new Set(
+    draft.mappings
+      .map((m) => m.binary)
+      .filter((b) => {
+        const match = suggestionByName.get((b ?? "").toLowerCase());
+        return match != null && !match.isAccessible;
+      }),
+  ));
+
+  const vmEnabled = draft.useVoiceMeeter;
+  const vmAvailable = strips.length > 0;
+  const vmWarning = !vmEnabled
+    ? ""
+    : !draft.voiceMeeterDllPath
+      ? "VoiceMeeter integration is enabled but no DLL path is configured. Set the path below."
+      : !vmAvailable
+        ? "VoiceMeeter is not running or the Remote API DLL was not found."
+        : "";
+
+  function setBackend(useVm: boolean) {
+    setDraft((d) => (d ? { ...d, useVoiceMeeter: useVm, isCoreAudioSelected: !useVm } : d));
+    if (useVm) reloadStrips();
   }
 
   return (
@@ -119,10 +192,17 @@ export function AudioSettingsPanel() {
         </div>
       </div>
 
-      <Section title="Backend">
-        <BoolField label="CoreAudio Backend (off = VoiceMeeter)"
-          value={draft.isCoreAudioSelected}
-          onChange={(v) => update("isCoreAudioSelected", v)} />
+      <Section title="Audio API">
+        <RadioField
+          label="Backend"
+          name="audioApi"
+          value={draft.useVoiceMeeter ? "voicemeeter" : "core"}
+          options={[
+            { value: "core", label: "Core Audio (Process Control)" },
+            { value: "voicemeeter", label: "VoiceMeeter API (Strip Control)" },
+          ]}
+          onChange={(v) => setBackend(v === "voicemeeter")}
+        />
         <SelectField label="ACP Side" value={draft.audioAcpSide}
           options={ACP_SIDE_OPTIONS}
           onChange={(v) => update("audioAcpSide", v)} />
@@ -134,76 +214,138 @@ export function AudioSettingsPanel() {
           onChange={(v) => update("audioDeviceState", v)} />
       </Section>
 
-      <Section title="Startup Volumes" hint="-1 = do not set on startup. Range 0.0–1.0.">
-        {AUDIO_CHANNELS.map((c) => {
-          const vol = draft.startupVolumes[c];
-          const unmute = draft.startupUnmute[c] ?? false;
-          return (
-            <div key={c} className={styles.channelRow}>
-              <span className={styles.channelLabel}>{c}</span>
-              <input type="number" step="0.05" min={-1} max={1}
-                value={vol === undefined ? "" : vol}
-                onChange={(e) => setStartupVolume(c, e.target.value)}
-                className={styles.channelVolume}
-                placeholder="—" />
-              <label className={styles.channelUnmute}>
-                <input type="checkbox" checked={unmute}
-                  onChange={(e) => toggleStartupUnmute(c, e.target.checked)} />
-                Unmute on startup
-              </label>
-            </div>
-          );
-        })}
-      </Section>
-
-      <Section title="App → Channel Mappings">
-        <div className={styles.mappingsHeader}>
-          <span>Channel</span>
-          <span>Binary</span>
-          <span>Device</span>
-          <span>Latch</span>
-          <span>Active</span>
-          <span />
+      <Section title="VoiceMeeter">
+        {vmWarning && <div className={styles.warningBanner}>{vmWarning}</div>}
+        <div className={styles.vmPathRow}>
+          <label className={styles.vmPathLabel}>Remote DLL path</label>
+          <input
+            type="text"
+            value={draft.voiceMeeterDllPath}
+            placeholder="C:\Program Files (x86)\VB\Voicemeeter\VoicemeeterRemote64.dll"
+            onChange={(e) => update("voiceMeeterDllPath", e.target.value)}
+            className={styles.cellInput}
+            spellCheck={false}
+          />
+          <button type="button" className={styles.vmReloadBtn} onClick={reloadStrips}>
+            Reload strips
+          </button>
         </div>
-        {draft.mappings.length === 0 && <div className={styles.empty}>No mappings configured.</div>}
-        {draft.mappings.map((m, i) => (
-          <div key={i} className={styles.mappingRow}>
-            <select value={m.channel}
-              onChange={(e) => updateMapping(i, { channel: e.target.value as AudioChannel })}
-              className={styles.cellSelect}>
-              {AUDIO_CHANNELS.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-            <input value={m.binary}
-              onChange={(e) => updateMapping(i, { binary: e.target.value })}
-              placeholder="ProcessName"
-              className={styles.cellInput} />
-            <input value={m.device}
-              onChange={(e) => updateMapping(i, { device: e.target.value })}
-              placeholder="(All)"
-              className={styles.cellInput} />
-            <input type="checkbox" checked={m.useLatch}
-              onChange={(e) => updateMapping(i, { useLatch: e.target.checked })} />
-            <input type="checkbox" checked={m.onlyActive}
-              onChange={(e) => updateMapping(i, { onlyActive: e.target.checked })} />
-            <button type="button" className={styles.removeBtn} onClick={() => removeMapping(i)}>×</button>
-          </div>
-        ))}
-        <PrimaryButton onClick={addMapping} variant="secondary">Add mapping</PrimaryButton>
       </Section>
 
-      <Section title="Device Blacklist">
-        {draft.blacklist.length === 0 && <div className={styles.empty}>No devices blacklisted.</div>}
-        {draft.blacklist.map((d, i) => (
-          <div key={i} className={styles.blacklistRow}>
-            <input value={d}
-              onChange={(e) => updateBlacklist(i, e.target.value)}
-              placeholder="Device name"
-              className={styles.cellInput} />
-            <button type="button" className={styles.removeBtn} onClick={() => removeBlacklist(i)}>×</button>
+      {!vmEnabled && (
+        <Section title="App → Channel Mappings">
+          {elevatedBinaries.length > 0 && (
+            <div className={styles.warningBanner}>
+              Elevated process(es) detected: {elevatedBinaries.join(", ")}.
+              Run Prosim2GSX as administrator to control these apps —
+              otherwise these mappings are inactive.
+            </div>
+          )}
+
+          <div className={styles.mappingsHeader}>
+            <span>Channel</span>
+            <span>Binary</span>
+            <span>Device</span>
+            <span>Latch</span>
+            <span>Active</span>
+            <span>Status</span>
+            <span />
           </div>
+          {draft.mappings.length === 0 && <div className={styles.empty}>No mappings configured.</div>}
+          {draft.mappings.map((m, i) => {
+            const match = suggestionByName.get((m.binary ?? "").toLowerCase());
+            const isElevated = match != null && !match.isAccessible;
+            return (
+              <div key={i} className={styles.mappingRow}>
+                <select value={m.channel}
+                  onChange={(e) => updateMapping(i, { channel: e.target.value as AudioChannel })}
+                  className={styles.cellSelect}>
+                  {AUDIO_CHANNELS.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <input value={m.binary}
+                  list="audio-process-suggestions"
+                  onFocus={reloadSuggestions}
+                  onChange={(e) => {
+                    let v = e.target.value;
+                    if (v.endsWith(ELEVATED_SUFFIX)) v = v.slice(0, -ELEVATED_SUFFIX.length);
+                    updateMapping(i, { binary: v });
+                  }}
+                  placeholder="ProcessName"
+                  className={styles.cellInput} />
+                <input value={m.device}
+                  onChange={(e) => updateMapping(i, { device: e.target.value })}
+                  placeholder="(All)"
+                  className={styles.cellInput} />
+                <input type="checkbox" checked={m.useLatch}
+                  onChange={(e) => updateMapping(i, { useLatch: e.target.checked })} />
+                <input type="checkbox" checked={m.onlyActive}
+                  onChange={(e) => updateMapping(i, { onlyActive: e.target.checked })} />
+                <span className={styles.statusCell} title={isElevated ? "Elevated — run Prosim2GSX as admin" : ""}>
+                  {isElevated ? "Elevated — run Prosim2GSX as admin" : ""}
+                </span>
+                <button type="button" className={styles.removeBtn} onClick={() => removeMapping(i)}>×</button>
+              </div>
+            );
+          })}
+          <PrimaryButton onClick={addMapping} variant="secondary">Add mapping</PrimaryButton>
+        </Section>
+      )}
+
+      {vmEnabled && (
+        <Section title="VoiceMeeter Mappings">
+          <div className={styles.vmMappingsHeader}>
+            <span>Channel</span>
+            <span>Strip / Bus</span>
+            <span>Latch</span>
+            <span />
+          </div>
+          {draft.voiceMeeterMappings.length === 0 && <div className={styles.empty}>No VoiceMeeter mappings configured.</div>}
+          {draft.voiceMeeterMappings.map((m, i) => (
+            <div key={i} className={styles.vmMappingsRow}>
+              <select value={m.channel}
+                onChange={(e) => updateVmMapping(i, { channel: e.target.value as AudioChannel })}
+                className={styles.cellSelect}>
+                {AUDIO_CHANNELS.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <select value={vmMappingKey(m)}
+                onChange={(e) => setVmMappingTargetFromKey(i, e.target.value)}
+                disabled={strips.length === 0}
+                className={styles.cellSelect}>
+                {strips.length === 0 && <option value="">(no strips available — load DLL or start VoiceMeeter)</option>}
+                {strips.map((s) => (
+                  <option key={s.key} value={s.key}>{s.displayName}</option>
+                ))}
+              </select>
+              <input type="checkbox" checked={m.useLatch}
+                onChange={(e) => updateVmMapping(i, { useLatch: e.target.checked })} />
+              <button type="button" className={styles.removeBtn} onClick={() => removeVmMapping(i)}>×</button>
+            </div>
+          ))}
+          <PrimaryButton onClick={addVmMapping} variant="secondary">Add VoiceMeeter mapping</PrimaryButton>
+        </Section>
+      )}
+
+      <datalist id="audio-process-suggestions">
+        {suggestions.map((s) => (
+          <option key={s.processName} value={s.isAccessible ? s.processName : s.processName + ELEVATED_SUFFIX} />
         ))}
-        <PrimaryButton onClick={addBlacklist} variant="secondary">Add device</PrimaryButton>
-      </Section>
+      </datalist>
+
+      {!vmEnabled && (
+        <Section title="Device Blacklist">
+          {draft.blacklist.length === 0 && <div className={styles.empty}>No devices blacklisted.</div>}
+          {draft.blacklist.map((d, i) => (
+            <div key={i} className={styles.blacklistRow}>
+              <input value={d}
+                onChange={(e) => updateBlacklist(i, e.target.value)}
+                placeholder="Device name"
+                className={styles.cellInput} />
+              <button type="button" className={styles.removeBtn} onClick={() => removeBlacklist(i)}>×</button>
+            </div>
+          ))}
+          <PrimaryButton onClick={addBlacklist} variant="secondary">Add device</PrimaryButton>
+        </Section>
+      )}
     </div>
   );
 }

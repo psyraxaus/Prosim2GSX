@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useApi } from "../api/useApi";
 import { useAppState } from "../state/AppStateContext";
 import { Section } from "../components/forms/Section";
@@ -6,6 +6,8 @@ import { PrimaryButton } from "../components/forms/PrimaryButton";
 import { KorryPushbackButton } from "../components/KorryPushbackButton";
 import {
   ConfirmArrivalGateRequest,
+  DeiceHoldoverDto,
+  HotPrecip,
   OfpDto,
   PushbackPreference,
   SetPushbackPreferenceRequest,
@@ -130,27 +132,6 @@ export function OfpPanel() {
     <div className={styles.panel}>
       {error && <div className={styles.error}>{error}</div>}
 
-      <Section title="Flight Information">
-        {ofp.isOfpLoaded ? (
-          <div className={styles.kvGrid}>
-            <KV label="Departure" value={ofp.departureIcao} mono />
-            <KV label="Arrival" value={ofp.arrivalIcao} mono />
-            <KV label="Alternate" value={ofp.alternateIcao || "—"} mono />
-            <KV label="Flight" value={ofp.flightNumber || "—"} mono />
-            <KV label="Plan RWY Out" value={ofp.departurePlanRwy || "—"} mono />
-            <KV label="Plan RWY In" value={ofp.arrivalPlanRwy || "—"} mono />
-            <KV label="CPDLC" value={ofp.cpdlcStation || "—"} mono />
-            <KV label="Cruise Alt" value={ofp.cruiseAltitude || "—"} mono />
-            <KV label="Block Fuel" value={ofp.blockFuelKg || "—"} mono />
-            <KV label="Block Time" value={ofp.blockTimeFormatted || "—"} mono />
-            <KV label="Pax" value={ofp.paxCount || "—"} mono />
-            <KV label="Air Distance" value={ofp.airDistance || "—"} mono />
-          </div>
-        ) : (
-          <div className={styles.empty}>No OFP loaded. Import a flight plan in ProSim.</div>
-        )}
-      </Section>
-
       <Section title="Pushback Direction">
         <div className={styles.korryGroup} role="group" aria-label="Pushback direction">
           <KorryPushbackButton
@@ -241,6 +222,9 @@ export function OfpPanel() {
           >
             {busy === "weather" || ofp.isRefreshingWeather ? "Refreshing…" : "Refresh Weather"}
           </PrimaryButton>
+          {ofp.cpdlcStation && (
+            <span className={styles.weatherStatus}>CPDLC: {ofp.cpdlcStation}</span>
+          )}
           {ofp.weatherStatus && <span className={styles.weatherStatus}>{ofp.weatherStatus}</span>}
         </div>
 
@@ -249,15 +233,10 @@ export function OfpPanel() {
           <WeatherCard title={`Arrival ${ofp.arrivalIcao || ""}`} wx={ofp.arrivalWeather} />
         </div>
       </Section>
-    </div>
-  );
-}
 
-function KV({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className={styles.kv}>
-      <span className={styles.kvLabel}>{label}</span>
-      <span className={mono ? styles.kvValueMono : styles.kvValue}>{value}</span>
+      <Section title="Deice Holdover (HOT)">
+        <HotCard hot={ofp.deiceHoldover} />
+      </Section>
     </div>
   );
 }
@@ -268,6 +247,134 @@ function StatusLine({ label, value }: { label: string; value: string }) {
       <span className={styles.statusLabel}>{label}</span>
       <span className={styles.statusValue}>{value}</span>
     </div>
+  );
+}
+
+const PRECIP_OPTIONS: { value: HotPrecip; label: string }[] = [
+  { value: "None", label: "No precipitation" },
+  { value: "ActiveFrost", label: "Active frost" },
+  { value: "FreezingFog", label: "Freezing fog" },
+  { value: "Snow", label: "Snow / snow grains" },
+  { value: "FreezingDrizzleLight", label: "Freezing drizzle (light)" },
+  { value: "FreezingDrizzleModerate", label: "Freezing drizzle (moderate)" },
+  { value: "LightFreezingRain", label: "Light freezing rain" },
+  { value: "RainOnColdSoakedWing", label: "Rain on cold-soaked wing" },
+];
+
+function fmtMMSS(total: number): string {
+  const m = Math.floor((total ?? 0) / 60);
+  const s = (total ?? 0) % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+// Deice holdover card. Precip + OAT are crew inputs POSTed to /api/deice;
+// the server recomputes and the result rides back on the deiceHoldover WS
+// channel (nested under ofp), so we don't optimistically mutate state.
+function HotCard({ hot }: { hot: DeiceHoldoverDto | undefined }) {
+  const { post } = useApi();
+  const [oatText, setOatText] = useState(String(hot?.oatC ?? 0));
+  const oatFocused = useRef(false);
+
+  // Keep the field in sync with the server (auto-prefill / other clients)
+  // unless the user is actively editing it.
+  useEffect(() => {
+    if (!oatFocused.current) setOatText(String(hot?.oatC ?? 0));
+  }, [hot?.oatC]);
+
+  if (!hot) {
+    return (
+      <div className={styles.kv}>
+        <span className={styles.kvLabel}>—</span>
+      </div>
+    );
+  }
+
+  const changePrecip = async (precip: HotPrecip) => {
+    try {
+      await post("/deice/set-precip", { precip });
+    } catch {
+      /* WS will reconcile */
+    }
+  };
+  const commitOat = async () => {
+    oatFocused.current = false;
+    const v = parseFloat(oatText);
+    if (Number.isFinite(v)) {
+      try {
+        await post("/deice/set-oat", { oatC: v });
+      } catch {
+        /* WS will reconcile */
+      }
+    }
+  };
+
+  return (
+    <>
+      <div className={styles.kv}>
+        <span className={styles.kvLabel}>Precipitation</span>
+        <span className={styles.kvValue}>
+          <select
+            className={styles.hotSelect}
+            value={hot.precip}
+            onChange={(e) => changePrecip(e.target.value as HotPrecip)}
+          >
+            {PRECIP_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </span>
+      </div>
+
+      <div className={styles.kv}>
+        <span className={styles.kvLabel}>
+          OAT (°C){hot.oatUserSet ? "" : " · auto"}
+        </span>
+        <span className={styles.kvValue}>
+          <input
+            className={styles.hotInput}
+            type="number"
+            step="0.5"
+            value={oatText}
+            onFocus={() => {
+              oatFocused.current = true;
+            }}
+            onChange={(e) => setOatText(e.target.value)}
+            onBlur={commitOat}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitOat();
+            }}
+          />
+        </span>
+      </div>
+
+      <div className={styles.kv}>
+        <span className={styles.kvLabel}>Fluid</span>
+        <span className={styles.kvValue}>{hot.fluidLabel || "—"}</span>
+      </div>
+
+      {hot.active && (
+        <div className={styles.kv}>
+          <span className={styles.kvLabel}>Holdover remaining</span>
+          <span className={styles.hotCountdown}>
+            {fmtMMSS(hot.remainingLowSeconds)} – {fmtMMSS(hot.remainingHighSeconds)}
+          </span>
+        </div>
+      )}
+
+      <div className={styles.kv}>
+        <span className={styles.kvLabel}>Status</span>
+        <span className={hot.expired ? styles.hotExpired : styles.kvValue}>
+          {hot.status || (hot.fluidLabel ? "—" : "Awaiting GSX deicing…")}
+        </span>
+      </div>
+
+      <p className={styles.hotDisclaimer}>
+        Representative HOT figures for simulation immersion only — not a
+        certified table. Do not use for real-world dispatch.
+      </p>
+    </>
   );
 }
 

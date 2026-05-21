@@ -49,6 +49,17 @@ namespace Prosim2GSX.AppConfig
         public virtual bool RestartGsxOnTaxiIn { get; set; } = false;
         public virtual bool PushbackPreferenceReapplyOnChange { get; set; } = true;
         public virtual bool AutoDeiceEnabled { get; set; } = false;
+        // Suppress GSX's "waiting for your action" door prompt messages —
+        // the bridge handles doors, so the beeps are redundant noise
+        // (especially for headless setups). Low risk.
+        public virtual bool GsxSuppressDoorMessages { get; set; } = false;
+        // EXPERIMENTAL: place GSX under Remote Control (no in-sim pop-up
+        // menu / notifications) for headless operation. Auto-disabled
+        // during the pushback/taxi-out window so the user can still
+        // interact when GSX needs input. Verify by flight log before
+        // relying on it — our menu engine also scrapes an undocumented
+        // menu file whose behaviour under remote control is unconfirmed.
+        public virtual bool GsxRemoteControlExperimental { get; set; } = false;
         public virtual GSX.AutoDeiceFluid AutoDeiceFluid { get; set; } = GSX.AutoDeiceFluid.TypeIV100;
         public virtual bool RunAudioService { get; set; } = true;
         public virtual bool UseSayIntentions { get; set; } = false;
@@ -58,6 +69,51 @@ namespace Prosim2GSX.AppConfig
         // ECAM behaviour where checks track aircraft state. Lives in the new
         // Integrations card alongside UseSayIntentions.
         public virtual bool AllowManualChecklistOverride { get; set; } = false;
+
+        // When true, the FMS init datarefs (zfw, zfwcg, block) are
+        // automatically written the moment the final loadsheet arrives —
+        // matching real-world dispatch flow where the FMS init values
+        // come straight from the signed-off loadsheet. Off by default so
+        // existing installs don't gain new behaviour silently. Out-of-
+        // envelope MACTOW blocks the auto-sync; the user retains the
+        // manual SYNC TO FMS button for that case.
+        public virtual bool AutoSyncFmsOnFinal { get; set; } = false;
+
+        // EFB INIT tab — flight planning behaviour flags.
+        //
+        // EfbAutoSyncToFmsOnFetch: when true, ZFW and block fuel are pushed
+        // to the FMS init datarefs the moment an OFP fetch completes.
+        // Default off — pilot retains positive control via the manual SYNC
+        // TO FMS button. This is independent of AutoSyncFmsOnFinal (which
+        // gates the final-loadsheet write); both can run concurrently.
+        //
+        // EfbPreferEfbFlightPlan: surfaced for the React panel so it can
+        // hint the user that the INIT tab is the canonical entry point.
+        // No behavioural gate yet — placeholder for future "skip ProSim
+        // EFB sync" wiring.
+        //
+        // EfbLockFieldsFromOfp: drives the override UX — when true, OFP-
+        // derived fields render as locked rows requiring an explicit
+        // unlock click to edit. When false, fields are directly editable.
+        public virtual bool EfbAutoSyncToFmsOnFetch { get; set; } = false;
+        public virtual bool EfbPreferEfbFlightPlan { get; set; } = false;
+        public virtual bool EfbLockFieldsFromOfp { get; set; } = true;
+
+        // Loadsheet auto-trigger timing. LoadsheetTimingService fires
+        // a warning notification at T-0 (STD reached) when the prelim
+        // hasn't been received — actionable since the SDK transmits
+        // the prelim only when GSX refuel goes Active, so a missing
+        // prelim at STD means refuel hasn't been called yet. The
+        // boarding-complete rising edge also fires an info "final
+        // incoming" notification.
+        //
+        // PrelimOffsetMinutes bounds the overdue window: only fire if
+        // STD was reached within the last N minutes. Stops a stale OFP
+        // / day-rollover from firing a false positive on first eval.
+        // Disabled flag mutes the trigger entirely without tearing
+        // down the service.
+        public virtual int LoadsheetPrelimOffsetMinutes { get; set; } = 30;
+        public virtual bool LoadsheetAutoTriggerEnabled { get; set; } = true;
         public virtual string AudioDebugFile { get; set; } = "log\\AudioDebug.txt";
         public virtual DataFlow AudioDeviceFlow { get; set; } = DataFlow.Render;
         public virtual DeviceState AudioDeviceState { get; set; } = DeviceState.Active;
@@ -79,28 +135,6 @@ namespace Prosim2GSX.AppConfig
             new(AudioChannel.CAB, "", "FlightSimulator"),
             new(AudioChannel.CAB, "", "FlightSimulator2024"),
         ];
-        public virtual Dictionary<AudioChannel, double> AudioStartupVolumes { get; set; } = new()
-        {
-            { AudioChannel.VHF1, 1.0 },
-            { AudioChannel.VHF2, -1.0 },
-            { AudioChannel.VHF3, -1.0 },
-            { AudioChannel.HF1, -1.0 },
-            { AudioChannel.HF2, -1.0 },
-            { AudioChannel.INT, 1.0 },
-            { AudioChannel.CAB, 1.0 },
-            { AudioChannel.PA, -1.0 },
-        };
-        public virtual Dictionary<AudioChannel, bool> AudioStartupUnmute { get; set; } = new()
-        {
-            { AudioChannel.VHF1, true },
-            { AudioChannel.VHF2, false },
-            { AudioChannel.VHF3, false },
-            { AudioChannel.HF1, false },
-            { AudioChannel.HF2, false },
-            { AudioChannel.INT, true },
-            { AudioChannel.CAB, true },
-            { AudioChannel.PA, false },
-        };
         public virtual int GsxServiceStartDelay { get; set; } = 4000;
         public virtual int GroundTicks { get; set; } = 2;
         public virtual int DelayForegroundChange { get; set; } = 1250;
@@ -168,6 +202,19 @@ namespace Prosim2GSX.AppConfig
         public virtual bool WebServerBindAll { get; set; } = false;
         public virtual string WebServerAuthToken { get; set; } = "";
 
+        // VoiceMeeter audio backend. UseVoiceMeeter routes SimpleAudioVolume
+        // writes through VoiceMeeter Remote API instead of CoreAudio. The DLL
+        // path is user-supplied at install time (or via the Audio Settings
+        // tab) and loaded dynamically at runtime — Prosim2GSX does NOT
+        // redistribute VoicemeeterRemote64.dll.
+        public virtual bool UseVoiceMeeter { get; set; } = false;
+        public virtual string VoiceMeeterDllPath { get; set; } = "";
+
+        // VoiceMeeter routing is per-mixer-target, not per-process. These
+        // mappings are independent of AudioMappings and only consulted when
+        // UseVoiceMeeter is true; the CoreAudio AudioMappings sit dormant.
+        public virtual List<VoiceMeeterMapping> VoiceMeeterMappings { get; set; } = new();
+
         //ProsimSDK
         public virtual string ProSimSdkPath { get; set; } = "";
         public virtual string ProSimSdkHostname { get; set; } = "localhost";
@@ -175,6 +222,16 @@ namespace Prosim2GSX.AppConfig
         public virtual bool ProSimSdkAutoReconnect { get; set; } = true;
         public virtual int ProSimSdkConnectionTimeout { get; set; } = 10000; // milliseconds
         public virtual int ProSimSdkMaxReconnectAttempts { get; set; } = 10;
+
+        // When true, GsxController fires the walkaround skip + GSX gate-menu
+        // open + reposition before waiting for the ProSim SDK handshake. This
+        // is opt-in for users running ProSim on a remote machine that comes up
+        // AFTER MSFS, where the standard order (handshake → walkaround → menu
+        // → reposition) lands too late. Off by default — leaves the existing
+        // boot sequence untouched. The pre-handshake path uses the "default"
+        // aircraft profile (the matched profile isn't known yet); profile-
+        // specific reposition / walkaround flags only apply post-handshake.
+        public virtual bool DelayProsimConnection { get; set; } = false;
 
         [JsonIgnore]
         public virtual bool IsProsimLocal
@@ -305,6 +362,36 @@ namespace Prosim2GSX.AppConfig
                         profile.MatchType = ProfileMatchType.Title;
                 }
             }
+
+            // v25: Audio startup volumes / unmute removed — ProSim datarefs are
+            // now the source of truth for ACP knob/latch state, so the app no
+            // longer writes startup values into the sim. Stale keys in
+            // existing AppConfig.json files are silently dropped on next save.
+
+            // v26: VoiceMeeter audio-backend integration — initial cut put
+            // VoiceMeeterStripIndex / VoiceMeeterIsBus on AudioMapping. v27
+            // moved them to a dedicated VoiceMeeterMapping list. Old fields
+            // are silently dropped on next save (System.Text.Json ignores
+            // unknown JSON keys).
+
+            // v27: VoiceMeeterMappings split off into their own collection.
+            // Empty list defaults in for upgrading users; CoreAudio mappings
+            // are unchanged and stay dormant while UseVoiceMeeter is true.
+
+            // v28: AutoSyncFmsOnFinal added as an opt-in. Default false on
+            // upgrade keeps existing installs on the manual-sync workflow;
+            // the user enables it via Settings > Integrations.
+
+            // v29: LoadsheetPrelimOffsetMinutes + LoadsheetAutoTriggerEnabled
+            // added for the loadsheet auto-trigger timing service. The C#
+            // defaults (30 minutes / enabled) take effect for any install
+            // that upgrades from <29 — no explicit migration needed since
+            // System.Text.Json applies the default to missing keys.
+
+            // v30: DelayProsimConnection added as an opt-in. Default false on
+            // upgrade keeps existing installs on the standard boot order;
+            // users running ProSim on a remote machine that starts after MSFS
+            // enable it via Settings > ProSim SDK & Data.
         }
 
         public virtual void SetFuelFob(string registration, double fuel)

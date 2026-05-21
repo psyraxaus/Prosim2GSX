@@ -7,12 +7,15 @@ Full and proper GSX Integration and Automation for the ProSim A320! <br/>
 - **Ground Equipment** (GPU, Chocks, PCA) is automatically set or removed
 - All **Service Calls** can be automated — including **Pushback Direction** (cockpit-style Korry buttons on the OFP tab) and **De-Icing** (auto-answer + fluid selection)
 - **Arrival Gate** can be assigned from the OFP tab — Prosim2GSX drives both ATC (via SayIntentions) and GSX (via an in-sim Stackless Python handler installed automatically)
+- **Flight Plan loading** via the **INIT page on the web interface** — enter Departure / Arrival on the MCDU *or* hit **FETCH OFP** in the web UI; Prosim2GSX pulls the OFP from SimBrief and writes it into ProSim. Replaces the legacy ProSim-EFB import workflow and is the only path with per-field overrides (ZFW / Block Fuel / Pax / Cargo)
 - Using the **INT/RAD** Switch as a Shortcut for certain GSX Interactions (i.e. call / confirm Pushback)
-- **GSX Audio** and **ATC Volume** can be controlled via the **INT/VHF1-Knob** from the ACP in the Cockpit
-- Applications can be **freely mapped** to Audio-Channels
+- **GSX Audio** and **ATC Volume** can be controlled via the **INT/VHF1-Knob** from the ACP in the Cockpit (driven directly from ProSim datarefs — no LVAR poller, no separate startup-state to configure)
+- Applications can be **freely mapped** to Audio-Channels — either via **CoreAudio** (per-process) or **VoiceMeeter Remote API** (per-strip/bus), selectable per install
 - Can be used, within certain Limits, with the native Integration
 - Supports to use the Volume Control without having GSX installed or running (or to solely use the native Integration)
-- **Embedded Web Interface** — mirrors the WPF UI in any LAN browser (phone, tablet, second PC). QR-code onboarding, bearer-token auth, loopback-only by default. Designed for **headless sim-PC** setups where the WPF window isn't reachable.
+- **Embedded Web Interface** — full operational surface (INIT, LOADSHEET, W&B, FUEL, TAKEOFF, LANDING, OFP, CHECKLISTS, settings) in any LAN browser (phone, tablet, second PC). QR-code onboarding, bearer-token auth, loopback-only by default. Designed for **headless sim-PC** setups where the WPF window isn't reachable.
+
+> **Where to find each feature.** The WPF window covers Flight Status, OFP (with a read-only flight-plan summary), Checklists, GSX Settings, Aircraft Profiles, Audio Settings, and App Settings. The advanced EFB features — **INIT** (flight-plan fetch + per-field overrides), **LOADSHEET**, **W&B**, **FUEL**, **TAKEOFF** (Airbus-style V-speed calculator with one-click FMS uplink), and **LANDING** (landing-distance calculator) — live on the embedded web interface (Section 3). Enable the web server in App Settings to use them.
 
 <br/><br/>
 
@@ -21,7 +24,7 @@ Full and proper GSX Integration and Automation for the ProSim A320! <br/>
 ### 1.1 - Requirements
 
 - Windows 10/11, MSFS 2020/2024, ProSim A320 latest :wink:
-- A properly working and updated GSX Installation. **GSX Pro v3.9.4 or newer** is required for the in-sim arrival-gate handler (see Section 2.3.2); older GSX versions work for everything else.
+- A properly working and updated GSX Installation. **GSX Pro v4.0.0 or newer** is required — Prosim2GSX is built against the GSX Pro v4.0.0 menu layout and handler-script API. The in-sim arrival-gate handler, the ground-services menu automation, and the VDGS / de-icing integrations all assume v4.0.0.
 - Capability to actually read the Readme up until and beyond this Point :stuck_out_tongue_winking_eye:
 - The Installer will install the following Software automatically:
   - .NET 10 Desktop Runtime (x64) - Reboot your System if it was installed for the first Time
@@ -36,7 +39,7 @@ Full and proper GSX Integration and Automation for the ProSim A320! <br/>
 ### 1.2 - Installation, Update & Removal
 
 Just [Download](https://github.com/psyraxaus/Prosim2GSX/releases/latest) & Run the **Installer** Binary! It will check and install all Requirements the App (or remove it). Your existing Configuration persists through Updates.<br/>
-On the second Installer Page you can select if Auto-Start should be set up for Prosim2GSX (recommended for Ease of Use).<br/>
+On the second Installer Page you can select if Auto-Start should be set up for Prosim2GSX (recommended for Ease of Use). On a fresh install (or an update where the path is missing) the same page also asks for the **ProSim SDK** location and — optionally — the **VoiceMeeter Remote DLL** path if you want to use VoiceMeeter as the audio backend. Both fields try to auto-detect; both can be left/changed later from the WPF tabs.<br/>
 You do **not need to remove** the old Version for an Update (unless instructed) - using 'Remove' in the Installer completely removes Prosim2GSX and removes it from Auto-Start. This also removes your Configuration including Aircraft Profiles and saved Fuel!<br/><br/>
 
 It is highly likely that you need to **Unblock/Exclude** the Installer & App from BitDefender and other AV-/Security-Software.<br/>
@@ -48,7 +51,7 @@ When **Upgrading** from Versions **before 0.5.0**:
 - The MobiFlight Module is not required anymore, the Installer will offer an Option to remove it - if MF Connector and PilotsDeck are not detected.
 - Even then it is *your Responsibility* to know if the MobiFlight Module is not required for other Addons on your System and safe to remove!
 
-The Installer also drops a small **`gsx_handler.py`** script into each `%appdata%\Virtuali\Airplanes\prosim-a322-*` profile folder. GSX Pro loads this at sim start and uses it to read the user-confirmed arrival gate from Prosim2GSX over loopback HTTP (see Section 2.3.2). The handler is always refreshed on update, even if you opted out of overwriting GSX profiles.
+The Installer also drops a small **`gsx_handler.py`** script into each `%appdata%\Virtuali\Airplanes\prosim-a322-*` profile folder. GSX Pro loads this at sim start and uses it to read the user-confirmed arrival gate from Prosim2GSX over loopback HTTP (see Section 2.3.3). The handler is always refreshed on update, even if you opted out of overwriting GSX profiles.
 
 <br/>
 
@@ -233,16 +236,52 @@ By default, Prosim2GSX saves the FOB per Aircraft Registration upon Arrival. Whe
 
 <br/><br/>
 
-#### 2.3.2 - OFP
+#### 2.3.2 - INIT (EFB Flight Planning) — Web Interface only
 
-The OFP tab gives you a one-glance view of the loaded Operational Flight Plan, lets you **preselect a Pushback Direction**, lets you assign an **Arrival Gate** to both ATC (via SayIntentions) and GSX, and shows live ATIS / METAR for Departure and Arrival when SayIntentions is enabled.
+The **INIT page** is the canonical place to load a SimBrief OFP into ProSim. It replaces the import button in the ProSim EFB — you can keep using the EFB if you prefer, but INIT is the recommended path going forward and is the only path with per-field override support.
+
+<img src="img/INIT Tab.png" width="600"/>
+
+Two entry points feed the same fetch logic:
+- **MCDU** — entering Departure / Arrival on the MCDU (`aircraft.fms.origin` / `aircraft.fms.destination`) automatically triggers a SimBrief fetch using the user ID configured in ProSim's EFB.
+- **FETCH OFP** button on the INIT page — manual fetch on demand. Useful when the OFP changed on simbrief.com and you want to pull the new copy without re-typing the route into the MCDU.
+
+Either path:
+1. Calls SimBrief with your user ID
+2. Parses the returned OFP
+3. Writes the planned values to the ProSim EFB datarefs (planned pax, planned cargo, planned fuel) so downstream systems (W&B, loadsheet, GSX) see the right numbers
+4. Caches the parsed OFP in-memory and broadcasts on the WS feed
+
+The page is laid out FMS-style in two columns:
+- **Left ("ACTIVE / INIT")** — flight info: FLT NBR, FROM / TO / ALTN, RWY OUT/IN, CALLSIGN, CRZ FL, CI, CPNY RTE, STD, ETA, status indicator with the OFP source (MCDU / MANUAL / SIMBRIEF).
+- **Right ("DATA / STATUS")** — aircraft type, registration, weights and fuels: ZFW, OEW, FUEL RAMP / TRIP / MIN / EXTRA, PAX, CARGO. Override-active fields render in amber-orange; unmodified OFP values in green.
+
+Action buttons:
+- **FETCH OFP** — manual SimBrief fetch
+- **SYNC TO FMS** — pushes effective ZFW + block fuel to the FMS init datarefs (`aircraft.fms.init.zfw`, `aircraft.fms.init.block`). Idempotent
+- **CLEAR OVERRIDES** — drops every per-field override and re-applies the OFP values to ProSim
+- **RESET FLIGHT** — clears the in-memory OFP cache and any overrides. Also auto-fires on flight-cycle shutdown so a fresh session starts clean
+
+Per-field overrides (ZFW / Fuel Ramp / Pax / Cargo) write to the matching ProSim dataref the moment they're committed — explicit pilot intent, no SYNC TO FMS click required. Clearing an override re-writes the SimBrief value back. Other displayed fields (trip / contingency / min / extra fuel etc.) are display-only — there are no FMS init datarefs to push them to.
+
+A **read-only summary** of whichever OFP is currently loaded is mirrored on the WPF **OFP tab** (Section 2.3.3) so desktop users see the same situational awareness without launching a browser. Fetching, override management, and SYNC TO FMS remain web-only.
+
+App Settings flags that affect the INIT page:
+- **Auto-sync FMS on fetch** (default off) — when on, ZFW + block fuel are pushed to the FMS init datarefs the moment a fetch completes. Off by default to give the pilot positive control via the manual SYNC TO FMS button.
+- **Lock fields from OFP** (default on) — drives the locked-row UX (click a row to unlock and edit).
+
+<br/><br/>
+
+#### 2.3.3 - OFP
+
+The OFP tab covers a read-only **FLIGHT PLAN** summary, gate assignment, weather, and pushback preference. The summary shows whichever OFP is currently loaded — flight number, route, runways, aircraft, STD/ETA, ZFW, block fuel, pax, cargo — sourced live from the EFB flight-plan store. Fetching, per-field overrides, and SYNC TO FMS are managed exclusively on the **INIT page** of the web interface (Section 2.3.2 / 3.4).
 
 <img src="img/OFP Tab.png" width="600"/>
 
 The tab populates in stages:
 - **Departure / Arrival ICAO** appear as soon as the Flight Plan is loaded into the MCDU (read directly from `aircraft.fms.origin` / `aircraft.fms.destination`).
-- **Route details** (Flight #, planned RWY, Alternate, Cruise FL, Block fuel, Block time, Pax, Air distance) populate after the SimBrief OFP has been imported.
 - **ATIS / METAR / wind / runway** are fetched from SayIntentions on tab open and via the **Refresh** button.
+- **CPDLC** logon station appears next to the Refresh button when SayIntentions returns one (it's fetched in the same round-trip as weather).
 
 ##### Pushback Direction
 
@@ -261,7 +300,7 @@ Type the destination gate identifier (e.g. `B38`, `W34A`) and click **Confirm**.
 
 The two status lines beneath the buttons report each channel independently:
 - **ATC** — uses the SayIntentions `assignGate` API. Requires SayIntentions to be running with a flight loaded.
-- **GSX** — driven by the **`gsx_handler.py`** Stackless Python script the Installer drops into each `%appdata%\Virtuali\Airplanes\prosim-a322-*` profile (see Section 1.2). GSX Pro loads the handler at sim start, polls Prosim2GSX over loopback HTTP for the queued gate, and calls GSX's native `selectGate()` at the in-flight gate-selection and airport-entry hooks. This replaces the older menu-walking approach and is far more robust at busy airports. **Requires GSX Pro v3.9.4 or newer.**
+- **GSX** — driven by the **`gsx_handler.py`** Stackless Python script the Installer drops into each `%appdata%\Virtuali\Airplanes\prosim-a322-*` profile (see Section 1.2). GSX Pro loads the handler at sim start, polls Prosim2GSX over loopback HTTP for the queued gate, and calls GSX's native `selectGate()` at the in-flight gate-selection and airport-entry hooks. This replaces the older menu-walking approach and is far more robust at busy airports. **Requires GSX Pro v4.0.0 or newer.**
 
 If either side fails, click **Send Now** again — only the failed channel is retried.
 
@@ -280,9 +319,17 @@ Behaviour notes:
 - **Weather (ATIS/METAR)** does *not* require an active session — only the API key. A single API call covers both ICAOs.
 - When **Use SayIntentions** is unchecked, the OFP tab still works for GSX gate assignment; the ATC channel is simply skipped.
 
+##### Deice Holdover (HOT)
+
+After GSX completes a de-icing service, the OFP tab shows a **Holdover Time (HOT)** card. Pick the **precipitation** condition (active frost, freezing fog, snow, freezing drizzle, light freezing rain, rain on a cold-soaked wing) and confirm the **OAT** — pre-filled from the Takeoff performance tab when you've set it there. Prosim2GSX reads back the applied de-icing fluid type from GSX, combines it with the concentration you configured (Section 2.3.1), looks up a holdover window and counts it down live — flipping to an **expired** state when re-treatment is due.
+
+<img src="img/Deice Holdover Card.png" width="600"/>
+
+> ⚠️ The HOT figures are representative of the published FAA holdover-time guideline *structure*, **rounded for simulation immersion only**. They are **not a certified table and must not be used for real-world dispatch.**
+
 <br/><br/>
 
-#### 2.3.3 - Aircraft Profiles
+#### 2.3.4 - Aircraft Profiles
 
 The Idea behind Aircraft Profiles is to have *different Automation Settings* for *different Operators* without having the Need to change the Settings manually every time.<br/>
 The *Profile Name* is only for display Purposes, it doesn't have a functional Impact. The *Match Type* defines on what Aircraft Information the *Match String* will be compared to. The Match String can contain multiple Values separated by a Pipe `|` - for Example `Condor|CFG` for a Match String for the Airline.<br/>
@@ -295,38 +342,69 @@ The **default Profile** can not be deleted and there can only ever be one Profil
 
 <br/><br/>
 
-#### 2.3.4 - Audio Settings
+#### 2.3.5 - Audio Settings
 
-Prosim2GSX will only start to control Volume once the Plane is **powered** (=DC Essential Bus powered). When the Aircraft is powered, Prosim2GSX will set each Audio-Channel to the configured Startup State (e.g. 100% Volume and unmuted for VHF1). **Only one ACP** Panel is used for Volume Control at any given time. But you can change your Seat Position / Panel at any Time (the Startup State is only applied to the Panel selected at that Time).<br/>
+Prosim2GSX will only start to control Volume once the Plane is **powered** (=DC Essential Bus powered). Volume and mute state are read directly from ProSim **datarefs** — the ACP knob and Record Latch are authoritative, so there is no separate "startup state" to configure anymore. Whatever the cockpit panel reads when the bus comes alive is what gets applied. **Only one ACP** Panel is used for Volume Control at any given time, but you can change your Seat Position / Panel at any Time.<br/>
 Prosim2GSX will automatically disable the native Volume Control when it starts. If you want to use the native Volume Control, disable the Volume Controller in the App Settings. In any Case: do not let both Apps control the same Stuff!<br/><br/>
+
+##### Audio Backend
+
+The top of the Audio Settings tab has an **Audio Backend** selector with two mutually-exclusive options:
+
+- **CoreAudio** (default) — Prosim2GSX directly drives per-application volume/mute on Windows audio sessions. This is the classic behaviour and works without any extra software. Use this if you let each app talk to your sound card on its own.
+- **VoiceMeeter** — Prosim2GSX drives **strips and buses** in [VoiceMeeter](https://vb-audio.com/Voicemeeter/) via the VoiceMeeter Remote API. Use this if your audio chain runs through VoiceMeeter (Banana / Potato / Standard) and you'd rather mix at the strip/bus level than at the per-app session level.
+
+VoiceMeeter must be installed separately — Prosim2GSX does not redistribute the VoiceMeeter DLL. The Installer offers to **auto-detect and configure** the path to `VoicemeeterRemote64.dll` on fresh install (typical location: `C:\Program Files (x86)\VB\Voicemeeter\VoicemeeterRemote64.dll`). You can also set or change the path later from the Audio Settings tab. The **VoiceMeeter card** on the tab shows a yellow warning when VoiceMeeter is enabled but the DLL path is missing or VoiceMeeter isn't running.<br/><br/>
+
+Switching backends is live — you don't need to restart Prosim2GSX. When swapping VoiceMeeter → CoreAudio, Prosim2GSX resets the VoiceMeeter strips it was driving back to neutral (0 dB, unmuted) so VoiceMeeter doesn't keep mixing at whatever the last ACP knob position was.<br/><br/>
+
+##### CoreAudio: App Mappings
+
+When the **CoreAudio** backend is selected, the **APP MAPPINGS** section is shown. You can map freely Applications to any of the ACP Channels. Per Default ATC Applications are controlled by VHF1, GSX by INT and the Simulator by CAB. You change the Mappings to your Preferences. All Mappings are global - they are not associated to an Aircraft Profile!<br/>
+To identify an Application you need to enter it's Binary Name without .exe Extension. The UI presents an autocomplete list of matching applications that **currently have a live audio session** (so the dropdown stays snappy and only shows things you can actually map). Inaccessible processes are tagged with " — elevated"; see the note below.<br/>
+The **Use Mute** Checkbox determines if the **Record Latch** (=Knob is pulled or pushed) is used to mute the Application.<br/><br/>
+
+**Elevated-process limitation.** If a target application is running **elevated** (as Administrator) while Prosim2GSX is running unelevated, Windows will refuse Prosim2GSX access to that application's audio session. When this is detected, the Audio Settings tab shows a **yellow banner** listing the affected binaries and the per-mapping Status column flags the offending row. The mapping stays in the config but is inactive until either the target app is run unelevated or Prosim2GSX itself is run as administrator. Running as administrator is generally **not recommended** — restart the target app unelevated where you can.<br/><br/>
 
 When you end your Session (or close Prosim2GSX), Prosim2GSX will try to reset all Audio Sessions of the controlled Applications to their last known State (before it started controlling the Volume). That might not work on Applications which reset their Audio Sessions at the same Time (like GSX). So **GSX can stay muted** when switching to another Plane (if it was muted) - keep that in Mind.<br/>
 Prosim2GSX will control **all Audio Sessions** on all Devices for a configured Application by default. You can change the Configuration to limit the Volume Control to a certain Device per Application - but on that Device it will still control all Sessions at once.<br/><br/>
 
-You can map freely Applications to any of the ACP Channels. Per Default ATC Applications are controlled by VHF1, GSX by INT and the Simulator by CAB. You change the Mappings to your Preferences. All Mappings are global - they are not associated to an Aircraft Profile!<br/>
-To identify an Application you need to enter it's Binary Name without .exe Extension. The UI will present a List of matching (running!) Applications to your Input to ease Selection. The **Use Mute** Checkbox determines if the **Record Latch** (=Knob is pulled or pushed) is used to mute the Application.<br/><br/>
+##### VoiceMeeter: Channel Mappings
+
+When the **VoiceMeeter** backend is selected, the **VOICEMEETER MAPPINGS** section is shown instead. Mappings here are **per ACP channel → strip or bus**, not per process — VoiceMeeter doesn't expose individual app sessions, the strip/bus is the routing target. The dropdown lists all strips and buses currently published by VoiceMeeter (with the user-assigned label, where set). Use the **Reload Strips** button if you've just reconfigured VoiceMeeter and want the list refreshed.<br/>
+The **Use Latch** checkbox is the VoiceMeeter equivalent of the Use Mute checkbox above — when ticked, the ACP Record Latch mutes the strip/bus.<br/>
+ACP volume `0..100%` maps to VoiceMeeter's **-60 dB to +12 dB** strip range (so 100% on the knob = +12 dB on the strip, not 0 dB).<br/><br/>
+
+The CoreAudio app mappings and the VoiceMeeter channel mappings are stored as **separate lists** in the config — flipping the radio doesn't lose either, so you can keep both wired up and switch between them as your audio chain changes.<br/><br/>
+
+##### Device Blacklist (CoreAudio only)
 
 Some Audio Devices act 'strangely' or throw Exceptions when being scanned by Prosim2GSX for Audio-Sessions. If you have such a Device, you can add it to the Blacklist so that Prosim2GSX ignores it (normally it should automatically add Devices throwing Exceptions).<br/>
-But there also Cases where Input (Capture) Devices are reported as Output (Render) Devices which leads to Any2GSX controlling the Volume of your Microphone! In such Cases these "false-output" also need to be added to the Blacklist.<br/>
+But there also Cases where Input (Capture) Devices are reported as Output (Render) Devices which leads to Prosim2GSX controlling the Volume of your Microphone! In such Cases these "false-output" also need to be added to the Blacklist.<br/>
 Matching is done on the Start of the Device Name, but it is recommended to use the exact Device Name for blacklisting. Tip: when you hit Ctrl+C on the Device Dropdown (under App Mappings), the selected Device's Name is automatically pasted to Blacklist Input Field.
 
 <br/><br/>
 
-#### 2.3.5 - App Settings
+#### 2.3.6 - App Settings
 
 These global Settings affect all Profiles and basic App Features. In most cases you only need to check if the Weight per Bag matches to your SimBrief Profile (the default Value matches the Default in the official SimBrief Profile).<br/>
 You might want to change the Weight Unit used in the UI, but you don't need to match that to SimBrief or the Airplane - it's just for displaying Purposes.<br/>
 Depending on your Preferences, you might want to check the Settings to round the planned Block Fuel or skipping Walkaround.<br/>
 If you only want to use Prosim2GSX for Volume-Control, uncheck 'Run GSX Controller' - in all other Cases leave it on!<br/>
 The **Integrations** card at the top groups the optional add-on toggles:
-- **Use SayIntentions** — enables the SayIntentions ATC and weather integration on the OFP tab (see Section 2.3.2 for details).
-- **Allow Manual Checklist Override** — when ticked, the user can click any actionable Checklist item to toggle it, including dataref-bound ones. Off by default — follows real ECAM behaviour where checks track aircraft state automatically (see Section 2.3.6).
+- **Use SayIntentions** — enables the SayIntentions ATC and weather integration on the OFP tab (see Section 2.3.3 for details).
+- **Allow Manual Checklist Override** — when ticked, the user can click any actionable Checklist item to toggle it, including dataref-bound ones. Off by default — follows real ECAM behaviour where checks track aircraft state automatically (see Section 2.3.7).
+
+A few **GSX behaviour / startup** options also live on this tab:
+- **Suppress GSX Door Messages** — tells GSX to stop showing its "waiting for your action" door prompts (Prosim2GSX already handles the doors, so the prompts are redundant noise). Handy for headless setups. Off by default.
+- **Remote-Control GSX (experimental)** — places GSX under Remote Control, suppressing the in-sim pop-up menu and notifications for fully headless operation. It is automatically disabled during the pushback / taxi-out window so you can still interact with GSX when it needs input. Experimental — verify it behaves on your setup before relying on it. Off by default.
+- **Delay ProSim Connection** — defers the ProSim SDK handshake at startup so the walkaround / menu / reposition steps can run before the connection is established. Useful on slower or networked sim rigs. Off by default.
 
 The **Web Interface** card on this tab (Enable Web Server, Port, Expose to LAN, Auth Token + Regenerate, LAN Address, Connection URL, QR Code) is documented separately in Section 3 — that section walks through enabling the embedded web server and onboarding a phone or tablet via QR code.
 
 <br/><br/>
 
-#### 2.3.6 - Checklists
+#### 2.3.7 - Checklists
 
 Interactive ECAM-style A320 checklists, automatically driven from ProSim datarefs. The tab mirrors the cockpit ECAM C/L page: items tick **green** when the associated cockpit switch / system state matches the procedure, and the **C/L COMPLETE** button glows green once every item in the active section has been confirmed.
 
@@ -352,6 +430,44 @@ When every actionable item in the active section is satisfied, the **C/L COMPLET
 **Authoring custom checklists.** Drop additional `*.json` files into `%LocalAppData%\Prosim2GSX\Checklists\`. Every dataref a checklist references is auto-subscribed and polled at 250 ms when the file loads — no code change required. The schema is documented in the `_README` block at the top of `a320_default.json`. Most cockpit switches can be polled directly, but a handful are **momentary** in ProSim (Ext Pwr, APU Start, Auto/brk LO/MED/MAX, IDG, Refuel power, Terrain on ND, etc.) — they pulse `0 → 1 → 0` and the polling cache reads `0` almost all the time. For those, set `"Momentary": true` and add a `"SteadyDataRef"` field pointing at the indicator LED, gate, or composite state that actually holds the system's mode (the `_README` lists the convention and the default JSON shows the pattern in action for EXT POWER).
 
 The Checklists tab is also fully replicated in the [Web Interface](#3---web-interface-lan-browser) — same evaluation, same green-state, same JSON files served live to any browser/tablet on the LAN.
+
+<br/><br/>
+
+#### 2.3.8 - Performance & Data Tabs (Web Interface only)
+
+The Web Interface hosts five additional tabs that have **no WPF equivalent** — the desktop UI was deliberately slimmed to the automation and settings surfaces, while these data-heavy and EFB-style tabs live exclusively in the browser (see Section 3). Open them on a phone or tablet alongside the sim.
+
+##### Takeoff Performance
+
+An EFB-style **TAKEOFF** performance tab. Enter the departure airport / runway (intersection departures supported), surface, wind, OAT and QNH, plus the aircraft configuration — flap, anti-ice, packs, force-TOGA — and TOW / MAC TOW. The weights can be pulled straight from the loadsheet with **Sync Loadsheet**. **Calculate** produces V1 / VR / V2, the take-off flap setting, FLEX temperature, THS trim and the runway shift, rendered in an MCDU-style *FMGC TAKE OFF* block, along with the headwind/tailwind component and the take-off performance limit. **Send Uplink** writes the V-speeds, FLAPS, FLEX, THS and SHIFT straight into the ProSim FMS PERF page. The METAR for the entered ICAO is shown at the foot of the tab.
+
+<img src="img/Takeoff Tab.png" width="600"/>
+
+##### Landing Performance
+
+The arrival-side counterpart — a **LANDING** performance tab covering required landing distance and the approach / landing reference speeds for the configured runway, weather, landing weight and aircraft configuration.
+
+<img src="img/Landing Tab.png" width="600"/>
+
+##### W&B (Weight & Balance)
+
+Live weight & balance built around the **CG envelope chart** — a single marker plotting the aircraft against the A320 envelope, with **LIVE** and **LOADSHEET** summary rows. The **MACTOW** chip shows whether the resolved figure came from the FINAL loadsheet, the PRELIM, or a live computation, and **Sync to FMS** pushes the loadsheet ZFW + ZFWCG to the FMS. A **departure-readiness banner** rolls up the all-doors-closed check.
+
+The **Aircraft Status silhouette** shows the cabin (132-seat overlay) and every door — eight entry / overwing doors and three cargo doors — coloured live from the ProSim door datarefs. The **Passenger Simulation** controls (**SIMULATE / CLEAR**, plus the **MANIFEST** table) populate a plausible passenger load for testing and demos without flying a full boarding.
+
+<img src="img/WandB Tab.png" width="600"/>
+
+##### Fuel
+
+A per-tank fuel breakdown — a capacity bar per tank, the planned-vs-in-tanks delta, a kg / litres mirror, and over / under-fuel flags when the load doesn't match the OFP plan.
+
+<img src="img/Fuel Tab.png" width="600"/>
+
+##### Loadsheet
+
+The preliminary and final **loadsheets** as transmitted by the ProSim SDK — weights, passenger zones and the A320 envelope, with MACTOW + FMS-sync staleness indicators. Prosim2GSX also raises **operational notifications** around the loadsheet timeline (preliminary overdue at STD, final loadsheet incoming once boarding completes); a manual **STD** override is available for OFP-less workflows.
+
+<img src="img/Loadsheet Tab.png" width="600"/>
 
 <br/><br/>
 
@@ -439,7 +555,7 @@ By default, Prosim2GSX assumes ProSim is on the same PC (`localhost`). For a rem
 
 ## 3 - Web Interface (LAN browser)
 
-Prosim2GSX ships with an **embedded web server** that mirrors the WPF UI in any modern browser — phone, tablet, second PC, anything on the same LAN. This is a first-class surface, not a remote viewer: every WPF tab has a matching React panel, and changes made in either UI propagate live to the other over a WebSocket.
+Prosim2GSX ships with an **embedded web server** that mirrors the WPF UI in any modern browser — phone, tablet, second PC, anything on the same LAN. This is a first-class surface, not a remote viewer — in fact the web interface is the **canonical superset**: every WPF tab has a matching web panel, and the web additionally hosts the tabs the desktop UI doesn't (INIT, W&B, Fuel, Loadsheet, and the Takeoff / Landing performance tabs). Changes made in either UI propagate live to the other over a WebSocket.
 
 It is built primarily for **headless sim-PC** setups (no monitor, sim-rig in another room) where opening the WPF window isn't practical, but it works just as well alongside the WPF UI on a normal desktop.
 
@@ -475,15 +591,21 @@ The web UI is responsive and is intended to be used on small screens.
 
 ### 3.4 - What's in the Web UI
 
-Seven tabs, mirroring the WPF UI in the same order:
+Thirteen pages cover every operational and configuration surface:
 
 1. **Flight Status** — split-flap header (FLT NO / UTC / DATE), Sim/GSX/App state indicators, flight-phase progress bar, message log tail.
-2. **OFP** — full parity with the WPF OFP tab: route details, three Korry pushback-direction buttons, arrival gate Confirm / Send Now, ATIS / METAR.
-3. **GSX Settings** — left-rail navigation by section, sticky save bar, full parity with the WPF GSX Settings tab.
-4. **Aircraft Profiles** — full CRUD against the Profiles list, including the active-profile selector.
-5. **Audio Settings** — *known limitation:* the panel structure ships and renders correctly, but the underlying audio mapping/control flow is being reworked. Treat this tab as read-only / preview only for now and use the WPF Audio Settings tab to make changes.
-6. **App Settings** — global app settings (excluding the Web Interface card itself, which is WPF-only by design so you can never lock yourself out).
-7. **Checklists** — full parity with the WPF Checklists tab: per-profile checklist file, ECAM-style green-when-complete C/L COMPLETE button, sequential gating + retreat + past-progress freeze, manual-tick fallback for unreachable datarefs (see Section 2.3.6 for the engine semantics and authoring guide).
+2. **INIT** — the canonical flight-planning surface (web-only). SimBrief OFP fetch on MCDU origin/destination entry or via the **FETCH OFP** button, FMS-style two-column layout, per-field overrides on ZFW / FUEL RAMP / PAX / CARGO, **SYNC TO FMS** / **CLEAR OVERRIDES** / **RESET FLIGHT** actions. See Section 2.3.2 for the full feature description.
+3. **OFP** — route details, three Korry pushback-direction buttons, arrival gate Confirm / Send Now, ATIS / METAR, and the deice Holdover (HOT) card (see Section 2.3.3).
+4. **LOADSHEET** (web-only) — preliminary and final loadsheets parsed from the SDK datarefs, ICAO-aligned envelope display, MACTOW + FMS sync staleness, RESEND placeholder. See Section 2.3.8.
+5. **W&B** (web-only) — live weight & balance with the CG envelope chart, MACTOW resolution chip (FINAL / PRELIM / COMPUTED), SYNC TO FMS button, departure-readiness banner, the Aircraft Status silhouette (132-seat overlay + 8 entry doors + 3 cargo doors), and the SIMULATE / CLEAR / MANIFEST passenger-simulation surface. See Section 2.3.8.
+6. **FUEL** (web-only) — per-tank breakdown bars, planned vs in-tanks delta, kg / L mirror, over/under flags. See Section 2.3.8.
+7. **TAKEOFF** (web-only) — EFB-style take-off performance: V1 / VR / V2, FLEX, THS and runway shift, with an FMS uplink button. See Section 2.3.8.
+8. **LANDING** (web-only) — landing distance and approach / landing reference speeds. See Section 2.3.8.
+9. **CHECKLISTS** — per-profile checklist file, ECAM-style green-when-complete C/L COMPLETE button, sequential gating + retreat + past-progress freeze, manual-tick fallback for unreachable datarefs (see Section 2.3.7 for the engine semantics and authoring guide).
+10. **GSX Settings** — left-rail navigation by section, sticky save bar, full parity with the WPF GSX Settings tab.
+11. **Aircraft Profiles** — full CRUD against the Profiles list, including the active-profile selector.
+12. **Audio Settings** — full parity with the WPF Audio Settings tab: backend selector (CoreAudio / VoiceMeeter), VoiceMeeter DLL-path card with status warning, App Mappings (CoreAudio) with running-process autocomplete and elevated banner, VoiceMeeter Channel Mappings (per-strip/bus), Device Blacklist.
+13. **App Settings** — global app settings (excluding the Web Interface card itself, which is WPF-only by design so you can never lock yourself out).
 
 ### 3.5 - Limits
 
@@ -515,8 +637,8 @@ Besides these general Best Practices, there is nothing Special to consider - Pla
 - If you have disabled to call Jetway/Stairs on Session Start, you can use the **INT/RAD** Switch (move to the INT Position) to call them at your Discretion (before the Flightplan is imported).
 - When the Jetway/Stairs are called after Walkaround has ended (either Way), Prosim2GSX will remove ProSim's native Stairs
 - Mind that selecting a **Panel-State** in the EFB also changes the **ACP State** - that will override Startup State set by Prosim2GSX.
-- After that **import the Flightplan** into the EFB to get the Automatic Service-Flow going -OR- **before** you call any GSX Service manually (if you have disabled the Automations).
-- It is recommended to **power-up** the Aircraft **before importing** the Flightplan
+- After that **load the Flightplan** to get the Automatic Service-Flow going. The recommended path is the **INIT tab** (Section 2.3.2) — either enter the route on the MCDU or hit **FETCH OFP** in the app — but the legacy ProSim-EFB import button still works as a fallback.
+- It is recommended to **power-up** the Aircraft **before** loading the Flightplan
 - If you plan to use **any EFB Loading** Option, remember that you have the Departure Services configured in a certain Way!
 
 <br/><br/>
@@ -565,7 +687,7 @@ During the sequence:
 ##### Common to both flows
 
 - You need to **enable the GSX Menu again** for the Pushback Phase to interact with the Menu! By default Prosim2GSX does not answer the Deice Question — but it can be configured to do so:
-  - **Pushback Direction** — preselect TAIL LEFT / STRAIGHT / TAIL RIGHT on the **OFP tab** (Section 2.3.2). The lit Korry button is auto-selected the moment GSX shows the direction menu. Default is STRAIGHT. The same controls are mirrored on the OFP tab of the **Web Interface** (Section 3).
+  - **Pushback Direction** — preselect TAIL LEFT / STRAIGHT / TAIL RIGHT on the **OFP tab** (Section 2.3.3). The lit Korry button is auto-selected the moment GSX shows the direction menu. Default is STRAIGHT. The same controls are mirrored on the OFP tab of the **Web Interface** (Section 3).
   - **De-Icing** — tick **Automatically respond Yes to GSX de-icing request** under GSX Settings → De-Icing (Section 2.3.1) to auto-answer the prompt and pick a configured fluid + concentration. Off by default.
 - With default Settings, Prosim2GSX will **automatically reopen** the Pushback Direction Menu if the GSX Menu should time out (hides itself again).
 - **Ground-Equipment** will also be removed automatically when GSX Pushback/Deice Service is running or when the Engines are running (=start combusting).

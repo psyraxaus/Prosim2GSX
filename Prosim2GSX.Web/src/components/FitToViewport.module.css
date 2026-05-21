@@ -1,0 +1,18 @@
+/* Scale-to-fit wrapper — see FitToViewport.tsx. */
+
+.outer {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* Full slot width, so only the height ratio drives the scale; the
+   shrunken visual is kept top-aligned and horizontally centred. */
+.content {
+  width: 100%;
+  flex: 0 0 auto;
+  transform-origin: top center;
+}

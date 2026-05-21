@@ -7,14 +7,22 @@ import { useWebSocket } from "./ws/useWebSocket";
 import { useApi } from "./api/useApi";
 import { useTheme } from "./theme/useTheme";
 import { Header } from "./components/Header";
+import { NotificationBanner } from "./components/NotificationBanner";
 import { TabBar } from "./components/TabBar";
+import { FitToViewport } from "./components/FitToViewport";
 import { FlightStatusPanel } from "./panels/FlightStatusPanel";
 import { AudioSettingsPanel } from "./panels/AudioSettingsPanel";
 import { AppSettingsPanel } from "./panels/AppSettingsPanel";
 import { GsxSettingsPanel } from "./panels/GsxSettingsPanel";
 import { OfpPanel } from "./panels/OfpPanel";
+import { InitPanel } from "./panels/InitPanel";
+import { LoadsheetPanel } from "./panels/LoadsheetPanel";
+import { WeightBalancePanel } from "./panels/WeightBalancePanel";
+import { FuelPanel } from "./panels/FuelPanel";
 import { ChecklistsPanel } from "./panels/ChecklistsPanel";
 import { AircraftProfilesPanel } from "./panels/AircraftProfilesPanel";
+import { TakeoffPerfPanel } from "./panels/TakeoffPerfPanel";
+import { LandingPerfPanel } from "./panels/LandingPerfPanel";
 import styles from "./App.module.css";
 export function App() {
     // The auth gate is shown until a token is in localStorage. Re-checked
@@ -63,5 +71,5 @@ function AppShell() {
     const themeName = state.appSettings?.currentTheme ?? null;
     useTheme(themeName);
     const [tab, setTab] = useState("flightStatus");
-    return (_jsxs("div", { className: styles.app, children: [_jsx(Header, {}), _jsx(TabBar, { active: tab, onSelect: setTab }), _jsxs("main", { className: styles.main, children: [tab === "flightStatus" && _jsx(FlightStatusPanel, {}), tab === "ofp" && _jsx(OfpPanel, {}), tab === "checklists" && _jsx(ChecklistsPanel, {}), tab === "gsxSettings" && _jsx(GsxSettingsPanel, {}), tab === "aircraftProfiles" && _jsx(AircraftProfilesPanel, {}), tab === "audioSettings" && _jsx(AudioSettingsPanel, {}), tab === "appSettings" && _jsx(AppSettingsPanel, {})] })] }));
+    return (_jsxs("div", { className: styles.app, children: [_jsx(Header, {}), _jsx(NotificationBanner, {}), _jsx(TabBar, { active: tab, onSelect: setTab }), _jsxs("main", { className: styles.main, children: [tab === "flightStatus" && _jsx(FlightStatusPanel, {}), tab === "init" && _jsx(InitPanel, {}), tab === "ofp" && _jsx(OfpPanel, {}), tab === "loadsheet" && _jsx(LoadsheetPanel, {}), tab === "weightBalance" && _jsx(WeightBalancePanel, {}), tab === "fuel" && _jsx(FuelPanel, {}), tab === "takeoff" && _jsx(FitToViewport, { children: _jsx(TakeoffPerfPanel, {}) }), tab === "landing" && _jsx(FitToViewport, { children: _jsx(LandingPerfPanel, {}) }), tab === "checklists" && _jsx(ChecklistsPanel, {}), tab === "gsxSettings" && _jsx(GsxSettingsPanel, {}), tab === "aircraftProfiles" && _jsx(AircraftProfilesPanel, {}), tab === "audioSettings" && _jsx(AudioSettingsPanel, {}), tab === "appSettings" && _jsx(AppSettingsPanel, {})] })] }));
 }

@@ -5,26 +5,27 @@
 .panel {
   display: flex;
   flex-direction: column;
-  background: #000000;
-  color: #00cccc;
-  font-family: Consolas, "Courier New", monospace;
-  /* Full-bleed ECAM look. App.module.css's <main> has padding: 16px 0 so
-     other panels get breathing room around their bordered cards; we
-     cancel it locally with negative margin + extra height so the black
-     panel reaches the very edges of the available main area. The body
-     flexes within (overflow-y: auto handles long lists), the footer
-     sticks to the bottom edge.
-     The 32px is the sum of main's top + bottom vertical padding; if
-     that ever changes, this needs to change with it. */
-  margin: -16px 0;
-  min-height: calc(100% + 32px);
-  height: calc(100% + 32px);
+  /* Standard padded frame so the tab sits in the same outer margin as
+     every other tab. Only the chrome is wrapped — the ECAM checklist
+     list keeps its black instrument-screen styling on .body. The flex
+     column + full height keeps the body's internal scroll so the list
+     reads as a fixed instrument display between the header/footer
+     bars. */
+  padding: 16px 18px;
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
   overflow: hidden;
 }
 
 .headerBar {
-  background: #001830;
-  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: var(--radius-md, 6px) var(--radius-md, 6px) 0 0;
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -37,25 +38,36 @@
 }
 
 .label {
-  font-weight: bold;
-  font-size: 13px;
-  color: #00cccc;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--category-text);
 }
 
 .select {
-  background: #000000;
-  color: #00cccc;
-  border: 1px solid #00cccc;
-  padding: 4px 8px;
-  font-family: inherit;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 4px);
+  padding: 5px 8px;
+  font-family: var(--font-sans);
   font-size: 13px;
   min-width: 240px;
 }
 
+/* ECAM instrument screen — the checklist list itself stays authentic
+   (black, cyan, monospace). Flanked by the themed header/footer bars so
+   the 1px frame reads as one continuous card around the screen. */
 .body {
   flex: 1;
   overflow-y: auto;
   padding: 12px 8px;
+  background: #000000;
+  color: #00cccc;
+  font-family: Consolas, "Courier New", monospace;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
 }
 
 .itemRow {
@@ -113,7 +125,10 @@
 }
 
 .footer {
-  background: #001830;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-md, 6px) var(--radius-md, 6px);
   padding: 10px;
   display: flex;
   justify-content: center;
@@ -121,15 +136,22 @@
 }
 
 .button {
-  background: #1a1a2e;
-  color: #00cccc;
-  border: 1px solid #00cccc;
+  background: var(--bg-button);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 4px);
   padding: 6px 16px;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: bold;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   min-width: 110px;
   cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  border-color: var(--accent);
 }
 
 .button:disabled {
@@ -148,7 +170,7 @@
 }
 
 .error {
-  color: #ff8080;
+  color: var(--danger);
   padding: 12px;
-  font-family: inherit;
+  font-family: var(--font-sans);
 }

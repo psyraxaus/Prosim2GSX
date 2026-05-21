@@ -2,12 +2,13 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Prosim2GSX.State
 {
-    // Long-lived observable mirror for runtime Audio state that does not live on
-    // Config (Config already owns ACP side, mappings, blacklist, startup volumes
-    // and unmute). Today the only Model-local field is the audio-backend toggle.
+    // Long-lived observable mirror for runtime Audio state. Today it surfaces
+    // the audio-backend toggle (CoreAudio vs VoiceMeeter), which is the
+    // inverse of Config.UseVoiceMeeter. The WPF AUDIO API radio buttons bind
+    // here; ModelAudio writes through to Config so persistence and live state
+    // stay in lock-step.
     public partial class AudioState : ObservableObject
     {
-        // True when CoreAudio backend is selected, false when VoiceMeeter is selected.
         [ObservableProperty] private bool _IsCoreAudioSelected = true;
     }
 }

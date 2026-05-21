@@ -1,6 +1,7 @@
 ﻿using CFIT.AppLogger;
 using CFIT.Installer.LibFunc;
 using CFIT.Installer.LibWorker;
+using CFIT.Installer.Product;
 using System;
 using System.IO;
 using System.Text.Json;
@@ -61,53 +62,76 @@ namespace Installer
             if (!Directory.Exists(logDir))
                 Directory.CreateDirectory(logDir);
 
-            // Write the ProSim SDK path into the app config file
-            WriteProSimSdkPathToConfig();
+            // Write user-selected paths into the app config file.
+            WriteUserPathsToConfig();
 
             return Directory.Exists(logDir);
         }
 
         /// <summary>
-        /// Reads the deployed AppConfig.json, injects the ProSimSdkPath value
-        /// selected by the user during installation, and rewrites the file.
+        /// Reads the deployed AppConfig.json, injects user-selected paths
+        /// from the install-time configuration, and rewrites the file.
+        /// Currently handles ProSimSdkPath, plus the VoiceMeeter integration
+        /// toggle and DLL path.
         /// </summary>
-        private void WriteProSimSdkPathToConfig()
+        private void WriteUserPathsToConfig()
         {
-            string sdkPath = Config.GetOption<string>(Config.OptionProSimSdkPath);
-            if (string.IsNullOrEmpty(sdkPath))
-            {
-                Logger.Warning("No ProSim SDK path was configured during installation");
-                return;
-            }
-
             try
             {
                 string configPath = Config.ProductConfigPath;
                 if (!File.Exists(configPath))
                 {
-                    Logger.Error($"Config file not found at '{configPath}', cannot write SDK path");
+                    Logger.Error($"Config file not found at '{configPath}', cannot write user paths");
                     return;
                 }
 
                 string json = File.ReadAllText(configPath);
                 var jsonNode = JsonNode.Parse(json);
-                if (jsonNode is JsonObject jsonObj)
+                if (jsonNode is not JsonObject jsonObj) return;
+
+                bool changed = false;
+
+                string sdkPath = Config.GetOption<string>(Config.OptionProSimSdkPath);
+                if (!string.IsNullOrEmpty(sdkPath))
                 {
                     jsonObj["ProSimSdkPath"] = sdkPath;
-
-                    var options = new JsonSerializerOptions
-                    {
-                        WriteIndented = true
-                    };
-                    string updatedJson = jsonObj.ToJsonString(options);
-                    File.WriteAllText(configPath, updatedJson);
-
                     Logger.Information($"ProSim SDK path written to config: {sdkPath}");
+                    changed = true;
+                }
+                else
+                {
+                    Logger.Warning("No ProSim SDK path was configured during installation");
+                }
+
+                // Only write VoiceMeeter keys when the section was actually
+                // shown to the user this run. UPDATE installs that detected
+                // an existing valid configuration suppress the prompt — and
+                // must therefore leave the existing keys untouched.
+                bool vmAlreadyConfigured = Config.GetOption<bool>(Config.StateVoiceMeeterAlreadyConfigured);
+                bool vmPromptShown = Config.Mode == SetupMode.INSTALL || !vmAlreadyConfigured;
+                if (vmPromptShown)
+                {
+                    bool enableVm = Config.GetOption<bool>(Config.OptionEnableVoiceMeeter);
+                    string vmPath = Config.GetOption<string>(Config.OptionVoiceMeeterDllPath) ?? "";
+                    jsonObj["UseVoiceMeeter"] = enableVm;
+                    jsonObj["VoiceMeeterDllPath"] = vmPath;
+                    Logger.Information($"VoiceMeeter integration: enabled={enableVm}, dll='{vmPath}'");
+                    changed = true;
+                }
+                else
+                {
+                    Logger.Information("VoiceMeeter integration: keeping existing AppConfig.json values (already configured).");
+                }
+
+                if (changed)
+                {
+                    var options = new JsonSerializerOptions { WriteIndented = true };
+                    File.WriteAllText(configPath, jsonObj.ToJsonString(options));
                 }
             }
             catch (Exception ex)
             {
-                Logger.Error($"Failed to write ProSim SDK path to config file");
+                Logger.Error($"Failed to write user paths to config file");
                 Logger.LogException(ex);
             }
         }

@@ -1,8 +1,7 @@
 using CFIT.AppLogger;
 using Prosim2GSX.AppConfig;
 using System;
-using System.Windows;
-using System.Windows.Threading;
+using System.Threading;
 
 namespace Prosim2GSX.State
 {
@@ -11,6 +10,17 @@ namespace Prosim2GSX.State
     // to live on ModelMonitor, so the message stream is durable independent of
     // whether the WPF Monitor tab is open.
     //
+    // Runs on a System.Threading.Timer (thread-pool callback), NOT a
+    // DispatcherTimer. The earlier DispatcherTimer implementation ran this drain
+    // — and the synchronous WS log fan-out it triggers via
+    // FlightStatusState.MessageLog.CollectionChanged — on the WPF UI thread for
+    // the whole process lifetime, including the long headless stretches the
+    // window spends hidden to the tray. With a chatty logger that starved the
+    // UI thread's shared Win32 message queue until the per-thread PostMessage
+    // limit was hit (ERROR_NOT_ENOUGH_QUOTA crash on the next window restore).
+    // The store and the WS handler have no UI affinity; the only UI consumer
+    // (ModelMonitor) marshals to its own dispatcher.
+    //
     // Cap inside the store is StoreCap (500) — large enough for the web layer to
     // replay recent history; the WPF Monitor tab keeps its own visual-line trim
     // on top of this for its compact log panel.
@@ -18,9 +28,18 @@ namespace Prosim2GSX.State
     {
         private const int StoreCap = 500;
 
+        // Hard ceiling on how many messages a single tick will move out of the
+        // CFIT queue into the store. At the ~500 ms cadence this is far above
+        // any sane sustained log rate; it exists purely so a pathological burst
+        // can't make one tick run unbounded. Anything still queued above this
+        // is caught by the overflow/hardCap trim below on subsequent ticks.
+        private const int MaxDrainPerTick = 1000;
+
         private readonly FlightStatusState _state;
         private readonly Config _config;
-        private readonly DispatcherTimer _timer;
+        private readonly Timer _timer;
+        private readonly int _intervalMs;
+        private volatile bool _isDraining;
         private bool _queueOverflowWarned;
 
         public MessageLogDrainWorker(FlightStatusState state, Config config)
@@ -28,33 +47,20 @@ namespace Prosim2GSX.State
             _state = state;
             _config = config;
 
-            int interval = Math.Max(100, config?.UiRefreshInterval ?? 500);
-            var dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
-            _timer = new DispatcherTimer(DispatcherPriority.Background, dispatcher)
-            {
-                Interval = TimeSpan.FromMilliseconds(interval),
-            };
-            _timer.Tick += OnTick;
+            _intervalMs = Math.Max(100, config?.UiRefreshInterval ?? 500);
+            _timer = new Timer(OnTick, null, Timeout.Infinite, Timeout.Infinite);
         }
 
         public virtual void Start()
-        {
-            // Start can be called from any thread (e.g. AppService init); marshal
-            // to the timer's dispatcher because DispatcherTimer.Start requires it.
-            var d = _timer.Dispatcher;
-            if (d.CheckAccess()) _timer.Start();
-            else d.InvokeAsync(_timer.Start);
-        }
+            => _timer.Change(_intervalMs, _intervalMs);
 
         public virtual void Stop()
-        {
-            var d = _timer.Dispatcher;
-            if (d.CheckAccess()) _timer.Stop();
-            else d.InvokeAsync(_timer.Stop);
-        }
+            => _timer.Change(Timeout.Infinite, Timeout.Infinite);
 
-        protected virtual void OnTick(object? sender, EventArgs e)
+        protected virtual void OnTick(object? state)
         {
+            if (_isDraining) return;
+            _isDraining = true;
             try
             {
                 if (Logger.Messages.IsEmpty)
@@ -76,16 +82,22 @@ namespace Prosim2GSX.State
                     _queueOverflowWarned = false;
                 }
 
-                while (Logger.Messages.TryDequeue(out var msg))
+                int drained = 0;
+                while (drained < MaxDrainPerTick && Logger.Messages.TryDequeue(out var msg))
                 {
                     _state.MessageLog.Add(msg);
                     while (_state.MessageLog.Count > StoreCap)
                         _state.MessageLog.RemoveAt(0);
+                    drained++;
                 }
             }
             catch (Exception ex)
             {
                 Logger.LogException(ex);
+            }
+            finally
+            {
+                _isDraining = false;
             }
         }
     }

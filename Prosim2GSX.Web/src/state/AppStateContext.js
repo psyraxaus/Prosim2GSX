@@ -15,6 +15,13 @@ const initialState = {
     appSettings: null,
     ofp: null,
     checklists: null,
+    weightBalance: null,
+    loadsheet: null,
+    efbFlightPlan: null,
+    notifications: null,
+    fuel: null,
+    takeoffPerf: null,
+    landingPerf: null,
     connection: "closed",
 };
 function reducer(state, action) {
@@ -33,6 +40,20 @@ function reducer(state, action) {
                     flightStatus: {
                         ...state.flightStatus,
                         gsx: { ...currentGsx, ...action.patch },
+                    },
+                };
+            }
+            // Same nesting as "gsx", but the deice HOT card is OfpDto's nested
+            // DeiceHoldoverDto — it merges into ofp.deiceHoldover.
+            if (action.channel === "deiceHoldover") {
+                if (!state.ofp)
+                    return state;
+                const currentHot = state.ofp.deiceHoldover ?? {};
+                return {
+                    ...state,
+                    ofp: {
+                        ...state.ofp,
+                        deiceHoldover: { ...currentHot, ...action.patch },
                     },
                 };
             }

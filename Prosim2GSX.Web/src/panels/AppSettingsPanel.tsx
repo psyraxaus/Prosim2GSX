@@ -116,6 +116,8 @@ export function AppSettingsPanel() {
           onChange={(v) => update("useSayIntentions", v)} />
         <BoolField label="Allow Manual Checklist Override" value={draft.allowManualChecklistOverride}
           onChange={(v) => update("allowManualChecklistOverride", v)} />
+        <BoolField label="Auto-sync FMS on Final Loadsheet" value={draft.autoSyncFmsOnFinal}
+          onChange={(v) => update("autoSyncFmsOnFinal", v)} />
       </Section>
 
       <Section title="Display">
@@ -172,11 +174,17 @@ export function AppSettingsPanel() {
           onChange={(v) => update("runGsxService", v)} />
         <BoolField label="Run Audio Service" value={draft.runAudioService}
           onChange={(v) => update("runAudioService", v)} />
+        <BoolField label="Suppress GSX Door Messages" value={draft.gsxSuppressDoorMessages}
+          onChange={(v) => update("gsxSuppressDoorMessages", v)} />
+        <BoolField label="Remote-Control GSX (experimental, headless)" value={draft.gsxRemoteControlExperimental}
+          onChange={(v) => update("gsxRemoteControlExperimental", v)} />
       </Section>
 
-      <Section title="ProSim SDK">
+      <Section title="ProSim SDK" hint="Pre-handshake actions use the 'default' aircraft profile">
         <TextField label="ProSim SDK Path" value={draft.proSimSdkPath} monospace
           onChange={(v) => update("proSimSdkPath", v)} />
+        <BoolField label="Delay ProSim Connection" value={draft.delayProsimConnection}
+          onChange={(v) => update("delayProsimConnection", v)} />
       </Section>
 
       <Section title="Web Interface" hint="Hot-toggle on save">

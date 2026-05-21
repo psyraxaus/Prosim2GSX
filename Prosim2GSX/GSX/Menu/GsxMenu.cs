@@ -594,7 +594,18 @@ namespace Prosim2GSX.GSX.Menu
 
             if (command.HasTitle && !command.MatchesAny(MatchTitle))
             {
-                Logger.Warning($"Menu Command skipped - Title did not match: '{MenuTitle}' does not start with '{command.Title}'");
+                // An operator-selection menu ("Select … operator") still on
+                // screen when the next service command arrives is a normal
+                // transient — RunDeparture retries on the next tick and it
+                // resolves. Log that at Debug to avoid alarming WRN noise;
+                // a mismatch against any other title stays a Warning.
+                bool transientOperatorMenu = MenuTitle?.TrimEnd()
+                    .EndsWith("operator", StringComparison.OrdinalIgnoreCase) == true;
+                string msg = $"Menu Command skipped - Title did not match: '{MenuTitle}' does not start with '{command.Title}'";
+                if (transientOperatorMenu)
+                    Logger.Debug(msg);
+                else
+                    Logger.Warning(msg);
                 return result;
             }
 

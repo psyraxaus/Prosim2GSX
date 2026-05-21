@@ -6,14 +6,22 @@ import { useWebSocket } from "./ws/useWebSocket";
 import { useApi } from "./api/useApi";
 import { useTheme } from "./theme/useTheme";
 import { Header } from "./components/Header";
+import { NotificationBanner } from "./components/NotificationBanner";
 import { TabBar, TabKey } from "./components/TabBar";
+import { FitToViewport } from "./components/FitToViewport";
 import { FlightStatusPanel } from "./panels/FlightStatusPanel";
 import { AudioSettingsPanel } from "./panels/AudioSettingsPanel";
 import { AppSettingsPanel } from "./panels/AppSettingsPanel";
 import { GsxSettingsPanel } from "./panels/GsxSettingsPanel";
 import { OfpPanel } from "./panels/OfpPanel";
+import { InitPanel } from "./panels/InitPanel";
+import { LoadsheetPanel } from "./panels/LoadsheetPanel";
+import { WeightBalancePanel } from "./panels/WeightBalancePanel";
+import { FuelPanel } from "./panels/FuelPanel";
 import { ChecklistsPanel } from "./panels/ChecklistsPanel";
 import { AircraftProfilesPanel } from "./panels/AircraftProfilesPanel";
+import { TakeoffPerfPanel } from "./panels/TakeoffPerfPanel";
+import { LandingPerfPanel } from "./panels/LandingPerfPanel";
 import { AppSettingsDto } from "./types";
 import styles from "./App.module.css";
 
@@ -78,10 +86,17 @@ function AppShell() {
   return (
     <div className={styles.app}>
       <Header />
+      <NotificationBanner />
       <TabBar active={tab} onSelect={setTab} />
       <main className={styles.main}>
         {tab === "flightStatus" && <FlightStatusPanel />}
+        {tab === "init" && <InitPanel />}
         {tab === "ofp" && <OfpPanel />}
+        {tab === "loadsheet" && <LoadsheetPanel />}
+        {tab === "weightBalance" && <WeightBalancePanel />}
+        {tab === "fuel" && <FuelPanel />}
+        {tab === "takeoff" && <FitToViewport><TakeoffPerfPanel /></FitToViewport>}
+        {tab === "landing" && <FitToViewport><LandingPerfPanel /></FitToViewport>}
         {tab === "checklists" && <ChecklistsPanel />}
         {tab === "gsxSettings" && <GsxSettingsPanel />}
         {tab === "aircraftProfiles" && <AircraftProfilesPanel />}

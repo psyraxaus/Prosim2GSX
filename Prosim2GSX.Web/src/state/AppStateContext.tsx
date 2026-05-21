@@ -24,6 +24,13 @@ export interface AppState {
   appSettings: Record<string, unknown> | null;
   ofp: Record<string, unknown> | null;
   checklists: Record<string, unknown> | null;
+  weightBalance: Record<string, unknown> | null;
+  loadsheet: Record<string, unknown> | null;
+  efbFlightPlan: Record<string, unknown> | null;
+  notifications: Record<string, unknown> | null;
+  fuel: Record<string, unknown> | null;
+  takeoffPerf: Record<string, unknown> | null;
+  landingPerf: Record<string, unknown> | null;
   connection: ConnectionStatus;
 }
 
@@ -40,6 +47,13 @@ const initialState: AppState = {
   appSettings: null,
   ofp: null,
   checklists: null,
+  weightBalance: null,
+  loadsheet: null,
+  efbFlightPlan: null,
+  notifications: null,
+  fuel: null,
+  takeoffPerf: null,
+  landingPerf: null,
   connection: "closed",
 };
 
@@ -60,6 +74,21 @@ function reducer(state: AppState, action: AppAction): AppState {
           flightStatus: {
             ...state.flightStatus,
             gsx: { ...currentGsx, ...action.patch },
+          },
+        };
+      }
+
+      // Same nesting as "gsx", but the deice HOT card is OfpDto's nested
+      // DeiceHoldoverDto — it merges into ofp.deiceHoldover.
+      if (action.channel === "deiceHoldover") {
+        if (!state.ofp) return state;
+        const currentHot =
+          (state.ofp.deiceHoldover as Record<string, unknown> | undefined) ?? {};
+        return {
+          ...state,
+          ofp: {
+            ...state.ofp,
+            deiceHoldover: { ...currentHot, ...action.patch },
           },
         };
       }

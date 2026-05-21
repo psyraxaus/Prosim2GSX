@@ -51,7 +51,40 @@ namespace Prosim2GSX.UI
                 Interval = TimeSpan.FromSeconds(2)
             };
             _updateTimer.Tick += OnUpdate;
-            _updateTimer.Start();
+
+            // The header lives permanently in AppWindow row 0, so without this
+            // gating the 2 s timer would run — and re-animate the split-flap
+            // cells every minute — for the entire process lifetime, including
+            // the long stretches the window spends hidden to the system tray
+            // (the dominant headless usage). While not rendering, the animation
+            // work piled onto a UI message pump that never drained, exhausting
+            // the per-thread PostMessage quota (the recurring crash). Run the
+            // timer only while the control is actually visible.
+            IsVisibleChanged += OnVisibilityChanged;
+            Unloaded += OnUnloaded;
+            if (IsVisible)
+                _updateTimer.Start();
+        }
+
+        private void OnVisibilityChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (IsVisible)
+            {
+                // Refresh immediately so the header is current the instant the
+                // window is restored, instead of showing stale values until
+                // the next 2 s tick.
+                OnUpdate(this, EventArgs.Empty);
+                _updateTimer.Start();
+            }
+            else
+            {
+                _updateTimer.Stop();
+            }
+        }
+
+        private void OnUnloaded(object sender, RoutedEventArgs e)
+        {
+            _updateTimer.Stop();
         }
 
         private void OnUpdate(object sender, EventArgs e)

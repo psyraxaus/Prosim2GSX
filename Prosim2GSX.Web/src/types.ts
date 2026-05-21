@@ -13,9 +13,9 @@
 
 export type ConnectionStatus = "connecting" | "open" | "reconnecting" | "closed";
 
-export type WsChannel = "flightStatus" | "gsx" | "audio" | "appSettings" | "ofp" | "checklists";
+export type WsChannel = "flightStatus" | "gsx" | "deiceHoldover" | "audio" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet" | "efbFlightPlan" | "notifications" | "fuel" | "takeoffPerf" | "landingPerf";
 
-export type StateChannel = "flightStatus" | "audio" | "gsxSettings" | "appSettings" | "ofp" | "checklists";
+export type StateChannel = "flightStatus" | "audio" | "gsxSettings" | "appSettings" | "ofp" | "checklists" | "weightBalance" | "loadsheet" | "efbFlightPlan" | "notifications" | "fuel" | "takeoffPerf" | "landingPerf";
 
 export interface PatchEnvelope {
   channel: WsChannel;
@@ -149,6 +149,7 @@ export interface GsxLiveDto {
   appAutomationDepartureServices: string;
 
   assignedArrivalGate: string;
+  lastHandlerEvent: string;
 }
 
 export interface FlightStatusDto {
@@ -180,6 +181,36 @@ export interface FlightStatusDto {
 
   gsx: GsxLiveDto;
   messageLog: string[];
+}
+
+// Deice holdover-time card. Patched on the "deiceHoldover" WS channel,
+// nested under ofp client-side (same scheme as gsx under flightStatus).
+// Precip/oatC are crew inputs POSTed to /api/deice. HotPrecip values are
+// the C# enum names (string enums on the wire).
+export type HotPrecip =
+  | "None"
+  | "ActiveFrost"
+  | "FreezingFog"
+  | "Snow"
+  | "FreezingDrizzleLight"
+  | "FreezingDrizzleModerate"
+  | "LightFreezingRain"
+  | "RainOnColdSoakedWing";
+
+export interface DeiceHoldoverDto {
+  active: boolean;
+  expired: boolean;
+  fluidType: number;
+  fluidLabel: string;
+  concentration: number;
+  precip: HotPrecip;
+  oatC: number;
+  oatUserSet: boolean;
+  lowMinutes: number;
+  highMinutes: number;
+  remainingLowSeconds: number;
+  remainingHighSeconds: number;
+  status: string;
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -280,15 +311,36 @@ export interface AudioMappingDto {
   onlyActive: boolean;
 }
 
+export interface VoiceMeeterMappingDto {
+  channel: AudioChannel;
+  stripIndex: number;
+  isBus: boolean;
+  useLatch: boolean;
+}
+
+export interface AudioSessionSuggestionDto {
+  processName: string;
+  isAccessible: boolean;
+}
+
+export interface VoiceMeeterStripDto {
+  index: number;
+  isBus: boolean;
+  label: string;
+  displayName: string;
+  key: string;
+}
+
 export interface AudioDto {
   isCoreAudioSelected: boolean;
+  useVoiceMeeter: boolean;
+  voiceMeeterDllPath: string;
   audioAcpSide: AcpSide;
   audioDeviceFlow: DataFlow;
   audioDeviceState: DeviceState;
   mappings: AudioMappingDto[];
+  voiceMeeterMappings: VoiceMeeterMappingDto[];
   blacklist: string[];
-  startupVolumes: Partial<Record<AudioChannel, number>>;
-  startupUnmute: Partial<Record<AudioChannel, boolean>>;
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -315,15 +367,19 @@ export interface AppSettingsDto {
   resetGsxStateVarsFlight: boolean;
   restartGsxOnTaxiIn: boolean;
   restartGsxStartupFail: boolean;
+  gsxSuppressDoorMessages: boolean;
+  gsxRemoteControlExperimental: boolean;
   gsxMenuStartupMaxFail: number;
 
   runGsxService: boolean;
   runAudioService: boolean;
   useSayIntentions: boolean;
   allowManualChecklistOverride: boolean;
+  autoSyncFmsOnFinal: boolean;
   openAppWindowOnStart: boolean;
 
   proSimSdkPath: string;
+  delayProsimConnection: boolean;
 
   solariAnimationEnabled: boolean;
   currentTheme: string;
@@ -458,19 +514,14 @@ export interface WeatherDto {
   windSpeed: number | null;
 }
 
+// Read-only OFP tab snapshot. Flight info (dep/arr/altn/flight#/runways/
+// fuel/time/pax/distance) moved to the INIT tab via EfbFlightPlanDto;
+// DepartureIcao + ArrivalIcao retained here for gate assignment + weather
+// card titles.
 export interface OfpDto {
   isOfpLoaded: boolean;
   departureIcao: string;
   arrivalIcao: string;
-  alternateIcao: string;
-  flightNumber: string;
-  departurePlanRwy: string;
-  arrivalPlanRwy: string;
-  cruiseAltitude: string;
-  blockFuelKg: string;
-  blockTimeFormatted: string;
-  paxCount: string;
-  airDistance: string;
 
   pendingArrivalGate: string;
   gateAssignmentStatus: string;
@@ -487,6 +538,7 @@ export interface OfpDto {
   pushbackPreference: PushbackPreference;
   useSayIntentions: boolean;
   sayIntentionsActive: boolean;
+  deiceHoldover: DeiceHoldoverDto;
 }
 
 export interface ConfirmArrivalGateRequest {
@@ -636,4 +688,455 @@ export interface ToggleItemRequest {
 
 export interface ResetSectionRequest {
   sectionIndex: number;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Weight & Balance (read-only — W&B tab)
+// ──────────────────────────────────────────────────────────────────────────
+
+export interface WeightBalanceDto {
+  zfwKg: number;
+  maczfwPercent: number;
+  gwKg: number;
+  macgwPercent: number;
+  fuelPlannedKg: number;
+  fuelInTanksKg: number;
+  fuelCapacityKg: number;
+
+  cargoFwdLoadedKg: number;
+  cargoFwdCapacityKg: number;
+  cargoAftLoadedKg: number;
+  cargoAftCapacityKg: number;
+  cargoBulkCapacityKg: number;
+  cargoPlannedKg: number;
+
+  passengersPlanned: number;
+  passengersBoarded: number;
+  zone1Capacity: number;
+  zone2Capacity: number;
+  zone3Capacity: number;
+  zone4Capacity: number;
+  seatOccupation: string;
+
+  fwdCargoDoorOpen: boolean;
+  aftCargoDoorOpen: boolean;
+  bulkCargoDoorOpen: boolean;
+  // Entry / overwing doors L1..R4 — render on the Aircraft Status
+  // silhouette alongside the cargo doors. Naming mirrors the backend
+  // WeightBalanceState.Door{1..4}{L|R}Open fields.
+  door1LOpen: boolean;
+  door1ROpen: boolean;
+  door2LOpen: boolean;
+  door2ROpen: boolean;
+  door3LOpen: boolean;
+  door3ROpen: boolean;
+  door4LOpen: boolean;
+  door4ROpen: boolean;
+  allDoorsClosed: boolean;
+
+  // Headline MACZFW% displayed next to the SYNC TO FMS button — the
+  // value the sync writes to aircraft.fms.init.zfwcg. Resolved server-side
+  // from the loadsheet (final → prelim) with a live aircraft.zfwcg
+  // fallback when no loadsheet has been received yet.
+  maczfwResolvedPercent: number;
+  maczfwResolvedError: boolean;
+  maczfwResolvedSource: "final" | "prelim" | "computed";
+
+  // Loadsheet mirror — projected by WeightBalanceService each tick from
+  // the active slot (final → prelim). Drives the LOADSHEET row beneath
+  // the LIVE row in the summary table; "none" greys it out with dashes.
+  loadsheetZfwKg: number;
+  loadsheetMaczfwPercent: number;
+  loadsheetTowKg: number;
+  loadsheetMactowPercent: number;
+  loadsheetSource: "final" | "prelim" | "none";
+
+  fmsSyncStale: boolean;
+  fmsLastSyncedAt: string | null;
+  fmsLastSyncedSource: string;
+  minMacTow: number;
+  maxMacTow: number;
+
+  mtowLimitKg: number;
+  mlwLimitKg: number;
+  mzfwLimitKg: number;
+}
+
+// Passenger simulation — used by the Aircraft Status panel's SIMULATE
+// button. The manifest is generated server-side by PassengerSimulationService;
+// the seat overlay updates via the existing WeightBalance WS channel because
+// the simulate write goes straight to seatOccupation.string.
+export interface PassengerEntryDto {
+  seatNumber: number;
+  zone: number;
+  firstName: string;
+  lastName: string;
+}
+
+export interface PassengerManifestDto {
+  totalPassengers: number;
+  generatedAt: string;
+  seatOccupationWritten: boolean;
+  passengers: PassengerEntryDto[];
+}
+
+export interface PassengerSimulationResultDto {
+  success: boolean;
+  errorMessage: string;
+  manifest: PassengerManifestDto | null;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Fuel (read-only — FUEL tab)
+// ──────────────────────────────────────────────────────────────────────────
+
+// Mirror of Web/Contracts/FuelDto.cs. Live updates arrive on the WS "fuel"
+// channel as per-property camelCase patches; the reducer's default branch
+// merges them into state.fuel.
+export interface FuelDto {
+  plannedRampKg: number;
+  fuelInTanksKg: number;
+  fuelCentreKg: number;
+  fuelLeftKg: number;
+  fuelRightKg: number;
+  fuelLeftOuterKg: number;
+  fuelLeftInnerKg: number;
+  fuelRightInnerKg: number;
+  fuelRightOuterKg: number;
+  fuelCapacityKg: number;
+  fuelCentreCapacityKg: number;
+  fuelLeftCapacityKg: number;
+  fuelRightCapacityKg: number;
+  fuelLeftOuterCapacityKg: number;
+  fuelLeftInnerCapacityKg: number;
+  fuelRightInnerCapacityKg: number;
+  fuelRightOuterCapacityKg: number;
+  fuelDeltaKg: number;
+  isOverFuelled: boolean;
+  isUnderFuelled: boolean;
+  specificGravity: number;
+  plannedRampLitres: number;
+  fuelInTanksLitres: number;
+  underFuelThresholdKg: number;
+}
+
+// Result of a POST /api/fms/sync attempt. Also broadcast on the WS
+// "fmsSync" channel as a one-shot snapshot after every sync.
+export interface FmsSyncResultDto {
+  success: boolean;
+  writtenFields: string[];
+  failedFields: string[];
+  skippedFields: string[];
+  errorMessage: string;
+  // Headline MACZFW% that was just synced (final → prelim → live).
+  maczfwResolvedPercent: number;
+  maczfwResolvedError: boolean;
+  zfwKg: number;
+  maczfwPercent: number;
+  timestamp: string;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Loadsheet (read-only — LOADSHEET tab)
+// ──────────────────────────────────────────────────────────────────────────
+
+// Lifecycle string for a single slot. "none" until ProSim writes a non-empty
+// blob; flips to "received" on a successful parse, or "error" if the JSON
+// is malformed (raw string is preserved on the DTO for diagnosis).
+export type LoadsheetType = "none" | "prelim" | "final";
+export type LoadsheetStatus = "pending" | "received" | "error";
+
+export interface LoadsheetDto {
+  type: LoadsheetType;
+  status: LoadsheetStatus;
+  macTow: number;
+  macTowError: boolean;
+  minMacTow: number;
+  maxMacTow: number;
+  loadsheetIdent: string;
+  towKg: number;
+  rawJson: string;
+  // ISO-8601 string from System.Text.Json (Prosim2GSX.Web uses the
+  // default DateTime serialiser — no special converter needed for the
+  // panel; new Date(...) parses it).
+  receivedAt: string | null;
+}
+
+export interface LoadsheetSnapshotDto {
+  prelim: LoadsheetDto;
+  final: LoadsheetDto;
+}
+
+// Manual STD override surface — POST /api/loadsheet/set-std and
+// GET /api/loadsheet/std. OFP-derived STD wins when an OFP is loaded;
+// the manual value is a fallback for OFP-less workflows.
+export type StdSource = "ofp" | "manual" | "none";
+
+export interface StdResponse {
+  std: string | null;
+  source: StdSource;
+}
+
+export interface SetStdRequest {
+  std: string | null;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// EFB Flight Planning (INIT tab)
+// ──────────────────────────────────────────────────────────────────────────
+
+export type OfpStatus = "Empty" | "Loaded" | "Partial";
+export type OfpSource = "None" | "SimbriefEfb" | "Mcdu" | "Manual";
+
+// Mirrors Prosim2GSX/State/OFPData.cs. All weights are kg (server normalises
+// lbs → kg at parse time). DateTime fields ride as ISO-8601 strings.
+export interface OFPData {
+  ofpId: string;
+  departureIcao: string;
+  arrivalIcao: string;
+  alternateIcao: string;
+  flightNumber: string;
+  airlineIcao: string;
+  callsign: string;
+
+  zfwKg: number;
+  oewKg: number;
+
+  fuelRampKg: number;
+  fuelTripKg: number;
+  fuelContingencyKg: number;
+  fuelAlternateKg: number;
+  fuelMinimumKg: number;
+  fuelExtraKg: number;
+  fuelTaxiKg: number;
+  fuelReserveKg: number;
+
+  passengerCount: number;
+  cargoKg: number;
+
+  cruiseFlightLevel: number;
+  costIndex: number;
+  route: string;
+  departurePlanRwy: string;
+  arrivalPlanRwy: string;
+
+  // STD = scheduled out; ETA = estimated touchdown (Airbus FMS convention).
+  std: string | null;
+  eta: string | null;
+
+  aircraftType: string;
+  aircraftReg: string;
+  aircraftEngines: string;
+
+  fetchedAt: string;
+}
+
+// Mirrors Prosim2GSX/Web/Contracts/EfbFlightPlanDto.cs. The "effective" value
+// for a writable field is overrideValues[field] when overrideFlags[field] is
+// true, else ofp.<field>.
+export interface EfbFlightPlanDto {
+  isOfpLoaded: boolean;
+  status: OfpStatus;
+  source: OfpSource;
+  ofp: OFPData | null;
+  overrideFlags: Record<string, boolean>;
+  overrideValues: Record<string, unknown>;
+  fetchedAt: string | null;
+  lastFetchError: string;
+  isBusy: boolean;
+  autoSyncToFmsOnFetch: boolean;
+  preferEfbFlightPlan: boolean;
+  lockFieldsFromOfp: boolean;
+}
+
+export interface FetchOfpRequest {
+  departure: string;
+  arrival: string;
+  alternate: string;
+  flightNumber: string;
+}
+
+export interface OverrideRequest {
+  field: string;
+  value: number | string | boolean;
+}
+
+export interface ClearOverrideRequest {
+  field: string;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Notifications
+// ──────────────────────────────────────────────────────────────────────────
+
+export type NotificationSeverity = "info" | "warning" | "error";
+
+export interface NotificationDto {
+  id: string;
+  type: string;
+  severity: NotificationSeverity;
+  message: string;
+  timestamp: string;
+  dismissed: boolean;
+}
+
+export interface NotificationsSnapshotDto {
+  items: NotificationDto[];
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Performance — Takeoff & Landing tabs
+// Mirrors Prosim2GSX/Web/Contracts/PerfDtos.cs.
+// ──────────────────────────────────────────────────────────────────────────
+
+export interface RunwayIntersectionDto {
+  name: string;
+  toraFt: number;
+}
+
+export interface RunwayDto {
+  runwayId: string;
+  lengthFt: number;
+  dtFt: number;
+  qdm: number;
+  intersections: RunwayIntersectionDto[];
+}
+
+// Wire-string unions. The server tolerates case mismatches on the
+// inbound `/inputs` partial-update side (state setters take whatever
+// the client sends and the calc layer normalises), so these are
+// declared as the canonical values the UI should emit.
+export type TakeoffSurface = "DRY" | "WET";
+export type TakeoffFlap = "opt" | "1+F" | "2" | "3";
+export type TakeoffAntiIce = "OFF" | "ENG" | "ENG+WING";
+export type TakeoffPacks = "OFF" | "ON";
+export type EngineVariant = "CFM" | "IAE";
+
+export interface TakeoffPerfStateDto {
+  // Inputs
+  icao: string;
+  runwayId: string;
+  intersectionName: string;
+  surface: TakeoffSurface;
+  flap: TakeoffFlap;
+  antiIce: TakeoffAntiIce;
+  packs: TakeoffPacks;
+  forceToga: boolean;
+  towKg: number;
+  mactowPercent: number;
+  oatC: number;
+  qnhHpa: number;
+  windDir: string;            // "VRB" or "DDD"
+  windKt: number;
+  engineVariant: EngineVariant;
+
+  // Lookups
+  runways: RunwayDto[];
+  metarText: string;
+  metarFetchedAt: string | null;
+
+  // Result
+  hasResult: boolean;
+  v1: number;
+  vr: number;
+  v2: number;
+  flapSettings: number;       // 1 | 2 | 3 (1 = CONF 1+F)
+  flexOutputC: number;        // 0 = TOGA
+  thsValue: number;           // signed: + = UP, − = DN
+  trimDir: "UP" | "DN" | "";
+  toplKg: number;
+  toplLimited: boolean;
+  forceTogaResult: boolean;
+  hwCompKt: number;           // signed: + = headwind, − = tailwind
+  greenDot: number | null;
+  shiftM: number;
+  calculationError: string;
+
+  // Status
+  isBusy: boolean;
+  lastError: string;
+  isUplinked: boolean;
+  uplinkedAt: string | null;
+}
+
+// All fields optional — caller sends only what changed.
+export interface TakeoffInputsDto {
+  icao?: string;
+  runwayId?: string;
+  intersectionName?: string;
+  surface?: string;
+  flap?: string;
+  antiIce?: string;
+  packs?: string;
+  forceToga?: boolean;
+  towKg?: number;
+  mactowPercent?: number;
+  oatC?: number;
+  qnhHpa?: number;
+  windDir?: string;
+  windKt?: number;
+}
+
+export type LandingBrakeMode = "LOW" | "MED" | "MAX";
+export type LandingRevMode = "idle" | "max";
+export type LandingAutoMode = "auto" | "manual";
+export type LandingFlapConfig = "FULL" | "3";
+export type WindClass = "normal" | "red";
+export type VisualDistClass = "normal" | "red" | "red-margin";
+
+export interface LandingPerfStateDto {
+  // Inputs
+  icao: string;
+  runwayId: string;
+  rwySurfaceCode: number;     // 1–6 (6 = Dry, 1 = Poor)
+  ldgWeightTons: number;
+  aircraftSpeedKt: number | null;
+  brakeMode: LandingBrakeMode;
+  revMode: LandingRevMode;
+  autolandMode: LandingAutoMode;
+  flapConfig: LandingFlapConfig;
+  athr: "0" | "1";
+  oatC: number;
+  qnhHpa: number;
+  windDir: string;
+  windKt: number;
+
+  // Lookups
+  runways: RunwayDto[];
+  metarText: string;
+  metarFetchedAt: string | null;
+
+  // Output (server-derived)
+  hasResult: boolean;
+  isNoData: boolean;
+  retreatFlap: boolean;
+  ldrM: number;
+  ldr15M: number;
+  ldaM: number;
+  hwKt: number;               // signed
+  xwKt: number;               // signed
+  hwClass: WindClass;
+  xwClass: WindClass;
+  visualDistClass: VisualDistClass;
+
+  // Status
+  isBusy: boolean;
+  lastError: string;
+}
+
+export interface LandingInputsDto {
+  icao?: string;
+  runwayId?: string;
+  rwySurfaceCode?: number;
+  ldgWeightTons?: number;
+  aircraftSpeedKt?: number;
+  brakeMode?: string;
+  revMode?: string;
+  autolandMode?: string;
+  flapConfig?: string;
+  athr?: string;
+  oatC?: number;
+  qnhHpa?: number;
+  windDir?: string;
+  windKt?: number;
 }

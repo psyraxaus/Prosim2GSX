@@ -1,0 +1,368 @@
+/* Airbus FMS palette + base layout for the EFB INIT tab. The full design
+ * system (animations, blink cursor, fetch sequence) lands in the next
+ * polish slice; this v1 covers the colours, monospace font, sharp
+ * borders, and two-column layout. */
+
+/* Chrome aliases ride on the app theme tokens so the INIT tab recolours
+ * with the airline theme like every other tab. The FMS readout + state
+ * colours below are deliberately FIXED — same rationale as the perf
+ * tabs' instrument readouts: they convey FMS state, not theme. */
+.panel {
+  /* Theme-aware chrome */
+  --fms-bg-section: var(--bg-card);
+  --fms-btn-bg:     var(--bg-button);
+  --fms-btn-border: var(--border);
+  --fms-grey:       var(--border);
+  --fms-white:      var(--text-primary);
+  --fms-heading:    var(--category-text);
+
+  /* Fixed FMS readout / state colours (NOT themed) */
+  --fms-cyan:       #00d4e8;
+  --fms-green:      #39ff6e;
+  --fms-amber:      #ffaa00;
+  --fms-override:   #ff8c00;
+  --fms-warn:       #ff4444;
+  --fms-font:       'Courier New', 'Lucida Console', monospace;
+
+  /* Standard padded panel frame — matches OFP / Fuel / Loadsheet so the
+   * INIT tab sits in the same outer margin as every other tab. The
+   * monospace + uppercase + letter-spacing is kept: it's the FMS
+   * readout identity (unify chrome, keep readouts). */
+  color: var(--text-primary);
+  font-family: var(--fms-font);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 16px 18px;
+  max-width: 1100px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.inner {
+  min-width: 0;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* Stack columns on narrow viewports (phones / split-screen browsers). */
+@media (max-width: 760px) {
+  .columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.column {
+  background: var(--fms-bg-section);
+  border: 1px solid var(--fms-grey);
+  border-radius: var(--radius-md, 6px);
+  padding: 14px 16px;
+  min-width: 0; /* allow column to shrink inside the grid */
+}
+
+.title {
+  color: var(--fms-heading);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  margin: 0 0 8px 0;
+}
+
+.separator {
+  height: 1px;
+  background: var(--fms-grey);
+  opacity: 0.4;
+  margin: 8px 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 110px auto;
+  gap: 12px;
+  margin: 4px 0;
+  align-items: center;
+}
+
+.rowSplit {
+  display: grid;
+  grid-template-columns: 60px 80px 40px 80px 50px 80px;
+  gap: 8px;
+  margin: 4px 0;
+  align-items: center;
+  justify-content: start;
+}
+
+.rowFuel {
+  /* Flex with explicit widths so the row is always 280px wide regardless
+   * of the parent column's size. A grid with max-width still gets
+   * stretched by its 1fr track when the column is wider. */
+  display: flex;
+  align-items: center;
+  margin: 3px 0;
+}
+
+.rowFuel .label {
+  width: 120px;
+  flex-shrink: 0;
+}
+
+.rowFuel .valueRight {
+  width: 160px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.label {
+  color: var(--fms-white);
+  font-size: 11px;
+}
+
+.value {
+  color: var(--fms-green);
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.valueRight {
+  color: var(--fms-green);
+  font-weight: bold;
+  font-size: 13px;
+  text-align: right;
+}
+
+.valueOverridden {
+  color: var(--fms-override);
+}
+
+/* Pending / empty (no OFP loaded yet) — a row of individual amber-
+ * outlined boxes, mimicking a real Airbus FMS INIT page where each
+ * character slot has its own square box waiting for an entry.
+ * Renders as inline-flex so the boxes sit side-by-side without the
+ * wrapper expanding to fill its grid cell. */
+.pending {
+  display: inline-flex;
+  gap: 1px;
+  width: max-content;
+  justify-self: start;
+  flex: 0 0 auto;
+}
+
+.pendingBox {
+  display: inline-block;
+  width: 0.62em;
+  height: 1em;
+  border: 1px solid var(--fms-amber);
+  background: transparent;
+  box-sizing: border-box;
+}
+
+/* When a pending block sits in a fuel row (display: flex), push it to
+ * the right edge so it lines up with where the green value normally
+ * lives. */
+.pendingFuel {
+  margin-left: auto;
+}
+
+/* Brief white→green flash when a value first lands. Applied via inline
+ * key=fetchedAt so React reuses the same DOM and the animation re-fires. */
+@keyframes fms-flash {
+  0%   { color: #ffffff; }
+  100% { color: var(--fms-green); }
+}
+
+.flash {
+  animation: fms-flash 220ms ease-out;
+}
+
+/* Editor — inline input + ENT / CLR keys for the four writable rows. */
+.editor {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.editorInput {
+  background: var(--fms-btn-bg);
+  border: 1px solid var(--fms-cyan);
+  color: var(--fms-green);
+  font-family: var(--fms-font);
+  font-size: 13px;
+  font-weight: bold;
+  padding: 2px 6px;
+  width: 90px;
+  text-align: right;
+  outline: none;
+  border-radius: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.editorInput:focus {
+  border-color: var(--fms-green);
+}
+
+.editorKey {
+  background: var(--fms-btn-bg);
+  border: 1px solid var(--fms-btn-border);
+  color: var(--fms-white);
+  border-radius: 0;
+  padding: 2px 6px;
+  font-family: var(--fms-font);
+  font-size: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+}
+
+.editorKey:hover {
+  border-color: var(--fms-cyan);
+  color: var(--fms-cyan);
+}
+
+.editorKeyEnter {
+  border-color: var(--fms-cyan);
+  color: var(--fms-cyan);
+}
+
+.editorKeyClr {
+  border-color: var(--fms-warn);
+  color: var(--fms-warn);
+}
+
+/* Editable rows are click targets when locked. Subtle hover hint so the
+ * pilot knows they can edit. */
+.rowFuelEditable {
+  cursor: pointer;
+}
+
+.rowFuelEditable:hover .valueRight {
+  border-bottom: 1px dashed var(--fms-cyan);
+  margin-bottom: -1px; /* keep layout stable */
+}
+
+/* "OUT OF RANGE" — red, sits to the right of the editor, fades after
+ * 2s via React state (the timeout clears the message). */
+.editorError {
+  color: var(--fms-warn);
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+  margin-left: 6px;
+}
+
+/* MOD chip for overridden rows. */
+.modChip {
+  color: var(--fms-override);
+  font-size: 10px;
+  font-weight: bold;
+  margin-left: 6px;
+  letter-spacing: 0.05em;
+}
+
+/* Fetch-phase scrolling text at the bottom of the left panel. Cycles
+ * "CONTACTING SIMBRIEF..." → "PARSING OFP..." → "WRITING TO FMS..."
+ * while isBusy is true; cleared when the fetch finishes. */
+.fetchPhase {
+  color: var(--fms-cyan);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  margin-top: 6px;
+  min-height: 1em;
+}
+
+.cyanLabel {
+  color: var(--fms-cyan);
+  font-weight: bold;
+}
+
+.statusRow {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  margin: 4px 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  display: inline-block;
+}
+
+.statusDotGreen { background: var(--fms-green); }
+.statusDotAmber { background: var(--fms-amber); }
+.statusDotWarn  { background: var(--fms-warn);  }
+.statusDotCyan  { background: var(--fms-cyan);  }
+
+.errorLine {
+  color: var(--fms-warn);
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.fetchedAt {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-align: right;
+  margin-top: 4px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  background: var(--fms-btn-bg);
+  border: 1px solid var(--fms-btn-border);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm, 4px);
+  padding: 6px 14px;
+  font-family: var(--fms-font);
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: border-color 100ms, color 100ms;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btnPrimary {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btnAmber {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.btnWarn {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.loading {
+  color: var(--fms-cyan);
+  font-family: var(--fms-font);
+  text-align: center;
+  padding: 40px;
+}

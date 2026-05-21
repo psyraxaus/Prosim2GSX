@@ -51,6 +51,14 @@ namespace Prosim2GSX
         public virtual AudioState Audio { get; } = new();
         public virtual OfpState Ofp { get; } = new();
         public virtual ChecklistState Checklist { get; } = new();
+        public virtual WeightBalanceState WeightBalance { get; } = new();
+        public virtual LoadsheetState Loadsheet { get; } = new();
+        public virtual FuelState Fuel { get; } = new();
+        public virtual EfbFlightPlanState EfbFlightPlan { get; } = new();
+        public virtual NotificationsState Notifications { get; } = new();
+        public virtual TakeoffPerfState TakeoffPerf { get; } = new();
+        public virtual LandingPerfState LandingPerf { get; } = new();
+        public virtual DeiceHoldoverState DeiceHoldover { get; } = new();
         // Settings is an alias for the existing Config singleton — Config already
         // implements INotifyPropertyChanged and persists itself, so it serves as
         // the AppSettingsState surface unchanged.
@@ -61,6 +69,12 @@ namespace Prosim2GSX
         // the first tick fires; stopped in FreeResources during app shutdown.
         protected virtual StateUpdateWorker StateUpdateWorker { get; set; }
         protected virtual MessageLogDrainWorker MessageLogDrainWorker { get; set; }
+
+        // Always-on resource telemetry (USER/GDI/handle counts + CFIT log queue
+        // depth). Lives here rather than on AppWindow because the headless
+        // scenario — window never shown — is exactly the one that crashed, and
+        // the AppWindow-hosted heartbeat never ran in that case.
+        protected virtual ResourceDiagnosticsWorker ResourceDiagnosticsWorker { get; set; }
 
         // Embedded Kestrel host for the LAN browser interface. Constructed
         // unconditionally so it can react to Config.WebServerEnabled changes
@@ -90,6 +104,69 @@ namespace Prosim2GSX
         // Send-Now flow when the aircraft enters Flight. Backend service so
         // both WPF and web benefit identically.
         public virtual OfpAutoSendService OfpAutoSend { get; protected set; }
+
+        // Reads ProSim weight/cargo/pax/fuel datarefs each StateUpdateWorker
+        // tick and writes them into WeightBalanceState. Constructed
+        // unconditionally; the service itself null-guards on the SDK so a
+        // degraded mode (no SDK) just leaves the store at last-known values.
+        public virtual WeightBalanceService WeightBalanceService { get; protected set; }
+
+        // Reads ProSim fuel datarefs (totals, per-tank amounts, per-tank
+        // capacities) each StateUpdateWorker tick into FuelState. Distinct
+        // from the W&B fuel mini-section: this drives the dedicated FUEL
+        // tab (planned vs in-tanks delta, over/under flags, kg/L mirror,
+        // tank-breakdown bars). Same null-safety story as W&B.
+        public virtual FuelService FuelService { get; protected set; }
+
+        // Reads the two EFB loadsheet datarefs (efb.prelimLoadsheet,
+        // efb.finalLoadsheet) each StateUpdateWorker tick and projects the
+        // parsed JSON into LoadsheetState. Same null-safety story as W&B —
+        // no SDK simply leaves both slots at "none"/"pending".
+        public virtual LoadsheetService LoadsheetService { get; protected set; }
+
+        // Resolves the active MACZFW (loadsheet → live mirror), validates
+        // it against the A320 envelope, and writes the FMS init datarefs on
+        // demand. Read by WeightBalanceService each tick to populate
+        // MaczfwResolvedPercent / MaczfwResolvedError; called from
+        // FmsController for sync.
+        public virtual FmsSyncService FmsSyncService { get; protected set; }
+
+        // Deice holdover-time card. Captures the GSX deice-complete edge,
+        // looks up the HOT window from fluid/conc/OAT/precip, and ticks the
+        // countdown. Readout only — never writes a ProSim dataref.
+        public virtual DeiceHoldoverService DeiceHoldoverService { get; protected set; }
+
+        // Owns the EFB Flight Planning (INIT) tab workflow: manual SimBrief
+        // fetch, MCDU auto-fetch observation, and per-field override
+        // management. Reads through the SDK's SimbriefService so there's a
+        // single fetch path; null-safe under degraded SDK.
+        public virtual EfbFlightPlanService EfbFlightPlanService { get; protected set; }
+
+        // Auto-trigger timing for the loadsheet workflow. Polled from the
+        // shared StateUpdateWorker tick; emits notifications at T-30 / T-0
+        // / boarding-complete and reads STD from EfbFlightPlanState (with
+        // a manual override fallback for OFP-less workflows).
+        public virtual LoadsheetTimingService LoadsheetTimingService { get; protected set; }
+
+        // Takeoff perf reader/orchestrator. Owns the proxy to the gateway's
+        // /efb/calculate/vspeeds endpoint, the runway/METAR lookups for the
+        // TAKEOFF tab, and the FMS uplink action that writes V1/VR/V2 +
+        // flaps + flex + THS + shift into aircraft.fms.perf.takeOff.*.
+        public virtual TakeoffPerfService TakeoffPerfService { get; protected set; }
+
+        // Landing perf reader/orchestrator. Owns the proxy to
+        // /efb/calculate/ldr, the runway/METAR lookups for the LANDING tab,
+        // and the client-side LDA / wind-component / colour-class
+        // derivations consumed by both UIs.
+        public virtual LandingPerfService LandingPerfService { get; protected set; }
+
+        // Synthetic passenger manifest generator — fills the cabin on demand
+        // from the Aircraft Status panel without going through GSX. Writes
+        // aircraft.passengers.seatOccupation.string directly via the SDK so
+        // the WeightBalance store picks up the change on the next tick and
+        // the silhouette re-renders. Cached manifest survives the request
+        // so subsequent GET /api/passengers/manifest returns the same names.
+        public virtual PassengerSimulationService PassengerSimulationService { get; protected set; }
 
         public AppService(Config config) : base(config)
         {
@@ -136,8 +213,10 @@ namespace Prosim2GSX
             // until controllers come up.
             StateUpdateWorker = new StateUpdateWorker(this);
             MessageLogDrainWorker = new MessageLogDrainWorker(FlightStatus, Config);
+            ResourceDiagnosticsWorker = new ResourceDiagnosticsWorker(Config);
             StateUpdateWorker.Start();
             MessageLogDrainWorker.Start();
+            ResourceDiagnosticsWorker.Start();
 
             // Web host follows Config.WebServerEnabled — constructed always so
             // it can react to runtime toggles, only Start()s when enabled.
@@ -161,6 +240,59 @@ namespace Prosim2GSX
             // GsxService is null (degraded mode) so safe to call here.
             OfpAutoSend = new OfpAutoSendService(this);
             OfpAutoSend.Attach();
+
+            // W&B reader — populates WeightBalanceState from datarefs each
+            // StateUpdateWorker tick. The worker calls Tick() unconditionally;
+            // the service no-ops when the SDK is unavailable.
+            WeightBalanceService = new WeightBalanceService(this);
+
+            // Fuel reader — populates FuelState (totals, per-tank, deltas,
+            // litres). Separate service from W&B because the FUEL tab needs
+            // per-tank breakdown + delta/over-fuel flags that the W&B store
+            // doesn't carry. Same Tick() contract; null-safe under degraded SDK.
+            FuelService = new FuelService(this);
+
+            // Loadsheet reader — populates LoadsheetState from the two EFB
+            // loadsheet datarefs. Same Tick() contract as the W&B service.
+            LoadsheetService = new LoadsheetService(this);
+
+            // FMS sync orchestration. Constructed AFTER WeightBalance and
+            // Loadsheet so its resolver can read both stores. The service
+            // itself is null-safe under degraded SDK; the FMS sync path
+            // short-circuits with an error result rather than throwing.
+            // Attach() wires the auto-sync subscription onto LoadsheetState
+            // (no-op when AutoSyncFmsOnFinal is disabled in config).
+            FmsSyncService = new FmsSyncService(this);
+            FmsSyncService.Attach();
+
+            // EFB Flight Planning service — picks up MCDU-triggered SDK
+            // fetches each tick and exposes the manual fetch + override API
+            // to the REST controller (Slice 4).
+            EfbFlightPlanService = new EfbFlightPlanService(this);
+
+            // Loadsheet timing — fires prelim/overdue/final-due notifications
+            // off the EfbFlightPlan-derived STD and the SDK boarding-state
+            // dataref. Constructed after EfbFlightPlanService and Loadsheet
+            // so its resolver and state checks see the latest stores.
+            LoadsheetTimingService = new LoadsheetTimingService(this);
+
+            // Deice holdover — watches the GSX deice-complete edge and
+            // ticks the HOT countdown. Constructed here with the other
+            // tick-driven services; null-safe under degraded SDK.
+            DeiceHoldoverService = new DeiceHoldoverService(this);
+
+            // Takeoff + landing perf orchestrators. Constructed after the
+            // loadsheet/W&B services since TakeoffPerfService.SyncFromLoadsheet
+            // reads LoadsheetState. Both services are null-safe under
+            // degraded SDK — Tick early-returns when the SDK isn't up yet.
+            TakeoffPerfService = new TakeoffPerfService(this);
+            LandingPerfService = new LandingPerfService(this);
+
+            // Passenger simulation — writes a synthetic manifest's
+            // seatOccupation.string to ProSim on demand. Independent of the
+            // GSX boarding pipeline; the W&B store mirrors the dataref each
+            // tick so the silhouette reflects the new state automatically.
+            PassengerSimulationService = new PassengerSimulationService(this);
 
             // Eagerly load the checklist definition into ChecklistState so the
             // web UI can render even before the WPF Checklists tab is opened.
@@ -365,6 +497,7 @@ namespace Prosim2GSX
 
             try { StateUpdateWorker?.Stop(); } catch { }
             try { MessageLogDrainWorker?.Stop(); } catch { }
+            try { ResourceDiagnosticsWorker?.Stop(); } catch { }
             try { WebHost?.Stop(); } catch { }
             try { OfpAutoSend?.Detach(); } catch { }
 

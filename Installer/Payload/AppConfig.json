@@ -27,10 +27,18 @@
   "RestartGsxOnTaxiIn": false,
   "PushbackPreferenceReapplyOnChange": true,
   "AutoDeiceEnabled": false,
+  "GsxSuppressDoorMessages": false,
+  "GsxRemoteControlExperimental": false,
   "AutoDeiceFluid": 4,
   "RunAudioService": true,
   "UseSayIntentions": false,
   "AllowManualChecklistOverride": false,
+  "AutoSyncFmsOnFinal": false,
+  "EfbAutoSyncToFmsOnFetch": false,
+  "EfbPreferEfbFlightPlan": false,
+  "EfbLockFieldsFromOfp": true,
+  "LoadsheetPrelimOffsetMinutes": 30,
+  "LoadsheetAutoTriggerEnabled": true,
   "AudioDebugFile": "log\\AudioDebug.txt",
   "AudioDeviceFlow": 0,
   "AudioDeviceState": 1,
@@ -93,26 +101,6 @@
       "OnlyActive": true
     }
   ],
-  "AudioStartupVolumes": {
-    "VHF1": 1,
-    "VHF2": -1,
-    "VHF3": -1,
-    "HF1": -1,
-    "HF2": -1,
-    "INT": 1,
-    "CAB": 1,
-    "PA": -1
-  },
-  "AudioStartupUnmute": {
-    "VHF1": true,
-    "VHF2": false,
-    "VHF3": false,
-    "HF1": false,
-    "HF2": false,
-    "INT": true,
-    "CAB": true,
-    "PA": false
-  },
   "GsxServiceStartDelay": 4000,
   "GroundTicks": 2,
   "DelayForegroundChange": 1250,
@@ -154,12 +142,16 @@
   "WebServerPort": 5001,
   "WebServerBindAll": false,
   "WebServerAuthToken": "",
+  "UseVoiceMeeter": false,
+  "VoiceMeeterDllPath": "",
+  "VoiceMeeterMappings": [],
   "ProSimSdkPath": "",
   "ProSimSdkHostname": "localhost",
   "ProSimSdkReconnectInterval": 5000,
   "ProSimSdkAutoReconnect": true,
   "ProSimSdkConnectionTimeout": 10000,
   "ProSimSdkMaxReconnectAttempts": 10,
+  "DelayProsimConnection": false,
   "AircraftProfiles": [
     {
       "Name": "default",
@@ -262,7 +254,7 @@
       }
     }
   ],
-  "ConfigVersion": 24,
+  "ConfigVersion": 30,
   "LogInterval": 3,
   "SizeLimit": 10485760,
   "LogCount": 3,

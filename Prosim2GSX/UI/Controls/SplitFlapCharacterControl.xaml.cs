@@ -66,8 +66,15 @@ namespace Prosim2GSX.UI
 
             char target = char.ToUpper(_targetChar);
 
-            // Check animation toggle — snap directly if disabled
-            bool animationEnabled = AppService.Instance?.Config?.SolariAnimationEnabled ?? true;
+            // Check animation toggle — snap directly if disabled.
+            // Also snap (no timer, no flip ticks, no dispatcher posts) when the
+            // control is not currently rendered: with the window hidden to the
+            // system tray the WPF render pass is suspended, so an animating
+            // header would otherwise keep queuing work onto a UI message pump
+            // that never drains — the accumulation behind the recurring
+            // ERROR_NOT_ENOUGH_QUOTA crash.
+            bool animationEnabled = (AppService.Instance?.Config?.SolariAnimationEnabled ?? true)
+                                    && IsVisible;
             if (!animationEnabled)
             {
                 _currentChar = target;
@@ -113,6 +120,16 @@ namespace Prosim2GSX.UI
 
         private void OnFlipTick(object sender, EventArgs e)
         {
+            // Restore the squeeze applied by the previous tick before advancing
+            // to the next character. This replaces the former
+            // Dispatcher.BeginInvoke(DispatcherPriority.Render, …) restore in
+            // ApplyFlipEffect, which posted one UI-thread message per flip and
+            // accumulated without bound while the window was not rendering
+            // (root cause of the ERROR_NOT_ENOUGH_QUOTA / "Not enough quota"
+            // crash in HwndTarget.UpdateWindowSettings). The final tick falls
+            // through to ResetFlipTransform() below for the closing restore.
+            FlipTransform.ScaleY = 1.0;
+
             // Advance one position on the drum
             _drumIndex = (_drumIndex + 1) % UnifiedDrum.Length;
             _currentChar = UnifiedDrum[_drumIndex];
@@ -140,15 +157,13 @@ namespace Prosim2GSX.UI
 
         private void ApplyFlipEffect()
         {
-            // Squeeze vertically to simulate flap folding
+            // Squeeze vertically to simulate flap folding. The matching restore
+            // to ScaleY = 1.0 happens at the top of the next OnFlipTick (or in
+            // ResetFlipTransform() on the final tick) — deliberately NOT via a
+            // Dispatcher.BeginInvoke(Render) post, which leaked one UI message
+            // queue slot per flip whenever the window was not rendering.
             FlipTransform.ScaleY = 0.3;
             CharDisplay.Foreground = BrushDimAmber;
-
-            // Restore on next render pass — new character "drops" into place
-            Dispatcher.BeginInvoke(DispatcherPriority.Render, () =>
-            {
-                FlipTransform.ScaleY = 1.0;
-            });
         }
 
         private void ResetFlipTransform()

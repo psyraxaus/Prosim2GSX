@@ -43,6 +43,8 @@ namespace Prosim2GSX.Web.Contracts
         public bool ResetGsxStateVarsFlight { get; set; }
         public bool RestartGsxOnTaxiIn { get; set; }
         public bool RestartGsxStartupFail { get; set; }
+        public bool GsxSuppressDoorMessages { get; set; }
+        public bool GsxRemoteControlExperimental { get; set; }
         public int GsxMenuStartupMaxFail { get; set; }
 
         // Subsystem toggles
@@ -50,10 +52,12 @@ namespace Prosim2GSX.Web.Contracts
         public bool RunAudioService { get; set; }
         public bool UseSayIntentions { get; set; }
         public bool AllowManualChecklistOverride { get; set; }
+        public bool AutoSyncFmsOnFinal { get; set; }
         public bool OpenAppWindowOnStart { get; set; }
 
         // ProSim SDK
         public string ProSimSdkPath { get; set; } = "";
+        public bool DelayProsimConnection { get; set; } = false;
 
         // UI display
         public bool SolariAnimationEnabled { get; set; }
@@ -96,15 +100,19 @@ namespace Prosim2GSX.Web.Contracts
                 ResetGsxStateVarsFlight = c.ResetGsxStateVarsFlight,
                 RestartGsxOnTaxiIn = c.RestartGsxOnTaxiIn,
                 RestartGsxStartupFail = c.RestartGsxStartupFail,
+                GsxSuppressDoorMessages = c.GsxSuppressDoorMessages,
+                GsxRemoteControlExperimental = c.GsxRemoteControlExperimental,
                 GsxMenuStartupMaxFail = c.GsxMenuStartupMaxFail,
 
                 RunGsxService = c.RunGsxService,
                 RunAudioService = c.RunAudioService,
                 UseSayIntentions = c.UseSayIntentions,
                 AllowManualChecklistOverride = c.AllowManualChecklistOverride,
+                AutoSyncFmsOnFinal = c.AutoSyncFmsOnFinal,
                 OpenAppWindowOnStart = c.OpenAppWindowOnStart,
 
                 ProSimSdkPath = c.ProSimSdkPath ?? "",
+                DelayProsimConnection = c.DelayProsimConnection,
 
                 SolariAnimationEnabled = c.SolariAnimationEnabled,
                 CurrentTheme = c.CurrentTheme ?? "Light",
@@ -141,15 +149,19 @@ namespace Prosim2GSX.Web.Contracts
             c.ResetGsxStateVarsFlight = ResetGsxStateVarsFlight;
             c.RestartGsxOnTaxiIn = RestartGsxOnTaxiIn;
             c.RestartGsxStartupFail = RestartGsxStartupFail;
+            c.GsxSuppressDoorMessages = GsxSuppressDoorMessages;
+            c.GsxRemoteControlExperimental = GsxRemoteControlExperimental;
             c.GsxMenuStartupMaxFail = GsxMenuStartupMaxFail;
 
             c.RunGsxService = RunGsxService;
             c.RunAudioService = RunAudioService;
             c.UseSayIntentions = UseSayIntentions;
             c.AllowManualChecklistOverride = AllowManualChecklistOverride;
+            c.AutoSyncFmsOnFinal = AutoSyncFmsOnFinal;
             c.OpenAppWindowOnStart = OpenAppWindowOnStart;
 
             c.ProSimSdkPath = ProSimSdkPath ?? "";
+            c.DelayProsimConnection = DelayProsimConnection;
 
             c.SolariAnimationEnabled = SolariAnimationEnabled;
 

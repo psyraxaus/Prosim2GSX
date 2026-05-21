@@ -103,13 +103,17 @@ namespace Prosim2GSX.UI.Views.Settings
         public virtual bool ResetGsxStateVarsFlight { get => Source.ResetGsxStateVarsFlight; set => SetModelValue<bool>(value); }
         public virtual bool RestartGsxOnTaxiIn { get => Source.RestartGsxOnTaxiIn; set => SetModelValue<bool>(value); }
         public virtual bool RestartGsxStartupFail { get => Source.RestartGsxStartupFail; set => SetModelValue<bool>(value); }
+        public virtual bool GsxSuppressDoorMessages { get => Source.GsxSuppressDoorMessages; set => SetModelValue<bool>(value); }
+        public virtual bool GsxRemoteControlExperimental { get => Source.GsxRemoteControlExperimental; set => SetModelValue<bool>(value); }
         public virtual int GsxMenuStartupMaxFail { get => Source.GsxMenuStartupMaxFail; set => SetModelValue<int>(value); }
         public virtual bool RunGsxService { get => Source.RunGsxService; set => SetModelValue<bool>(value); }
         public virtual bool RunAudioService { get => Source.RunAudioService; set => SetModelValue<bool>(value); }
         public virtual bool UseSayIntentions { get => Source.UseSayIntentions; set => SetModelValue<bool>(value); }
         public virtual bool AllowManualChecklistOverride { get => Source.AllowManualChecklistOverride; set => SetModelValue<bool>(value); }
+        public virtual bool AutoSyncFmsOnFinal { get => Source.AutoSyncFmsOnFinal; set => SetModelValue<bool>(value); }
         public virtual bool OpenAppWindowOnStart { get => Source.OpenAppWindowOnStart; set => SetModelValue<bool>(value); }
         public virtual string ProSimSdkPath { get => Source.ProSimSdkPath; set => SetModelValue<string>(value); }
+        public virtual bool DelayProsimConnection { get => Source.DelayProsimConnection; set => SetModelValue<bool>(value); }
         public virtual bool SolariAnimationEnabled { get => Source.SolariAnimationEnabled; set => SetModelValue<bool>(value); }
 
         // ── Web interface (hot-toggled; WebHostService observes Config) ──────

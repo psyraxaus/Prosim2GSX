@@ -61,6 +61,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Use SayIntentions.AI for ATIS/weather and gate assignment. Requires SayIntentions installed and api_key in flight.json.">Use SayIntentions:</TextBlock>
@@ -68,6 +69,9 @@
 
                     <TextBlock Grid.Column="0" Grid.Row="1" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="When enabled, allow manual click on dataref-bound checklist items to override their automatic state. Off = real-aircraft behaviour (only manual items are clickable).">Allow Manual Checklist Override:</TextBlock>
                     <CheckBox Grid.Column="1" Grid.Row="1" IsChecked="{Binding AllowManualChecklistOverride}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="When enabled, allow manual click on dataref-bound checklist items to override their automatic state. Off = real-aircraft behaviour (only manual items are clickable)."/>
+
+                    <TextBlock Grid.Column="0" Grid.Row="2" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="When enabled, the FMS init datarefs (zfw, zfwcg, block fuel) are automatically written the moment the final loadsheet arrives. Off = manual SYNC TO FMS button only.">Auto-sync FMS on Final Loadsheet:</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="2" IsChecked="{Binding AutoSyncFmsOnFinal}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="When enabled, the FMS init datarefs (zfw, zfwcg, block fuel) are automatically written the moment the final loadsheet arrives. Off = manual SYNC TO FMS button only."/>
                 </Grid>
             </Border>
 
@@ -196,6 +200,8 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Reset the GSX Service State Variables to 1 (callable) when switching to the Flight Phase.">Reset GSX Vars in Flight:</TextBlock>
@@ -216,6 +222,12 @@
 
                     <TextBlock Grid.Column="0" Grid.Row="4" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Enable / Disable the Audio Controller for App Volume Control.">Run Audio Controller:</TextBlock>
                     <CheckBox Grid.Column="1" Grid.Row="4" IsChecked="{Binding RunAudioService}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Enable / Disable the Audio Controller for App Volume Control."/>
+
+                    <TextBlock Grid.Column="0" Grid.Row="5" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Suppress GSX's 'waiting for your action' door prompt messages — the bridge handles doors, so they're redundant (useful for headless setups).">Suppress GSX Door Messages:</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="5" IsChecked="{Binding GsxSuppressDoorMessages}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="Suppress GSX's 'waiting for your action' door prompt messages — the bridge handles doors, so they're redundant (useful for headless setups)."/>
+
+                    <TextBlock Grid.Column="0" Grid.Row="6" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="EXPERIMENTAL. Place GSX under Remote Control (no in-sim pop-up menu / notifications) for headless operation. Auto-disabled during the pushback/taxi-out window. Verify by flight log before relying on it.">Remote-Control GSX (experimental):</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="6" IsChecked="{Binding GsxRemoteControlExperimental}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="EXPERIMENTAL. Place GSX under Remote Control (no in-sim pop-up menu / notifications) for headless operation. Auto-disabled during the pushback/taxi-out window. Verify by flight log before relying on it."/>
                 </Grid>
             </Border>
 
@@ -230,6 +242,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Column="0" Grid.Row="0" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="Path to the ProSim SDK DLL file required for ProSim integration.">ProSim SDK Path:</TextBlock>
@@ -240,8 +253,11 @@
                         </Button>
                     </StackPanel>
 
-                    <TextBlock Grid.Column="0" Grid.Row="1" Margin="6" Style="{StaticResource TextBlockDefault}" VerticalAlignment="Top" ToolTip="The Fuel-on-Board Values currently stored by Prosim2GSX for the various Aircrafts.">Saved Fuel Values:</TextBlock>
-                    <StackPanel Grid.Column="1" Grid.Row="1" Margin="6" Orientation="Horizontal">
+                    <TextBlock Grid.Column="0" Grid.Row="1" Margin="6" Style="{StaticResource TextBlockDefault}" ToolTip="When enabled, fire the walkaround skip + GSX gate-menu open + reposition before waiting for the ProSim SDK handshake. Use when ProSim runs on a remote machine that starts after MSFS. Pre-handshake actions use the 'default' aircraft profile (the matched profile is not known yet).">Delay ProSim Connection:</TextBlock>
+                    <CheckBox Grid.Column="1" Grid.Row="1" IsChecked="{Binding DelayProsimConnection}" Style="{StaticResource CheckBoxSettingItem}" ToolTip="When enabled, fire the walkaround skip + GSX gate-menu open + reposition before waiting for the ProSim SDK handshake. Use when ProSim runs on a remote machine that starts after MSFS. Pre-handshake actions use the 'default' aircraft profile (the matched profile is not known yet)."/>
+
+                    <TextBlock Grid.Column="0" Grid.Row="2" Margin="6" Style="{StaticResource TextBlockDefault}" VerticalAlignment="Top" ToolTip="The Fuel-on-Board Values currently stored by Prosim2GSX for the various Aircrafts.">Saved Fuel Values:</TextBlock>
+                    <StackPanel Grid.Column="1" Grid.Row="2" Margin="6" Orientation="Horizontal">
                         <ListView MinWidth="228" MaxWidth="384" Height="96" MaxHeight="142"
                                   ScrollViewer.CanContentScroll="True" ScrollViewer.VerticalScrollBarVisibility="Auto"
                                   HorizontalAlignment="Left" HorizontalContentAlignment="Left"
@@ -256,6 +272,10 @@
 
             <!-- WEB INTERFACE -->
             <TextBlock Style="{StaticResource CategoryHeader}" Text="WEB INTERFACE"/>
+            <TextBlock Foreground="{DynamicResource CategoryTextBrush}"
+                       FontSize="11" FontStyle="Italic"
+                       TextWrapping="Wrap" Margin="0,0,0,4"
+                       Text="INIT, Loadsheet, W&amp;B and Fuel are only accessible through the web interface — enable below to use them."/>
             <Border Style="{StaticResource SectionCardBorder}">
                 <Grid>
                     <Grid.ColumnDefinitions>

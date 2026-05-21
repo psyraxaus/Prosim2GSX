@@ -112,6 +112,40 @@ export function TextField({
   );
 }
 
+interface RadioFieldProps<T extends string | number> {
+  label: string;
+  hint?: string;
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (next: T) => void;
+  name: string;
+  disabled?: boolean;
+}
+
+export function RadioField<T extends string | number>({
+  label, hint, value, options, onChange, name, disabled,
+}: RadioFieldProps<T>) {
+  return (
+    <Field label={label} hint={hint}>
+      <div className={styles.radioGroup}>
+        {options.map((o) => (
+          <label key={String(o.value)} className={styles.radioOption}>
+            <input
+              type="radio"
+              name={name}
+              checked={value === o.value}
+              disabled={disabled}
+              onChange={() => onChange(o.value)}
+              className={styles.radio}
+            />
+            {o.label}
+          </label>
+        ))}
+      </div>
+    </Field>
+  );
+}
+
 interface SelectFieldProps<T extends string | number> {
   label: string;
   hint?: string;

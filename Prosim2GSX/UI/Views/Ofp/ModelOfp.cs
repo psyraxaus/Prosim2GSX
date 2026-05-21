@@ -25,6 +25,8 @@ namespace Prosim2GSX.UI.Views.Ofp
         protected virtual AircraftInterface AircraftInterface => GsxController?.AircraftInterface;
         protected virtual ISayIntentionsService SayIntentions => AppService?.SayIntentionsService;
         protected virtual OfpState OfpState => AppService?.Ofp;
+        protected virtual EfbFlightPlanState EfbFlightPlan => AppService?.EfbFlightPlan;
+        protected virtual DeiceHoldoverState DeiceHoldover => AppService?.DeiceHoldover;
 
         public ModelOfp(AppService appService) : base(appService)
         {
@@ -48,6 +50,16 @@ namespace Prosim2GSX.UI.Views.Ofp
             // in sync without the panel having to know about the store.
             if (OfpState != null)
                 OfpState.PropertyChanged += OnOfpStateChanged;
+            // Drive the FLIGHT PLAN summary card from EfbFlightPlanState. The
+            // card is read-only — overrides + fetching live on the web INIT
+            // page; this surface just shows whatever OFP is currently loaded
+            // so the WPF user has parity awareness with the web side.
+            if (EfbFlightPlan != null)
+                EfbFlightPlan.PropertyChanged += OnFlightPlanStateChanged;
+            // Deice holdover one-liner on the OFP tab. Interactive precip/
+            // OAT entry is web-only; the WPF tab shows the rolled-up status.
+            if (DeiceHoldover != null)
+                DeiceHoldover.PropertyChanged += OnDeiceHoldoverStateChanged;
         }
 
         protected virtual void OnOfpStateChanged(object sender, PropertyChangedEventArgs e)
@@ -100,6 +112,60 @@ namespace Prosim2GSX.UI.Views.Ofp
                 notify();
         }
 
+        protected virtual void OnFlightPlanStateChanged(object sender, PropertyChangedEventArgs e)
+        {
+            // CurrentOfp is replaced wholesale on every fetch (and cleared on
+            // RESET FLIGHT) so a single notify-everything fan-out per change
+            // is the simplest correct shape — no per-field tracking needed.
+            // Status changes are forwarded too because HasFlightPlan reads
+            // through it.
+            if (e?.PropertyName != nameof(EfbFlightPlanState.CurrentOfp)
+                && e?.PropertyName != nameof(EfbFlightPlanState.Status))
+                return;
+
+            var dispatcher = Application.Current?.Dispatcher;
+            Action notify = NotifyFlightPlanProperties;
+            if (dispatcher != null && !dispatcher.CheckAccess())
+                dispatcher.BeginInvoke(notify);
+            else
+                notify();
+        }
+
+        // Compact deice holdover one-liner (e.g. "Type IV 75% · snow ·
+        // 12:30–25:00 remaining" / "HOLDOVER EXPIRED…"); "" when no
+        // holdover is active. Interactive precip/OAT entry is web-only.
+        public virtual string DeiceHoldoverStatus => DeiceHoldover?.Status ?? "";
+
+        protected virtual void OnDeiceHoldoverStateChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e?.PropertyName == nameof(DeiceHoldoverState.Status))
+                NotifyPropertyChanged(nameof(DeiceHoldoverStatus));
+        }
+
+        protected virtual void NotifyFlightPlanProperties()
+        {
+            NotifyPropertyChanged(nameof(HasFlightPlan));
+            NotifyPropertyChanged(nameof(HasNoFlightPlan));
+            NotifyPropertyChanged(nameof(FlightNumber));
+            NotifyPropertyChanged(nameof(Callsign));
+            NotifyPropertyChanged(nameof(FpDeparture));
+            NotifyPropertyChanged(nameof(FpArrival));
+            NotifyPropertyChanged(nameof(FpAlternate));
+            NotifyPropertyChanged(nameof(DeparturePlanRwy));
+            NotifyPropertyChanged(nameof(ArrivalPlanRwy));
+            NotifyPropertyChanged(nameof(AircraftType));
+            NotifyPropertyChanged(nameof(AircraftReg));
+            NotifyPropertyChanged(nameof(CruiseFlText));
+            NotifyPropertyChanged(nameof(Route));
+            NotifyPropertyChanged(nameof(StdZulu));
+            NotifyPropertyChanged(nameof(EtaZulu));
+            NotifyPropertyChanged(nameof(ZfwKgText));
+            NotifyPropertyChanged(nameof(BlockFuelKgText));
+            NotifyPropertyChanged(nameof(PaxCountText));
+            NotifyPropertyChanged(nameof(CargoKgText));
+            NotifyPropertyChanged(nameof(FetchedAtText));
+        }
+
         protected virtual void OnPushbackPreferenceChanged(PushbackPreference _)
         {
             var dispatcher = Application.Current?.Dispatcher;
@@ -137,15 +203,6 @@ namespace Prosim2GSX.UI.Views.Ofp
             NotifyPropertyChanged(nameof(IsOfpNotLoaded));
             NotifyPropertyChanged(nameof(DepartureIcao));
             NotifyPropertyChanged(nameof(ArrivalIcao));
-            NotifyPropertyChanged(nameof(FlightNumber));
-            NotifyPropertyChanged(nameof(AlternateIcao));
-            NotifyPropertyChanged(nameof(DeparturePlanRwy));
-            NotifyPropertyChanged(nameof(ArrivalPlanRwy));
-            NotifyPropertyChanged(nameof(CruiseAltitude));
-            NotifyPropertyChanged(nameof(BlockFuelKg));
-            NotifyPropertyChanged(nameof(BlockTimeFormatted));
-            NotifyPropertyChanged(nameof(PaxCount));
-            NotifyPropertyChanged(nameof(AirDistance));
             ConfirmArrivalGateCommand.NotifyCanExecuteChanged();
             SendNowCommand.NotifyCanExecuteChanged();
             RefreshWeatherCommand.NotifyCanExecuteChanged();
@@ -165,27 +222,88 @@ namespace Prosim2GSX.UI.Views.Ofp
 
         protected virtual SimbriefResponse Ofp => AircraftInterface?.LastSimbriefOfp;
 
+        // Retained for gate-assignment (SayIntentions.AssignGateAsync needs the
+        // ICAO) and the weather card titles. The FLIGHT PLAN summary card uses
+        // its own Fp* projections sourced from EfbFlightPlanState below — that
+        // path is exclusively SimBrief-fed, while these two also fall back to
+        // the FMS origin/destination from the live aircraft for the gate flow.
         public virtual string DepartureIcao => AircraftInterface?.FmsOrigin ?? Ofp?.Origin?.IcaoCode ?? "";
         public virtual string ArrivalIcao => AircraftInterface?.FmsDestination ?? Ofp?.Destination?.IcaoCode ?? "";
-        public virtual string AlternateIcao => Ofp?.Alternate?.IcaoCode ?? "";
-        public virtual string FlightNumber
-            => string.IsNullOrWhiteSpace(Ofp?.General?.FlightNumber) ? "" : $"{Ofp.General.IcaoAirline}{Ofp.General.FlightNumber}";
-        public virtual string DeparturePlanRwy => Ofp?.Origin?.PlanRwy ?? "";
-        public virtual string ArrivalPlanRwy => Ofp?.Destination?.PlanRwy ?? "";
-        public virtual string CruiseAltitude => Ofp?.Atc?.InitialAlt ?? "";
-        public virtual string BlockFuelKg => Ofp?.Fuel?.PlanRamp ?? "";
-        public virtual string BlockTimeFormatted => FormatBlockSeconds(Ofp?.Times?.EstBlock);
-        public virtual string PaxCount => Ofp?.Weights?.PaxCount ?? "";
-        public virtual string AirDistance => Ofp?.General?.AirDistance ?? "";
 
-        protected static string FormatBlockSeconds(string secondsStr)
+        // ── FLIGHT PLAN summary card (read-only, sourced from EfbFlightPlanState) ──
+        // The web INIT page is the only place to fetch / manage overrides; this
+        // card just reflects whichever OFP is currently loaded so the desktop
+        // user has the same situational awareness without launching a browser.
+        // All values come from CurrentOfp directly — overrides are intentionally
+        // not applied here. If the user has tweaked PAX/FUEL/etc on the web INIT
+        // page, the W&B and Loadsheet panels (also web-only) show the resulting
+        // numbers; this card stays as the as-fetched OFP record.
+        protected virtual OFPData CurrentOfp => EfbFlightPlan?.CurrentOfp;
+        public virtual bool HasFlightPlan =>
+            EfbFlightPlan != null
+            && EfbFlightPlan.Status != OfpStatus.Empty
+            && CurrentOfp != null;
+        public virtual bool HasNoFlightPlan => !HasFlightPlan;
+
+        public virtual string FlightNumber => CurrentOfp?.FlightNumber ?? "";
+        public virtual string Callsign => CurrentOfp?.Callsign ?? "";
+        public virtual string FpDeparture => CurrentOfp?.DepartureIcao ?? "";
+        public virtual string FpArrival => CurrentOfp?.ArrivalIcao ?? "";
+        public virtual string FpAlternate => CurrentOfp?.AlternateIcao ?? "";
+        public virtual string DeparturePlanRwy => CurrentOfp?.DeparturePlanRwy ?? "";
+        public virtual string ArrivalPlanRwy => CurrentOfp?.ArrivalPlanRwy ?? "";
+        public virtual string AircraftType => CurrentOfp?.AircraftType ?? "";
+        public virtual string AircraftReg => CurrentOfp?.AircraftReg ?? "";
+        public virtual string Route => CurrentOfp?.Route ?? "";
+
+        // FL370 / FL280 — short, scannable. Empty when no plan or zero level.
+        public virtual string CruiseFlText
         {
-            if (long.TryParse(secondsStr, out long seconds) && seconds > 0)
+            get
             {
-                var span = TimeSpan.FromSeconds(seconds);
-                return $"{(int)span.TotalHours}h {span.Minutes:D2}m";
+                var fl = CurrentOfp?.CruiseFlightLevel ?? 0;
+                return fl > 0 ? $"FL{fl}" : "";
             }
-            return "";
+        }
+
+        // STD = scheduled out (off blocks); ETA = wheels-down per the Airbus FMS
+        // convention. Both shown as Zulu HH:MM with a "Z" suffix to match the
+        // INIT panel formatting.
+        public virtual string StdZulu => FormatZulu(CurrentOfp?.Std);
+        public virtual string EtaZulu => FormatZulu(CurrentOfp?.Eta);
+
+        public virtual string ZfwKgText => FormatKg(CurrentOfp?.ZfwKg);
+        public virtual string BlockFuelKgText => FormatKg(CurrentOfp?.FuelRampKg);
+        public virtual string CargoKgText => FormatKg(CurrentOfp?.CargoKg);
+        public virtual string PaxCountText
+        {
+            get
+            {
+                var n = CurrentOfp?.PassengerCount ?? 0;
+                return n > 0 ? n.ToString(System.Globalization.CultureInfo.InvariantCulture) : "";
+            }
+        }
+
+        public virtual string FetchedAtText
+        {
+            get
+            {
+                var at = CurrentOfp?.FetchedAt;
+                if (!at.HasValue || at.Value == default) return "";
+                return $"FETCHED {at.Value.ToLocalTime():HH:mm:ss}";
+            }
+        }
+
+        private static string FormatZulu(System.DateTime? dt)
+        {
+            if (!dt.HasValue || dt.Value == default) return "";
+            return dt.Value.ToUniversalTime().ToString("HH:mm") + "Z";
+        }
+
+        private static string FormatKg(double? kg)
+        {
+            if (!kg.HasValue || kg.Value <= 0) return "";
+            return kg.Value.ToString("N0", System.Globalization.CultureInfo.InvariantCulture) + " KG";
         }
 
         // Arrival Gate input + Confirm

@@ -397,6 +397,10 @@
                         <TextBlock Grid.Column="8" Text="Assigned Gate:" FontSize="11" VerticalAlignment="Center" Margin="0,2,6,2" FontWeight="SemiBold"/>
                         <TextBlock Grid.Column="9" Text="{Binding AssignedArrivalGate}" FontSize="11" VerticalAlignment="Center" Margin="0,2,0,2"/>
                     </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                        <TextBlock Text="Last Handler Event:" FontSize="11" VerticalAlignment="Center" Margin="0,2,6,2" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding LastHandlerEvent}" FontSize="11" VerticalAlignment="Center" Margin="0,2,0,2"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 

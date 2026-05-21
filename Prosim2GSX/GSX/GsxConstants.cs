@@ -24,6 +24,14 @@
         public static string VarSetCustFuel { get; } = "L:FSDT_GSX_SET_DETECT_CUST_REFUEL";
         public static string VarReadAutoMode { get; } = "L:FSDT_GSX_SETTINGS_AUTOMODE";
         public static string VarSetAutoMode { get; } = "L:FSDT_GSX_SET_AUTOMODE";
+        // Headless-friendly external-control LVARs. Both reset to 0 on a
+        // Couatl restart / aircraft change, so they're re-asserted from the
+        // controller tick. DISABLE_DOORS_MSG silences GSX's "waiting for
+        // your action" door prompts (the bridge handles doors).
+        // SET_REMOTECONTROL suppresses the in-sim pop-up menu entirely —
+        // experimental, opt-in, auto-disabled around the pushback window.
+        public static string VarDisableDoorsMsg { get; } = "L:FSDT_GSX_DISABLE_DOORS_MSG";
+        public static string VarSetRemoteControl { get; } = "L:FSDT_GSX_SET_REMOTECONTROL";
         public static string VarServiceJetway { get; } = "L:FSDT_GSX_JETWAY";
         public static string VarServiceJetwayOperation { get; } = "L:FSDT_GSX_OPERATEJETWAYS_STATE";
         public static string VarServiceStairs { get; } = "L:FSDT_GSX_STAIRS";
@@ -43,6 +51,12 @@
         public static string VarVehiclePushbackState { get; } = "L:FSDT_GSX_VEHICLE_PUSHBACK_STATE";
         public static string VarBypassPin { get; } = "L:FSDT_GSX_BYPASS_PIN";
         public static string VarServiceDeice { get; } = "L:FSDT_GSX_DEICING_STATE";
+        // Applied de-icing fluid type the user picked at the GSX deice
+        // crew (1=Type I .. 4=Type IV). GSX exposes the type but NOT the
+        // concentration — concentration comes from Config.AutoDeiceFluid,
+        // which is what Prosim2GSX drove into the menu. Read by
+        // DeiceHoldoverService to seed the holdover-time lookup.
+        public static string VarDeiceType { get; } = "L:FSDT_GSX_DEICING_TYPE";
         public static string VarServiceLavatory { get; } = "L:FSDT_GSX_LAVATORY_STATE";
         public static string VarServiceWater { get; } = "L:FSDT_GSX_WATER_STATE";
         public static string VarServiceCleaning { get; } = "L:FSDT_GSX_CLEANING_STATE";
@@ -74,7 +88,10 @@
         public static string MenuGate { get; } = "Activate Services at";
         public static string MenuParkingSelect { get; } = "Select Position at";
         public static string MenuParkingChange { get; } = "Change parking or service";
-        public static string MenuAdditionalServices { get; } = "Activate Ground Services";
+        // GSX Pro v4.0.0 renamed this submenu from "Activate Ground Services"
+        // to "Additional Services". Title-matched (StartsWith) by the GPU /
+        // Deice / Lavatory / Water / Cleaning call sequences.
+        public static string MenuAdditionalServices { get; } = "Additional Services";
         public static string MenuOperatorHandling { get; } = "Select handling operator";
         public static string MenuOperatorCater { get; } = "Select catering operator";
         public static string MenuTugAttach { get; } = "Attach Pushback Tug"; 

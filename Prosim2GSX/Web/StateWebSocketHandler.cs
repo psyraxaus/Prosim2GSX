@@ -57,10 +57,18 @@ namespace Prosim2GSX.Web
 
             _app.FlightStatus.PropertyChanged += OnFlightStatusChanged;
             _app.Gsx.PropertyChanged += OnGsxChanged;
+            _app.DeiceHoldover.PropertyChanged += OnDeiceHoldoverChanged;
             _app.Audio.PropertyChanged += OnAudioChanged;
             _app.Config.PropertyChanged += OnConfigChanged;
             _app.Ofp.PropertyChanged += OnOfpChanged;
             _app.Checklist.PropertyChanged += OnChecklistChanged;
+            _app.WeightBalance.PropertyChanged += OnWeightBalanceChanged;
+            _app.Fuel.PropertyChanged += OnFuelChanged;
+            _app.Loadsheet.PropertyChanged += OnLoadsheetChanged;
+            _app.EfbFlightPlan.PropertyChanged += OnEfbFlightPlanChanged;
+            _app.Notifications.PropertyChanged += OnNotificationsChanged;
+            _app.TakeoffPerf.PropertyChanged += OnTakeoffPerfChanged;
+            _app.LandingPerf.PropertyChanged += OnLandingPerfChanged;
             HookChecklistItems(_app.Checklist);
             _app.FlightStatus.MessageLog.CollectionChanged += OnMessageLogChanged;
 
@@ -98,6 +106,20 @@ namespace Prosim2GSX.Web
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(aborted, conn.Cts.Token);
                 var writer = WriterLoopAsync(conn, linkedCts.Token);
                 var reader = ReaderLoopAsync(conn, linkedCts.Token);
+
+                // Send the full current state to this client BEFORE awaiting
+                // either loop. Without this, slow-changing channels (Fuel,
+                // W&B, Loadsheet, OFP, EfbFlightPlan, Notifications,
+                // Checklists) would stay at their default values on the
+                // client side because their per-property INPC events fire
+                // only on real-world events (refuel, boarding, OFP import)
+                // and the rising-edge BroadcastSnapshotAll only catches
+                // clients that were already connected at the SDK transition.
+                // Bytes are queued into conn.Outbound, the writer loop drains
+                // them as soon as it starts (Channel<T> buffers — order
+                // between this enqueue and writer-loop start doesn't matter).
+                BroadcastSnapshotAll(target: conn);
+
                 await Task.WhenAny(writer, reader);
                 conn.Cts.Cancel();
                 await Task.WhenAll(writer, reader);
@@ -203,8 +225,66 @@ namespace Prosim2GSX.Web
         private void OnGsxChanged(object sender, PropertyChangedEventArgs e)
             => Broadcast(channel: "gsx", e.PropertyName, sender);
 
+        // Patch-only channel that the client merges into ofp.deiceHoldover
+        // (same nesting scheme as "gsx" under flightStatus).
+        private void OnDeiceHoldoverChanged(object sender, PropertyChangedEventArgs e)
+            => Broadcast(channel: "deiceHoldover", e.PropertyName, sender);
+
+        // Probe + broadcast handlers for the per-property channels. The
+        // Logger.Debug calls at the top of each are deliberate: in March 2026
+        // we hit a regression where fuel/weightBalance/audio (and ofp,
+        // loadsheet via the custom handlers below) silently stopped firing
+        // INPC because services were reading from a stale SDK cache. The
+        // probe makes the next occurrence visible in DEBUG logs without
+        // adding any cost in INFO-level operation. Gate on connection count
+        // so the log stays clean when the web UI isn't open.
         private void OnAudioChanged(object sender, PropertyChangedEventArgs e)
-            => Broadcast(channel: "audio", e.PropertyName, sender);
+        {
+            if (!_connections.IsEmpty) Logger.Debug($"WS audio: {e.PropertyName}");
+            Broadcast(channel: "audio", e.PropertyName, sender);
+        }
+
+        private void OnWeightBalanceChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (!_connections.IsEmpty) Logger.Debug($"WS weightBalance: {e.PropertyName}");
+            Broadcast(channel: "weightBalance", e.PropertyName, sender);
+        }
+
+        private void OnFuelChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (!_connections.IsEmpty) Logger.Debug($"WS fuel: {e.PropertyName}");
+            Broadcast(channel: "fuel", e.PropertyName, sender);
+        }
+
+        // Loadsheet broadcasts the full Prelim+Final pair on every property
+        // change rather than per-property patches — the React panel renders
+        // both cards atomically (each card is one card, not 8 fields), and a
+        // single combined patch is cheaper to reason about than 16 individual
+        // PropertyChanged broadcasts. Cost is small: the DTO pair is ~20
+        // primitives + 2 strings, fired only when something actually moved.
+        private void OnLoadsheetChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (_connections.IsEmpty) return;
+            Logger.Debug($"WS loadsheet: {e.PropertyName}");
+            try
+            {
+                var snap = LoadsheetSnapshotDto.From(_app);
+                var envelope = new
+                {
+                    channel = "loadsheet",
+                    patch = new Dictionary<string, object>
+                    {
+                        ["prelim"] = snap.Prelim,
+                        ["final"] = snap.Final,
+                    },
+                };
+                BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+        }
 
         private void OnConfigChanged(object sender, PropertyChangedEventArgs e)
         {
@@ -225,6 +305,7 @@ namespace Prosim2GSX.Web
             var name = e?.PropertyName ?? "";
             if (string.IsNullOrEmpty(name)) return;
             if (sender is not OfpState ofp) return;
+            Logger.Debug($"WS ofp: {name}");
 
             object value;
             switch (name)
@@ -253,6 +334,100 @@ namespace Prosim2GSX.Web
                 {
                     channel = "ofp",
                     patch = new Dictionary<string, object> { [camel] = value },
+                };
+                BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+        }
+
+        // Notifications broadcast: full-snapshot per change. The list is
+        // replaced wholesale on every Add/Dismiss, so a single snapshot is
+        // the natural envelope — same shape the React panel needs to
+        // recompute "most recent non-dismissed".
+        private void OnNotificationsChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (_connections.IsEmpty) return;
+            try
+            {
+                var dto = NotificationsSnapshotDto.From(_app);
+                var envelope = new
+                {
+                    channel = "notifications",
+                    snapshot = dto,
+                };
+                BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+        }
+
+        // EFB Flight Planning broadcast: full-snapshot per change. CurrentOfp
+        // is a complex object (not a primitive) and the override dicts move
+        // together with status, so per-property patches buy nothing — the
+        // panel renders all fields atomically. Snapshot-only matches the
+        // checklists + fmsSync convention.
+        private void OnEfbFlightPlanChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (_connections.IsEmpty) return;
+            Logger.Debug($"WS efbFlightPlan: {e.PropertyName}");
+            try
+            {
+                var dto = EfbFlightPlanDto.From(_app);
+                var envelope = new
+                {
+                    channel = "efbFlightPlan",
+                    snapshot = dto,
+                };
+                BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+        }
+
+        // Takeoff + landing perf broadcasts: full-snapshot per change. Both
+        // panels render their inputs / result / status fields atomically;
+        // per-property patches would be cheaper on the wire but invite the
+        // partial-update bugs that bit fuel/W&B in March 2026. Snapshot
+        // envelopes also fix the DelayProsimConnection edge — a patch
+        // arriving before the channel exists on the client is silently
+        // dropped, but a snapshot bootstraps the channel out of null
+        // (project_ws_on_connect_snapshot memory).
+        private void OnTakeoffPerfChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (_connections.IsEmpty) return;
+            Logger.Debug($"WS takeoffPerf: {e.PropertyName}");
+            try
+            {
+                var envelope = new
+                {
+                    channel = "takeoffPerf",
+                    snapshot = TakeoffPerfStateDto.From(_app),
+                };
+                BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+        }
+
+        private void OnLandingPerfChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (_connections.IsEmpty) return;
+            Logger.Debug($"WS landingPerf: {e.PropertyName}");
+            try
+            {
+                var envelope = new
+                {
+                    channel = "landingPerf",
+                    snapshot = LandingPerfStateDto.From(_app),
                 };
                 BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default));
             }
@@ -302,9 +477,9 @@ namespace Prosim2GSX.Web
             }
         }
 
-        private void BroadcastChecklistSnapshot()
+        private void BroadcastChecklistSnapshot(Connection target = null)
         {
-            if (_connections.IsEmpty) return;
+            if (target == null && _connections.IsEmpty) return;
             try
             {
                 var dto = ChecklistDto.From(_app);
@@ -312,6 +487,226 @@ namespace Prosim2GSX.Web
                 {
                     channel = "checklists",
                     snapshot = dto,
+                };
+                BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default), target);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+        }
+
+        // Full-state snapshot broadcast for every channel. Two callers:
+        //   1. StateUpdateWorker rising-edge detection (target == null) —
+        //      fans out to every connected client when the SDK transitions
+        //      disconnected → connected. Catches clients that subscribed
+        //      during the disconnected window before state stores were
+        //      populated.
+        //   2. HandleAsync on a fresh WebSocket connection (target == conn) —
+        //      sends the full current state to ONE newly-connected client
+        //      so its tabs render with real values immediately, instead of
+        //      sitting at defaults until the next per-property INPC fires.
+        //      Required because slow-changing stores (Fuel, W&B, Loadsheet,
+        //      OFP, EfbFlightPlan, Notifications, Checklists) update only
+        //      on real-world events (refuel, boarding, OFP import) so a
+        //      client that connected mid-session would otherwise never see
+        //      their values until such an event happened to fire.
+        //
+        // Patch-style channels (weightBalance, fuel, flightStatus, audio,
+        // ofp, appSettings, gsx) ship as { channel, patch: <full DTO> } so
+        // the existing client-side reducer's merge path picks them up
+        // unchanged. Snapshot-style channels (loadsheet, efbFlightPlan,
+        // notifications, checklists) re-use their existing snapshot
+        // helpers so the wire shape is identical to a normal change.
+        //
+        // Idempotent and safe to call repeatedly; no-op when target is null
+        // and no clients are connected.
+        public void BroadcastSnapshotAll() => BroadcastSnapshotAll(null);
+
+        private void BroadcastSnapshotAll(Connection target)
+        {
+            if (target == null && _connections.IsEmpty) return;
+            Logger.Information(target == null
+                ? "WS snapshot broadcast — pushing full state to all connected clients (SDK-connect rising edge)"
+                : "WS snapshot — sending initial state to newly-connected client");
+
+            // Full-DTO channels — shipped as { channel, snapshot: <DTO> } so
+            // the client dispatches a "set" (replace-the-whole-channel), which
+            // also bootstraps the channel out of its initial null. A "patch"
+            // here would be silently dropped on a fresh client whose channel
+            // hasn't yet been populated by a panel-mount REST fetch — exactly
+            // the DelayProsimConnection case this snapshot exists to fix.
+            // Per-property change broadcasts continue to ship as patches and
+            // merge into the now-non-null channel.
+            BroadcastDtoAsSnapshot("weightBalance", WeightBalanceDto.From(_app), target);
+            BroadcastDtoAsSnapshot("fuel", FuelDto.From(_app), target);
+            BroadcastDtoAsSnapshot("flightStatus", FlightStatusDto.From(_app), target);
+            BroadcastDtoAsSnapshot("audio", AudioDto.From(_app), target);
+            BroadcastDtoAsSnapshot("ofp", OfpDto.From(_app), target);
+
+            // appSettings stays a patch — the React app pre-fetches it via
+            // REST on load (App.tsx), so its channel is reliably non-null by
+            // the time any snapshot arrives, and the per-property OnConfigChanged
+            // broadcasts already use this shape.
+            BroadcastDtoAsPatch("appSettings", AppSettingsDto.From(_app), target);
+
+            // Patch-style "gsx" channel — no DTO (per-property INPC fan-out
+            // works directly off GsxState) and it nests under flightStatus.gsx
+            // on the client, so it can't be a top-level "set". Reflect over the
+            // state object and ship every public scalar property in one envelope
+            // so the client gets the same key set a tick's worth of per-property
+            // patches would produce. (flightStatus is set just above, so the
+            // client's gsx-patch branch finds a non-null flightStatus to nest into.)
+            BroadcastStateAsPatch("gsx", _app?.Gsx, target);
+
+            // Patch-only, nests under ofp.deiceHoldover on the client. The
+            // "ofp" snapshot is sent just above, so the client's
+            // deiceHoldover-patch branch finds a non-null ofp to nest into.
+            BroadcastStateAsPatch("deiceHoldover", _app?.DeiceHoldover, target);
+
+            // Snapshot-style channels — re-use the existing helpers so the
+            // wire shape stays identical to a property-driven snapshot.
+            BroadcastChecklistSnapshot(target);
+
+            try
+            {
+                var lsSnap = LoadsheetSnapshotDto.From(_app);
+                var lsEnvelope = new
+                {
+                    channel = "loadsheet",
+                    snapshot = new Dictionary<string, object>
+                    {
+                        ["prelim"] = lsSnap.Prelim,
+                        ["final"] = lsSnap.Final,
+                    },
+                };
+                BroadcastBytes(Serialize(lsEnvelope), target);
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
+
+            try
+            {
+                var notifEnvelope = new
+                {
+                    channel = "notifications",
+                    snapshot = NotificationsSnapshotDto.From(_app),
+                };
+                BroadcastBytes(Serialize(notifEnvelope), target);
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
+
+            try
+            {
+                var efbEnvelope = new
+                {
+                    channel = "efbFlightPlan",
+                    snapshot = EfbFlightPlanDto.From(_app),
+                };
+                BroadcastBytes(Serialize(efbEnvelope), target);
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
+
+            // takeoffPerf + landingPerf — ship as snapshot envelopes so they
+            // bootstrap on a fresh client (a patch lands before the channel
+            // exists and gets dropped). Matches the efbFlightPlan / loadsheet
+            // convention.
+            try
+            {
+                var toEnvelope = new
+                {
+                    channel = "takeoffPerf",
+                    snapshot = TakeoffPerfStateDto.From(_app),
+                };
+                BroadcastBytes(Serialize(toEnvelope), target);
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
+
+            try
+            {
+                var ldgEnvelope = new
+                {
+                    channel = "landingPerf",
+                    snapshot = LandingPerfStateDto.From(_app),
+                };
+                BroadcastBytes(Serialize(ldgEnvelope), target);
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
+        }
+
+        // Wraps a DTO as a { channel, patch: <dto> } envelope. JsonSerializer
+        // applies WebJsonOptions camelCase naming so the patch keys match
+        // the per-property broadcast shape and the client's reducer merges
+        // them into the existing channel state without any special handling.
+        // When `target` is non-null, sends to that connection only.
+        private void BroadcastDtoAsPatch(string channel, object dto, Connection target = null)
+        {
+            if (dto == null) return;
+            try
+            {
+                var envelope = new { channel, patch = dto };
+                BroadcastBytes(Serialize(envelope), target);
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
+        }
+
+        // Wraps a DTO as a { channel, snapshot: <dto> } envelope. Used by the
+        // full-state broadcast so the client treats it as a wholesale channel
+        // replace ("set"), which also bootstraps the channel from null — a
+        // plain "patch" is dropped client-side until the channel has been
+        // populated by something else. When `target` is non-null, sends to
+        // that connection only.
+        private void BroadcastDtoAsSnapshot(string channel, object dto, Connection target = null)
+        {
+            if (dto == null) return;
+            try
+            {
+                var envelope = new { channel, snapshot = dto };
+                BroadcastBytes(Serialize(envelope), target);
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
+        }
+
+        // Reflection-based snapshot for channels that don't have a dedicated
+        // DTO (currently just "gsx"). Mirrors what an exhaustive sequence of
+        // per-property INPC broadcasts would produce: every public readable
+        // scalar, camelCased, packed into one patch envelope. When `target`
+        // is non-null, sends to that connection only.
+        private void BroadcastStateAsPatch(string channel, object stateObject, Connection target = null)
+        {
+            if (stateObject == null) return;
+            try
+            {
+                var dict = new Dictionary<string, object>();
+                foreach (var prop in stateObject.GetType().GetProperties())
+                {
+                    if (prop.GetIndexParameters().Length > 0) continue;
+                    if (!prop.CanRead) continue;
+                    try
+                    {
+                        var camel = JsonNamingPolicy.CamelCase.ConvertName(prop.Name);
+                        dict[camel] = prop.GetValue(stateObject);
+                    }
+                    catch { }
+                }
+                var envelope = new { channel, patch = dict };
+                BroadcastBytes(Serialize(envelope), target);
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
+        }
+
+        // FMS sync result → "fmsSync" channel snapshot. Fired only after a
+        // POST /api/fms/sync attempt — this is a one-shot broadcast (not
+        // per-property), so listeners can drive a flash + label transition
+        // without subscribing to W&B deltas. Caller is FmsSyncService.
+        public void BroadcastFmsSync(FmsSyncResultDto result)
+        {
+            if (_connections.IsEmpty || result == null) return;
+            try
+            {
+                var envelope = new
+                {
+                    channel = "fmsSync",
+                    snapshot = result,
                 };
                 BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default));
             }
@@ -388,11 +783,20 @@ namespace Prosim2GSX.Web
         private static byte[] SerializeLogAdd(string msg)
             => JsonSerializer.SerializeToUtf8Bytes(new { channel = "flightStatus", logAdded = msg }, WebJsonOptions.Default);
 
-        private void BroadcastBytes(byte[] frame)
+        private void BroadcastBytes(byte[] frame, Connection target = null)
         {
-            // Best-effort enqueue per connection. If a writer is overwhelmed
-            // the channel write may fail — drop and let the reader loop
-            // detect the dead socket.
+            // Best-effort enqueue. Two modes:
+            //   target == null → fan out to every connected client
+            //   target != null → send to that one connection only (used by
+            //                    the on-connect initial-snapshot path)
+            // If a writer is overwhelmed the channel write may fail — drop
+            // and let the reader loop detect the dead socket.
+            if (target != null)
+            {
+                if (!target.Outbound.Writer.TryWrite(frame))
+                    target.Cts.Cancel();
+                return;
+            }
             foreach (var conn in _connections.Values)
             {
                 if (!conn.Outbound.Writer.TryWrite(frame))
