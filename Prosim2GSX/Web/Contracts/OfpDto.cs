@@ -46,6 +46,11 @@ namespace Prosim2GSX.Web.Contracts
         public bool UseSayIntentions { get; set; }
         public bool SayIntentionsActive { get; set; }
 
+        // Deice holdover-time card. Patched on the "deiceHoldover" WS
+        // channel, nested here client-side (same scheme as the "gsx"
+        // channel nests under flightStatus).
+        public DeiceHoldoverDto DeiceHoldover { get; set; } = new();
+
         public static OfpDto From(AppService app)
         {
             var ai = app?.GsxService?.AircraftInterface;
@@ -76,6 +81,7 @@ namespace Prosim2GSX.Web.Contracts
                 PushbackPreference = gsx?.PushbackPreference ?? PushbackPreference.Straight,
                 UseSayIntentions = config?.UseSayIntentions == true,
                 SayIntentionsActive = sayIntentions?.IsActive == true,
+                DeiceHoldover = DeiceHoldoverDto.From(app.DeiceHoldover),
             };
         }
 

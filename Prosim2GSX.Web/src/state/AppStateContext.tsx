@@ -78,16 +78,16 @@ function reducer(state: AppState, action: AppAction): AppState {
         };
       }
 
-      // Same nesting as "gsx" — the deice HOT card is FlightStatusDto's
-      // nested DeiceHoldoverDto.
+      // Same nesting as "gsx", but the deice HOT card is OfpDto's nested
+      // DeiceHoldoverDto — it merges into ofp.deiceHoldover.
       if (action.channel === "deiceHoldover") {
-        if (!state.flightStatus) return state;
+        if (!state.ofp) return state;
         const currentHot =
-          (state.flightStatus.deiceHoldover as Record<string, unknown> | undefined) ?? {};
+          (state.ofp.deiceHoldover as Record<string, unknown> | undefined) ?? {};
         return {
           ...state,
-          flightStatus: {
-            ...state.flightStatus,
+          ofp: {
+            ...state.ofp,
             deiceHoldover: { ...currentHot, ...action.patch },
           },
         };

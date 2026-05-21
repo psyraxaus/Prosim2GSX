@@ -316,6 +316,14 @@
                 </Border>
             </Grid>
 
+            <!-- DEICE HOLDOVER -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="DEICE HOLDOVER" Margin="0,8,0,4"/>
+            <Border Style="{StaticResource SectionCardBorder}">
+                <StackPanel Margin="6,4,6,4">
+                    <TextBlock Text="{Binding DeiceHoldoverStatus}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+
         </StackPanel>
     </ScrollViewer>
 </UserControl>

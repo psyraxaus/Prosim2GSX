@@ -1,5 +1,5 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useEffect, useState } from "react";
+import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
+import { useEffect, useRef, useState } from "react";
 import { useApi } from "../api/useApi";
 import { useAppState } from "../state/AppStateContext";
 import { Section } from "../components/forms/Section";
@@ -118,10 +118,68 @@ export function OfpPanel() {
             setBusy(null);
         }
     }
-    return (_jsxs("div", { className: styles.panel, children: [error && _jsx("div", { className: styles.error, children: error }), _jsx(Section, { title: "Pushback Direction", children: _jsxs("div", { className: styles.korryGroup, role: "group", "aria-label": "Pushback direction", children: [_jsx(KorryPushbackButton, { arrow: "tailLeft", label: "TAIL LEFT", subtitle: "NOSE RIGHT", isActive: ofp.pushbackPreference === "TailLeft", onClick: () => setPushback("TailLeft"), disabled: busy === "pushback", title: "Auto-select 'Nose Right / Tail Left' when GSX shows the direction menu." }), _jsx(KorryPushbackButton, { arrow: "straight", label: "STRAIGHT", subtitle: "STRAIGHT BACK", isActive: ofp.pushbackPreference === "Straight", onClick: () => setPushback("Straight"), disabled: busy === "pushback", title: "Auto-select 'Straight pushback' when GSX shows the direction menu." }), _jsx(KorryPushbackButton, { arrow: "tailRight", label: "TAIL RIGHT", subtitle: "NOSE LEFT", isActive: ofp.pushbackPreference === "TailRight", onClick: () => setPushback("TailRight"), disabled: busy === "pushback", title: "Auto-select 'Nose Left / Tail Right' when GSX shows the direction menu." })] }) }), _jsxs(Section, { title: "Arrival Gate Assignment", children: [_jsxs("form", { className: styles.gateForm, onSubmit: confirmGate, children: [_jsx("input", { type: "text", value: arrivalGateInput, onChange: (e) => setArrivalGateInput(e.target.value.toUpperCase()), placeholder: "GATE", disabled: !ofp.isOfpLoaded || busy === "confirm", className: styles.gateInput, autoCapitalize: "characters", spellCheck: false }), _jsx(PrimaryButton, { type: "submit", disabled: !ofp.isOfpLoaded || !arrivalGateInput.trim() || busy === "confirm", children: busy === "confirm" ? "Confirming…" : "Confirm" }), _jsx(PrimaryButton, { variant: "secondary", onClick: sendNow, disabled: !ofp.pendingArrivalGate || busy === "sendNow", children: busy === "sendNow" ? "Sending…" : "Send Now" })] }), ofp.pendingArrivalGate && (_jsxs("div", { className: styles.pending, children: [_jsx("span", { className: styles.pendingLabel, children: "Pending" }), _jsx("span", { className: styles.pendingValue, children: ofp.pendingArrivalGate })] })), ofp.assignedArrivalGate && (_jsxs("div", { className: styles.assigned, children: [_jsx("span", { className: styles.assignedLabel, children: "GSX Assigned" }), _jsx("span", { className: styles.assignedValue, children: ofp.assignedArrivalGate })] })), ofp.gateAssignmentStatus && (_jsx(StatusLine, { label: "ATC", value: ofp.gateAssignmentStatus })), ofp.gsxAssignmentStatus && (_jsx(StatusLine, { label: "GSX", value: ofp.gsxAssignmentStatus }))] }), _jsxs(Section, { title: "Weather", hint: ofp.sayIntentionsActive ? "" : "SayIntentions inactive", children: [_jsxs("div", { className: styles.weatherToolbar, children: [_jsx(PrimaryButton, { variant: "secondary", onClick: refreshWeather, disabled: busy === "weather" || !ofp.sayIntentionsActive, children: busy === "weather" || ofp.isRefreshingWeather ? "Refreshing…" : "Refresh Weather" }), ofp.cpdlcStation && (_jsxs("span", { className: styles.weatherStatus, children: ["CPDLC: ", ofp.cpdlcStation] })), ofp.weatherStatus && _jsx("span", { className: styles.weatherStatus, children: ofp.weatherStatus })] }), _jsxs("div", { className: styles.weatherGrid, children: [_jsx(WeatherCard, { title: `Departure ${ofp.departureIcao || ""}`, wx: ofp.departureWeather }), _jsx(WeatherCard, { title: `Arrival ${ofp.arrivalIcao || ""}`, wx: ofp.arrivalWeather })] })] })] }));
+    return (_jsxs("div", { className: styles.panel, children: [error && _jsx("div", { className: styles.error, children: error }), _jsx(Section, { title: "Pushback Direction", children: _jsxs("div", { className: styles.korryGroup, role: "group", "aria-label": "Pushback direction", children: [_jsx(KorryPushbackButton, { arrow: "tailLeft", label: "TAIL LEFT", subtitle: "NOSE RIGHT", isActive: ofp.pushbackPreference === "TailLeft", onClick: () => setPushback("TailLeft"), disabled: busy === "pushback", title: "Auto-select 'Nose Right / Tail Left' when GSX shows the direction menu." }), _jsx(KorryPushbackButton, { arrow: "straight", label: "STRAIGHT", subtitle: "STRAIGHT BACK", isActive: ofp.pushbackPreference === "Straight", onClick: () => setPushback("Straight"), disabled: busy === "pushback", title: "Auto-select 'Straight pushback' when GSX shows the direction menu." }), _jsx(KorryPushbackButton, { arrow: "tailRight", label: "TAIL RIGHT", subtitle: "NOSE LEFT", isActive: ofp.pushbackPreference === "TailRight", onClick: () => setPushback("TailRight"), disabled: busy === "pushback", title: "Auto-select 'Nose Left / Tail Right' when GSX shows the direction menu." })] }) }), _jsxs(Section, { title: "Arrival Gate Assignment", children: [_jsxs("form", { className: styles.gateForm, onSubmit: confirmGate, children: [_jsx("input", { type: "text", value: arrivalGateInput, onChange: (e) => setArrivalGateInput(e.target.value.toUpperCase()), placeholder: "GATE", disabled: !ofp.isOfpLoaded || busy === "confirm", className: styles.gateInput, autoCapitalize: "characters", spellCheck: false }), _jsx(PrimaryButton, { type: "submit", disabled: !ofp.isOfpLoaded || !arrivalGateInput.trim() || busy === "confirm", children: busy === "confirm" ? "Confirming…" : "Confirm" }), _jsx(PrimaryButton, { variant: "secondary", onClick: sendNow, disabled: !ofp.pendingArrivalGate || busy === "sendNow", children: busy === "sendNow" ? "Sending…" : "Send Now" })] }), ofp.pendingArrivalGate && (_jsxs("div", { className: styles.pending, children: [_jsx("span", { className: styles.pendingLabel, children: "Pending" }), _jsx("span", { className: styles.pendingValue, children: ofp.pendingArrivalGate })] })), ofp.assignedArrivalGate && (_jsxs("div", { className: styles.assigned, children: [_jsx("span", { className: styles.assignedLabel, children: "GSX Assigned" }), _jsx("span", { className: styles.assignedValue, children: ofp.assignedArrivalGate })] })), ofp.gateAssignmentStatus && (_jsx(StatusLine, { label: "ATC", value: ofp.gateAssignmentStatus })), ofp.gsxAssignmentStatus && (_jsx(StatusLine, { label: "GSX", value: ofp.gsxAssignmentStatus }))] }), _jsxs(Section, { title: "Weather", hint: ofp.sayIntentionsActive ? "" : "SayIntentions inactive", children: [_jsxs("div", { className: styles.weatherToolbar, children: [_jsx(PrimaryButton, { variant: "secondary", onClick: refreshWeather, disabled: busy === "weather" || !ofp.sayIntentionsActive, children: busy === "weather" || ofp.isRefreshingWeather ? "Refreshing…" : "Refresh Weather" }), ofp.cpdlcStation && (_jsxs("span", { className: styles.weatherStatus, children: ["CPDLC: ", ofp.cpdlcStation] })), ofp.weatherStatus && _jsx("span", { className: styles.weatherStatus, children: ofp.weatherStatus })] }), _jsxs("div", { className: styles.weatherGrid, children: [_jsx(WeatherCard, { title: `Departure ${ofp.departureIcao || ""}`, wx: ofp.departureWeather }), _jsx(WeatherCard, { title: `Arrival ${ofp.arrivalIcao || ""}`, wx: ofp.arrivalWeather })] })] }), _jsx(Section, { title: "Deice Holdover (HOT)", children: _jsx(HotCard, { hot: ofp.deiceHoldover }) })] }));
 }
 function StatusLine({ label, value }) {
     return (_jsxs("div", { className: styles.statusLine, children: [_jsx("span", { className: styles.statusLabel, children: label }), _jsx("span", { className: styles.statusValue, children: value })] }));
+}
+const PRECIP_OPTIONS = [
+    { value: "None", label: "No precipitation" },
+    { value: "ActiveFrost", label: "Active frost" },
+    { value: "FreezingFog", label: "Freezing fog" },
+    { value: "Snow", label: "Snow / snow grains" },
+    { value: "FreezingDrizzleLight", label: "Freezing drizzle (light)" },
+    { value: "FreezingDrizzleModerate", label: "Freezing drizzle (moderate)" },
+    { value: "LightFreezingRain", label: "Light freezing rain" },
+    { value: "RainOnColdSoakedWing", label: "Rain on cold-soaked wing" },
+];
+function fmtMMSS(total) {
+    const m = Math.floor((total ?? 0) / 60);
+    const s = (total ?? 0) % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+}
+// Deice holdover card. Precip + OAT are crew inputs POSTed to /api/deice;
+// the server recomputes and the result rides back on the deiceHoldover WS
+// channel (nested under ofp), so we don't optimistically mutate state.
+function HotCard({ hot }) {
+    const { post } = useApi();
+    const [oatText, setOatText] = useState(String(hot?.oatC ?? 0));
+    const oatFocused = useRef(false);
+    // Keep the field in sync with the server (auto-prefill / other clients)
+    // unless the user is actively editing it.
+    useEffect(() => {
+        if (!oatFocused.current)
+            setOatText(String(hot?.oatC ?? 0));
+    }, [hot?.oatC]);
+    if (!hot) {
+        return (_jsx("div", { className: styles.kv, children: _jsx("span", { className: styles.kvLabel, children: "\u2014" }) }));
+    }
+    const changePrecip = async (precip) => {
+        try {
+            await post("/deice/set-precip", { precip });
+        }
+        catch {
+            /* WS will reconcile */
+        }
+    };
+    const commitOat = async () => {
+        oatFocused.current = false;
+        const v = parseFloat(oatText);
+        if (Number.isFinite(v)) {
+            try {
+                await post("/deice/set-oat", { oatC: v });
+            }
+            catch {
+                /* WS will reconcile */
+            }
+        }
+    };
+    return (_jsxs(_Fragment, { children: [_jsxs("div", { className: styles.kv, children: [_jsx("span", { className: styles.kvLabel, children: "Precipitation" }), _jsx("span", { className: styles.kvValue, children: _jsx("select", { className: styles.hotSelect, value: hot.precip, onChange: (e) => changePrecip(e.target.value), children: PRECIP_OPTIONS.map((o) => (_jsx("option", { value: o.value, children: o.label }, o.value))) }) })] }), _jsxs("div", { className: styles.kv, children: [_jsxs("span", { className: styles.kvLabel, children: ["OAT (\u00B0C)", hot.oatUserSet ? "" : " · auto"] }), _jsx("span", { className: styles.kvValue, children: _jsx("input", { className: styles.hotInput, type: "number", step: "0.5", value: oatText, onFocus: () => {
+                                oatFocused.current = true;
+                            }, onChange: (e) => setOatText(e.target.value), onBlur: commitOat, onKeyDown: (e) => {
+                                if (e.key === "Enter")
+                                    commitOat();
+                            } }) })] }), _jsxs("div", { className: styles.kv, children: [_jsx("span", { className: styles.kvLabel, children: "Fluid" }), _jsx("span", { className: styles.kvValue, children: hot.fluidLabel || "—" })] }), hot.active && (_jsxs("div", { className: styles.kv, children: [_jsx("span", { className: styles.kvLabel, children: "Holdover remaining" }), _jsxs("span", { className: styles.hotCountdown, children: [fmtMMSS(hot.remainingLowSeconds), " \u2013 ", fmtMMSS(hot.remainingHighSeconds)] })] })), _jsxs("div", { className: styles.kv, children: [_jsx("span", { className: styles.kvLabel, children: "Status" }), _jsx("span", { className: hot.expired ? styles.hotExpired : styles.kvValue, children: hot.status || (hot.fluidLabel ? "—" : "Awaiting GSX deicing…") })] }), _jsx("p", { className: styles.hotDisclaimer, children: "Representative HOT figures for simulation immersion only \u2014 not a certified table. Do not use for real-world dispatch." })] }));
 }
 function WeatherCard({ title, wx }) {
     if (!wx) {

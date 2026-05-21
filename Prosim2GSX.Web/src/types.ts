@@ -180,14 +180,13 @@ export interface FlightStatusDto {
   utcDate: string;
 
   gsx: GsxLiveDto;
-  deiceHoldover: DeiceHoldoverDto;
   messageLog: string[];
 }
 
 // Deice holdover-time card. Patched on the "deiceHoldover" WS channel,
-// nested under flightStatus client-side (same scheme as gsx). Precip/oatC
-// are crew inputs POSTed to /api/deice. HotPrecip values are the C# enum
-// names (string enums on the wire).
+// nested under ofp client-side (same scheme as gsx under flightStatus).
+// Precip/oatC are crew inputs POSTed to /api/deice. HotPrecip values are
+// the C# enum names (string enums on the wire).
 export type HotPrecip =
   | "None"
   | "ActiveFrost"
@@ -539,6 +538,7 @@ export interface OfpDto {
   pushbackPreference: PushbackPreference;
   useSayIntentions: boolean;
   sayIntentionsActive: boolean;
+  deiceHoldover: DeiceHoldoverDto;
 }
 
 export interface ConfirmArrivalGateRequest {

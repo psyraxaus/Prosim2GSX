@@ -26,6 +26,7 @@ namespace Prosim2GSX.UI.Views.Ofp
         protected virtual ISayIntentionsService SayIntentions => AppService?.SayIntentionsService;
         protected virtual OfpState OfpState => AppService?.Ofp;
         protected virtual EfbFlightPlanState EfbFlightPlan => AppService?.EfbFlightPlan;
+        protected virtual DeiceHoldoverState DeiceHoldover => AppService?.DeiceHoldover;
 
         public ModelOfp(AppService appService) : base(appService)
         {
@@ -55,6 +56,10 @@ namespace Prosim2GSX.UI.Views.Ofp
             // so the WPF user has parity awareness with the web side.
             if (EfbFlightPlan != null)
                 EfbFlightPlan.PropertyChanged += OnFlightPlanStateChanged;
+            // Deice holdover one-liner on the OFP tab. Interactive precip/
+            // OAT entry is web-only; the WPF tab shows the rolled-up status.
+            if (DeiceHoldover != null)
+                DeiceHoldover.PropertyChanged += OnDeiceHoldoverStateChanged;
         }
 
         protected virtual void OnOfpStateChanged(object sender, PropertyChangedEventArgs e)
@@ -124,6 +129,17 @@ namespace Prosim2GSX.UI.Views.Ofp
                 dispatcher.BeginInvoke(notify);
             else
                 notify();
+        }
+
+        // Compact deice holdover one-liner (e.g. "Type IV 75% · snow ·
+        // 12:30–25:00 remaining" / "HOLDOVER EXPIRED…"); "" when no
+        // holdover is active. Interactive precip/OAT entry is web-only.
+        public virtual string DeiceHoldoverStatus => DeiceHoldover?.Status ?? "";
+
+        protected virtual void OnDeiceHoldoverStateChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e?.PropertyName == nameof(DeiceHoldoverState.Status))
+                NotifyPropertyChanged(nameof(DeiceHoldoverStatus));
         }
 
         protected virtual void NotifyFlightPlanProperties()

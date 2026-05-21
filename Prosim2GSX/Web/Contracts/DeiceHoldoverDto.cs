@@ -2,10 +2,10 @@ using Prosim2GSX.GSX;
 
 namespace Prosim2GSX.Web.Contracts
 {
-    // Deice holdover-time card. Nested in FlightStatusDto and pushed on the
-    // "deiceHoldover" WS channel (patch-only, nests under
-    // flightStatus.deiceHoldover client-side — same shape as the "gsx"
-    // channel). Precip/OatC are crew inputs set via /api/deice.
+    // Deice holdover-time card. Nested in OfpDto and pushed on the
+    // "deiceHoldover" WS channel (patch-only, nests under ofp.deiceHoldover
+    // client-side — same shape as the "gsx" channel under flightStatus).
+    // Precip/OatC are crew inputs set via /api/deice.
     public class DeiceHoldoverDto
     {
         public bool Active { get; set; }

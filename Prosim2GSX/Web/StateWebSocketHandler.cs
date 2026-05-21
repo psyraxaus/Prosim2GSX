@@ -225,8 +225,8 @@ namespace Prosim2GSX.Web
         private void OnGsxChanged(object sender, PropertyChangedEventArgs e)
             => Broadcast(channel: "gsx", e.PropertyName, sender);
 
-        // Same nesting scheme as "gsx": patch-only channel that the client
-        // merges into flightStatus.deiceHoldover.
+        // Patch-only channel that the client merges into ofp.deiceHoldover
+        // (same nesting scheme as "gsx" under flightStatus).
         private void OnDeiceHoldoverChanged(object sender, PropertyChangedEventArgs e)
             => Broadcast(channel: "deiceHoldover", e.PropertyName, sender);
 
@@ -559,8 +559,9 @@ namespace Prosim2GSX.Web
             // client's gsx-patch branch finds a non-null flightStatus to nest into.)
             BroadcastStateAsPatch("gsx", _app?.Gsx, target);
 
-            // Same scheme as "gsx" — patch-only, nests under
-            // flightStatus.deiceHoldover on the client.
+            // Patch-only, nests under ofp.deiceHoldover on the client. The
+            // "ofp" snapshot is sent just above, so the client's
+            // deiceHoldover-patch branch finds a non-null ofp to nest into.
             BroadcastStateAsPatch("deiceHoldover", _app?.DeiceHoldover, target);
 
             // Snapshot-style channels — re-use the existing helpers so the
