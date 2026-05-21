@@ -1,9 +1,49 @@
-.tabBar {
+/* Wrapper holds the optional ‹ / › overflow chevrons either side of the
+   scrollable tab strip. Background + baseline border live here so the
+   chevrons sit flush on the same surface as the tabs. */
+.tabBarWrap {
   display: flex;
+  align-items: stretch;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border);
+}
+
+.tabBar {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
   overflow-x: auto;
-  scrollbar-width: thin;
+  /* The chevrons are the overflow affordance now — hide the scrollbar
+     itself so the strip stays clean. Native swipe still works. */
+  scrollbar-width: none;
+}
+.tabBar::-webkit-scrollbar {
+  display: none;
+}
+
+.chevron {
+  flex: 0 0 auto;
+  width: 34px;
+  background: var(--bg-secondary);
+  border: none;
+  color: var(--text-on-dark-muted);
+  font-size: 18px;
+  line-height: 1;
+  transition: color 120ms ease, background 120ms ease, opacity 120ms ease;
+}
+.chevron:hover:not(:disabled) {
+  color: var(--text-on-dark);
+  background: rgba(255, 255, 255, 0.06);
+}
+.chevron:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+.chevronLeft {
+  border-right: 1px solid var(--border);
+}
+.chevronRight {
+  border-left: 1px solid var(--border);
 }
 
 .tab {
