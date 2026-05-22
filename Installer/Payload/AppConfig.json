@@ -107,6 +107,10 @@
   "DelayAircraftModeChange": 1250,
   "MenuCheckInterval": 250,
   "MenuOpenTimeout": 2500,
+  "GsxMenuDiagnosticLevel": 1,
+  "GsxMenuDiagnosticRetainSessions": 10,
+  "GsxMenuDiagnosticPath": "",
+  "IntentVerificationTimeout": 5000,
   "EfbCheckInterval": 1500,
   "DingOnStartup": true,
   "DingOnFinal": true,
@@ -254,7 +258,7 @@
       }
     }
   ],
-  "ConfigVersion": 30,
+  "ConfigVersion": 31,
   "LogInterval": 3,
   "SizeLimit": 10485760,
   "LogCount": 3,

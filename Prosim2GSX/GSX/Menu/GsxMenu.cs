@@ -3,10 +3,12 @@ using CFIT.AppLogger;
 using CFIT.AppTools;
 using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.AppConfig;
+using Prosim2GSX.GSX.Menu.Intents;
 using ProsimInterface;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -54,6 +56,11 @@ namespace Prosim2GSX.GSX.Menu
         protected virtual bool FollowMeAnswered { get; set; } = false;
         protected virtual bool MenuOpenRequesting { get; set; } = false;
         protected virtual bool MenuOpenAfterReady { get; set; } = false;
+        // Grace window so the passive FSDT_GSX_MENU_CHOICE observer can tell
+        // our own Select() writes apart from a real manual click. Set at the
+        // top of Select(); if the LVAR callback fires inside the window the
+        // write is ours and not a manual override.
+        private DateTime _lastSelectInFlightUntil = DateTime.MinValue;
         public virtual bool WaitingForGate { get; protected set; } = false;
         public virtual bool WarpedToGate { get; protected set; } = false;
         public virtual bool SuppressMenuRefresh { get; set; } = false;
@@ -96,6 +103,22 @@ namespace Prosim2GSX.GSX.Menu
             double num = sub.GetNumber();
             if (num != -2)
             {
+                // Passive manual-override detection. If the LVAR change arrived
+                // outside the in-flight grace window, the click came from the
+                // user (or another tool), not from our Select(). Surface it to
+                // the diagnostic log so the audit trail covers human input too.
+                if (DateTime.UtcNow > _lastSelectInFlightUntil)
+                {
+                    try
+                    {
+                        int choiceIndex = (int)num;
+                        string lineText = (choiceIndex >= 0 && choiceIndex < MenuLines.Count)
+                            ? MenuLines[choiceIndex] : null;
+                        Controller.GsxMenuDiagnosticLog?.LogManualOverride(MenuTitle, choiceIndex, lineText);
+                    }
+                    catch (Exception ex) { Logger.LogException(ex); }
+                }
+
                 if (MatchTitle(GsxConstants.MenuDeiceOnPush))
                 {
                     Logger.Debug($"Deice Question was answered: {num}");
@@ -521,6 +544,11 @@ namespace Prosim2GSX.GSX.Menu
                 await MsgMenuReady.ReceiveAsync(false, Config.MenuOpenTimeout, RequestToken);
             }
 
+            // Mark a short window during which any inbound FSDT_GSX_MENU_CHOICE
+            // change should be attributed to this write rather than to a user
+            // click — see OnMenuSelection.
+            _lastSelectInFlightUntil = DateTime.UtcNow + TimeSpan.FromSeconds(2);
+
             Logger.Debug($"Menu Select Item {number} => Value {number - 1}");
             await SubMenuChoice.WriteValue(number - 1);
 
@@ -695,6 +723,278 @@ namespace Prosim2GSX.GSX.Menu
         public virtual bool MatchTitle(string match)
         {
             return MenuTitle?.StartsWith(match, StringComparison.InvariantCultureIgnoreCase) == true;
+        }
+
+        /// <summary>
+        /// Resolves and executes a <see cref="GsxMenuIntent"/> against the live menu.
+        /// This is the entry point that replaces the legacy
+        /// <c>RunSequence</c>/<c>RunCommand</c>/<c>GsxMenuCommand</c> path; Phase 3+
+        /// migrations route every menu interaction through here. The result is rich
+        /// enough that callers don't need to consult any other state to know what
+        /// happened, and the diagnostic log is emitted once per call (success or
+        /// failure) at the single return path.
+        /// </summary>
+        public virtual async Task<GsxMenuResult> ExecuteIntent(GsxMenuIntent intent, AutomationState currentPhase, CancellationToken token = default)
+        {
+            if (intent == null) throw new ArgumentNullException(nameof(intent));
+
+            var stopwatch = Stopwatch.StartNew();
+            GsxMenuResult result;
+
+            // Step 1: plausibility
+            if (!intent.IsValidForPhase(currentPhase))
+            {
+                result = MakeResult(MenuOutcome.PhaseMismatch, intent, MenuTitle, Array.Empty<string>(),
+                    null, null, currentPhase,
+                    $"Phase {currentPhase} not valid for intent {intent.IntentName}",
+                    stopwatch);
+                EmitResult(result);
+                return result;
+            }
+
+            // Step 2: already-satisfied short-circuit
+            if (intent.IsAlreadySatisfied(Controller))
+            {
+                result = MakeResult(MenuOutcome.StatePreconditionSatisfiedAlready, intent, MenuTitle, Array.Empty<string>(),
+                    null, null, currentPhase,
+                    $"Intent {intent.IntentName} reports already satisfied — no menu interaction needed",
+                    stopwatch);
+                EmitResult(result);
+                return result;
+            }
+
+            // Step 3: precondition
+            if (!intent.ArePreconditionsSatisfied(Controller))
+            {
+                result = MakeResult(MenuOutcome.StatePreconditionFailed, intent, MenuTitle, Array.Empty<string>(),
+                    null, null, currentPhase,
+                    $"Preconditions for intent {intent.IntentName} not met",
+                    stopwatch);
+                EmitResult(result);
+                return result;
+            }
+
+            // Step 4: navigate to parent (recurse) or open at top level
+            if (intent.ParentMenu != null)
+            {
+                var parent = await ExecuteIntent(intent.ParentMenu, currentPhase, token);
+                if (!parent.IsSuccess && !parent.IsBenignSkip)
+                {
+                    result = MakeResult(MenuOutcome.NavigationFailed, intent, MenuTitle, Array.Empty<string>(),
+                        null, null, currentPhase,
+                        $"Parent navigation '{intent.ParentMenu.IntentName}' returned {parent.Outcome}: {parent.Reason}",
+                        stopwatch);
+                    EmitResult(result);
+                    return result;
+                }
+            }
+            else
+            {
+                bool opened = await Open(waitReady: true);
+                if (!opened)
+                {
+                    result = MakeResult(MenuOutcome.NavigationFailed, intent, MenuTitle, Array.Empty<string>(),
+                        null, null, currentPhase,
+                        "Open(waitReady:true) returned false — menu did not become ready",
+                        stopwatch);
+                    EmitResult(result);
+                    return result;
+                }
+            }
+
+            // Step 5: defensive snapshot — every later check reads from snap*, never the live list.
+            string snapTitle = MenuTitle;
+            IReadOnlyList<string> snapLines = MenuLines.ToList();
+
+            // Step 6: title check (multi-prefix; default impl wraps the single ExpectedMenuTitlePrefix)
+            if (!MenuTitleMatchesAny(snapTitle, intent.ExpectedMenuTitlePrefixes))
+            {
+                string prefixes = string.Join(" | ", intent.ExpectedMenuTitlePrefixes ?? Array.Empty<string>());
+                result = MakeResult(MenuOutcome.MenuTitleMismatch, intent, snapTitle, snapLines,
+                    null, null, currentPhase,
+                    $"Live menu title '{snapTitle}' does not match any of: [{prefixes}]",
+                    stopwatch);
+                EmitResult(result);
+                return result;
+            }
+
+            // Step 7: door-action-prompt guard — must run BEFORE resolution.
+            int doorIdx = FindDoorActionPromptIndex(snapLines);
+            if (doorIdx >= 0)
+            {
+                result = MakeResult(MenuOutcome.DoorActionPrompt, intent, snapTitle, snapLines,
+                    null, null, currentPhase,
+                    $"Menu shows door-action prompt at entry {doorIdx + 1}: '{snapLines[doorIdx]}'",
+                    stopwatch);
+                EmitResult(result);
+                return result;
+            }
+
+            // Step 8: resolve
+            int idx;
+            try
+            {
+                idx = intent.ResolveMenuLineIndex(snapLines);
+            }
+            catch (AmbiguousMatchException amx)
+            {
+                result = MakeResult(MenuOutcome.AmbiguousMatch, intent, snapTitle, snapLines,
+                    null, null, currentPhase,
+                    amx.Message,
+                    stopwatch,
+                    exception: amx);
+                EmitResult(result);
+                return result;
+            }
+
+            if (idx < 0)
+            {
+                // Navigation-intent special case: a top-level intent whose
+                // ResolveMenuLineIndex returns -1 and whose live title already
+                // matches the expected prefix is treated as success without a
+                // write — the Open() in step 4 IS the operation. This is the
+                // pattern OpenGateMenu uses; gating it on ParentMenu == null
+                // keeps non-navigation intents from accidentally claiming
+                // success when their pattern fails to match.
+                if (intent.ParentMenu == null && MenuTitleMatchesAny(snapTitle, intent.ExpectedMenuTitlePrefixes))
+                {
+                    result = MakeResult(MenuOutcome.Success, intent, snapTitle, snapLines,
+                        null, null, currentPhase,
+                        "Navigation-only intent: live menu is the expected destination; no choice written",
+                        stopwatch);
+                    EmitResult(result);
+                    return result;
+                }
+
+                result = MakeResult(MenuOutcome.ItemNotAvailable, intent, snapTitle, snapLines,
+                    null, null, currentPhase,
+                    $"No menu line matched intent {intent.IntentName}",
+                    stopwatch);
+                EmitResult(result);
+                return result;
+            }
+
+            string matchedText = snapLines[idx];
+
+            // Step 9: write choice — Select(N) writes N-1, so the 1-based form is idx+1.
+            try
+            {
+                await Select(idx + 1, waitReady: false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                result = MakeResult(MenuOutcome.GsxError, intent, snapTitle, snapLines,
+                    idx, matchedText, currentPhase,
+                    $"Select threw during write: {ex.Message}",
+                    stopwatch,
+                    exception: ex);
+                EmitResult(result);
+                return result;
+            }
+
+            // Step 10: verify
+            bool verified;
+            try
+            {
+                verified = await intent.VerifyOutcomeAsync(Controller,
+                    TimeSpan.FromMilliseconds(Config.IntentVerificationTimeout), token);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                result = MakeResult(MenuOutcome.GsxError, intent, snapTitle, snapLines,
+                    idx, matchedText, currentPhase,
+                    $"VerifyOutcomeAsync threw: {ex.Message}",
+                    stopwatch,
+                    exception: ex);
+                EmitResult(result);
+                return result;
+            }
+
+            if (!verified)
+            {
+                result = MakeResult(MenuOutcome.GsxNoResponse, intent, snapTitle, snapLines,
+                    idx, matchedText, currentPhase,
+                    $"Wrote choice {idx + 1} ('{matchedText}') but verification did not observe the expected change within {Config.IntentVerificationTimeout}ms",
+                    stopwatch);
+                EmitResult(result);
+                return result;
+            }
+
+            // Step 11: success
+            result = MakeResult(MenuOutcome.Success, intent, snapTitle, snapLines,
+                idx, matchedText, currentPhase,
+                $"Resolved '{matchedText}' at entry {idx + 1}; wrote and verified",
+                stopwatch);
+            EmitResult(result);
+            return result;
+        }
+
+        private static GsxMenuResult MakeResult(
+            MenuOutcome outcome,
+            GsxMenuIntent intent,
+            string title,
+            IReadOnlyList<string> lines,
+            int? resolvedIndex,
+            string matchedEntryText,
+            AutomationState phase,
+            string reason,
+            Stopwatch stopwatch,
+            Exception exception = null,
+            string postWriteStateObservation = null)
+        {
+            return new GsxMenuResult(
+                outcome,
+                intent,
+                title,
+                lines,
+                resolvedIndex,
+                matchedEntryText,
+                phase,
+                reason,
+                exception,
+                stopwatch?.Elapsed,
+                postWriteStateObservation);
+        }
+
+        private void EmitResult(GsxMenuResult result)
+        {
+            try { Controller.GsxMenuDiagnosticLog?.LogIntentExecution(result); }
+            catch (Exception ex) { Logger.LogException(ex); }
+        }
+
+        private static bool MenuTitleMatchesAny(string title, IReadOnlyList<string> prefixes)
+        {
+            if (string.IsNullOrWhiteSpace(title) || prefixes == null || prefixes.Count == 0)
+                return false;
+            for (int i = 0; i < prefixes.Count; i++)
+            {
+                var p = prefixes[i];
+                if (!string.IsNullOrWhiteSpace(p) && title.StartsWith(p, StringComparison.InvariantCultureIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
+
+        private static int FindDoorActionPromptIndex(IReadOnlyList<string> lines)
+        {
+            const string prefix = "Waiting for your action:";
+            if (lines == null) return -1;
+            for (int i = 0; i < lines.Count; i++)
+            {
+                var line = lines[i];
+                if (!string.IsNullOrEmpty(line)
+                    && line.StartsWith(prefix, StringComparison.InvariantCultureIgnoreCase))
+                    return i;
+            }
+            return -1;
         }
     }
 }

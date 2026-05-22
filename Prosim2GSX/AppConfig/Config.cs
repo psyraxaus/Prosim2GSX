@@ -3,6 +3,7 @@ using CFIT.AppLogger;
 using CoreAudio;
 using Prosim2GSX.Aircraft;
 using Prosim2GSX.Audio;
+using Prosim2GSX.GSX.Menu;
 using Prosim2GSX.GSX.Services;
 using ProsimInterface;
 using System;
@@ -141,6 +142,26 @@ namespace Prosim2GSX.AppConfig
         public virtual int DelayAircraftModeChange { get; set; } = 1250;
         public virtual int MenuCheckInterval { get; set; } = 250;
         public virtual int MenuOpenTimeout { get; set; } = 2500;
+
+        // Intent-based menu engine (Phase 2 refactor). The new GsxMenu.ExecuteIntent
+        // path resolves menu lines against live content + GSX state LVARs instead of
+        // fixed ordinals. The settings below control the dedicated CMTrace-format
+        // diagnostic log that records every resolution.
+        //   - Level: Off disables the file entirely; Normal logs one row per
+        //     intent (full menu dump on non-success); Verbose adds navigation +
+        //     per-poll rows and always dumps.
+        //   - RetainSessions: how many previous Prosim2GSX-GsxMenu-*.log files
+        //     to keep around the current session (older ones pruned at startup).
+        //   - Path: optional override for the log directory. Empty → same dir
+        //     as Prosim2GSX.log. Relative paths resolve against ProductPath
+        //     (matches the AudioDebugFile convention); absolute paths used as-is.
+        //   - IntentVerificationTimeout: budget (ms) for an intent's
+        //     VerifyOutcomeAsync poll to observe the expected LVAR transition
+        //     before the resolver returns MenuOutcome.GsxNoResponse.
+        public virtual GsxMenuDiagnosticLevel GsxMenuDiagnosticLevel { get; set; } = GsxMenuDiagnosticLevel.Normal;
+        public virtual int GsxMenuDiagnosticRetainSessions { get; set; } = 10;
+        public virtual string GsxMenuDiagnosticPath { get; set; } = "";
+        public virtual int IntentVerificationTimeout { get; set; } = 5000;
         public virtual int EfbCheckInterval { get; set; } = 1500;
         public virtual bool DingOnStartup { get; set; } = true;
         public virtual bool DingOnFinal { get; set; } = true;
@@ -392,6 +413,12 @@ namespace Prosim2GSX.AppConfig
             // upgrade keeps existing installs on the standard boot order;
             // users running ProSim on a remote machine that starts after MSFS
             // enable it via Settings > ProSim SDK & Data.
+
+            // v31: Intent-based menu engine settings added — GsxMenuDiagnosticLevel
+            // (Normal), GsxMenuDiagnosticRetainSessions (10), GsxMenuDiagnosticPath
+            // (empty = same dir as Prosim2GSX.log), and IntentVerificationTimeout
+            // (5000ms). All four take effect via System.Text.Json's default-for-
+            // missing-key behaviour — no explicit migration needed.
         }
 
         public virtual void SetFuelFob(string registration, double fuel)
