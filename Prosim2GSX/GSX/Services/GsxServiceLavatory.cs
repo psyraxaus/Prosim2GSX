@@ -1,5 +1,7 @@
 using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.GSX.Menu;
+using Prosim2GSX.GSX.Menu.Intents;
+using System.Threading.Tasks;
 
 namespace Prosim2GSX.GSX.Services
 {
@@ -10,6 +12,8 @@ namespace Prosim2GSX.GSX.Services
         public virtual ISimResourceSubscription SubLavatoryService { get; protected set; }
         protected override ISimResourceSubscription SubStateVar => SubLavatoryService;
 
+        // Phase 4 migration: DoCall routes through the RequestLavatory intent.
+        // AlternateTitles.Add(MenuGate) is dead in this code path.
         protected override GsxMenuSequence InitCallSequence()
         {
             var sequence = new GsxMenuSequence();
@@ -22,6 +26,8 @@ namespace Prosim2GSX.GSX.Services
 
             return sequence;
         }
+
+        protected override Task<bool> DoCall() => ExecuteIntentAsync(new RequestLavatory());
 
         protected override void InitSubscriptions()
         {

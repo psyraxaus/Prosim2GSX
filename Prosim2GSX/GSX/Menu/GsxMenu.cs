@@ -246,11 +246,18 @@ namespace Prosim2GSX.GSX.Menu
             Logger.Debug($"FollowMe Question active");
             if (AircraftProfile.SkipFollowMe && !FollowMeAnswered)
             {
-                var sequence = new GsxMenuSequence();
-                sequence.Commands.Add(new GsxMenuCommand(2, GsxConstants.MenuFollowMe, false) { WaitReady = false});
-                sequence.Commands.Add(GsxMenuCommand.CreateOperator());
-                sequence.Commands.Add(GsxMenuCommand.CreateReset());
-                FollowMeAnswered = await RunSequence(sequence);
+                // Phase 4 migration: replaces the Select(2)+Operator+Reset
+                // legacy sequence with the AnswerFollowMe intent (accept=false
+                // matches the legacy "item 2 = No" choice). The trailing
+                // OpenHide preserves the legacy Reset command's forced-close
+                // semantic; without it the verify can time out waiting for
+                // GSX to dismiss the menu on its own.
+                var phase = Controller.AutomationController.State;
+                var result = await ExecuteIntent(new AnswerFollowMe(accept: false), phase, RequestToken);
+                bool success = result.IsSuccess || result.IsBenignSkip;
+                if (success)
+                    await OpenHide();
+                FollowMeAnswered = success;
             }
         }
 
@@ -258,15 +265,22 @@ namespace Prosim2GSX.GSX.Menu
         {
             Logger.Debug($"DeIce Question active");
 
+            // Phase 4 migration: both branches replaced with the
+            // AnswerDeIceQuestion intent. The legacy code did not OpenHide
+            // after either Select (hide:0 default), so the migrated paths
+            // also rely on GSX dismissing the menu naturally — the intent's
+            // VerifyOutcomeAsync polls for that title transition.
+            var phase = Controller.AutomationController.State;
+
             if (Config.AutoDeiceEnabled && !DeIceQuestionAnswered)
             {
-                Logger.Information($"Auto-deice enabled: answering Yes (item 1) to de-icing request");
-                await Select(1, false, false);
+                Logger.Information($"Auto-deice enabled: answering Yes to de-icing request");
+                await ExecuteIntent(new AnswerDeIceQuestion(accept: true), phase, RequestToken);
                 return;
             }
 
             if (AircraftProfile.KeepDirectionMenuOpen && DeIceQuestionAnswered)
-                await Select(2);
+                await ExecuteIntent(new AnswerDeIceQuestion(accept: false), phase, RequestToken);
         }
 
         protected static readonly System.Collections.Generic.Dictionary<AutoDeiceFluid, (string Type, string Concentration)> DeiceFluidTokens = new()
@@ -334,7 +348,14 @@ namespace Prosim2GSX.GSX.Menu
             Logger.Debug($"Board Crew Question active");
             if (AircraftProfile.SkipCrewQuestion)
             {
-                await Select(1, false, false, 2);
+                // Phase 4 migration: replaces Select(1,..,hide:2) with the
+                // OnBoardCrewIntent + explicit OpenHide. The hide:2 semantic
+                // (force-close via OpenHide) is preserved because GSX does
+                // not reliably dismiss this menu on its own after a Yes.
+                var phase = Controller.AutomationController.State;
+                var result = await ExecuteIntent(new OnBoardCrewIntent(), phase, RequestToken);
+                if (result.IsSuccess || result.IsBenignSkip)
+                    await OpenHide();
                 SuppressMenuRefresh = false;
             }
         }
@@ -344,9 +365,13 @@ namespace Prosim2GSX.GSX.Menu
             Logger.Debug($"Deboard Crew Question active");
             if (AircraftProfile.SkipCrewQuestion)
             {
-                await Select(1, false, false, 2);
+                // Phase 4 migration: see OnBoardCrew for the hide:2 rationale.
+                var phase = Controller.AutomationController.State;
+                var result = await ExecuteIntent(new OnDeboardCrewIntent(), phase, RequestToken);
+                if (result.IsSuccess || result.IsBenignSkip)
+                    await OpenHide();
                 SuppressMenuRefresh = false;
-            }            
+            }
         }
 
         protected virtual void OnCouatlStopped(MsgGsxCouatlStopped msg)

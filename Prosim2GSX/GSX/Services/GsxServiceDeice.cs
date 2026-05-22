@@ -1,5 +1,7 @@
 using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.GSX.Menu;
+using Prosim2GSX.GSX.Menu.Intents;
+using System.Threading.Tasks;
 
 namespace Prosim2GSX.GSX.Services
 {
@@ -9,6 +11,9 @@ namespace Prosim2GSX.GSX.Services
         public virtual ISimResourceSubscription SubDeiceService { get; protected set; }
         protected override ISimResourceSubscription SubStateVar => SubDeiceService;
 
+        // Phase 4 migration: DoCall routes through the RequestDeice intent.
+        // AlternateTitles.Add(MenuGate) is dead in this code path — see GsxServiceGpu
+        // for the structural argument.
         protected override GsxMenuSequence InitCallSequence()
         {
             var sequence = new GsxMenuSequence();
@@ -21,6 +26,8 @@ namespace Prosim2GSX.GSX.Services
 
             return sequence;
         }
+
+        protected override Task<bool> DoCall() => ExecuteIntentAsync(new RequestDeice());
 
         protected override void InitSubscriptions()
         {
