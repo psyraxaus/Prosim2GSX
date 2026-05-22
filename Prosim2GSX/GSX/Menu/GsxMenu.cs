@@ -726,6 +726,63 @@ namespace Prosim2GSX.GSX.Menu
         }
 
         /// <summary>
+        /// Waits up to <paramref name="timeout"/> for the live menu to transition
+        /// into an operator-selection picker (either handling or catering). Used
+        /// by intent-migrated services after a service-request intent succeeds —
+        /// the operator picker materialises asynchronously when GSX needs it,
+        /// and the request intent's verify only confirms the LVAR state change,
+        /// not the follow-up menu transition. Returns true when the operator
+        /// menu is observed, false on timeout. Polls at <c>Config.MenuCheckInterval</c>.
+        /// </summary>
+        public virtual async Task<bool> WaitForOperatorMenuAsync(TimeSpan timeout, CancellationToken token)
+        {
+            int waited = 0;
+            int interval = Math.Max(50, Config.MenuCheckInterval);
+            int budget = (int)timeout.TotalMilliseconds;
+            while (waited < budget && !IsOperatorMenu)
+            {
+                if (token.IsCancellationRequested) return IsOperatorMenu;
+                try { await Task.Delay(interval, token); }
+                catch (OperationCanceledException) { return IsOperatorMenu; }
+                waited += interval;
+            }
+            return IsOperatorMenu;
+        }
+
+        /// <summary>
+        /// Waits for a human menu click on the open operator-selection picker,
+        /// up to <c>Config.OperatorSelectTimeout</c>. Mirrors the manual-wait
+        /// branch in <see cref="RunCommand"/>'s legacy <c>Operator</c> command
+        /// type — extracted so intent-migrated services (Phase 3+) can invoke
+        /// the same behaviour without going through <see cref="RunSequence"/>.
+        /// On timeout, fires <see cref="Timeout"/>; on success, closes the menu
+        /// via <see cref="OpenHide"/>. Returns true if a selection was observed.
+        /// </summary>
+        public virtual async Task<bool> WaitForManualOperatorSelectionAsync(CancellationToken token)
+        {
+            int waited = 0;
+            int interval = Math.Max(50, Config.MenuCheckInterval);
+            int budget = Config.OperatorSelectTimeout;
+            LastMenuSelection = -2;
+            Logger.Information($"Waiting for manual Operator Selection ... (Timeout {budget / 1000}s)");
+            while (waited < budget && LastMenuSelection == -2)
+            {
+                if (token.IsCancellationRequested) return false;
+                try { await Task.Delay(interval, token); }
+                catch (OperationCanceledException) { return false; }
+                waited += interval;
+            }
+            Logger.Debug($"Wait ended after {waited}ms - LastSelection {LastMenuSelection}");
+            if (waited >= budget)
+            {
+                Timeout();
+                return false;
+            }
+            await OpenHide();
+            return true;
+        }
+
+        /// <summary>
         /// Resolves and executes a <see cref="GsxMenuIntent"/> against the live menu.
         /// This is the entry point that replaces the legacy
         /// <c>RunSequence</c>/<c>RunCommand</c>/<c>GsxMenuCommand</c> path; Phase 3+

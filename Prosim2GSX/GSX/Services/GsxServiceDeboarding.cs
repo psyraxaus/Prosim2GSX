@@ -2,6 +2,7 @@ using CFIT.AppLogger;
 using CFIT.AppTools;
 using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.GSX.Menu;
+using Prosim2GSX.GSX.Menu.Intents;
 using System;
 using System.Threading.Tasks;
 
@@ -22,6 +23,12 @@ namespace Prosim2GSX.GSX.Services
         public event Action<GsxServiceDeboarding> OnPaxChange;
         public event Action<GsxServiceDeboarding> OnCargoChange;
 
+        // Phase 3+ migration: DoCall routes through the RequestDeboarding intent
+        // rather than RunSequence(CallSequence). InitCallSequence still returns
+        // the legacy sequence so the CallSequence field is populated for the
+        // SequenceResult-based fallbacks elsewhere in the codebase; the sequence
+        // itself is never executed. Phase 6 removes both the override and the
+        // abstract method.
         protected override GsxMenuSequence InitCallSequence()
         {
             var sequence = new GsxMenuSequence();
@@ -31,6 +38,8 @@ namespace Prosim2GSX.GSX.Services
 
             return sequence;
         }
+
+        protected override Task<bool> DoCall() => ExecuteIntentAsync(new RequestDeboarding());
 
         protected override void InitSubscriptions()
         {

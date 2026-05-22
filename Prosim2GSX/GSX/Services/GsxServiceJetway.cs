@@ -1,5 +1,6 @@
 using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.GSX.Menu;
+using Prosim2GSX.GSX.Menu.Intents;
 using System.Threading.Tasks;
 
 namespace Prosim2GSX.GSX.Services
@@ -16,6 +17,8 @@ namespace Prosim2GSX.GSX.Services
         public virtual bool IsConnected => SubService.GetNumber() == (int)GsxServiceState.Active && SubOperating.GetNumber() < 3;
         public virtual bool IsOperating => SubService.GetNumber() == (int)GsxServiceState.Requested || SubOperating.GetNumber() > 3;
 
+        // Phase 3+ migration: DoCall routes through the RequestJetway intent.
+        // Legacy sequence preserved as a dead placeholder; Phase 6 removes both.
         protected override GsxMenuSequence InitCallSequence()
         {
             var sequence = new GsxMenuSequence();
@@ -44,10 +47,17 @@ namespace Prosim2GSX.GSX.Services
 
         protected override async Task<bool> DoCall()
         {
-            if (IsAvailable)
-                return await base.DoCall();
-            else
+            if (!IsAvailable)
+            {
+                // Preserve the legacy "no-op success when not available" behaviour.
+                // The RequestJetway intent's precondition would map this to
+                // StatePreconditionFailed (a real failure), which would change
+                // caller-visible semantics — guarding at the override level keeps
+                // the existing IsAvailable=false path silently successful.
+                if (CallSequence != null) CallSequence.IsSuccess = true;
                 return true;
+            }
+            return await ExecuteIntentAsync(new RequestJetway());
         }
 
         public virtual async Task Remove()

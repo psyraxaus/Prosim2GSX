@@ -2,6 +2,7 @@ using CFIT.AppLogger;
 using CFIT.AppTools;
 using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.GSX.Menu;
+using Prosim2GSX.GSX.Menu.Intents;
 using System;
 using System.Threading.Tasks;
 
@@ -22,6 +23,8 @@ namespace Prosim2GSX.GSX.Services
         public event Action<GsxServiceBoarding> OnPaxChange;
         public event Action<GsxServiceBoarding> OnCargoChange;
 
+        // Phase 3+ migration: DoCall routes through the RequestBoarding intent.
+        // Legacy sequence preserved as a dead placeholder; Phase 6 removes both.
         protected override GsxMenuSequence InitCallSequence()
         {
             var sequence = new GsxMenuSequence();
@@ -31,6 +34,8 @@ namespace Prosim2GSX.GSX.Services
 
             return sequence;
         }
+
+        protected override Task<bool> DoCall() => ExecuteIntentAsync(new RequestBoarding());
 
         protected override void InitSubscriptions()
         {

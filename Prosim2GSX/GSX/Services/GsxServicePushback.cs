@@ -2,6 +2,7 @@ using CFIT.AppLogger;
 using CFIT.AppTools;
 using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.GSX.Menu;
+using Prosim2GSX.GSX.Menu.Intents;
 using System;
 using System.Threading.Tasks;
 
@@ -25,6 +26,11 @@ namespace Prosim2GSX.GSX.Services
 
         public event Action<GsxServicePushback> OnBypassPin;
 
+        // Phase 3 migration: the primary Call() path (PushStatus == 0 || !IsCalled
+        // branch in Call() below) now routes through the RequestPushbackPrepare
+        // intent. The legacy InitCallSequence is preserved as a dead placeholder.
+        // EndPushback / ConfirmEngineStart and the mid-pushback re-open branch
+        // of Call() are intentionally NOT migrated here — Phase 4 handles them.
         protected override GsxMenuSequence InitCallSequence()
         {
             var sequence = new GsxMenuSequence();
@@ -34,6 +40,8 @@ namespace Prosim2GSX.GSX.Services
 
             return sequence;
         }
+
+        protected override Task<bool> DoCall() => ExecuteIntentAsync(new RequestPushbackPrepare());
 
         protected override void InitSubscriptions()
         {
@@ -99,6 +107,12 @@ namespace Prosim2GSX.GSX.Services
                 await base.Call();
             else if (PushStatus > 0 && PushStatus < 5)
             {
+                // PHASE 4 TODO: this mid-pushback re-open branch still constructs
+                // a GsxMenuSequence directly. It can't reuse RequestPushbackPrepare
+                // (its precondition rejects non-Callable states). Either define a
+                // ReopenPushbackMenu intent or move this branch into Phase 4's
+                // interrupt-pushback migration. Tracked in the design recap
+                // (Section G item 5).
                 var sequence = new GsxMenuSequence();
                 sequence.Commands.Add(new(5, GsxConstants.MenuGate, true) { NoHide = true });
                 await Controller.Menu.RunSequence(sequence);

@@ -4,6 +4,7 @@ using CFIT.AppTools;
 using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.AppConfig;
 using Prosim2GSX.GSX.Menu;
+using Prosim2GSX.GSX.Menu.Intents;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -299,6 +300,75 @@ namespace Prosim2GSX.GSX.Services
             bool result = await Controller.Menu.RunSequence(CallSequence);
             Logger.Debug($"{Type} Sequence completed: Success {result}");
             return result;
+        }
+
+        /// <summary>
+        /// Phase 3+ migration helper. Executes a single <see cref="GsxMenuIntent"/>
+        /// via the new <see cref="GsxMenu.ExecuteIntent"/> resolver, optionally
+        /// chains operator-picker handling (matching the legacy CreateOperator
+        /// command in each gate-service's InitCallSequence), and preserves the
+        /// <see cref="CallSequence"/>.IsSuccess signal that subclasses like
+        /// Lavatory/Water/Cleaning/Reposition still read via
+        /// <see cref="SequenceResult"/>.
+        ///
+        /// <para>
+        /// Operator chaining semantics (preserved from the legacy CreateOperator
+        /// flow): wait up to <c>OperatorWaitTimeout</c> for the menu to
+        /// transition into an operator picker. If it does:
+        /// <list type="bullet">
+        /// <item><description>When <see cref="AircraftProfile.OperatorAutoSelect"/> is true → invoke the
+        /// <see cref="SelectOperator"/> intent. (Note: the existing
+        /// <see cref="GsxMenu.UpdateMenu"/> auto-select may race with this — both
+        /// paths compute the same target via <c>GsxOperator.OperatorSelection</c>,
+        /// so the second write is benign / no-op.)</description></item>
+        /// <item><description>Otherwise → call <see cref="GsxMenu.WaitForManualOperatorSelectionAsync"/>
+        /// to block until a human click or timeout.</description></item>
+        /// </list>
+        /// When the menu does not transition to an operator picker (the request
+        /// didn't need one, or GSX skipped it), the helper returns immediately
+        /// — matching the legacy behaviour where the CreateOperator command's
+        /// polls fall through after OperatorWaitTimeout.
+        /// </para>
+        /// </summary>
+        protected virtual async Task<bool> ExecuteIntentAsync(GsxMenuIntent intent, bool handleOperatorPicker = true)
+        {
+            if (intent == null) return false;
+
+            var phase = Controller.AutomationController.State;
+            var result = await Controller.Menu.ExecuteIntent(intent, phase, Controller.Token);
+            bool success = result.IsSuccess || result.IsBenignSkip;
+
+            if (!success)
+            {
+                Logger.Warning($"{Type}: intent {intent.IntentName} did not succeed ({result.Outcome}) — {result.Reason}");
+            }
+            else if (handleOperatorPicker && !Controller.Token.IsCancellationRequested)
+            {
+                var operatorWait = TimeSpan.FromMilliseconds(Controller.Config.OperatorWaitTimeout);
+                bool opMenu = await Controller.Menu.WaitForOperatorMenuAsync(operatorWait, Controller.Token);
+                if (opMenu)
+                {
+                    if (Profile != null && Profile.OperatorAutoSelect)
+                    {
+                        // Intent-routed auto-select. May race with UpdateMenu's
+                        // own auto-select path; same target operator, benign.
+                        await Controller.Menu.ExecuteIntent(new SelectOperator(Profile), phase, Controller.Token);
+                    }
+                    else
+                    {
+                        await Controller.Menu.WaitForManualOperatorSelectionAsync(Controller.Token);
+                    }
+                }
+            }
+
+            // Preserve the legacy SequenceResult signal — Lavatory/Water/Cleaning
+            // and Reposition still read CallSequence.IsSuccess via the
+            // SequenceResult property. Without this, their CheckCalled / GetState
+            // overrides would never observe a successful call.
+            if (CallSequence != null)
+                CallSequence.IsSuccess = success;
+
+            return success;
         }
 
         protected virtual void NotifyStateChange()
