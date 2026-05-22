@@ -4,6 +4,8 @@ using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.GSX.Menu;
 using Prosim2GSX.GSX.Menu.Intents;
 using System;
+using System.Globalization;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Prosim2GSX.GSX.Services
@@ -25,6 +27,17 @@ namespace Prosim2GSX.GSX.Services
         public virtual ISimResourceSubscription SubBypassPin { get; protected set; }
 
         public event Action<GsxServicePushback> OnBypassPin;
+
+        /// <summary>
+        /// Phase 5 diagnostic record of the most recent
+        /// <see cref="GsxMenu.OnPushbackDirection"/> decision. Set by
+        /// <c>GsxMenu</c> when the direction menu is auto-picked; consumed and
+        /// cleared by the pushback-completion follow-up emission in
+        /// <see cref="OnVehiclePushbackStateChange"/>. Null when no decision
+        /// is outstanding (initial state, after follow-up emission, after
+        /// reset).
+        /// </summary>
+        public virtual PushbackDirectionDecision LastDirectionDecision { get; set; }
 
         // Phase 3 migration: the primary Call() path (PushStatus == 0 || !IsCalled
         // branch in Call() below) now routes through the RequestPushbackPrepare
@@ -67,9 +80,51 @@ namespace Prosim2GSX.GSX.Services
             if (!IsProsimAircraft)
                 return;
             // Subscription registered for its side-effects on derived
-            // properties (VehiclePushbackState / Label) — no log emission
-            // needed; the engine-start gate in GsxAutomationController
-            // logs once when it actually fires Confirm good engine start.
+            // properties (VehiclePushbackState / Label) — no main-Logger
+            // emission needed; the engine-start gate in
+            // GsxAutomationController logs once when it actually fires
+            // Confirm good engine start.
+
+            // Phase 5: pushback-direction follow-up. States 13 (Disconnecting)
+            // and 14 (Clear to start) indicate the physical push is over;
+            // emit a diagnostic comparing our recorded decision to the post-
+            // push observed state. One-shot — clear the decision so a
+            // subsequent transition (re-attach, etc.) doesn't re-fire.
+            var state = (int)sub.GetNumber();
+            if ((state == 13 || state == 14) && LastDirectionDecision != null)
+            {
+                var decision = LastDirectionDecision;
+                LastDirectionDecision = null;
+                try { EmitPushbackDirectionFollowup(decision, state); }
+                catch (Exception ex) { Logger.LogException(ex); }
+            }
+        }
+
+        private void EmitPushbackDirectionFollowup(PushbackDirectionDecision decision, int observedState)
+        {
+            var diag = Controller?.GsxMenuDiagnosticLog;
+            if (diag == null || decision == null) return;
+
+            var sb = new StringBuilder();
+            sb.AppendLine("Pushback completion follow-up");
+            sb.Append("  Decision at: ")
+              .AppendLine(decision.At.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture));
+            sb.Append("  Pushback state: ")
+              .Append(observedState).Append(" (")
+              .Append(MapVehiclePushbackState(observedState)).AppendLine(")");
+            sb.Append("  Preference: ").AppendLine(decision.Preference.ToString());
+            sb.Append("  Strategy: ").AppendLine(decision.Strategy ?? "<null>");
+            sb.Append("  Selected entry: ").AppendLine(decision.SelectedEntryText ?? "<none>");
+            if (decision.ParsedSelectedHeading.HasValue)
+                sb.Append("  Parsed selected bearing: ")
+                  .Append(decision.ParsedSelectedHeading.Value.ToString("F1", CultureInfo.InvariantCulture))
+                  .AppendLine("°");
+            else
+                sb.AppendLine("  Parsed selected bearing: unparseable");
+            sb.AppendLine("  Heading delta from start: unknown (no SimConnect heading source wired)");
+            sb.AppendLine("  Verdict: unknown — bearing-vs-prediction analysis disabled until a heading source is wired");
+
+            diag.LogDiagnostic("pushback-direction-followup", sb.ToString());
         }
 
         protected virtual void OnPushChange(ISimResourceSubscription sub, object data)
@@ -99,6 +154,10 @@ namespace Prosim2GSX.GSX.Services
             TugAttachedOnBoarding = false;
             EngineStartConfirmed = false;
             Controller.PushbackDirectionAutoSelected = false;
+            // Phase 5: drop any pending direction-decision context so a
+            // reset (turnaround, profile change) does not leak the previous
+            // cycle's data into a future pushback-direction-followup row.
+            LastDirectionDecision = null;
         }
 
         public override async Task Call()

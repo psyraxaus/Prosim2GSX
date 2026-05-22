@@ -4,6 +4,7 @@ using CFIT.AppTools;
 using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.AppConfig;
 using Prosim2GSX.GSX.Menu.Intents;
+using Prosim2GSX.GSX.Services;
 using ProsimInterface;
 using System;
 using System.Collections.Concurrent;
@@ -11,6 +12,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -170,6 +172,12 @@ namespace Prosim2GSX.GSX.Menu
                 strategy = "fixed-index";
             }
 
+            // Phase 5 diagnostic emission — captured AFTER the existing
+            // matching logic settles on its answer, BEFORE any side-effect
+            // (Select / log spam / state mutation). Purely observational; the
+            // matching algorithm above is unchanged.
+            EmitPushbackDirectionDiagnostic(preference, searchToken, index, strategy);
+
             if (index < 0)
             {
                 Logger.Information($"Pushback direction menu: could not auto-pick '{searchToken}' (text{(preference != PushbackPreference.Straight ? " and fixed-index" : "")} failed). Menu lines:");
@@ -182,6 +190,87 @@ namespace Prosim2GSX.GSX.Menu
             Logger.Information($"Auto-selecting pushback direction (preference={preference}, strategy={strategy}, item {index + 1}: '{MenuLines[index]}')");
             await Select(index + 1, false, false);
             Controller.PushbackDirectionAutoSelected = true;
+        }
+
+        private void EmitPushbackDirectionDiagnostic(PushbackPreference preference, string searchToken, int selectedIndex, string strategy)
+        {
+            var diag = Controller?.GsxMenuDiagnosticLog;
+            if (diag == null) return;
+
+            try
+            {
+                var sb = new StringBuilder();
+                sb.AppendLine("Pushback direction decision");
+                sb.Append("  Airport: ")
+                  .AppendLine(string.IsNullOrWhiteSpace(Controller?.AutomationController?.DepartureIcao)
+                      ? "unknown" : Controller.AutomationController.DepartureIcao);
+                sb.AppendLine("  Stand: unknown (not currently exposed through AircraftInterface)");
+                sb.AppendLine("  Heading: unknown (no SimConnect heading source wired — bearing-delta analysis disabled)");
+                sb.Append("  Preference: ").Append(preference)
+                  .Append(" (search token: '").Append(searchToken ?? "<null>").Append("')").AppendLine();
+                sb.Append("  MenuTitle: '").Append(MenuTitle).Append("'").AppendLine();
+                sb.Append("  MenuLines (").Append(MenuLineCount).Append("):").AppendLine();
+                for (int i = 0; i < MenuLines.Count; i++)
+                {
+                    var line = MenuLines[i] ?? string.Empty;
+                    var compass = PushbackCompassParser.TryParse(line);
+                    sb.Append("    [").Append(i + 1).Append("] ").Append(line);
+                    if (compass.HasValue)
+                        sb.Append("  -> parsed: ").Append(compass.Value.Token)
+                          .Append("=").Append(compass.Value.Degrees.ToString("F1", System.Globalization.CultureInfo.InvariantCulture))
+                          .Append("°");
+                    else
+                        sb.Append("  -> unparseable");
+                    sb.AppendLine();
+                }
+                if (selectedIndex >= 0 && selectedIndex < MenuLines.Count)
+                {
+                    sb.Append("  Selected: entry ").Append(selectedIndex + 1)
+                      .Append(" '").Append(MenuLines[selectedIndex])
+                      .Append("' via strategy '").Append(strategy).Append("'").AppendLine();
+                    sb.Append("  Verdict: ").AppendLine(strategy == "text"
+                        ? "OK (keyword match)"
+                        : strategy == "fixed-index"
+                            ? "FALLBACK (no keyword match, fixed-index fallback used)"
+                            : strategy);
+                }
+                else
+                {
+                    sb.AppendLine("  Selected: none");
+                    sb.AppendLine("  Verdict: MANUAL (no match, no fallback, menu left open for user)");
+                }
+
+                diag.LogDiagnostic("pushback-direction", sb.ToString());
+
+                // Record decision context so the pushback-completion observer
+                // can emit the follow-up diagnostic. Best-effort cast — if the
+                // service registry doesn't yet contain Pushback (degraded
+                // startup), we silently skip the follow-up.
+                if (Controller != null
+                    && Controller.GsxServices != null
+                    && Controller.GsxServices.TryGetValue(GsxServiceType.Pushback, out var svc)
+                    && svc is GsxServicePushback pushback)
+                {
+                    double? parsedBearing = null;
+                    if (selectedIndex >= 0 && selectedIndex < MenuLines.Count)
+                    {
+                        var parsed = PushbackCompassParser.TryParse(MenuLines[selectedIndex]);
+                        if (parsed.HasValue) parsedBearing = parsed.Value.Degrees;
+                    }
+                    pushback.LastDirectionDecision = new PushbackDirectionDecision
+                    {
+                        At = DateTime.UtcNow,
+                        Preference = preference,
+                        SelectedEntryText = (selectedIndex >= 0 && selectedIndex < MenuLines.Count) ? MenuLines[selectedIndex] : null,
+                        Strategy = strategy,
+                        ParsedSelectedHeading = parsedBearing,
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
         }
 
         protected virtual int FindPushbackLineByText(string tailToken)
@@ -474,6 +563,23 @@ namespace Prosim2GSX.GSX.Menu
                     for (int i = 0; i < MenuLines.Count; i++)
                         Logger.Information($"  [{i + 1}] {MenuLines[i]}");
                 }
+
+                // Phase 5 Part 3: passive menu snapshot. Legacy Select(N) paths
+                // (OnTugQuestion, GsxController.ReloadSimbrief, etc.) bypass
+                // the intent-execution log because the in-flight grace window
+                // correctly attributes their writes as ours. This per-title-
+                // change capture covers them — one diagnostic row per menu
+                // transition, sufficient to unblock the deferred AnswerTugQuestion
+                // and ReloadSimbrief intents once a turnaround flight runs.
+                try
+                {
+                    var sb = new StringBuilder();
+                    sb.Append("Title: '").Append(MenuTitle).Append("' (").Append(MenuLineCount).AppendLine(" entries)");
+                    for (int i = 0; i < MenuLines.Count; i++)
+                        sb.Append("  [").Append(i + 1).Append("] ").AppendLine(MenuLines[i]);
+                    Controller.GsxMenuDiagnosticLog?.LogDiagnostic("menu-snapshot", sb.ToString());
+                }
+                catch (Exception ex) { Logger.LogException(ex); }
             }
 
             if (IsOperatorMenu && AircraftProfile.OperatorAutoSelect)
