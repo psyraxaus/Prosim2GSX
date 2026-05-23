@@ -175,12 +175,26 @@ namespace Prosim2GSX.State
             if (services.TryGetValue(GsxServiceType.Jetway, out s))
             {
                 gsx.ServiceJetway = s.State;
-                gsx.ServiceJetwayConnected = (s as global::Prosim2GSX.GSX.Services.GsxServiceJetway)?.IsConnected ?? false;
+                // Display flag: use IsActive (state == Active) rather than the
+                // strict IsConnected (state == Active && operation idle). GSX Pro
+                // v4 has been observed to leave the operation LVAR stuck at
+                // "in motion" indefinitely after a docked jetway, which made
+                // the old IsConnected report false despite the jetway being
+                // physically attached. The UI "Jetway Connected" pill then
+                // showed "—" forever. IsActive aligns with what the user sees
+                // in GSX itself; strict IsConnected stays intact for code
+                // paths that need definitive "docked-and-idle" semantics
+                // (Remove(), automation gating, intent IsAlreadySatisfied).
+                gsx.ServiceJetwayConnected = (s as global::Prosim2GSX.GSX.Services.GsxServiceJetway)?.IsActive ?? false;
             }
             if (services.TryGetValue(GsxServiceType.Stairs, out s))
             {
                 gsx.ServiceStairs = s.State;
-                gsx.ServiceStairsConnected = (s as global::Prosim2GSX.GSX.Services.GsxServiceStairs)?.IsConnected ?? false;
+                // Same rationale as Jetway above — display flag uses IsActive.
+                // For gates with no stairs equipment, state stays
+                // GsxServiceState.NotAvailable so IsActive is correctly false
+                // and the UI shows "—".
+                gsx.ServiceStairsConnected = (s as global::Prosim2GSX.GSX.Services.GsxServiceStairs)?.IsActive ?? false;
             }
 
             UpdateAssignedGate();

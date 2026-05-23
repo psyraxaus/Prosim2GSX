@@ -21,6 +21,14 @@ namespace Prosim2GSX.GSX
         // (where the apron implies the prefix). Requires the GATE keyword to
         // anchor the match so we don't pick up unrelated numbers in the line.
         protected static readonly Regex GateTokenRegex = new(@"\bGATE\s+([A-Z]*)(\d+)([A-Z]*)\b", RegexOptions.Compiled);
+        // Gate-letter parent entry for two-level airports (e.g. EHAM Schiphol):
+        // the "Select Position at <airport>" page lists "Gate A (N suitable parkings)" /
+        // "Gate D (36 suitable parkings)" etc., and drilling into one opens
+        // "All Gate D positions" with the specific stand entries. The regex
+        // matches "Gate <LETTERS>" followed by optional whitespace and an
+        // opening paren — the paren is the discriminator that rules out
+        // "Gate D 18 - Heavy" (specific stand) and "Gates W34-W48" (apron range).
+        protected static readonly Regex GateLetterParentRegex = new(@"\bGATE\s+([A-Z]+)\s*\(", RegexOptions.Compiled);
         // Extract implied apron prefix from titles like "All Apron 1W (Gates W34-W48) positions".
         protected static readonly Regex ApronPrefixRegex = new(@"APRON\s+\d+([A-Z]+)", RegexOptions.Compiled);
 
@@ -159,6 +167,21 @@ namespace Prosim2GSX.GSX
                             chosen = FindRangeMatchIndex(lines, target);
                             if (chosen >= 0)
                                 strategy = "range";
+                        }
+
+                        // Two-level airport layout (Schiphol convention): the
+                        // "Select Position at <airport>" page lists "Gate A
+                        // (N suitable parkings)" / "Gate D (36 suitable
+                        // parkings)" parent entries, and the actual stands
+                        // live one level deeper under "All Gate D positions".
+                        // When the target's letter prefix matches a parent
+                        // letter on this page, drill into it.
+                        if (chosen < 0)
+                        {
+                            var (targetPrefix, _, _) = ParseGateId(target);
+                            chosen = FindGateLetterParentIndex(lines, targetPrefix);
+                            if (chosen >= 0)
+                                strategy = "gate-letter-parent";
                         }
 
                         if (chosen < 0)
@@ -362,6 +385,30 @@ namespace Prosim2GSX.GSX
                     if (prefix == targetPrefix && number == targetNumber && suffix == targetSuffix)
                         return i;
                 }
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// Finds a "Gate &lt;LETTER&gt; (N suitable parkings)" parent entry whose
+        /// letter prefix matches <paramref name="targetPrefix"/>. Used for
+        /// two-level airport navigation (Schiphol-style) where the position
+        /// list is split into a per-letter parent menu and a per-stand child
+        /// menu. Returns -1 when no parent matches or <paramref name="targetPrefix"/>
+        /// is empty.
+        /// </summary>
+        protected virtual int FindGateLetterParentIndex(IReadOnlyList<string> lines, string targetPrefix)
+        {
+            if (string.IsNullOrEmpty(targetPrefix)) return -1;
+            for (int i = 0; i < lines.Count; i++)
+            {
+                var upper = (lines[i] ?? "").ToUpperInvariant();
+                // Skip page-nav rows.
+                if (upper.Contains(NextPageToken) || upper.Contains(PreviousPageToken) || upper.StartsWith(BackToken))
+                    continue;
+                var m = GateLetterParentRegex.Match(upper);
+                if (m.Success && m.Groups[1].Value == targetPrefix)
+                    return i;
             }
             return -1;
         }

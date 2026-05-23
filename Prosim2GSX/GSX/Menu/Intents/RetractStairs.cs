@@ -44,15 +44,9 @@ namespace Prosim2GSX.GSX.Menu.Intents
 
         public override Task<bool> VerifyOutcomeAsync(GsxController controller, TimeSpan timeout, CancellationToken token)
         {
-            return IntentHelpers.PollUntilAsync(
-                () =>
-                {
-                    var stairs = IntentHelpers.GetService<GsxServiceStairs>(controller, GsxServiceType.Stairs);
-                    return stairs == null || stairs.State != GsxServiceState.Active;
-                },
-                timeout,
-                IntentHelpers.DefaultPollInterval,
-                token);
+            // Same fire-and-confirm pattern as RetractJetway — see that
+            // class for the rationale.
+            return Task.FromResult(true);
         }
 
         public override string Describe() => "Retract the gate passenger stairs";

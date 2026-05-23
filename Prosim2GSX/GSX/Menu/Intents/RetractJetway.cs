@@ -71,18 +71,16 @@ namespace Prosim2GSX.GSX.Menu.Intents
 
         public override Task<bool> VerifyOutcomeAsync(GsxController controller, TimeSpan timeout, CancellationToken token)
         {
-            // Verify that the jetway has transitioned out of Active. GSX
-            // typically moves Active → Callable (with operation cycling
-            // through "moving away" → idle) within the verification budget.
-            return IntentHelpers.PollUntilAsync(
-                () =>
-                {
-                    var jetway = IntentHelpers.GetService<GsxServiceJetway>(controller, GsxServiceType.Jetway);
-                    return jetway == null || jetway.State != GsxServiceState.Active;
-                },
-                timeout,
-                IntentHelpers.DefaultPollInterval,
-                token);
+            // Retract is fire-and-confirm: the menu click is the action, and
+            // GSX physical retraction takes 15-30s — well beyond the default
+            // 5s IntentVerificationTimeout. Field testing showed waiting on
+            // state == Active reliably timed out as GsxNoResponse even though
+            // the retract was happening normally (next pushback step
+            // succeeded a minute later). Nothing downstream gates on the
+            // verify result for retract, so declaring success at the menu-
+            // write point is correct and removes a misleading red row from
+            // the diagnostic log on every retract.
+            return Task.FromResult(true);
         }
 
         public override string Describe() => "Retract the gate jetway";
