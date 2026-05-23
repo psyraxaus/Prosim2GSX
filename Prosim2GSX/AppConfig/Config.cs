@@ -201,6 +201,16 @@ namespace Prosim2GSX.AppConfig
         // the next drain trims the queue to UiLogMaxMessages and emits a single warning.
         public virtual int UiLogQueueWarnThreshold { get; set; } = 1000;
 
+        // Phase 6.5.B ground-reproduction switch for the recurring
+        // ERROR_NOT_ENOUGH_QUOTA dispatcher saturation crash. When true,
+        // the app forces MainWindowShowOnStartup=false regardless of the
+        // user's normal setting AND ResourceDiagnosticsWorker drops its
+        // heartbeat cadence from 300s to 30s so trends show up in
+        // ground-test timescales. Off in production; enable only when
+        // actively trying to reproduce the crash on the ground without a
+        // flight. See docs/phase2-prompts/phase-6-5-resource-diagnostics-summary.md.
+        public virtual bool StressMode { get; set; } = false;
+
         // Theme
         public virtual string CurrentTheme { get; set; } = "Light";
 
@@ -419,6 +429,11 @@ namespace Prosim2GSX.AppConfig
             // (empty = same dir as Prosim2GSX.log), and IntentVerificationTimeout
             // (5000ms). All four take effect via System.Text.Json's default-for-
             // missing-key behaviour — no explicit migration needed.
+
+            // v32: StressMode flag added (Phase 6.5.B) for ground reproduction
+            // of the recurring ERROR_NOT_ENOUGH_QUOTA crash. Default false on
+            // upgrade keeps existing installs in normal operation; the user
+            // flips it manually in the JSON when actively investigating.
         }
 
         public virtual void SetFuelFob(string registration, double fuel)

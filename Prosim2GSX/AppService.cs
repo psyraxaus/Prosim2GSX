@@ -8,6 +8,7 @@ using Prosim2GSX.Audio;
 using Prosim2GSX.Checklists;
 using Prosim2GSX.UI.Views.Checklists;
 using Prosim2GSX.Commands;
+using Prosim2GSX.Diagnostics;
 using Prosim2GSX.GSX;
 using Prosim2GSX.Prosim;
 using Prosim2GSX.SayIntentions;
@@ -71,10 +72,17 @@ namespace Prosim2GSX
         protected virtual MessageLogDrainWorker MessageLogDrainWorker { get; set; }
 
         // Always-on resource telemetry (USER/GDI/handle counts + CFIT log queue
-        // depth). Lives here rather than on AppWindow because the headless
-        // scenario — window never shown — is exactly the one that crashed, and
-        // the AppWindow-hosted heartbeat never ran in that case.
+        // depth + WPF dispatcher post/complete/pending counters). Lives here
+        // rather than on AppWindow because the headless scenario — window
+        // never shown — is exactly the one that crashed, and the
+        // AppWindow-hosted heartbeat never ran in that case.
         protected virtual ResourceDiagnosticsWorker ResourceDiagnosticsWorker { get; set; }
+
+        // Dedicated CMTrace-format resource log (Phase 6.5.B). Paired with
+        // ResourceDiagnosticsWorker: the worker measures, this writes the
+        // detailed per-tick / per-top-poster / per-WARN rows. Owned by
+        // AppService for the same headless-survival reason as the worker.
+        public virtual ResourceDiagnosticsLog ResourceDiagnosticsLog { get; protected set; }
 
         // Embedded Kestrel host for the LAN browser interface. Constructed
         // unconditionally so it can react to Config.WebServerEnabled changes
@@ -211,9 +219,17 @@ namespace Prosim2GSX
             // log drain still surfaces messages in degraded mode, and the state
             // poller is null-safe so it simply leaves store fields at defaults
             // until controllers come up.
+            // ResourceDiagnosticsLog is constructed first so the worker can
+            // emit into it from the very first heartbeat. Path resolution
+            // mirrors GsxController's appLogDirectory derivation so both
+            // diagnostic logs land in the same directory.
+            string appLogDirectory = Path.Join(
+                AppConfig.Config.Definition?.ProductPath ?? string.Empty,
+                AppConfig.Config.Definition?.ProductLogPath ?? "log");
+            ResourceDiagnosticsLog = new ResourceDiagnosticsLog(appLogDirectory);
             StateUpdateWorker = new StateUpdateWorker(this);
             MessageLogDrainWorker = new MessageLogDrainWorker(FlightStatus, Config);
-            ResourceDiagnosticsWorker = new ResourceDiagnosticsWorker(Config);
+            ResourceDiagnosticsWorker = new ResourceDiagnosticsWorker(this, Config, ResourceDiagnosticsLog);
             StateUpdateWorker.Start();
             MessageLogDrainWorker.Start();
             ResourceDiagnosticsWorker.Start();
@@ -498,6 +514,7 @@ namespace Prosim2GSX
             try { StateUpdateWorker?.Stop(); } catch { }
             try { MessageLogDrainWorker?.Stop(); } catch { }
             try { ResourceDiagnosticsWorker?.Stop(); } catch { }
+            try { ResourceDiagnosticsLog?.Dispose(); } catch { }
             try { WebHost?.Stop(); } catch { }
             try { OfpAutoSend?.Detach(); } catch { }
 

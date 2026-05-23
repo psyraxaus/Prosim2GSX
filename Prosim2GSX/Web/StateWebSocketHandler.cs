@@ -42,6 +42,14 @@ namespace Prosim2GSX.Web
         private readonly AppService _app;
         private readonly ConcurrentDictionary<Guid, Connection> _connections = new();
 
+        /// <summary>
+        /// Number of currently-open WebSocket connections. Read-only;
+        /// exposed for <c>ResourceDiagnosticsWorker</c> so the heartbeat
+        /// row can correlate dispatcher / request-rate metrics with how
+        /// many web clients are actually attached.
+        /// </summary>
+        public virtual int ConnectionCount => _connections.Count;
+
         // Whitelist for Config.PropertyChanged so we never leak internal /
         // operational fields to the wire (binary names, intervals, etc.).
         // Sourced from AppSettingsDto so the whitelist tracks the DTO without

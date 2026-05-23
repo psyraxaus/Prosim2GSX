@@ -3,6 +3,7 @@ using CFIT.AppLogger;
 using CFIT.AppTools;
 using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.AppConfig;
+using Prosim2GSX.Diagnostics;
 using Prosim2GSX.GSX.Menu.Intents;
 using Prosim2GSX.GSX.Services;
 using ProsimInterface;
@@ -782,6 +783,13 @@ namespace Prosim2GSX.GSX.Menu
         public virtual async Task<GsxMenuResult> ExecuteIntent(GsxMenuIntent intent, AutomationState currentPhase, CancellationToken token = default)
         {
             if (intent == null) throw new ArgumentNullException(nameof(intent));
+
+            // Phase 6.5.B: any UiMarshal.Post/PostBackground that fires while
+            // this intent (or one of its callees) is executing is attributed
+            // to "intent:{IntentName}" in the ResourceDiagnosticsWorker
+            // top-N report. Nested intents (ParentMenu navigation) save and
+            // restore the outer name, so attribution follows the call chain.
+            using var _intentScope = UiMarshal.BeginIntentContext(intent.IntentName);
 
             var stopwatch = Stopwatch.StartNew();
             GsxMenuResult result;

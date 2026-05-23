@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Prosim2GSX.AppConfig;
+using Prosim2GSX.Diagnostics;
 using Prosim2GSX.Web.Contracts;
 using Prosim2GSX.Web.Middleware;
 using System;
@@ -215,6 +216,18 @@ namespace Prosim2GSX.Web
 #if DEBUG
             _webApp.UseCors();
 #endif
+
+            // Phase 6.5.B: pass-through request-counting middleware. Sits
+            // before the bearer gate so even auth-rejected requests are
+            // counted (they're real Kestrel load). ResourceDiagnosticsWorker
+            // reads the counters each heartbeat. Pure observation — never
+            // short-circuits or modifies the response.
+            _webApp.Use(async (ctx, next) =>
+            {
+                WebRequestMetrics.OnRequestStart();
+                try { await next(); }
+                finally { WebRequestMetrics.OnRequestEnd(); }
+            });
 
             // WebSockets middleware MUST be registered BEFORE UseRouting /
             // MapControllers, otherwise the endpoint that handles /ws fires
