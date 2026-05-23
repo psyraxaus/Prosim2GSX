@@ -20,7 +20,11 @@ namespace Prosim2GSX.GSX
         // can match lines like "Gate 46" once we're inside an apron context
         // (where the apron implies the prefix). Requires the GATE keyword to
         // anchor the match so we don't pick up unrelated numbers in the line.
-        protected static readonly Regex GateTokenRegex = new(@"\bGATE\s+([A-Z]*)(\d+)([A-Z]*)\b", RegexOptions.Compiled);
+        // The \s* between prefix and number allows for both contiguous formats
+        // ("Gate W34") and space-separated formats ("Gate D 5" — EHAM Schiphol
+        // convention). Doesn't conflict with GateLetterParentRegex because
+        // that one requires an opening paren after the letters.
+        protected static readonly Regex GateTokenRegex = new(@"\bGATE\s+([A-Z]*)\s*(\d+)([A-Z]*)\b", RegexOptions.Compiled);
         // Gate-letter parent entry for two-level airports (e.g. EHAM Schiphol):
         // the "Select Position at <airport>" page lists "Gate A (N suitable parkings)" /
         // "Gate D (36 suitable parkings)" etc., and drilling into one opens
@@ -96,8 +100,10 @@ namespace Prosim2GSX.GSX
                         // Open the GSX gate/parking menu (item 10 = "Activate Services at" or "Select airport"
                         // depending on whether GSX considers us parked).
                         var rootTitle = Menu.MenuTitle;
+                        var rootCount = Menu.MenuLineCount;
+                        var rootFirstLine = GetFirstLineOrEmpty(Menu.MenuLines);
                         await Menu.Select(10);
-                        if (!await WaitForMenuChange(rootTitle, Menu.MenuLineCount, Controller.Config.MenuOpenTimeout))
+                        if (!await WaitForMenuChange(rootTitle, rootCount, rootFirstLine, Controller.Config.MenuOpenTimeout))
                         {
                             Logger.Warning($"GsxParkingSelector: GSX menu did not advance from '{rootTitle}'");
                             outcome = $"aborted: GSX menu did not advance from root '{rootTitle}' after Select(10)";
@@ -196,8 +202,9 @@ namespace Prosim2GSX.GSX
                                 LogPageDiagnostic(pagesTraversed, step, pageTitle, pageLinesSnapshot, nextPageIdx, "next-page", $"no match — paginating (click {pageClicksAtLevel}/{MaxPageClicksPerLevel})");
                                 var prevTitle = Menu.MenuTitle;
                                 var prevCount = lines.Count;
+                                var prevFirstLine = GetFirstLineOrEmpty(lines);
                                 await Menu.Select(nextPageIdx + 1);
-                                if (!await WaitForMenuChange(prevTitle, prevCount, Controller.Config.MenuOpenTimeout))
+                                if (!await WaitForMenuChange(prevTitle, prevCount, prevFirstLine, Controller.Config.MenuOpenTimeout))
                                 {
                                     Logger.Warning($"GsxParkingSelector: menu did not refresh after Next Page at row {nextPageIdx + 1}");
                                     outcome = $"aborted: menu did not refresh after Next Page at depth {step}";
@@ -225,8 +232,9 @@ namespace Prosim2GSX.GSX
                         LogPageDiagnostic(pagesTraversed, step, pageTitle, pageLinesSnapshot, chosen, strategy, $"drilling into row {chosen + 1}");
                         var prevTitleDrill = Menu.MenuTitle;
                         var prevCountDrill = lines.Count;
+                        var prevFirstLineDrill = GetFirstLineOrEmpty(lines);
                         await Menu.Select(chosen + 1);
-                        if (!await WaitForMenuChange(prevTitleDrill, prevCountDrill, Controller.Config.MenuOpenTimeout))
+                        if (!await WaitForMenuChange(prevTitleDrill, prevCountDrill, prevFirstLineDrill, Controller.Config.MenuOpenTimeout))
                         {
                             Logger.Warning($"GsxParkingSelector: menu did not refresh after selecting row {chosen + 1} (still '{Menu.MenuTitle}')");
                             outcome = $"aborted: menu did not refresh after drill into row {chosen + 1} at depth {step}";
@@ -319,7 +327,18 @@ namespace Prosim2GSX.GSX
                 || Menu.MatchTitle(GateListTitlePrefix);
         }
 
-        protected virtual async Task<bool> WaitForMenuChange(string previousTitle, int previousLineCount, int timeoutMs)
+        /// <summary>
+        /// Polls until GSX refreshes the menu after a click, then returns true.
+        /// Returns false on timeout.
+        ///
+        /// <para>Change is detected by ANY of: title differs, line count differs,
+        /// OR <em>first-line text</em> differs. The first-line check exists
+        /// because GSX sub-page pagination (e.g. clicking "Next Page" on
+        /// "All Gate D positions") keeps both the title and the line count
+        /// stable — only the entries change. Without the first-line check
+        /// the selector would conclude the menu didn't refresh and abort.</para>
+        /// </summary>
+        protected virtual async Task<bool> WaitForMenuChange(string previousTitle, int previousLineCount, string previousFirstLine, int timeoutMs)
         {
             int waited = 0;
             int interval = Math.Max(50, Controller.Config.MenuCheckInterval);
@@ -327,11 +346,17 @@ namespace Prosim2GSX.GSX
             {
                 await Task.Delay(interval, Controller.RequestToken);
                 waited += interval;
-                if (Menu.MenuTitle != previousTitle || Menu.MenuLineCount != previousLineCount)
+                if (Menu.MenuTitle != previousTitle
+                    || Menu.MenuLineCount != previousLineCount
+                    || GetFirstLineOrEmpty(Menu.MenuLines) != previousFirstLine)
                     return true;
             }
             return false;
         }
+
+        /// <summary>Snapshot the first menu line as a non-null string for change-detection comparison.</summary>
+        protected static string GetFirstLineOrEmpty(IReadOnlyList<string> lines)
+            => (lines != null && lines.Count > 0) ? (lines[0] ?? "") : "";
 
         protected virtual int FindIcaoIndex(IReadOnlyList<string> lines, string normalisedIcao)
         {
