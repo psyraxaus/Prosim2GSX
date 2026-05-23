@@ -1154,16 +1154,15 @@ namespace Prosim2GSX.GSX
                 }
             }
 
-            // GSX exposes the "good engine start" prompt via VEHICLE_PUSHBACK_STATE == 12
-            // (WaitForConfirmation) — the explicit signal that the tug has stopped and is
-            // waiting for crew to confirm engine start on the Interrupt menu. Auto-confirm
-            // once brakes are set and both engines are running.
-            if (ServicePushBack.VehiclePushbackState == 12
+            // GSX's "good engine start" prompt corresponds to
+            // PushbackPhase.AwaitingEngineStart (raw VEHICLE_PUSHBACK_STATE == 12).
+            // Auto-confirm once brakes are set and both engines are running.
+            if (ServicePushBack.Phase == PushbackPhase.AwaitingEngineStart
                 && Aircraft.IsBrakeSet
                 && Aircraft.AllEnginesRunning
                 && !ServicePushBack.EngineStartConfirmed)
             {
-                Logger.Information($"Automation: VehiclePushbackState=12 + brakes set + both engines running — sending Confirm good engine start");
+                Logger.Information($"Automation: Phase=AwaitingEngineStart + brakes set + both engines running — sending Confirm good engine start");
                 await ServicePushBack.ConfirmEngineStart();
                 await Task.Delay(Config.StateMachineInterval, RequestToken);
             }

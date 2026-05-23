@@ -18,8 +18,19 @@ namespace Prosim2GSX.GSX.Services
         protected override ISimResourceSubscription SubStateVar => SubDepartService;
         public virtual bool IsPinInserted => SubBypassPin.GetNumber() == 1;
         public virtual int PushStatus => (int)SubPushStatus.GetNumber();
+        // Raw int kept for backwards compatibility with existing callers
+        // (StateUpdateWorker, DebugDataService, the GsxAutomationController
+        // == 12 check). New callers should prefer the strongly-typed
+        // <see cref="Phase"/> property below.
         public virtual int VehiclePushbackState => (int)SubVehiclePushbackState.GetNumber();
-        public virtual string VehiclePushbackStateLabel => MapVehiclePushbackState(VehiclePushbackState);
+        /// <summary>
+        /// Strongly-typed view of <c>FSDT_GSX_VEHICLE_PUSHBACK_STATE</c>.
+        /// Reads the raw LVAR via <see cref="SubVehiclePushbackState"/> and
+        /// maps it through <see cref="PushbackPhaseExtensions.FromRaw"/>.
+        /// </summary>
+        public virtual PushbackPhase Phase
+            => PushbackPhaseExtensions.FromRaw(SubVehiclePushbackState?.GetNumber() ?? -1);
+        public virtual string VehiclePushbackStateLabel => Phase.ToDisplayLabel();
         public virtual bool IsTugConnected => SubPushStatus.GetNumber() == 3 || SubPushStatus.GetNumber() == 4;
         public virtual bool TugAttachedOnBoarding { get; protected set; } = false;
         public virtual bool EngineStartConfirmed { get; protected set; } = false;
@@ -48,16 +59,13 @@ namespace Prosim2GSX.GSX.Services
             SubBypassPin = RegisterChangeSubscription(GsxConstants.VarBypassPin, NotifyBypassPin);
         }
 
-        protected static string MapVehiclePushbackState(int state) => state switch
-        {
-            8 => "Pushing back",
-            11 => "Waiting for engine shutdown",
-            12 => "Awaiting engine start confirmation",
-            13 => "Disconnecting",
-            14 => "Clear to start",
-            0 => "Idle",
-            _ => $"State {state}",
-        };
+        // Retained as a thin shim over the enum's ToDisplayLabel so the
+        // diagnostic emission below — which knows the raw int it observed
+        // — keeps a single call site. New code should use
+        // <c>PushbackPhaseExtensions.FromRaw(state).ToDisplayLabel()</c>
+        // directly.
+        protected static string MapVehiclePushbackState(int state)
+            => PushbackPhaseExtensions.FromRaw(state).ToDisplayLabel();
 
         protected virtual void OnVehiclePushbackStateChange(ISimResourceSubscription sub, object data)
         {
@@ -69,13 +77,15 @@ namespace Prosim2GSX.GSX.Services
             // GsxAutomationController logs once when it actually fires
             // Confirm good engine start.
 
-            // Phase 5: pushback-direction follow-up. States 13 (Disconnecting)
-            // and 14 (Clear to start) indicate the physical push is over;
-            // emit a diagnostic comparing our recorded decision to the post-
-            // push observed state. One-shot — clear the decision so a
-            // subsequent transition (re-attach, etc.) doesn't re-fire.
+            // Phase 5: pushback-direction follow-up. PushbackPhase.Disconnecting
+            // and PushbackPhase.ClearToStart indicate the physical push is
+            // over; emit a diagnostic comparing our recorded decision to
+            // the post-push observed state. One-shot — clear the decision
+            // so a subsequent transition (re-attach, etc.) doesn't re-fire.
             var state = (int)sub.GetNumber();
-            if ((state == 13 || state == 14) && LastDirectionDecision != null)
+            var phase = PushbackPhaseExtensions.FromRaw(state);
+            if ((phase == PushbackPhase.Disconnecting || phase == PushbackPhase.ClearToStart)
+                && LastDirectionDecision != null)
             {
                 var decision = LastDirectionDecision;
                 LastDirectionDecision = null;

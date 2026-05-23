@@ -146,6 +146,24 @@ namespace Prosim2GSX.GSX.Menu
         {
             var preference = Controller.PushbackPreference;
 
+            // GSX has been observed to re-open the direction menu after the
+            // push has already started (field log 2026-05-23 captured this
+            // on a TailLeft push at EFHK gate 24 — direction was selected
+            // at 16:32:25, push reached PushingBack, then the direction
+            // menu reopened at 16:33:02 and was auto-selected again). Once
+            // the pushback phase is past direction-needed, suppress the
+            // auto-select regardless of PushbackPreferenceReapplyOnChange —
+            // re-selecting direction mid-push is never the right action.
+            if (Controller != null
+                && Controller.GsxServices != null
+                && Controller.GsxServices.TryGetValue(GsxServiceType.Pushback, out var pushSvc)
+                && pushSvc is GsxServicePushback pushback
+                && pushback.Phase.IsPushInProgress())
+            {
+                Logger.Debug($"Pushback direction menu reopened while push already in progress (Phase={pushback.Phase}); skipping auto-select");
+                return;
+            }
+
             if (!Config.PushbackPreferenceReapplyOnChange && Controller.PushbackDirectionAutoSelected)
             {
                 Logger.Debug($"Pushback direction menu reopened; preference already applied this cycle, skipping");

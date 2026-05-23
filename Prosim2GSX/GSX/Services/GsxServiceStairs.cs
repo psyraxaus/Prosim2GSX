@@ -13,9 +13,18 @@ namespace Prosim2GSX.GSX.Services
         protected override ISimResourceSubscription SubStateVar => SubService;
         public virtual ISimResourceSubscription SubOperating { get; protected set; }
 
+        /// <summary>
+        /// Strongly-typed view of <c>FSDT_GSX_STAIRS_OPERATION</c>. See
+        /// <see cref="JetwayOperation"/> for the shared semantics.
+        /// </summary>
+        public virtual JetwayOperation Operation
+            => JetwayOperationExtensions.FromRaw(SubOperating?.GetNumber() ?? 0);
+
         public virtual bool IsAvailable => State != GsxServiceState.NotAvailable;
-        public virtual bool IsConnected => SubService.GetNumber() == (int)GsxServiceState.Active && SubOperating.GetNumber() < 3;
-        public virtual bool IsOperating => SubService.GetNumber() == (int)GsxServiceState.Requested || SubOperating.GetNumber() > 3;
+        // Behaviour preserved from the pre-enum implementation; same
+        // semantic notes as GsxServiceJetway.
+        public virtual bool IsConnected => State == GsxServiceState.Active && Operation.IsIdle();
+        public virtual bool IsOperating => State == GsxServiceState.Requested || Operation.IsInMotion();
 
         protected override void InitSubscriptions()
         {
@@ -44,12 +53,17 @@ namespace Prosim2GSX.GSX.Services
             return await ExecuteIntentAsync(new RequestStairs());
         }
 
+        /// <summary>
+        /// Retracts the stairs when GSX considers the service Active.
+        /// Routes through <see cref="RetractStairs"/> for the same reason
+        /// <see cref="GsxServiceJetway.Remove"/> uses
+        /// <see cref="RetractJetway"/> — see that method for the rationale.
+        /// </summary>
         public virtual async Task Remove()
         {
-            if (!IsConnected || !IsAvailable || IsOperating)
-                return;
-
-            await DoCall();
+            if (!IsAvailable) return;
+            if (State != GsxServiceState.Active) return;
+            await ExecuteIntentAsync(new RetractStairs(), handleOperatorPicker: false);
         }
 
         protected override void OnStateChange(ISimResourceSubscription sub, object data)
