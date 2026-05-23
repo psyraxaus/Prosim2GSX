@@ -70,11 +70,13 @@ namespace Prosim2GSX.GSX.Services
         protected virtual bool IsProsimAircraft => AppService.Instance.IsProsimAircraft;
 
         public virtual bool IsCalled { get; protected set; } = false;
-        protected virtual bool SequenceResult => CallSequence?.IsSuccess ?? false;
-        protected virtual GsxMenuSequence CallSequence { get; }
+        // Per-cycle success flag set by ExecuteIntentAsync (or subclass DoCall
+        // overrides). Lavatory/Water/Cleaning/Reposition consult it through
+        // SequenceResult in their CheckCalled / GetState overrides.
+        protected bool LastCallResult { get; set; } = false;
+        protected virtual bool SequenceResult => LastCallResult;
         protected abstract ISimResourceSubscription SubStateVar { get; }
         public virtual GsxServiceState State => GetState();
-        public virtual bool IsCalling => CallSequence.IsExecuting;
         public virtual bool IsRunning => State == GsxServiceState.Requested || State == GsxServiceState.Active;
         public virtual bool IsActive => State == GsxServiceState.Active;
         public virtual bool IsCompleted => State == GsxServiceState.Completed || WasCompleted;
@@ -109,12 +111,9 @@ namespace Prosim2GSX.GSX.Services
         public GsxService(GsxController controller)
         {
             Controller = controller;
-            CallSequence = InitCallSequence();
             InitSubscriptions();
             Controller.GsxServices.Add(Type, this);
         }
-
-        protected abstract GsxMenuSequence InitCallSequence();
 
         protected abstract void InitSubscriptions();
 
@@ -218,7 +217,7 @@ namespace Prosim2GSX.GSX.Services
             _lastNotifiedState = GsxServiceState.Unknown;
             _activeNotified = false;
             _completedNotified = false;
-            CallSequence.Reset();
+            LastCallResult = false;
             if (resetVariable)
                 SetStateVariable(GsxServiceState.Callable);
             DoReset();
@@ -295,21 +294,14 @@ namespace Prosim2GSX.GSX.Services
             IsCalled = CheckCalled();
         }
 
-        protected virtual async Task<bool> DoCall()
-        {
-            bool result = await Controller.Menu.RunSequence(CallSequence);
-            Logger.Debug($"{Type} Sequence completed: Success {result}");
-            return result;
-        }
+        protected abstract Task<bool> DoCall();
 
         /// <summary>
-        /// Phase 3+ migration helper. Executes a single <see cref="GsxMenuIntent"/>
-        /// via the new <see cref="GsxMenu.ExecuteIntent"/> resolver, optionally
-        /// chains operator-picker handling (matching the legacy CreateOperator
-        /// command in each gate-service's InitCallSequence), and preserves the
-        /// <see cref="CallSequence"/>.IsSuccess signal that subclasses like
-        /// Lavatory/Water/Cleaning/Reposition still read via
-        /// <see cref="SequenceResult"/>.
+        /// Intent-execution helper. Routes a single <see cref="GsxMenuIntent"/>
+        /// through <see cref="GsxMenu.ExecuteIntent"/>, optionally chains
+        /// operator-picker handling, and records the per-cycle result in
+        /// <see cref="LastCallResult"/> (consumed by subclasses such as
+        /// Lavatory/Water/Cleaning/Reposition via <see cref="SequenceResult"/>).
         ///
         /// <para>
         /// Operator chaining semantics (preserved from the legacy CreateOperator
@@ -375,13 +367,7 @@ namespace Prosim2GSX.GSX.Services
                 }
             }
 
-            // Preserve the legacy SequenceResult signal — Lavatory/Water/Cleaning
-            // and Reposition still read CallSequence.IsSuccess via the
-            // SequenceResult property. Without this, their CheckCalled / GetState
-            // overrides would never observe a successful call.
-            if (CallSequence != null)
-                CallSequence.IsSuccess = success;
-
+            LastCallResult = success;
             return success;
         }
 

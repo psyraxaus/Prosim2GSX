@@ -43,8 +43,6 @@ namespace Prosim2GSX.GSX.Menu
         public virtual List<string> MenuLines { get; } = [];
 
         public virtual bool FirstReadyReceived { get; protected set; } = false;
-        public virtual bool IsSequenceActive { get; protected set; } = false;
-        protected virtual bool WasOperatorSelected { get; set; } = false;
         public virtual bool IsMenuReady => MenuState == GsxMenuState.READY || MenuState == GsxMenuState.HIDE;
         public virtual bool IsGateMenu => MatchTitle(GsxConstants.MenuGate);
         public virtual bool IsOperatorMenu => MatchTitle(GsxConstants.MenuOperatorHandling) || MatchTitle(GsxConstants.MenuOperatorCater);
@@ -689,142 +687,6 @@ namespace Prosim2GSX.GSX.Menu
                 await OpenHide();
         }
 
-        public virtual async Task<bool> RunSequence(GsxMenuSequence sequence)
-        {
-            bool result = false;
-            IsSequenceActive = true;
-            sequence.IsExecuting = true;
-            WasOperatorSelected = false;
-
-            int counter = 0;
-            bool justHidden = false;
-            foreach (var command in sequence.Commands)
-            {
-                if ((!Controller.IsGsxRunning && !sequence.IgnoreGsxState) || RequestToken.IsCancellationRequested)
-                    break;
-
-                if (await RunCommand(command, justHidden) == true)
-                    counter++;
-
-                justHidden = command.OpenMenu && !command.NoHide;
-            }
-            result = counter == sequence.Commands.Count;
-            if (result)
-                sequence.CallbackCompleted?.Invoke(sequence);
-            
-            sequence.IsExecuting = false;
-            IsSequenceActive = false;
-            sequence.IsSuccess = result;
-            return result;
-        }
-
-        protected virtual async Task<bool> RunCommand(GsxMenuCommand command, bool priorHidMenu = false)
-        {
-            bool result = false;
-            Logger.Verbose($"Run Cmd Type: {command.Type}");
-            if (command.OpenMenu)
-            {
-                Logger.Verbose($"wait menu");
-                if (command.NoHide)
-                {
-                    if (await Open(command.WaitReady) == false)
-                        return result;
-                }
-                else
-                {
-                    if (await OpenHide() == false)
-                        return result;
-                }
-            }
-            else if (command.WaitReady && (priorHidMenu || MenuState != GsxMenuState.READY))
-            {
-                Logger.Verbose($"wait rdy (priorHid={priorHidMenu})");
-                var ready = await MsgMenuReady.ReceiveAsync(true, Config.MenuOpenTimeout, RequestToken);
-                if (priorHidMenu)
-                {
-                    if (ready == null)
-                    {
-                        Logger.Warning($"Menu Command aborted - expected submenu did not open after previous hide (MenuTitle: '{MenuTitle}')");
-                        return result;
-                    }
-                    await Task.Delay(Config.MenuCheckInterval, RequestToken);
-                }
-            }
-
-            if (command.HasTitle && !command.MatchesAny(MatchTitle))
-            {
-                // An operator-selection menu ("Select … operator") still on
-                // screen when the next service command arrives is a normal
-                // transient — RunDeparture retries on the next tick and it
-                // resolves. Log that at Debug to avoid alarming WRN noise;
-                // a mismatch against any other title stays a Warning.
-                bool transientOperatorMenu = MenuTitle?.TrimEnd()
-                    .EndsWith("operator", StringComparison.OrdinalIgnoreCase) == true;
-                string msg = $"Menu Command skipped - Title did not match: '{MenuTitle}' does not start with '{command.Title}'";
-                if (transientOperatorMenu)
-                    Logger.Debug(msg);
-                else
-                    Logger.Warning(msg);
-                return result;
-            }
-
-            if (command.Type == GsxMenuCommandType.Number)
-            {
-                Logger.Verbose($"op num");
-                await Select(command.Number, command.WaitReady);
-            }
-            else if (command.Type == GsxMenuCommandType.DummyWait)
-            {
-                await Task.Delay(Config.MenuCheckInterval * 2, RequestToken);
-            }
-            else if (command.Type == GsxMenuCommandType.Reset)
-            {
-                await Task.Delay(Config.MenuCheckInterval, RequestToken);
-                await OpenHide();
-            }
-            else if (command.Type == GsxMenuCommandType.Operator)
-            {
-                Logger.Verbose($"Op Cmd");
-                int timeWaited = 0;
-                do
-                {
-                    if (!IsMenuReady || !WasOperatorSelected)
-                        await Task.Delay(Config.MenuCheckInterval, RequestToken);
-                    timeWaited += Config.MenuCheckInterval;
-                }
-                while (timeWaited < Config.OperatorWaitTimeout && !IsMenuReady && !WasOperatorSelected && !Controller.Token.IsCancellationRequested && !RequestToken.IsCancellationRequested);
-                Logger.Verbose($"Rdy wait ended");
-                if (Controller.Token.IsCancellationRequested || RequestToken.IsCancellationRequested)
-                    return false;
-
-                if (IsOperatorMenu && !AircraftProfile.OperatorAutoSelect)
-                {
-                    timeWaited = 0;
-                    LastMenuSelection = -2;
-                    Logger.Information($"Waiting for manual Operator Selection ... (Timeout {Config.OperatorSelectTimeout / 1000}s)");
-                    do
-                    {
-                        if (LastMenuSelection == -2)
-                            await Task.Delay(Config.MenuCheckInterval, Controller.Token);
-                        timeWaited += Config.MenuCheckInterval;
-                    }
-                    while (timeWaited < Config.OperatorSelectTimeout && LastMenuSelection == -2 && !Controller.Token.IsCancellationRequested && !RequestToken.IsCancellationRequested);
-                    if (Controller.Token.IsCancellationRequested)
-                        return false;
-                    Logger.Debug($"Wait ended after {timeWaited}ms - LastSelection {LastMenuSelection}");
-                    if (timeWaited >= Config.OperatorSelectTimeout)
-                        Timeout();
-                    else
-                        await OpenHide();
-                }
-                else if (IsOperatorMenu && WasOperatorSelected)
-                    await OpenHide();
-            }
-
-            result = true;
-            return result;
-        }
-
         public virtual async Task SelectOperator()
         {
             var gsxOperator = GsxOperator.OperatorSelection(AircraftProfile, MenuLines);
@@ -882,12 +744,9 @@ namespace Prosim2GSX.GSX.Menu
 
         /// <summary>
         /// Waits for a human menu click on the open operator-selection picker,
-        /// up to <c>Config.OperatorSelectTimeout</c>. Mirrors the manual-wait
-        /// branch in <see cref="RunCommand"/>'s legacy <c>Operator</c> command
-        /// type — extracted so intent-migrated services (Phase 3+) can invoke
-        /// the same behaviour without going through <see cref="RunSequence"/>.
-        /// On timeout, fires <see cref="Timeout"/>; on success, closes the menu
-        /// via <see cref="OpenHide"/>. Returns true if a selection was observed.
+        /// up to <c>Config.OperatorSelectTimeout</c>. On timeout, fires
+        /// <see cref="Timeout"/>; on success, closes the menu via
+        /// <see cref="OpenHide"/>. Returns true if a selection was observed.
         /// </summary>
         public virtual async Task<bool> WaitForManualOperatorSelectionAsync(CancellationToken token)
         {
@@ -914,13 +773,11 @@ namespace Prosim2GSX.GSX.Menu
         }
 
         /// <summary>
-        /// Resolves and executes a <see cref="GsxMenuIntent"/> against the live menu.
-        /// This is the entry point that replaces the legacy
-        /// <c>RunSequence</c>/<c>RunCommand</c>/<c>GsxMenuCommand</c> path; Phase 3+
-        /// migrations route every menu interaction through here. The result is rich
-        /// enough that callers don't need to consult any other state to know what
-        /// happened, and the diagnostic log is emitted once per call (success or
-        /// failure) at the single return path.
+        /// Resolves and executes a <see cref="GsxMenuIntent"/> against the live
+        /// menu. The single entry point for menu interaction. The result is rich
+        /// enough that callers don't need to consult any other state to know
+        /// what happened, and the diagnostic log is emitted once per call
+        /// (success or failure) at the single return path.
         /// </summary>
         public virtual async Task<GsxMenuResult> ExecuteIntent(GsxMenuIntent intent, AutomationState currentPhase, CancellationToken token = default)
         {

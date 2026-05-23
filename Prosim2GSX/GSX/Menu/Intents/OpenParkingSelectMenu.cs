@@ -7,17 +7,12 @@ namespace Prosim2GSX.GSX.Menu.Intents
 {
     /// <summary>
     /// Navigation intent: from the gate menu, click "Reposition Aircraft" to
-    /// open the "Select Position at &lt;airport&gt;" submenu. This intent is the
-    /// structural replacement for the legacy <c>parkingSelect</c> +
-    /// <c>AlternateTitles.Add(MenuGate)</c> pattern in
-    /// <c>GsxServiceReposition.InitCallSequence</c> — the AlternateTitles
-    /// fallback let a "Select(1) on the parking-select submenu" command write
-    /// against the gate menu instead, where index 1 is "Request Deboarding".
-    /// Resolving against the live gate menu title (MenuGate) and verifying that
-    /// the new menu is MenuParkingSelect makes that collision structurally
-    /// impossible: a slow submenu transition leaves the title at MenuGate and
-    /// the resolver returns MenuTitleMismatch on the next attempt instead of
-    /// blindly writing a choice.
+    /// open the "Select Position at &lt;airport&gt;" submenu. Resolves against
+    /// the live gate menu title (MenuGate) and verifies the new menu is
+    /// MenuParkingSelect — a slow submenu transition leaves the title at
+    /// MenuGate and the resolver returns MenuTitleMismatch on the next attempt
+    /// instead of blindly writing a choice (which on the gate menu would land
+    /// on index 1, "Request Deboarding").
     /// </summary>
     internal sealed class OpenParkingSelectMenu : KeywordIntent
     {

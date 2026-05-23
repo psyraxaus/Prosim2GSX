@@ -13,8 +13,7 @@ namespace Prosim2GSX.GSX.Menu.Intents
     /// (<see cref="GsxMenu.ExecuteIntent"/>) walks the intent's parent chain to
     /// navigate, snapshots the live menu, verifies the title, then calls
     /// <see cref="ResolveMenuLineIndex"/> against the snapshot to obtain the
-    /// 0-based choice index. This eliminates the AlternateTitles + fixed-Number
-    /// collision class of bugs from the legacy GsxMenuCommand path.
+    /// 0-based choice index.
     /// </summary>
     public abstract class GsxMenuIntent
     {

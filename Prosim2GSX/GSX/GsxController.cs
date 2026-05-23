@@ -743,11 +743,10 @@ namespace Prosim2GSX.GSX
 
         public virtual async Task ReloadSimbrief()
         {
-            var sequence = new GsxMenuSequence();
-            sequence.Commands.Add(new(15, "", true));
-            sequence.Commands.Add(GsxMenuCommand.CreateDummy());
-
-            await Menu.RunSequence(sequence);
+            if (await Menu.OpenHide() == false)
+                return;
+            await Menu.Select(15, waitReady: true);
+            await Task.Delay(Config.MenuCheckInterval * 2, Token);
         }
 
         public override Task Stop()

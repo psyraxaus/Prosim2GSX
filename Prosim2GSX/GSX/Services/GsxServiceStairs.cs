@@ -1,6 +1,5 @@
 using CFIT.AppLogger;
 using CFIT.SimConnectLib.SimResources;
-using Prosim2GSX.GSX.Menu;
 using Prosim2GSX.GSX.Menu.Intents;
 using System.Threading.Tasks;
 
@@ -17,18 +16,6 @@ namespace Prosim2GSX.GSX.Services
         public virtual bool IsAvailable => State != GsxServiceState.NotAvailable;
         public virtual bool IsConnected => SubService.GetNumber() == (int)GsxServiceState.Active && SubOperating.GetNumber() < 3;
         public virtual bool IsOperating => SubService.GetNumber() == (int)GsxServiceState.Requested || SubOperating.GetNumber() > 3;
-
-        // Phase 3+ migration: DoCall routes through the RequestStairs intent.
-        // Legacy sequence preserved as a dead placeholder; Phase 6 removes both.
-        protected override GsxMenuSequence InitCallSequence()
-        {
-            var sequence = new GsxMenuSequence();
-            sequence.Commands.Add(new(7, GsxConstants.MenuGate, true));
-            sequence.Commands.Add(GsxMenuCommand.CreateOperator());
-            sequence.Commands.Add(GsxMenuCommand.CreateDummy());
-
-            return sequence;
-        }
 
         protected override void InitSubscriptions()
         {
@@ -51,7 +38,7 @@ namespace Prosim2GSX.GSX.Services
             if (!IsAvailable)
             {
                 // Same legacy-preservation guard as Jetway — see that class for details.
-                if (CallSequence != null) CallSequence.IsSuccess = true;
+                LastCallResult = true;
                 return true;
             }
             return await ExecuteIntentAsync(new RequestStairs());
