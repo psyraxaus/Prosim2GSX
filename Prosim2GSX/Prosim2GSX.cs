@@ -1,10 +1,13 @@
 ﻿using System;
+using System.ComponentModel;
 using System.IO;
 using System.Reflection;
 using System.Windows;
+using System.Windows.Threading;
 using CFIT.AppFramework;
 using CFIT.AppLogger;
 using Prosim2GSX.AppConfig;
+using Prosim2GSX.Diagnostics;
 using Prosim2GSX.Themes;
 using Prosim2GSX.UI;
 using Prosim2GSX.UI.NotifyIcon;
@@ -151,6 +154,65 @@ namespace Prosim2GSX
         {
             base.InitAppWindow();
             AppContext.SetSwitch("Switch.System.Windows.Controls.Grid.StarDefinitionsCanExceedAvailableSpace", true);
+        }
+
+        /// <summary>
+        /// Phase 6.6 resilience override. Intercepts the specific recurring
+        /// WPF dispatcher quota exception (<see cref="Win32Exception"/> with
+        /// <c>NativeErrorCode == 1816</c> / <c>ERROR_NOT_ENOUGH_QUOTA</c>) from
+        /// the render pipeline (<c>HwndTarget.UpdateWindowSettings → PostMessage</c>),
+        /// hands it to <see cref="DispatcherQuotaHandler"/> for forensic
+        /// logging, marks the dispatcher exception args as <c>Handled</c>,
+        /// and returns WITHOUT calling base so CFIT's
+        /// <see cref="SimApp{TApp,TAppService,TConfig,TDefinition}.UnhandledExceptionHandler"/>
+        /// does NOT force-shut-down the app.
+        ///
+        /// <para>
+        /// Per the Phase 6.5.B diagnostic findings the in-process resource
+        /// state is healthy at the moment of crash (USER ~30, dispatcher
+        /// pending ~3). The exception is almost certainly an external/
+        /// transient OS or WPF render-subsystem failure, so the pragmatic
+        /// response is to swallow the specific code, log it richly, and
+        /// keep running. Every other exception flows through to
+        /// <c>base.UnhandledExceptionHandler</c> unchanged — its
+        /// shutdown / log / exit-code path is preserved.
+        /// </para>
+        ///
+        /// <para>
+        /// The handler MUST NEVER throw. The body is wrapped in try/catch
+        /// and on any failure we fall through to <c>base</c> so the existing
+        /// crash pipeline still runs.
+        /// </para>
+        /// </summary>
+        public override void UnhandledExceptionHandler(object sender, EventArgs args)
+        {
+            try
+            {
+                if (args is DispatcherUnhandledExceptionEventArgs dispatchArgs
+                    && dispatchArgs.Exception is Win32Exception win32Ex
+                    && win32Ex.NativeErrorCode == DispatcherQuotaHandler.ErrorNotEnoughQuota)
+                {
+                    var handler = AppService.Instance?.DispatcherQuotaHandler;
+                    if (handler != null)
+                    {
+                        try { handler.HandleQuotaException(win32Ex); }
+                        catch { /* the handler is bulletproof internally; this catch is belt-and-braces */ }
+                        dispatchArgs.Handled = true;
+                        return;
+                    }
+                    // No handler yet — very early startup before AppService
+                    // has constructed it. Better to crash with full
+                    // diagnostics than swallow silently with no record.
+                }
+            }
+            catch
+            {
+                // Recognition path itself failed (cast / property access).
+                // Fall through to the existing crash handler so we don't
+                // hide an unrelated failure.
+            }
+
+            base.UnhandledExceptionHandler(sender, args);
         }
     }
 }

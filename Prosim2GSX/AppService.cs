@@ -76,13 +76,23 @@ namespace Prosim2GSX
         // rather than on AppWindow because the headless scenario — window
         // never shown — is exactly the one that crashed, and the
         // AppWindow-hosted heartbeat never ran in that case.
-        protected virtual ResourceDiagnosticsWorker ResourceDiagnosticsWorker { get; set; }
+        //
+        // Public (was protected) so ResourceSnapshot.Capture() can read the
+        // live dispatcher counters without going through a separate accessor.
+        public virtual ResourceDiagnosticsWorker ResourceDiagnosticsWorker { get; protected set; }
 
         // Dedicated CMTrace-format resource log (Phase 6.5.B). Paired with
         // ResourceDiagnosticsWorker: the worker measures, this writes the
         // detailed per-tick / per-top-poster / per-WARN rows. Owned by
         // AppService for the same headless-survival reason as the worker.
         public virtual ResourceDiagnosticsLog ResourceDiagnosticsLog { get; protected set; }
+
+        // Resilience handler for the recurring WPF dispatcher quota
+        // exception (Win32 native error 1816). Public so the Prosim2GSX
+        // unhandled-exception override can read it via AppService.Instance
+        // when the exception fires. See DispatcherQuotaHandler for the
+        // rationale (Phase 6.6).
+        public virtual DispatcherQuotaHandler DispatcherQuotaHandler { get; protected set; }
 
         // Embedded Kestrel host for the LAN browser interface. Constructed
         // unconditionally so it can react to Config.WebServerEnabled changes
@@ -227,9 +237,15 @@ namespace Prosim2GSX
                 AppConfig.Config.Definition?.ProductPath ?? string.Empty,
                 AppConfig.Config.Definition?.ProductLogPath ?? "log");
             ResourceDiagnosticsLog = new ResourceDiagnosticsLog(appLogDirectory);
+            // DispatcherQuotaHandler is constructed before the worker so the
+            // worker's heartbeat can include the handler's running stats from
+            // the very first tick. It also lets the Prosim2GSX unhandled-
+            // exception override read it via AppService.Instance the moment
+            // CreateServiceControllers completes.
+            DispatcherQuotaHandler = new DispatcherQuotaHandler(ResourceDiagnosticsLog);
             StateUpdateWorker = new StateUpdateWorker(this);
             MessageLogDrainWorker = new MessageLogDrainWorker(FlightStatus, Config);
-            ResourceDiagnosticsWorker = new ResourceDiagnosticsWorker(this, Config, ResourceDiagnosticsLog);
+            ResourceDiagnosticsWorker = new ResourceDiagnosticsWorker(this, Config, ResourceDiagnosticsLog, DispatcherQuotaHandler);
             StateUpdateWorker.Start();
             MessageLogDrainWorker.Start();
             ResourceDiagnosticsWorker.Start();

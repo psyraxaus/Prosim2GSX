@@ -135,7 +135,8 @@ namespace Prosim2GSX.Diagnostics
         /// GC managed bytes + collection-count deltas per generation,
         /// thread-pool worker / IO availability + pending work item count,
         /// web request total / delta / active, WebSocket connection count,
-        /// and process uptime in seconds.
+        /// process uptime in seconds, and (Phase 6.6) the dispatcher-quota
+        /// handled count + first/last UTC timestamps.
         /// </summary>
         public void LogHeartbeat(
             uint user, uint gdi, int handles, int threads, int logQueue,
@@ -143,7 +144,8 @@ namespace Prosim2GSX.Diagnostics
             long managedBytes, int gen0Delta, int gen1Delta, int gen2Delta,
             int tpWorkerAvailable, int tpIoAvailable, long tpPending,
             long webRequestsTotal, long webRequestsDelta, long webRequestsActive,
-            int wsConnections, double uptimeSeconds)
+            int wsConnections, double uptimeSeconds,
+            long quotaHandledCount, DateTime quotaFirstHandledUtc, DateTime quotaLastHandledUtc)
         {
             if (!_enabled) return;
             var sb = new StringBuilder();
@@ -167,8 +169,61 @@ namespace Prosim2GSX.Diagnostics
               .Append(", WebTotal=").Append(webRequestsTotal)
               .Append(", WebDelta=").Append(webRequestsDelta)
               .Append(", WebActive=").Append(webRequestsActive)
-              .Append(", WsClients=").Append(wsConnections);
+              .Append(", WsClients=").Append(wsConnections)
+              .Append(", QuotaHandled=").Append(quotaHandledCount);
+            // Only include timestamps once we've actually caught something —
+            // keeps the line shorter when nothing's happened (the common case).
+            if (quotaHandledCount > 0)
+            {
+                sb.Append(", QuotaFirstUtc=").Append(quotaFirstHandledUtc.ToString("o", CultureInfo.InvariantCulture))
+                  .Append(", QuotaLastUtc=").Append(quotaLastHandledUtc.ToString("o", CultureInfo.InvariantCulture));
+            }
             Write(sb.ToString(), severity: 1);
+        }
+
+        /// <summary>
+        /// Records a caught dispatcher quota exception
+        /// (<see cref="DispatcherQuotaHandler.ErrorNotEnoughQuota"/>). Emits
+        /// a single multi-line WARN row under the
+        /// <c>resource-quota-exception</c> category containing the running
+        /// handled-count, the full <see cref="ResourceSnapshot"/> at the
+        /// moment of capture, the native error code, the current intent
+        /// context (if any), and the exception's full stack trace.
+        ///
+        /// <para>
+        /// CMTrace renders multi-line bodies fine — filter the category
+        /// string to find every occurrence. Per-tick heartbeat rows also
+        /// carry the count + first/last timestamps so trends are visible
+        /// without filtering specifically for these rows.
+        /// </para>
+        /// </summary>
+        public void LogQuotaException(long handledCount, ResourceSnapshot snapshot, System.ComponentModel.Win32Exception ex)
+        {
+            if (!_enabled) return;
+            var sb = new StringBuilder();
+            sb.Append("[resource-quota-exception] Handled occurrence #").Append(handledCount).AppendLine();
+            sb.Append("  Timestamp (UTC): ").AppendLine(snapshot.TimestampUtc.ToString("o", CultureInfo.InvariantCulture));
+            sb.Append("  Native error code: ").Append(ex?.NativeErrorCode ?? -1)
+              .Append(" (").Append(ex?.Message ?? "<null>").Append(")").AppendLine();
+            sb.Append("  Intent context: ").AppendLine(snapshot.IntentContext ?? "<none>");
+            sb.AppendLine("  Resource snapshot:");
+            sb.Append("    USER=").Append(snapshot.UserObjects)
+              .Append(", GDI=").Append(snapshot.GdiObjects)
+              .Append(", Handles=").Append(snapshot.Handles)
+              .Append(", Threads=").Append(snapshot.Threads)
+              .Append(", LogQueue=").Append(snapshot.LogQueueDepth)
+              .AppendLine();
+            sb.Append("    DispatcherPosted=").Append(snapshot.DispatcherPosted)
+              .Append(", DispatcherCompleted=").Append(snapshot.DispatcherCompleted)
+              .Append(", DispatcherPending=").Append(snapshot.DispatcherPending)
+              .AppendLine();
+            sb.Append("    ManagedKB=").Append(snapshot.ManagedBytes / 1024).AppendLine();
+            if (ex != null)
+            {
+                sb.AppendLine("  Stack trace:");
+                sb.AppendLine(ex.ToString());
+            }
+            Write(sb.ToString(), severity: 2);
         }
 
         /// <summary>

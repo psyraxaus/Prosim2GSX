@@ -3,7 +3,6 @@ using Prosim2GSX.AppConfig;
 using Prosim2GSX.Diagnostics;
 using System;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
@@ -56,14 +55,10 @@ namespace Prosim2GSX.State
         private const long DispatcherPendingWarnHigh = 5_000;
         private const long DispatcherPendingWarnLow = 2_500;
 
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern uint GetGuiResources(IntPtr hProcess, uint uiFlags);
-        private const uint GR_GDIOBJECTS = 0;
-        private const uint GR_USEROBJECTS = 1;
-
         private readonly AppService _app;
         private readonly Config _config;
         private readonly ResourceDiagnosticsLog _log;
+        private readonly DispatcherQuotaHandler _quotaHandler;
         private readonly Timer _timer;
         private readonly int _intervalMs;
         private readonly bool _stressMode;
@@ -86,6 +81,13 @@ namespace Prosim2GSX.State
         private long _dispatcherCompletedAtLastTick;
         private bool _hooksSubscribed;
 
+        /// <summary>Lifetime cumulative count of dispatcher operations posted (from <c>Dispatcher.Hooks.OperationPosted</c>). Exposed so out-of-band callers — <see cref="ResourceSnapshot.Capture"/> — can read live without waiting for the next tick.</summary>
+        public long DispatcherPostedTotal => Interlocked.Read(ref _dispatcherPostedTotal);
+        /// <summary>Lifetime cumulative count of dispatcher operations completed (from <c>Dispatcher.Hooks.OperationCompleted</c>).</summary>
+        public long DispatcherCompletedTotal => Interlocked.Read(ref _dispatcherCompletedTotal);
+        /// <summary>Instantaneous dispatcher queue depth = posted − completed.</summary>
+        public long DispatcherPending => DispatcherPostedTotal - DispatcherCompletedTotal;
+
         // GC + web metric snapshots from the previous tick, used for delta
         // computation. Totals themselves are not stored — we re-read each
         // tick because GC.CollectionCount and WebRequestMetrics.* are
@@ -95,11 +97,12 @@ namespace Prosim2GSX.State
         private int _gen2AtLastTick;
         private long _webRequestsAtLastTick;
 
-        public ResourceDiagnosticsWorker(AppService app, Config config, ResourceDiagnosticsLog log)
+        public ResourceDiagnosticsWorker(AppService app, Config config, ResourceDiagnosticsLog log, DispatcherQuotaHandler quotaHandler)
         {
             _app = app;
             _config = config;
             _log = log;
+            _quotaHandler = quotaHandler;
             _stressMode = config?.StressMode == true;
             _intervalMs = _stressMode ? StressIntervalMs : NormalIntervalMs;
             _timer = new Timer(OnTick, null, Timeout.Infinite, Timeout.Infinite);
@@ -174,8 +177,8 @@ namespace Prosim2GSX.State
                 try
                 {
                     using var proc = Process.GetCurrentProcess();
-                    user = GetGuiResources(proc.Handle, GR_USEROBJECTS);
-                    gdi = GetGuiResources(proc.Handle, GR_GDIOBJECTS);
+                    user = NativeMethods.GetGuiResources(proc.Handle, NativeMethods.GR_USEROBJECTS);
+                    gdi = NativeMethods.GetGuiResources(proc.Handle, NativeMethods.GR_GDIOBJECTS);
                     handles = proc.HandleCount;
                     threads = proc.Threads.Count;
                 }
@@ -253,13 +256,15 @@ namespace Prosim2GSX.State
                 // focused on app behaviour. WARN escalations below still hit
                 // both sinks so the user sees them in the main log they
                 // already monitor.
+                var quotaStats = _quotaHandler?.GetStats() ?? default;
                 _log?.LogHeartbeat(
                     user, gdi, handles, threads, queueDepth,
                     postedDelta, completedDelta, pending,
                     managedBytes, gen0Delta, gen1Delta, gen2Delta,
                     tpWorkerAvailable, tpIoAvailable, tpPending,
                     webTotal, webDelta, webActive,
-                    wsConnections, uptimeSec);
+                    wsConnections, uptimeSec,
+                    quotaStats.HandledCount, quotaStats.FirstHandledUtc, quotaStats.LastHandledUtc);
 
                 // Top-N attributed posters via UiMarshal.SnapshotTop. The
                 // snapshot is atomic — counters reset for the next window at

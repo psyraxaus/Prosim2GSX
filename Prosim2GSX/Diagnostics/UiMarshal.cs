@@ -35,6 +35,16 @@ namespace Prosim2GSX.Diagnostics
         private static ConcurrentDictionary<string, long> _counters = new(StringComparer.Ordinal);
 
         /// <summary>
+        /// Read-only view of the current intent context (the value set by the
+        /// innermost <see cref="BeginIntentContext"/> scope on the calling
+        /// async-context chain). Returns <c>null</c> when no intent scope is
+        /// active. Exposed so out-of-band diagnostics (e.g.
+        /// <c>DispatcherQuotaHandler</c>) can attribute caught exceptions to
+        /// the intent that was running at the moment of the failure.
+        /// </summary>
+        public static string CurrentIntentContext => _currentIntentContext.Value;
+
+        /// <summary>
         /// Posts <paramref name="action"/> onto the WPF dispatcher at
         /// <see cref="DispatcherPriority.Normal"/>. Increments the per-site
         /// (or per-intent) counter before dispatching. When the dispatcher
