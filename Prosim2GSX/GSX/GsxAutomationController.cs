@@ -78,7 +78,67 @@ namespace Prosim2GSX.GSX
         protected virtual GsxServiceBoarding ServiceBoard => GsxServices[GsxServiceType.Boarding] as GsxServiceBoarding;
         protected virtual GsxServiceDeboarding ServiceDeboard => GsxServices[GsxServiceType.Deboarding] as GsxServiceDeboarding;
         protected virtual GsxServiceDeice ServiceDeice => GsxServices[GsxServiceType.Deice] as GsxServiceDeice;
-        public virtual bool IsGateConnected => ServiceJetway.IsConnected || ServiceStairs.IsConnected;
+        // IsGateConnected is the gate-side "we're attached to a ground service"
+        // signal used by phase transitions (notably Prep => Departure). Strict
+        // path: GsxServiceJetway/Stairs.IsConnected, which requires the GSX
+        // service LVAR == Active AND the operation LVAR < 3 (docked idle).
+        //
+        // Fallback (Phase 6.5.B + 1): in GSX Pro v4 — particularly with
+        // GsxRemoteControlExperimental enabled — the operation LVAR has been
+        // observed to stay at "in motion" (>=3) indefinitely even after the
+        // jetway has visibly docked. The strict check then stays false forever
+        // and the Prep => Departure transition never fires. Once the service
+        // has held GsxServiceState.Active for >= GateActiveGraceSec, treat
+        // the gate as connected for transition purposes — by that point GSX
+        // has had enough time to physically dock regardless of what it reports
+        // on the operation LVAR. The first time the fallback fires per session
+        // it logs once at INFO so the log carries clear evidence we took the
+        // rescue path.
+        public virtual bool IsGateConnected
+        {
+            get
+            {
+                bool strict = ServiceJetway.IsConnected || ServiceStairs.IsConnected;
+                if (strict)
+                    return true;
+                bool stale = HasStaleActiveGateService();
+                if (stale && !_gateConnectedFallbackLogged)
+                {
+                    _gateConnectedFallbackLogged = true;
+                    Logger.Information(
+                        $"IsGateConnected: strict IsConnected check failed (Jetway state={ServiceJetway?.State} op={ServiceJetway?.SubOperating?.GetNumber()}, "
+                      + $"Stairs state={ServiceStairs?.State} op={ServiceStairs?.SubOperating?.GetNumber()}) — "
+                      + $"falling back to >= {GateActiveGraceSec}s of stable Active state. "
+                      + "Suspect GSX operation LVAR stuck; check GsxRemoteControlExperimental.");
+                }
+                return stale;
+            }
+        }
+        private DateTime? _jetwayActiveSinceUtc;
+        private DateTime? _stairsActiveSinceUtc;
+        private bool _gateConnectedFallbackLogged;
+        private const double GateActiveGraceSec = 30;
+
+        private bool HasStaleActiveGateService()
+        {
+            if (ServiceJetway?.State == GsxServiceState.Active)
+                _jetwayActiveSinceUtc ??= DateTime.UtcNow;
+            else
+                _jetwayActiveSinceUtc = null;
+
+            if (ServiceStairs?.State == GsxServiceState.Active)
+                _stairsActiveSinceUtc ??= DateTime.UtcNow;
+            else
+                _stairsActiveSinceUtc = null;
+
+            var now = DateTime.UtcNow;
+            if (_jetwayActiveSinceUtc.HasValue && (now - _jetwayActiveSinceUtc.Value).TotalSeconds >= GateActiveGraceSec)
+                return true;
+            if (_stairsActiveSinceUtc.HasValue && (now - _stairsActiveSinceUtc.Value).TotalSeconds >= GateActiveGraceSec)
+                return true;
+            return false;
+        }
+
         public virtual bool HasDepartBypassed => Controller.GsxServices[GsxServiceType.Refuel].State == GsxServiceState.Bypassed || Controller.GsxServices[GsxServiceType.Boarding].State == GsxServiceState.Bypassed;
         public virtual bool ServicesValid => ServiceStairs.State != GsxServiceState.Unknown || ServiceJetway.State != GsxServiceState.Unknown || !IsOnGround;
 
@@ -195,6 +255,9 @@ namespace Prosim2GSX.GSX
             CabinDinged = false;
             DepartureIcao = "";
             OfpArrivalId = "0";
+            _jetwayActiveSinceUtc = null;
+            _stairsActiveSinceUtc = null;
+            _gateConnectedFallbackLogged = false;
 
             DepartureServicesCompleted = false;
             CancelChockTask();
