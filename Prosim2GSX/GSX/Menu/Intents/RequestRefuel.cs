@@ -44,8 +44,16 @@ namespace Prosim2GSX.GSX.Menu.Intents
 
         public override bool IsAlreadySatisfied(GsxController controller)
         {
+            // Refuel exposes Completed via GsxServiceRefuel.GetState's
+            // NumStateCompleted=1 mapping; the broader "in flight or done"
+            // semantic also covers Requested/Active (mid-refuel, hose
+            // attached). See RequestDeboarding for the rationale.
             var refuel = IntentHelpers.GetService<GsxServiceRefuel>(controller, GsxServiceType.Refuel);
-            return refuel != null && refuel.State == GsxServiceState.Completed;
+            if (refuel == null) return false;
+            var state = refuel.State;
+            return state == GsxServiceState.Requested
+                || state == GsxServiceState.Active
+                || state == GsxServiceState.Completed;
         }
 
         public override Task<bool> VerifyOutcomeAsync(GsxController controller, TimeSpan timeout, CancellationToken token)

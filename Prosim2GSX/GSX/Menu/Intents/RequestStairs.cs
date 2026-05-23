@@ -36,8 +36,9 @@ namespace Prosim2GSX.GSX.Menu.Intents
 
         public override bool IsAlreadySatisfied(GsxController controller)
         {
+            // See RequestJetway for the IsConnected || IsOperating rationale.
             var stairs = IntentHelpers.GetService<GsxServiceStairs>(controller, GsxServiceType.Stairs);
-            return stairs != null && stairs.IsConnected;
+            return stairs != null && (stairs.IsConnected || stairs.IsOperating);
         }
 
         public override Task<bool> VerifyOutcomeAsync(GsxController controller, TimeSpan timeout, CancellationToken token)

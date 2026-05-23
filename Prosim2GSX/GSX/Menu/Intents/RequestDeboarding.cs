@@ -35,8 +35,17 @@ namespace Prosim2GSX.GSX.Menu.Intents
 
         public override bool IsAlreadySatisfied(GsxController controller)
         {
+            // Treat any state past Callable as "no menu action needed" —
+            // Requested/Active mean the service is already in flight (GSX or
+            // the user fired it pre-emptively), Completed means it's done.
+            // Without this the resolver returns StatePreconditionFailed and
+            // GsxAutomationController.RunArrival re-fires Call() forever.
             var svc = IntentHelpers.GetService<GsxService>(controller, GsxServiceType.Deboarding);
-            return svc != null && svc.State == GsxServiceState.Completed;
+            if (svc == null) return false;
+            var state = svc.State;
+            return state == GsxServiceState.Requested
+                || state == GsxServiceState.Active
+                || state == GsxServiceState.Completed;
         }
 
         public override Task<bool> VerifyOutcomeAsync(GsxController controller, TimeSpan timeout, CancellationToken token)

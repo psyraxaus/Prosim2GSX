@@ -31,8 +31,14 @@ namespace Prosim2GSX.GSX.Menu.Intents
 
         public override bool IsAlreadySatisfied(GsxController controller)
         {
+            // Requested/Active/Completed are all "no menu action needed".
+            // See RequestDeboarding for the spam-prevention rationale.
             var svc = IntentHelpers.GetService<GsxService>(controller, GsxServiceType.Catering);
-            return svc != null && svc.State == GsxServiceState.Completed;
+            if (svc == null) return false;
+            var state = svc.State;
+            return state == GsxServiceState.Requested
+                || state == GsxServiceState.Active
+                || state == GsxServiceState.Completed;
         }
 
         public override Task<bool> VerifyOutcomeAsync(GsxController controller, TimeSpan timeout, CancellationToken token)

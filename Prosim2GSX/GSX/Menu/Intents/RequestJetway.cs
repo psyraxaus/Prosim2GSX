@@ -40,13 +40,13 @@ namespace Prosim2GSX.GSX.Menu.Intents
 
         public override bool IsAlreadySatisfied(GsxController controller)
         {
-            // Jetway already deployed (connected) → nothing to call. Note we
-            // do NOT short-circuit on IsOperating — the resolver's
-            // precondition gate already rejects that case (see above),
-            // distinguishing "already connected" (benign skip) from "currently
-            // moving" (transient, retry next tick).
+            // Both "connected" and "currently moving" are "no menu action
+            // needed" — without IsOperating here the resolver returns
+            // StatePreconditionFailed during a jetway-in-motion tick and the
+            // automation re-fires Call() every 500ms (same spam class as
+            // RequestDeboarding's Active-state bug).
             var jetway = IntentHelpers.GetService<GsxServiceJetway>(controller, GsxServiceType.Jetway);
-            return jetway != null && jetway.IsConnected;
+            return jetway != null && (jetway.IsConnected || jetway.IsOperating);
         }
 
         public override Task<bool> VerifyOutcomeAsync(GsxController controller, TimeSpan timeout, CancellationToken token)

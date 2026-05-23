@@ -350,9 +350,23 @@ namespace Prosim2GSX.GSX.Services
                 {
                     if (Profile != null && Profile.OperatorAutoSelect)
                     {
-                        // Intent-routed auto-select. May race with UpdateMenu's
-                        // own auto-select path; same target operator, benign.
-                        await Controller.Menu.ExecuteIntent(new SelectOperator(Profile), phase, Controller.Token);
+                        // UpdateMenu's existing synchronous auto-select path
+                        // (the if (IsOperatorMenu && AircraftProfile.OperatorAutoSelect)
+                        // block in UpdateMenu) typically fires the moment the
+                        // operator picker renders — before this helper's
+                        // WaitForOperatorMenuAsync has even returned. By the
+                        // time we'd invoke SelectOperator the menu has already
+                        // moved on, producing a noisy MenuTitleMismatch in the
+                        // diagnostic log on every service call. Re-check after
+                        // a short settle: if the menu has transitioned away,
+                        // the existing auto-select already picked the operator
+                        // and the redundant intent call is skipped.
+                        try { await Task.Delay(150, Controller.Token); }
+                        catch (OperationCanceledException) { return false; }
+
+                        if (Controller.Menu.IsOperatorMenu)
+                            await Controller.Menu.ExecuteIntent(new SelectOperator(Profile), phase, Controller.Token);
+                        // else: UpdateMenu's auto-select already handled it.
                     }
                     else
                     {

@@ -20,6 +20,7 @@ namespace Prosim2GSX.GSX.Menu.Intents
 
         public override bool IsValidForPhase(AutomationState phase)
             => phase == AutomationState.Preparation
+            || phase == AutomationState.Departure
             || phase == AutomationState.TurnAround;
 
         public override bool ArePreconditionsSatisfied(GsxController controller)
@@ -31,7 +32,11 @@ namespace Prosim2GSX.GSX.Menu.Intents
         public override bool IsAlreadySatisfied(GsxController controller)
         {
             var svc = IntentHelpers.GetService<GsxService>(controller, GsxServiceType.Lavatory);
-            return svc != null && svc.State == GsxServiceState.Completed;
+            if (svc == null) return false;
+            var state = svc.State;
+            return state == GsxServiceState.Requested
+                || state == GsxServiceState.Active
+                || state == GsxServiceState.Completed;
         }
 
         public override Task<bool> VerifyOutcomeAsync(GsxController controller, TimeSpan timeout, CancellationToken token)
