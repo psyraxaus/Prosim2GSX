@@ -317,11 +317,12 @@ namespace Prosim2GSX.AppConfig
             NormalizeActiveAcps();
         }
 
-        // Enforce ActiveAcps invariants on load: 1-2 unique entries from
-        // {CPT, FO, OBS}. Empty/null → [CPT]; out-of-range or duplicates
-        // dropped; >2 → first 2 kept. Logs once when normalization changes
-        // the list so a hand-edited AppConfig.json surfaces a warning
-        // instead of silently mis-binding.
+        // Enforce ActiveAcps invariants on load: 1-3 unique entries from
+        // {CPT, FO, OBS}. Empty/null → [CPT]; out-of-range or duplicate
+        // entries dropped. Logs once when normalization changes the list
+        // so a hand-edited AppConfig.json surfaces a warning instead of
+        // silently mis-binding. No upper-count break — the enum only has
+        // three values, so de-dupe self-caps at 3.
         protected virtual void NormalizeActiveAcps()
         {
             var original = ActiveAcps;
@@ -333,7 +334,6 @@ namespace Prosim2GSX.AppConfig
                     if (!Enum.IsDefined(typeof(AcpSide), side)) continue;
                     if (normalized.Contains(side)) continue;
                     normalized.Add(side);
-                    if (normalized.Count == 2) break;
                 }
             }
             if (normalized.Count == 0) normalized.Add(AcpSide.CPT);

@@ -21,7 +21,9 @@ namespace Prosim2GSX.UI.Views.Audio
     {
         protected virtual ModelAudio ViewModel { get; }
         protected virtual ViewModelSelector<AudioMapping, AudioMapping> ViewModelMappings { get; }
-        protected virtual ViewModelSelector<VoiceMeeterMapping, VoiceMeeterMapping> ViewModelVoiceMeeterMappings { get; }
+        protected virtual ViewModelSelector<VoiceMeeterMapping, VoiceMeeterMapping> ViewModelVmAcp1 { get; }
+        protected virtual ViewModelSelector<VoiceMeeterMapping, VoiceMeeterMapping> ViewModelVmAcp2 { get; }
+        protected virtual ViewModelSelector<VoiceMeeterMapping, VoiceMeeterMapping> ViewModelVmAcp3 { get; }
         protected virtual ViewModelSelector<string, string> ViewModelBlacklist { get; }
         public virtual bool HasSelection => GridAudioMappings?.SelectedIndex != -1;
 
@@ -53,19 +55,19 @@ namespace Prosim2GSX.UI.Views.Audio
 
             GridAudioMappings.SizeChanged += OnGridSizeChanged;
 
-            // VoiceMeeter mappings grid — channel + target combos drive the
-            // ViewModelSelector that wraps Source.VoiceMeeterMappings.
-            ViewModelVoiceMeeterMappings = new(GridVoiceMeeterMappings, ViewModel.VoiceMeeterMappingCollection, AppWindow.IconLoader);
-            ButtonAddVmMapping.Command = ViewModelVoiceMeeterMappings.BindAddUpdateButton(ButtonAddVmMapping, ImageAddVmMapping, GetVoiceMeeterMappingItem);
-            ButtonRemoveVmMapping.Command = ViewModelVoiceMeeterMappings.BindRemoveButton(ButtonRemoveVmMapping);
-
-            SelectorVmChannel.ItemsSource = Enum.GetValues<AudioChannel>();
-            ViewModelVoiceMeeterMappings.BindMember(SelectorVmChannel, nameof(VoiceMeeterMapping.Channel));
-            ViewModelVoiceMeeterMappings.BindMember(SelectorVmTarget, nameof(VoiceMeeterMapping.TargetKey));
-            ViewModelVoiceMeeterMappings.AddUpdateCommand.Subscribe(SelectorVmChannel);
-            ViewModelVoiceMeeterMappings.AddUpdateCommand.Subscribe(SelectorVmTarget);
-            ViewModelVoiceMeeterMappings.BindMember(CheckboxVmMute, nameof(VoiceMeeterMapping.UseLatch));
-            ViewModelVoiceMeeterMappings.AddUpdateCommand.Subscribe(CheckboxVmMute);
+            // Per-ACP VoiceMeeter mapping grids. Each card owns its own
+            // ViewModelSelector wrapping ModelAudio.AcpNMappingCollection
+            // (which in turn wraps Config.VoiceMeeterMappingsByAcp[Acp]).
+            // Add/Remove buttons + channel/target combos are scoped per card.
+            ViewModelVmAcp1 = WireVmCard(GridVoiceMeeterMappingsAcp1, ViewModel.Acp1MappingCollection,
+                ButtonAddVmMappingAcp1, ImageAddVmMappingAcp1, ButtonRemoveVmMappingAcp1,
+                SelectorVmChannelAcp1, SelectorVmTargetAcp1, CheckboxVmMuteAcp1);
+            ViewModelVmAcp2 = WireVmCard(GridVoiceMeeterMappingsAcp2, ViewModel.Acp2MappingCollection,
+                ButtonAddVmMappingAcp2, ImageAddVmMappingAcp2, ButtonRemoveVmMappingAcp2,
+                SelectorVmChannelAcp2, SelectorVmTargetAcp2, CheckboxVmMuteAcp2);
+            ViewModelVmAcp3 = WireVmCard(GridVoiceMeeterMappingsAcp3, ViewModel.Acp3MappingCollection,
+                ButtonAddVmMappingAcp3, ImageAddVmMappingAcp3, ButtonRemoveVmMappingAcp3,
+                SelectorVmChannelAcp3, SelectorVmTargetAcp3, CheckboxVmMuteAcp3);
 
             ViewModelBlacklist = new(ListDeviceBlacklist, ViewModel.BlacklistCollection, AppWindow.IconLoader);
             ButtonAddDevice.Command = ViewModelBlacklist.BindAddUpdateButton(ButtonAddDevice, ImageAddDevice, GetDeviceItem);
@@ -127,16 +129,40 @@ namespace Prosim2GSX.UI.Views.Audio
             return null;
         }
 
-        protected virtual VoiceMeeterMapping GetVoiceMeeterMappingItem()
+        // Builds and wires a single per-ACP VoiceMeeter card. Returns the
+        // ViewModelSelector so callers can keep a reference (used during
+        // life-of-window — no explicit teardown needed since the view goes
+        // away with the window).
+        private ViewModelSelector<VoiceMeeterMapping, VoiceMeeterMapping> WireVmCard(
+            DataGrid grid,
+            ModelVoiceMeeterMappings collection,
+            Button addBtn, System.Windows.Controls.Image addImg, Button removeBtn,
+            ComboBox channelCombo, ComboBox targetCombo, CheckBox muteCheck)
+        {
+            var sel = new ViewModelSelector<VoiceMeeterMapping, VoiceMeeterMapping>(grid, collection, AppWindow.IconLoader);
+            addBtn.Command = sel.BindAddUpdateButton(addBtn, addImg, () => BuildVmMappingItem(channelCombo, targetCombo, muteCheck));
+            removeBtn.Command = sel.BindRemoveButton(removeBtn);
+
+            channelCombo.ItemsSource = Enum.GetValues<AudioChannel>();
+            sel.BindMember(channelCombo, nameof(VoiceMeeterMapping.Channel));
+            sel.BindMember(targetCombo, nameof(VoiceMeeterMapping.TargetKey));
+            sel.AddUpdateCommand.Subscribe(channelCombo);
+            sel.AddUpdateCommand.Subscribe(targetCombo);
+            sel.BindMember(muteCheck, nameof(VoiceMeeterMapping.UseLatch));
+            sel.AddUpdateCommand.Subscribe(muteCheck);
+
+            return sel;
+        }
+
+        private static VoiceMeeterMapping BuildVmMappingItem(ComboBox channelCombo, ComboBox targetCombo, CheckBox muteCheck)
         {
             try
             {
-                if (SelectorVmChannel?.SelectedValue is AudioChannel channel
-                    && SelectorVmTarget?.SelectedValue is string key && !string.IsNullOrEmpty(key)
-                    && CheckboxVmMute?.IsChecked is bool useLatch)
+                if (channelCombo?.SelectedValue is AudioChannel channel
+                    && targetCombo?.SelectedValue is string key && !string.IsNullOrEmpty(key)
+                    && muteCheck?.IsChecked is bool useLatch)
                 {
-                    var mapping = new VoiceMeeterMapping(channel, 0, false, useLatch) { TargetKey = key };
-                    return mapping;
+                    return new VoiceMeeterMapping(channel, 0, false, useLatch) { TargetKey = key };
                 }
             }
             catch { }
@@ -241,6 +267,11 @@ namespace Prosim2GSX.UI.Views.Audio
             // Refresh VoiceMeeter strip list so per-row combos are current.
             // Cheap when VoiceMeeter is disabled — returns early in the model.
             ViewModel.RefreshVoiceMeeterStrips();
+
+            // Re-read the binder's last fallback reason so the banner reflects
+            // whatever happened during the last service-thread Bind (which we
+            // don't get INPC for). Cheap — just two property notifies.
+            ViewModel.RefreshRuntimeState();
         }
 
         protected virtual void ButtonBrowseVoiceMeeter_Click(object sender, RoutedEventArgs e)

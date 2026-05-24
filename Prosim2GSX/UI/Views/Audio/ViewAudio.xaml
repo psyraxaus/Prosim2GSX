@@ -73,11 +73,13 @@
                 </StackPanel>
             </Border>
 
-            <!-- ACP SOURCE -->
-            <TextBlock Style="{StaticResource CategoryHeader}" Text="ACP SOURCE" Margin="0,0,0,4"/>
-            <Border Style="{StaticResource SectionCardBorder}">
+            <!-- ACP SOURCE (CoreAudio mode only — VoiceMeeter uses its own ACTIVE ACPs section below) -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="ACP SOURCE" Margin="0,0,0,4"
+                       Visibility="{Binding IsCoreAudioSelected, Converter={StaticResource BoolToVis}}"/>
+            <Border Style="{StaticResource SectionCardBorder}"
+                    Visibility="{Binding IsCoreAudioSelected, Converter={StaticResource BoolToVis}}">
                 <StackPanel Style="{StaticResource SettingItemPanel}"
-                            ToolTip="Select which ACP Panel will be used for Volume Control. Only one Panel can be used, not both at the same Time.&#x0a;The Setting does not need to be the same as your actual Seat Position.">
+                            ToolTip="Drives CoreAudio app mappings only. Pick the ACP Panel whose knobs control the apps listed below.&#x0a;Doesn't affect VoiceMeeter mode — that uses the ACTIVE ACPs section.">
                     <TextBlock Style="{StaticResource TextBlockDefault}">Use ACP Panel from Seat Position</TextBlock>
                     <ComboBox Name="SelectorAcpSide" SelectedValue="{Binding AudioAcpSide}" ItemsSource="{Binding AcpSideOptions}" SelectedValuePath="Key" DisplayMemberPath="Value" Margin="8,0,0,0" Style="{StaticResource ComboBoxDefault}"/>
                 </StackPanel>
@@ -186,10 +188,51 @@
             <!-- VOICEMEETER MAPPINGS (VoiceMeeter mode only) -->
             <TextBlock Style="{StaticResource CategoryHeader}" Text="VOICEMEETER MAPPINGS" Margin="0,0,0,4"
                        Visibility="{Binding UseVoiceMeeter, Converter={StaticResource BoolToVis}}"/>
+
+            <!-- Active ACPs picker + global controls + banners -->
             <Border Style="{StaticResource SectionCardBorder}"
                     Visibility="{Binding UseVoiceMeeter, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <DataGrid Name="GridVoiceMeeterMappings" Margin="0,0,0,6" SelectionUnit="FullRow" SelectionMode="Single">
+                    <TextBlock Style="{StaticResource TextBlockDefault}" FontWeight="Bold" Margin="0,0,0,4">ACTIVE ACPs (select 1–3)</TextBlock>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <CheckBox Content="ACP1 (Captain)"        IsChecked="{Binding IsAcp1Active}" Margin="0,0,16,0" Style="{StaticResource CheckBoxDefault}"
+                                  ToolTip="ACP1 is electrically powered by AC ESS / DC ESS, and inhibited when AUDIO SWITCHING is set to CAPT (captain has swapped to ACP3)."/>
+                        <CheckBox Content="ACP2 (First Officer)"  IsChecked="{Binding IsAcp2Active}" Margin="0,0,16,0" Style="{StaticResource CheckBoxDefault}"
+                                  ToolTip="ACP2 is electrically powered by AC ESS / DC ESS, and inhibited when AUDIO SWITCHING is set to F/O (F/O has swapped to ACP3)."/>
+                        <CheckBox Content="ACP3 (Observer)"       IsChecked="{Binding IsAcp3Active}"                   Style="{StaticResource CheckBoxDefault}"
+                                  ToolTip="ACP3 is electrically powered by DC BUS 1. No audio-switching dependency — it's the swap target, not the source."/>
+                    </StackPanel>
+
+                    <!-- Conflict banner (validation) -->
+                    <Border Background="#3A2A00" BorderBrush="#FFB347" BorderThickness="1" Padding="10,6" Margin="0,0,0,6"
+                            Visibility="{Binding HasConflict, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <TextBlock Foreground="#FFD98A" FontWeight="Bold" Margin="0,0,0,2">Mapping conflict</TextBlock>
+                            <TextBlock Foreground="#FFD98A" TextWrapping="Wrap" Text="{Binding ConflictMessage}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Runtime fallback banner (binder fell back to ACP1-only) -->
+                    <Border Background="#3A2A00" BorderBrush="#FFB347" BorderThickness="1" Padding="10,6" Margin="0,0,0,6"
+                            Visibility="{Binding HasFallbackReason, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <TextBlock Foreground="#FFD98A" FontWeight="Bold" Margin="0,0,0,2">Fell back to ACP1 only at last bind</TextBlock>
+                            <TextBlock Foreground="#FFD98A" TextWrapping="Wrap" Text="{Binding FallbackReason}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Button Name="ButtonReloadStrips" Margin="0,0,0,0" Padding="8,2" HorizontalAlignment="Left"
+                            ToolTip="Re-query VoiceMeeter for available strips and buses." Click="ButtonReloadStrips_Click">Reload strips</Button>
+                </StackPanel>
+            </Border>
+
+            <!-- ACP1 mapping card -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="ACP1 (CAPTAIN) MAPPINGS" Margin="0,4,0,4"
+                       Visibility="{Binding IsAcp1Active, Converter={StaticResource BoolToVis}}"/>
+            <Border Style="{StaticResource SectionCardBorder}"
+                    Visibility="{Binding IsAcp1Active, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <DataGrid Name="GridVoiceMeeterMappingsAcp1" Margin="0,0,0,6" SelectionUnit="FullRow" SelectionMode="Single">
                         <DataGrid.Columns>
                             <DataGridTemplateColumn Header="Channel" MinWidth="96">
                                 <DataGridTemplateColumn.CellTemplate>
@@ -198,7 +241,6 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-
                             <DataGridTemplateColumn Header="Strip / Bus" MinWidth="220" Width="*">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
@@ -214,7 +256,6 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-
                             <DataGridTemplateColumn Header="Use Mute">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
@@ -224,29 +265,148 @@
                             </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
-
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                        <ComboBox Name="SelectorVmChannel" SelectedIndex="0" HorizontalContentAlignment="Center" VerticalAlignment="Top" Style="{StaticResource ComboBoxDefault}" ToolTip="Audio channel that drives this VoiceMeeter target."/>
-                        <ComboBox Name="SelectorVmTarget"
+                        <ComboBox Name="SelectorVmChannelAcp1" SelectedIndex="0" HorizontalContentAlignment="Center" VerticalAlignment="Top" Style="{StaticResource ComboBoxDefault}" ToolTip="Audio channel that drives this VoiceMeeter target."/>
+                        <ComboBox Name="SelectorVmTargetAcp1"
                                   ItemsSource="{Binding AvailableStrips}"
-                                  DisplayMemberPath="DisplayName"
-                                  SelectedValuePath="Key"
-                                  Margin="6,0,0,0"
-                                  MinWidth="220"
-                                  Style="{StaticResource ComboBoxDefault}"
-                                  VerticalAlignment="Top"
-                                  ToolTip="VoiceMeeter Strip or Bus to control. Reload strips after configuring the DLL path or starting VoiceMeeter."/>
-                        <Grid Name="PanelVmMute" HorizontalAlignment="Stretch">
-                            <CheckBox Name="CheckboxVmMute" Margin="4,3.5,0,0" HorizontalAlignment="Center" HorizontalContentAlignment="Center" Style="{StaticResource CheckBoxDefault}" VerticalAlignment="Top" ToolTip="Use the Record Latch (push/pull the Knob) to mute the strip/bus."/>
+                                  DisplayMemberPath="DisplayName" SelectedValuePath="Key"
+                                  Margin="6,0,0,0" MinWidth="220" Style="{StaticResource ComboBoxDefault}" VerticalAlignment="Top"
+                                  ToolTip="VoiceMeeter Strip or Bus to control."/>
+                        <Grid Name="PanelVmMuteAcp1" HorizontalAlignment="Stretch">
+                            <CheckBox Name="CheckboxVmMuteAcp1" Margin="4,3.5,0,0" HorizontalAlignment="Center" Style="{StaticResource CheckBoxDefault}" VerticalAlignment="Top"
+                                      ToolTip="Use the Record Latch (push/pull the Knob) to mute the strip/bus."/>
                         </Grid>
                         <StackPanel Orientation="Horizontal" Margin="6,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
-                            <Button Name="ButtonAddVmMapping" Margin="0,0,0,0" Style="{StaticResource BtnSquareSmall}" ToolTip="Add/Update VoiceMeeter Mapping">
-                                <Image Name="ImageAddVmMapping" Source="../../Icons/add.png" Style="{StaticResource ImgSquareSmall}"/>
+                            <Button Name="ButtonAddVmMappingAcp1" Style="{StaticResource BtnSquareSmall}" ToolTip="Add/Update Mapping">
+                                <Image Name="ImageAddVmMappingAcp1" Source="../../Icons/add.png" Style="{StaticResource ImgSquareSmall}"/>
                             </Button>
-                            <Button Name="ButtonRemoveVmMapping" Margin="6,0,0,0" Style="{StaticResource BtnSquareSmall}" ToolTip="Remove VoiceMeeter Mapping">
+                            <Button Name="ButtonRemoveVmMappingAcp1" Margin="6,0,0,0" Style="{StaticResource BtnSquareSmall}" ToolTip="Remove Mapping">
                                 <Image Source="../../Icons/remove.png" Style="{StaticResource ImgSquareSmall}"/>
                             </Button>
-                            <Button Name="ButtonReloadStrips" Margin="6,0,0,0" Padding="8,2" VerticalAlignment="Top" ToolTip="Re-query VoiceMeeter for available strips and buses." Click="ButtonReloadStrips_Click">Reload strips</Button>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- ACP2 mapping card -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="ACP2 (FIRST OFFICER) MAPPINGS" Margin="0,4,0,4"
+                       Visibility="{Binding IsAcp2Active, Converter={StaticResource BoolToVis}}"/>
+            <Border Style="{StaticResource SectionCardBorder}"
+                    Visibility="{Binding IsAcp2Active, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <DataGrid Name="GridVoiceMeeterMappingsAcp2" Margin="0,0,0,6" SelectionUnit="FullRow" SelectionMode="Single">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="Channel" MinWidth="96">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Channel}" HorizontalAlignment="Center" Style="{StaticResource TextBlockDefault}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Strip / Bus" MinWidth="220" Width="*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Margin="6,0,0,0" Style="{StaticResource TextBlockDefault}">
+                                            <TextBlock.Text>
+                                                <MultiBinding Converter="{StaticResource VmStripDisplay}" FallbackValue="">
+                                                    <Binding Path="StripIndex"/>
+                                                    <Binding Path="IsBus"/>
+                                                    <Binding Path="DataContext.AvailableStrips" RelativeSource="{RelativeSource AncestorType={x:Type UserControl}}"/>
+                                                </MultiBinding>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Use Mute">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding UseLatch}" IsHitTestVisible="False" HorizontalAlignment="Center" Margin="2,0,0,0" Style="{StaticResource CheckBoxDefault}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <ComboBox Name="SelectorVmChannelAcp2" SelectedIndex="0" HorizontalContentAlignment="Center" VerticalAlignment="Top" Style="{StaticResource ComboBoxDefault}" ToolTip="Audio channel that drives this VoiceMeeter target."/>
+                        <ComboBox Name="SelectorVmTargetAcp2"
+                                  ItemsSource="{Binding AvailableStrips}"
+                                  DisplayMemberPath="DisplayName" SelectedValuePath="Key"
+                                  Margin="6,0,0,0" MinWidth="220" Style="{StaticResource ComboBoxDefault}" VerticalAlignment="Top"
+                                  ToolTip="VoiceMeeter Strip or Bus to control."/>
+                        <Grid Name="PanelVmMuteAcp2" HorizontalAlignment="Stretch">
+                            <CheckBox Name="CheckboxVmMuteAcp2" Margin="4,3.5,0,0" HorizontalAlignment="Center" Style="{StaticResource CheckBoxDefault}" VerticalAlignment="Top"
+                                      ToolTip="Use the Record Latch (push/pull the Knob) to mute the strip/bus."/>
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Margin="6,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
+                            <Button Name="ButtonAddVmMappingAcp2" Style="{StaticResource BtnSquareSmall}" ToolTip="Add/Update Mapping">
+                                <Image Name="ImageAddVmMappingAcp2" Source="../../Icons/add.png" Style="{StaticResource ImgSquareSmall}"/>
+                            </Button>
+                            <Button Name="ButtonRemoveVmMappingAcp2" Margin="6,0,0,0" Style="{StaticResource BtnSquareSmall}" ToolTip="Remove Mapping">
+                                <Image Source="../../Icons/remove.png" Style="{StaticResource ImgSquareSmall}"/>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- ACP3 mapping card -->
+            <TextBlock Style="{StaticResource CategoryHeader}" Text="ACP3 (OBSERVER) MAPPINGS" Margin="0,4,0,4"
+                       Visibility="{Binding IsAcp3Active, Converter={StaticResource BoolToVis}}"/>
+            <Border Style="{StaticResource SectionCardBorder}"
+                    Visibility="{Binding IsAcp3Active, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <DataGrid Name="GridVoiceMeeterMappingsAcp3" Margin="0,0,0,6" SelectionUnit="FullRow" SelectionMode="Single">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="Channel" MinWidth="96">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Channel}" HorizontalAlignment="Center" Style="{StaticResource TextBlockDefault}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Strip / Bus" MinWidth="220" Width="*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Margin="6,0,0,0" Style="{StaticResource TextBlockDefault}">
+                                            <TextBlock.Text>
+                                                <MultiBinding Converter="{StaticResource VmStripDisplay}" FallbackValue="">
+                                                    <Binding Path="StripIndex"/>
+                                                    <Binding Path="IsBus"/>
+                                                    <Binding Path="DataContext.AvailableStrips" RelativeSource="{RelativeSource AncestorType={x:Type UserControl}}"/>
+                                                </MultiBinding>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Use Mute">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding UseLatch}" IsHitTestVisible="False" HorizontalAlignment="Center" Margin="2,0,0,0" Style="{StaticResource CheckBoxDefault}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <ComboBox Name="SelectorVmChannelAcp3" SelectedIndex="0" HorizontalContentAlignment="Center" VerticalAlignment="Top" Style="{StaticResource ComboBoxDefault}" ToolTip="Audio channel that drives this VoiceMeeter target."/>
+                        <ComboBox Name="SelectorVmTargetAcp3"
+                                  ItemsSource="{Binding AvailableStrips}"
+                                  DisplayMemberPath="DisplayName" SelectedValuePath="Key"
+                                  Margin="6,0,0,0" MinWidth="220" Style="{StaticResource ComboBoxDefault}" VerticalAlignment="Top"
+                                  ToolTip="VoiceMeeter Strip or Bus to control."/>
+                        <Grid Name="PanelVmMuteAcp3" HorizontalAlignment="Stretch">
+                            <CheckBox Name="CheckboxVmMuteAcp3" Margin="4,3.5,0,0" HorizontalAlignment="Center" Style="{StaticResource CheckBoxDefault}" VerticalAlignment="Top"
+                                      ToolTip="Use the Record Latch (push/pull the Knob) to mute the strip/bus."/>
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Margin="6,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
+                            <Button Name="ButtonAddVmMappingAcp3" Style="{StaticResource BtnSquareSmall}" ToolTip="Add/Update Mapping">
+                                <Image Name="ImageAddVmMappingAcp3" Source="../../Icons/add.png" Style="{StaticResource ImgSquareSmall}"/>
+                            </Button>
+                            <Button Name="ButtonRemoveVmMappingAcp3" Margin="6,0,0,0" Style="{StaticResource BtnSquareSmall}" ToolTip="Remove Mapping">
+                                <Image Source="../../Icons/remove.png" Style="{StaticResource ImgSquareSmall}"/>
+                            </Button>
                         </StackPanel>
                     </StackPanel>
                 </StackPanel>
