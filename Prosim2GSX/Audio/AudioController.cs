@@ -47,6 +47,11 @@ namespace Prosim2GSX.Audio
         // Tracks the last-known backend / mappings revision so DoRun can
         // detect a UI-driven change and re-bind without restarting the loop.
         public virtual bool ResetVoiceMeeterBindings { get; set; } = false;
+        // When non-null, the VoiceMeeter mapping config failed validation and
+        // the binder fell back to ACP1-only for this session (ACP2/ACP3 entries
+        // dropped). UI surfaces this as a banner so the user knows their config
+        // isn't fully in effect. Cleared on the next successful Bind().
+        public virtual string VoiceMeeterFallbackReason { get; set; } = null;
         protected virtual DateTime NextProcessCheck { get; set; } = DateTime.MinValue;
         public virtual bool ResetVolumes { get; set; } = false;
         public virtual bool ResetMappings { get; set; } = false;
