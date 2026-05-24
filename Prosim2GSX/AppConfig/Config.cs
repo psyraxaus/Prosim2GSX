@@ -244,7 +244,20 @@ namespace Prosim2GSX.AppConfig
         // VoiceMeeter routing is per-mixer-target, not per-process. These
         // mappings are independent of AudioMappings and only consulted when
         // UseVoiceMeeter is true; the CoreAudio AudioMappings sit dormant.
+        //
+        // VoiceMeeterMappings (legacy, pre-v33): flat list of channel-to-strip
+        // bindings keyed to a single ACP (Config.AudioAcpSide). Retained for
+        // back-compat — the v33 migration copies its contents into
+        // VoiceMeeterMappingsByAcp[AudioAcpSide]. No longer authoritative.
         public virtual List<VoiceMeeterMapping> VoiceMeeterMappings { get; set; } = new();
+
+        // Multi-ACP VoiceMeeter support (v33+). ActiveAcps lists the 1-2 ACPs
+        // the binder drives concurrently; VoiceMeeterMappingsByAcp holds each
+        // ACP's channel-to-strip bindings. Default ships single-ACP (CPT only)
+        // matching pre-v33 behaviour. Invariants (1-2 unique entries from
+        // {CPT,FO,OBS}) enforced by NormalizeActiveAcps on load.
+        public virtual List<AcpSide> ActiveAcps { get; set; } = new() { AcpSide.CPT };
+        public virtual Dictionary<AcpSide, List<VoiceMeeterMapping>> VoiceMeeterMappingsByAcp { get; set; } = new();
 
         //ProsimSDK
         public virtual string ProSimSdkPath { get; set; } = "";
@@ -299,6 +312,39 @@ namespace Prosim2GSX.AppConfig
             {
                 AircraftProfiles.Add(new AircraftProfile());
                 this.SaveConfiguration();
+            }
+
+            NormalizeActiveAcps();
+        }
+
+        // Enforce ActiveAcps invariants on load: 1-2 unique entries from
+        // {CPT, FO, OBS}. Empty/null → [CPT]; out-of-range or duplicates
+        // dropped; >2 → first 2 kept. Logs once when normalization changes
+        // the list so a hand-edited AppConfig.json surfaces a warning
+        // instead of silently mis-binding.
+        protected virtual void NormalizeActiveAcps()
+        {
+            var original = ActiveAcps;
+            var normalized = new List<AcpSide>();
+            if (original != null)
+            {
+                foreach (var side in original)
+                {
+                    if (!Enum.IsDefined(typeof(AcpSide), side)) continue;
+                    if (normalized.Contains(side)) continue;
+                    normalized.Add(side);
+                    if (normalized.Count == 2) break;
+                }
+            }
+            if (normalized.Count == 0) normalized.Add(AcpSide.CPT);
+
+            bool changed = original == null
+                || original.Count != normalized.Count
+                || !original.SequenceEqual(normalized);
+            if (changed)
+            {
+                Logger.Warning($"ActiveAcps normalized from [{(original == null ? "null" : string.Join(",", original))}] to [{string.Join(",", normalized)}]");
+                ActiveAcps = normalized;
             }
         }
 
@@ -434,6 +480,25 @@ namespace Prosim2GSX.AppConfig
             // of the recurring ERROR_NOT_ENOUGH_QUOTA crash. Default false on
             // upgrade keeps existing installs in normal operation; the user
             // flips it manually in the JSON when actively investigating.
+
+            // v33: Multi-ACP VoiceMeeter support. VoiceMeeterMappings (flat list
+            // implicitly keyed to AudioAcpSide) is superseded by
+            // VoiceMeeterMappingsByAcp (explicit per-ACP buckets) and ActiveAcps
+            // (1-2 concurrent ACPs). Migrate the existing list into the bucket
+            // matching the saved AudioAcpSide; leave the legacy field populated
+            // as a back-compat snapshot for transitional UI bindings.
+            if (ConfigVersion < 33 && buildConfigVersion >= 33)
+            {
+                if (VoiceMeeterMappings?.Count > 0 && (VoiceMeeterMappingsByAcp == null || VoiceMeeterMappingsByAcp.Count == 0))
+                {
+                    VoiceMeeterMappingsByAcp = new Dictionary<AcpSide, List<VoiceMeeterMapping>>
+                    {
+                        [AudioAcpSide] = new List<VoiceMeeterMapping>(VoiceMeeterMappings),
+                    };
+                    ActiveAcps = new List<AcpSide> { AudioAcpSide };
+                    Logger.Information($"v33 migration: moved {VoiceMeeterMappings.Count} VoiceMeeter mapping(s) into ACP{(int)AudioAcpSide + 1} bucket; ActiveAcps=[{AudioAcpSide}]");
+                }
+            }
         }
 
         public virtual void SetFuelFob(string registration, double fuel)

@@ -150,6 +150,10 @@
   "UseVoiceMeeter": false,
   "VoiceMeeterDllPath": "",
   "VoiceMeeterMappings": [],
+  "ActiveAcps": [
+    0
+  ],
+  "VoiceMeeterMappingsByAcp": {},
   "ProSimSdkPath": "",
   "ProSimSdkHostname": "localhost",
   "ProSimSdkReconnectInterval": 5000,
@@ -259,7 +263,7 @@
       }
     }
   ],
-  "ConfigVersion": 32,
+  "ConfigVersion": 33,
   "LogInterval": 3,
   "SizeLimit": 10485760,
   "LogCount": 3,

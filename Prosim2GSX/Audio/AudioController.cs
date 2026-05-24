@@ -25,7 +25,8 @@ namespace Prosim2GSX.Audio
     public enum AcpSide
     {
         CPT = 0,
-        FO = 1
+        FO = 1,
+        OBS = 2,
     }
 
     public class AudioController : ServiceController<Prosim2GSX, AppService, Config, Definition>
