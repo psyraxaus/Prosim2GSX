@@ -1,6 +1,7 @@
 using CoreAudio;
 using Prosim2GSX.AppConfig;
 using Prosim2GSX.Audio;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -29,9 +30,19 @@ namespace Prosim2GSX.Web.Contracts
         // Mappings preserved in user-edit order (matches WPF grid order).
         public List<AudioMappingDto> Mappings { get; set; } = new();
 
-        // VoiceMeeter mappings — independent list, only routed when
-        // UseVoiceMeeter is true. CoreAudio mappings stay dormant.
-        public List<VoiceMeeterMappingDto> VoiceMeeterMappings { get; set; } = new();
+        // Multi-ACP VoiceMeeter routing. ActiveAcps selects 1-3 concurrent
+        // ACPs; VoiceMeeterMappingsByAcp holds each ACP's channel-to-strip
+        // bindings. Keys serialize as enum names ("CPT"/"FO"/"OBS") via the
+        // global JsonStringEnumConverter. CoreAudio mappings (above) stay
+        // dormant while UseVoiceMeeter is true.
+        public List<AcpSide> ActiveAcps { get; set; } = new() { AcpSide.CPT };
+        public Dictionary<AcpSide, List<VoiceMeeterMappingDto>> VoiceMeeterMappingsByAcp { get; set; } = new();
+
+        // Last fallback the binder applied — null when validation passed.
+        // The React panel surfaces this as a yellow banner in the
+        // VoiceMeeter Mappings section. Read-only field on the wire; the
+        // server ignores it on POST.
+        public string VoiceMeeterFallbackReason { get; set; }
 
         // Devices the user has chosen to exclude from enumeration.
         public List<string> Blacklist { get; set; } = new();
@@ -40,8 +51,18 @@ namespace Prosim2GSX.Web.Contracts
         {
             var config = app.Config;
             var audio = app.Audio;
+            var ctrl = app.AudioService;
             if (config == null)
                 return new AudioDto();
+
+            var byAcp = new Dictionary<AcpSide, List<VoiceMeeterMappingDto>>();
+            if (config.VoiceMeeterMappingsByAcp != null)
+            {
+                foreach (var kv in config.VoiceMeeterMappingsByAcp)
+                {
+                    byAcp[kv.Key] = kv.Value?.Select(VoiceMeeterMappingDto.From).ToList() ?? new();
+                }
+            }
 
             return new AudioDto
             {
@@ -52,7 +73,9 @@ namespace Prosim2GSX.Web.Contracts
                 AudioDeviceFlow = config.AudioDeviceFlow,
                 AudioDeviceState = config.AudioDeviceState,
                 Mappings = config.AudioMappings?.Select(AudioMappingDto.From).ToList() ?? new(),
-                VoiceMeeterMappings = config.VoiceMeeterMappings?.Select(VoiceMeeterMappingDto.From).ToList() ?? new(),
+                ActiveAcps = config.ActiveAcps?.ToList() ?? new() { AcpSide.CPT },
+                VoiceMeeterMappingsByAcp = byAcp,
+                VoiceMeeterFallbackReason = ctrl?.VoiceMeeterFallbackReason,
                 Blacklist = config.AudioDeviceBlacklist?.ToList() ?? new(),
             };
         }
@@ -72,7 +95,7 @@ namespace Prosim2GSX.Web.Contracts
 
             // Use the same setter side-effects ModelAudio relies on so the
             // controller picks up the change without a tab open.
-            bool mappingsChanged =
+            bool coreAudioMappingsChanged =
                 config.AudioAcpSide != AudioAcpSide
                 || config.AudioDeviceFlow != AudioDeviceFlow
                 || config.AudioDeviceState != AudioDeviceState
@@ -85,8 +108,32 @@ namespace Prosim2GSX.Web.Contracts
 
             // Replace the lists wholesale — preserves caller-supplied order.
             config.AudioMappings = Mappings?.Select(m => m.ToAudioMapping()).ToList() ?? new();
-            config.VoiceMeeterMappings = VoiceMeeterMappings?.Select(m => m.ToVoiceMeeterMapping()).ToList() ?? new();
             config.AudioDeviceBlacklist = Blacklist?.ToList() ?? new();
+
+            // Multi-ACP VM state. Clamp ActiveAcps to {CPT,FO,OBS} unique
+            // entries; reject empty (default to [CPT]). Same invariants as
+            // Config.NormalizeActiveAcps — repeated here so the server stays
+            // authoritative even on malformed POSTs.
+            var clean = new List<AcpSide>();
+            foreach (var side in ActiveAcps ?? Enumerable.Empty<AcpSide>())
+            {
+                if (!Enum.IsDefined(typeof(AcpSide), side)) continue;
+                if (clean.Contains(side)) continue;
+                clean.Add(side);
+            }
+            if (clean.Count == 0) clean.Add(AcpSide.CPT);
+            config.ActiveAcps = clean;
+
+            var nextByAcp = new Dictionary<AcpSide, List<VoiceMeeterMapping>>();
+            if (VoiceMeeterMappingsByAcp != null)
+            {
+                foreach (var kv in VoiceMeeterMappingsByAcp)
+                {
+                    if (!Enum.IsDefined(typeof(AcpSide), kv.Key)) continue;
+                    nextByAcp[kv.Key] = kv.Value?.Select(m => m.ToVoiceMeeterMapping()).ToList() ?? new();
+                }
+            }
+            config.VoiceMeeterMappingsByAcp = nextByAcp;
 
             config.SaveConfiguration();
 
@@ -96,7 +143,7 @@ namespace Prosim2GSX.Web.Contracts
             // mapping edits flag a binder rebind on the audio service tick.
             if (ctrl != null)
             {
-                if (mappingsChanged)
+                if (coreAudioMappingsChanged)
                     ctrl.ResetMappings = true;
                 ctrl.ResetVolumes = true;
                 ctrl.ResetVoiceMeeterBindings = true;

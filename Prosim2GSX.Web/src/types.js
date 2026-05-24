@@ -15,7 +15,15 @@ export const AUDIO_CHANNELS = [
 export const ACP_SIDE_OPTIONS = [
     { value: "CPT", label: "Captain" },
     { value: "FO", label: "First Officer" },
+    { value: "OBS", label: "Observer" },
 ];
+// Order used by the VoiceMeeter Mappings cards (ACP1 → ACP2 → ACP3).
+export const ACP_SIDES_ORDERED = ["CPT", "FO", "OBS"];
+export const ACP_SIDE_LABELS = {
+    CPT: "ACP1 (Captain)",
+    FO: "ACP2 (First Officer)",
+    OBS: "ACP3 (Observer)",
+};
 export const DATA_FLOW_OPTIONS = [
     { value: "Render", label: "Render" },
     { value: "Capture", label: "Capture" },
