@@ -12,6 +12,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Net.WebSockets;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -57,7 +58,39 @@ namespace Prosim2GSX.Web
         private static readonly HashSet<string> ConfigBroadcastWhitelist =
             typeof(AppSettingsDto).GetProperties()
                 .Select(p => p.Name)
+                // Never broadcast the auth token over the WS patch channel — a
+                // regenerated bearer token would be pushed to every connected
+                // client. The QR/onboarding UI reads it via the authenticated
+                // REST GET instead.
+                .Where(n => n != nameof(AppSettingsDto.WebServerAuthToken))
                 .ToHashSet(StringComparer.Ordinal);
+
+        // Per-type reflection caches. GetProperty/GetProperties do a linear
+        // member walk; Broadcast fires per changed property at the tick cadence
+        // and BroadcastStateAsPatch walks every property, so caching the
+        // PropertyInfo lookups keeps reflection off the hot broadcast path.
+        private static readonly ConcurrentDictionary<Type, Dictionary<string, PropertyInfo>> _propertyByName =
+            new ConcurrentDictionary<Type, Dictionary<string, PropertyInfo>>();
+        private static readonly ConcurrentDictionary<Type, PropertyInfo[]> _readableProps =
+            new ConcurrentDictionary<Type, PropertyInfo[]>();
+
+        private static PropertyInfo GetCachedProperty(Type type, string propertyName)
+        {
+            var map = _propertyByName.GetOrAdd(type, static t =>
+                t.GetProperties()
+                 .Where(p => p.CanRead && p.GetIndexParameters().Length == 0)
+                 // GroupBy guards against a shadowed (new) property name
+                 // throwing in ToDictionary; take the first match.
+                 .GroupBy(p => p.Name, StringComparer.Ordinal)
+                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal));
+            return map.TryGetValue(propertyName, out var prop) ? prop : null;
+        }
+
+        private static PropertyInfo[] GetCachedReadableProps(Type type)
+            => _readableProps.GetOrAdd(type, static t =>
+                t.GetProperties()
+                 .Where(p => p.CanRead && p.GetIndexParameters().Length == 0)
+                 .ToArray());
 
         public StateWebSocketHandler(AppService app)
         {
@@ -685,10 +718,8 @@ namespace Prosim2GSX.Web
             try
             {
                 var dict = new Dictionary<string, object>();
-                foreach (var prop in stateObject.GetType().GetProperties())
+                foreach (var prop in GetCachedReadableProps(stateObject.GetType()))
                 {
-                    if (prop.GetIndexParameters().Length > 0) continue;
-                    if (!prop.CanRead) continue;
                     try
                     {
                         var camel = JsonNamingPolicy.CamelCase.ConvertName(prop.Name);
@@ -767,7 +798,7 @@ namespace Prosim2GSX.Web
 
             try
             {
-                var prop = sender.GetType().GetProperty(propertyName);
+                var prop = GetCachedProperty(sender.GetType(), propertyName);
                 if (prop == null) return;
                 var value = prop.GetValue(sender);
                 var camel = JsonNamingPolicy.CamelCase.ConvertName(propertyName);

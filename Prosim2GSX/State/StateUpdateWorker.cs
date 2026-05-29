@@ -67,8 +67,8 @@ namespace Prosim2GSX.State
             try
             {
                 try { UpdateSim(); } catch (Exception ex) { Logger.LogException(ex); }
-                try { UpdateGsx(); } catch { }
-                try { UpdateApp(); } catch { }
+                try { UpdateGsx(); } catch (Exception ex) { Logger.LogException(ex); }
+                try { UpdateApp(); } catch (Exception ex) { Logger.LogException(ex); }
                 try { UpdateChecklist(); } catch (Exception ex) { Logger.LogException(ex); }
                 try { _app?.WeightBalanceService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
                 try { _app?.FuelService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }

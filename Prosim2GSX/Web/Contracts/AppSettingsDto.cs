@@ -1,3 +1,4 @@
+using CFIT.AppLogger;
 using Prosim2GSX.AppConfig;
 using Prosim2GSX.Themes;
 using ProsimInterface;
@@ -193,8 +194,19 @@ namespace Prosim2GSX.Web.Contracts
             var oldBindAll = c.WebServerBindAll;
             var oldToken = c.WebServerAuthToken ?? "";
 
+            // Clamp to the valid TCP port range. A client POSTing 0 or a value
+            // >65535 would otherwise crash Kestrel's hot-restart and leave the
+            // web server down — locking the client out. Keep the old port on
+            // garbage input rather than failing the whole save.
+            int requestedPort = WebServerPort;
+            if (requestedPort < 1 || requestedPort > 65535)
+            {
+                Logger.Warning($"Rejected out-of-range WebServerPort {requestedPort}; keeping {oldPort}.");
+                requestedPort = oldPort;
+            }
+
             c.WebServerEnabled = WebServerEnabled;
-            c.WebServerPort = WebServerPort;
+            c.WebServerPort = requestedPort;
             c.WebServerBindAll = WebServerBindAll;
             // Refuse to clear a populated token with an empty inbound value —
             // a misconfigured client could otherwise lock everyone out by
@@ -211,7 +223,7 @@ namespace Prosim2GSX.Web.Contracts
             // restart Kestrel even if the user only edited an unrelated field.
             if (oldEnabled != WebServerEnabled)
                 c.NotifyPropertyChanged(nameof(Config.WebServerEnabled));
-            if (oldPort != WebServerPort)
+            if (oldPort != requestedPort)
                 c.NotifyPropertyChanged(nameof(Config.WebServerPort));
             if (oldBindAll != WebServerBindAll)
                 c.NotifyPropertyChanged(nameof(Config.WebServerBindAll));
