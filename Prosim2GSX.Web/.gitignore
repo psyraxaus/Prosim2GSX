@@ -3,3 +3,11 @@ dist
 .vite
 *.log
 .DS_Store
+
+# Generated TypeScript compiler output. We type-check with `tsc --noEmit`
+# and Vite produces the real bundle into dist/, so no .js / .d.ts / build
+# info should be emitted into the source tree or committed.
+src/**/*.js
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts

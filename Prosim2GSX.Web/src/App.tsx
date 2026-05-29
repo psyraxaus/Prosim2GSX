@@ -9,6 +9,7 @@ import { Header } from "./components/Header";
 import { NotificationBanner } from "./components/NotificationBanner";
 import { TabBar, TabKey } from "./components/TabBar";
 import { FitToViewport } from "./components/FitToViewport";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { FlightStatusPanel } from "./panels/FlightStatusPanel";
 import { AudioSettingsPanel } from "./panels/AudioSettingsPanel";
 import { AppSettingsPanel } from "./panels/AppSettingsPanel";
@@ -89,19 +90,23 @@ function AppShell() {
       <NotificationBanner />
       <TabBar active={tab} onSelect={setTab} />
       <main className={styles.main}>
-        {tab === "flightStatus" && <FlightStatusPanel />}
-        {tab === "init" && <InitPanel />}
-        {tab === "ofp" && <OfpPanel />}
-        {tab === "loadsheet" && <LoadsheetPanel />}
-        {tab === "weightBalance" && <WeightBalancePanel />}
-        {tab === "fuel" && <FuelPanel />}
-        {tab === "takeoff" && <FitToViewport><TakeoffPerfPanel /></FitToViewport>}
-        {tab === "landing" && <FitToViewport><LandingPerfPanel /></FitToViewport>}
-        {tab === "checklists" && <ChecklistsPanel />}
-        {tab === "gsxSettings" && <GsxSettingsPanel />}
-        {tab === "aircraftProfiles" && <AircraftProfilesPanel />}
-        {tab === "audioSettings" && <AudioSettingsPanel />}
-        {tab === "appSettings" && <AppSettingsPanel />}
+        {/* Keyed by tab so a crash in one panel shows a contained fallback
+            and switching tabs remounts the boundary (auto-recovers). */}
+        <ErrorBoundary key={tab} label={tab}>
+          {tab === "flightStatus" && <FlightStatusPanel />}
+          {tab === "init" && <InitPanel />}
+          {tab === "ofp" && <OfpPanel />}
+          {tab === "loadsheet" && <LoadsheetPanel />}
+          {tab === "weightBalance" && <WeightBalancePanel />}
+          {tab === "fuel" && <FuelPanel />}
+          {tab === "takeoff" && <FitToViewport><TakeoffPerfPanel /></FitToViewport>}
+          {tab === "landing" && <FitToViewport><LandingPerfPanel /></FitToViewport>}
+          {tab === "checklists" && <ChecklistsPanel />}
+          {tab === "gsxSettings" && <GsxSettingsPanel />}
+          {tab === "aircraftProfiles" && <AircraftProfilesPanel />}
+          {tab === "audioSettings" && <AudioSettingsPanel />}
+          {tab === "appSettings" && <AppSettingsPanel />}
+        </ErrorBoundary>
       </main>
     </div>
   );
