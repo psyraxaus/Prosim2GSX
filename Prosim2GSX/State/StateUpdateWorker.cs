@@ -304,7 +304,7 @@ namespace Prosim2GSX.State
             catch { }
 
             fs.AppProfile = ctrl?.AircraftProfile?.ToString() ?? "";
-            fs.AppAircraft = $"{ai?.Airline ?? ""} / {ai?.Title ?? ""} / {ai?.Registration ?? ""}";
+            fs.AppAircraft = $"{ai?.Airline ?? ""} / {ai?.Title ?? ""}";
 
             // Header strip values — mirror HeaderBarControl.OnUpdate so the web
             // header reads identically to the WPF top bar.

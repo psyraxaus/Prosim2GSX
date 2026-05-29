@@ -129,7 +129,6 @@ namespace Prosim2GSX.UI.Views.Profiles
         protected virtual void OnUpdate(object? sender, EventArgs e)
         {
             try { UpdateState<string>(nameof(CurrentAirline), AircraftInterface?.Airline); } catch { }
-            try { UpdateState<string>(nameof(CurrentRegistration), AircraftInterface?.Registration); } catch { }
             try { UpdateState<string>(nameof(CurrentTitle), AircraftInterface?.Title); } catch { }
             try { UpdateState<string>(nameof(CurrentProfile), GsxController?.AircraftProfile?.ToString() ?? ""); } catch { }
             ForceRefresh = false;
@@ -137,9 +136,6 @@ namespace Prosim2GSX.UI.Views.Profiles
 
         [ObservableProperty]
         protected string _CurrentAirline = "";
-
-        [ObservableProperty]
-        protected string _CurrentRegistration = "";
 
         [ObservableProperty]
         protected string _CurrentTitle = "";
