@@ -25,8 +25,7 @@ namespace Prosim2GSX.Services
         // Shutdown-edge tracker (mirrors LoadsheetTimingService): clear the
         // card when the aircraft shuts down on the ground so the next
         // flight starts fresh.
-        private bool _wasOnGround = true;
-        private bool _wasEnginesRunning;
+        private readonly FlightCycleEdgeDetector _flightCycle = new();
 
         public DeiceHoldoverService(AppService app)
         {
@@ -180,13 +179,12 @@ namespace Prosim2GSX.Services
         {
             bool onGround = _app?.FlightStatus?.AppOnGround ?? true;
             bool engines = _app?.FlightStatus?.AppEnginesRunning ?? false;
+            _flightCycle.Update(onGround, engines);
 
-            // Engines were running on the ground, now off → flight done.
-            if (_wasOnGround && _wasEnginesRunning && onGround && !engines)
+            // Engines were running on the ground, now off → flight done. Uses the
+            // stricter "stable" edge (also requires on-ground the previous tick).
+            if (_flightCycle.EngineShutdownOnGroundStable)
                 Clear();
-
-            _wasOnGround = onGround;
-            _wasEnginesRunning = engines;
         }
 
         private void Clear()

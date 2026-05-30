@@ -61,8 +61,7 @@ namespace Prosim2GSX.Services
         // Edge tracking for the shutdown auto-reset trigger. Mirrors the
         // pattern in LoadsheetService.ProcessShutdownReset and
         // StateUpdateWorker.UpdateChecklist.
-        private bool _wasOnGround = true;
-        private bool _wasEnginesRunning;
+        private readonly FlightCycleEdgeDetector _flightCycle = new();
 
         public EfbFlightPlanService(AppService app)
         {
@@ -113,8 +112,9 @@ namespace Prosim2GSX.Services
 
             bool nowOnGround = fs.AppOnGround;
             bool nowEnginesRunning = fs.AppEnginesRunning;
+            _flightCycle.Update(nowOnGround, nowEnginesRunning);
 
-            if (nowOnGround && _wasEnginesRunning && !nowEnginesRunning)
+            if (_flightCycle.EngineShutdownOnGround)
             {
                 if (state.Status != OfpStatus.Empty || state.OverrideFlags.Count > 0)
                 {
@@ -122,9 +122,6 @@ namespace Prosim2GSX.Services
                     ResetFlight();
                 }
             }
-
-            _wasOnGround = nowOnGround;
-            _wasEnginesRunning = nowEnginesRunning;
         }
 
         // Manual fetch entry point used by the FETCH OFP button. Source is

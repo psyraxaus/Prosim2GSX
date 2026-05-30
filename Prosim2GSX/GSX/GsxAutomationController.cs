@@ -219,28 +219,13 @@ namespace Prosim2GSX.GSX
                 service.Value.ResetState();
 
             IsOnGround = true;
-
             ExecutedReposition = false;
-            GroundEquipmentPlaced = false;
-            JetwayStairRemoved = false;
-            ChockDelay = 0;
-            ChockFlashed = false;
-            CabinDinged = false;
-            DepartureIcao = "";
-            OfpArrivalId = "0";
             ServiceCountRunning = 0;
             ServiceCountCompleted = 0;
             ServiceCountTotal = 0;
 
-            DepartureServicesCompleted = false;
-            CancelChockTask();
-            ArrivalStableTicks = 0;
-            ArrivalEnteredAt = DateTime.MinValue;
-            ArrivalStallLastWarning = DateTime.MinValue;
-            LastFlightSummaryAt = DateTime.MinValue;
-            LastTaxiInSummaryAt = DateTime.MinValue;
-            LastStableParked = false;
-            ResetDepartureSequence();
+            ResetTurnaroundState();
+
             DepartureServicesCalled?.Clear();
             if (Profile?.DepartureServices != null)
             {
@@ -259,6 +244,20 @@ namespace Prosim2GSX.GSX
                 service.Value.ResetState(Config.ResetGsxStateVarsFlight);
 
             Aircraft.ResetFlight();
+
+            ResetTurnaroundState();
+
+            DepartureServicesCalled.Clear();
+            DepartureServicesEnumerator = Profile.DepartureServices.GetEnumerator();
+            DepartureServicesEnumerator.MoveNext();
+        }
+
+        // Shared turnaround-state reset for both the full session Reset() and
+        // the per-flight ResetFlight(), so the two can't drift. (They did:
+        // Reset() previously omitted the gate-connection fallback clears below,
+        // so a session reset left a stale 30s grace timer + "logged once" flag.)
+        private void ResetTurnaroundState()
+        {
             GroundEquipmentPlaced = false;
             JetwayStairRemoved = false;
             ChockDelay = 0;
@@ -269,7 +268,6 @@ namespace Prosim2GSX.GSX
             _jetwayActiveSinceUtc = null;
             _stairsActiveSinceUtc = null;
             _gateConnectedFallbackLogged = false;
-
             DepartureServicesCompleted = false;
             CancelChockTask();
             ArrivalStableTicks = 0;
@@ -279,9 +277,6 @@ namespace Prosim2GSX.GSX
             LastTaxiInSummaryAt = DateTime.MinValue;
             LastStableParked = false;
             ResetDepartureSequence();
-            DepartureServicesCalled.Clear();
-            DepartureServicesEnumerator = Profile.DepartureServices.GetEnumerator();
-            DepartureServicesEnumerator.MoveNext();
         }
 
         public virtual async Task Run()

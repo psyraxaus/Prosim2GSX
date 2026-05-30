@@ -1,6 +1,7 @@
 using CFIT.AppLogger;
 using Prosim2GSX.GSX;
 using Prosim2GSX.GSX.Services;
+using Prosim2GSX.Services;
 using Prosim2GSX.UI.Views.Checklists;
 using ProsimInterface;
 using System;
@@ -336,8 +337,7 @@ namespace Prosim2GSX.State
         // (pre-departure or post-landing), then engines stop. The takeoff
         // transition (on-ground -> airborne) auto-clears PRE-START/STARTUP/TAXI
         // so those sections are not stale when the user lands.
-        private bool _wasOnGround = true;
-        private bool _wasEnginesRunning = false;
+        private readonly FlightCycleEdgeDetector _flightCycle = new();
 
         protected virtual void UpdateChecklist()
         {
@@ -350,23 +350,21 @@ namespace Prosim2GSX.State
             // written by UpdateApp this tick) to the previous snapshot.
             var nowOnGround = fs.AppOnGround;
             var nowEnginesRunning = fs.AppEnginesRunning;
+            _flightCycle.Update(nowOnGround, nowEnginesRunning);
 
             // Takeoff: on-ground -> airborne. Clear pre-flight sections so the
             // user lands with a clean approach/landing flow.
-            if (_wasOnGround && !nowOnGround)
+            if (_flightCycle.Liftoff)
             {
                 cl.ResetSections("PRE START", "STARTUP", "BEFORE TAXI", "TAXI", "BEFORE TAKE-OFF", "TAKE-OFF");
             }
 
             // Shutdown: on-ground AND engines just transitioned running -> off.
             // Full reset of all sections (fresh flight cycle next time).
-            if (nowOnGround && _wasEnginesRunning && !nowEnginesRunning)
+            if (_flightCycle.EngineShutdownOnGround)
             {
                 cl.ResetAll();
             }
-
-            _wasOnGround = nowOnGround;
-            _wasEnginesRunning = nowEnginesRunning;
 
             // Dataref-driven item evaluation. Walk the current checklist's items;
             // for each item that has a dataref, read it via the SDK and update

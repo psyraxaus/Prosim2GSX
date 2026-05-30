@@ -76,8 +76,7 @@ namespace Prosim2GSX.Services
         private DateTime? _lastStdSeen;
 
         // Shutdown-edge tracker. Mirrors LoadsheetService.
-        private bool _wasOnGround = true;
-        private bool _wasEnginesRunning;
+        private readonly FlightCycleEdgeDetector _flightCycle = new();
 
         // 60-second throttle for the STD-based time evaluation. Boarding-
         // edge detection runs every tick (responsiveness > polling cost),
@@ -147,8 +146,9 @@ namespace Prosim2GSX.Services
 
             bool nowOnGround = fs.AppOnGround;
             bool nowEnginesRunning = fs.AppEnginesRunning;
+            _flightCycle.Update(nowOnGround, nowEnginesRunning);
 
-            if (nowOnGround && _wasEnginesRunning && !nowEnginesRunning)
+            if (_flightCycle.EngineShutdownOnGround)
             {
                 ResetFiredFlags();
                 _manualStdOverride = null;
@@ -156,9 +156,6 @@ namespace Prosim2GSX.Services
                 _boardingSeeded = false; // re-seed on next tick from current dataref
                 Logger.Information("Loadsheet timing: state reset on flight-cycle shutdown");
             }
-
-            _wasOnGround = nowOnGround;
-            _wasEnginesRunning = nowEnginesRunning;
         }
 
         protected virtual void ProcessStdChange()
