@@ -1,6 +1,6 @@
 using CFIT.AppLogger;
-using Newtonsoft.Json;
 using Prosim2GSX.UI.Views.Checklists;
+using System.Text.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -97,6 +97,16 @@ namespace Prosim2GSX.Checklists
             }
         }
 
+        // System.Text.Json options matching Newtonsoft's prior leniency:
+        // case-insensitive property matching, trailing commas, and // comments
+        // — user-edited checklist files relied on Newtonsoft's tolerance.
+        private static readonly JsonSerializerOptions ChecklistJsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true,
+            AllowTrailingCommas = true,
+            ReadCommentHandling = JsonCommentHandling.Skip,
+        };
+
         public virtual ChecklistDefinition LoadChecklist(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -109,10 +119,10 @@ namespace Prosim2GSX.Checklists
                 {
                     Logger.Warning($"ChecklistService: checklist not found: {path}; falling back to embedded default");
                     var content = ReadEmbeddedDefault();
-                    return content != null ? JsonConvert.DeserializeObject<ChecklistDefinition>(content) : null;
+                    return content != null ? JsonSerializer.Deserialize<ChecklistDefinition>(content, ChecklistJsonOptions) : null;
                 }
                 var json = File.ReadAllText(path);
-                return JsonConvert.DeserializeObject<ChecklistDefinition>(json);
+                return JsonSerializer.Deserialize<ChecklistDefinition>(json, ChecklistJsonOptions);
             }
             catch (Exception ex)
             {
