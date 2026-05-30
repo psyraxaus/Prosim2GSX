@@ -571,43 +571,9 @@ namespace Prosim2GSX.AppConfig
 
         public virtual AircraftProfile GetAircraftProfile(AircraftInterface aircraft)
         {
-            if (aircraft.IsLoaded)
-            {
-                foreach (var profile in AircraftProfiles)
-                {
-                    if (profile.MatchType != ProfileMatchType.Title)
-                        continue;
-                    var strings = profile.MatchString.Split('|');
-                    foreach (var s in strings)
-                    {
-                        if (aircraft.Title.Contains(s, StringComparison.InvariantCultureIgnoreCase))
-                        {
-                            Logger.Information($"Loading Profile '{profile.Name}' (matched on Title/Livery - '{aircraft.Title}' contains '{s}')");
-                            return profile;
-                        }
-                    }
-                }
-
-                foreach (var profile in AircraftProfiles)
-                {
-                    if (profile.MatchType != ProfileMatchType.Airline)
-                        continue;
-                    var strings = profile.MatchString.Split('|');
-                    foreach (var s in strings)
-                    {
-                        if (!AppService.Instance.GsxService.IsMsfs2024 && aircraft.Airline.StartsWith(s, StringComparison.InvariantCultureIgnoreCase))
-                        {
-                            Logger.Information($"Loading Profile '{profile.Name}' (matched on Airline - '{aircraft.Airline}' starts with '{s}')");
-                            return profile;
-                        }
-                        else if (AppService.Instance.GsxService.IsMsfs2024 && aircraft.Title.Contains(s, StringComparison.InvariantCultureIgnoreCase))
-                        {
-                            Logger.Information($"Loading Profile '{profile.Name}' (matched on Livery - '{aircraft.Title}' contains '{s}')");
-                            return profile;
-                        }
-                    }
-                }
-            }
+            var matched = ProfileMatcher.Match(aircraft, AircraftProfiles, AppService.Instance.GsxService.IsMsfs2024);
+            if (matched != null)
+                return matched;
 
             Logger.Information($"Loading default Aircraft Profile");
             return CheckServices(AircraftProfiles.Where(p => p.Name == "default").First() ?? new AircraftProfile());
