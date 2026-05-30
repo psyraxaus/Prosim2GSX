@@ -94,32 +94,36 @@ namespace Prosim2GSX.GSX
         // on the operation LVAR. The first time the fallback fires per session
         // it logs once at INFO so the log carries clear evidence we took the
         // rescue path.
+        // Pure read: strict IsConnected, else the stale-Active fallback. The
+        // "active since" timers it relies on are advanced once per tick by
+        // AdvanceGateConnectionState() — NOT here — so this getter can be read
+        // any number of times per tick without perturbing the 30s grace timer.
         public virtual bool IsGateConnected
-        {
-            get
-            {
-                bool strict = ServiceJetway.IsConnected || ServiceStairs.IsConnected;
-                if (strict)
-                    return true;
-                bool stale = HasStaleActiveGateService();
-                if (stale && !_gateConnectedFallbackLogged)
-                {
-                    _gateConnectedFallbackLogged = true;
-                    Logger.Information(
-                        $"IsGateConnected: strict IsConnected check failed (Jetway state={ServiceJetway?.State} op={ServiceJetway?.SubOperating?.GetNumber()}, "
-                      + $"Stairs state={ServiceStairs?.State} op={ServiceStairs?.SubOperating?.GetNumber()}) — "
-                      + $"falling back to >= {GateActiveGraceSec}s of stable Active state. "
-                      + "Suspect GSX operation LVAR stuck; check GsxRemoteControlExperimental.");
-                }
-                return stale;
-            }
-        }
+            => ServiceJetway.IsConnected || ServiceStairs.IsConnected || HasStaleActiveGateService();
+
         private DateTime? _jetwayActiveSinceUtc;
         private DateTime? _stairsActiveSinceUtc;
         private bool _gateConnectedFallbackLogged;
         private const double GateActiveGraceSec = 30;
 
+        // Pure check against the once-per-tick-advanced timers (no mutation).
         private bool HasStaleActiveGateService()
+        {
+            var now = DateTime.UtcNow;
+            if (_jetwayActiveSinceUtc.HasValue && (now - _jetwayActiveSinceUtc.Value).TotalSeconds >= GateActiveGraceSec)
+                return true;
+            if (_stairsActiveSinceUtc.HasValue && (now - _stairsActiveSinceUtc.Value).TotalSeconds >= GateActiveGraceSec)
+                return true;
+            return false;
+        }
+
+        // Advance the gate-connection "active since" timers once per tick from
+        // the automation loop. This mutation previously lived in the
+        // IsGateConnected getter, so the 30s grace timer depended on how often /
+        // when the property was read each tick — a transient non-Active blip
+        // during one read could reset it. Advancing deterministically here makes
+        // the fallback robust and keeps IsGateConnected a pure read.
+        private void AdvanceGateConnectionState()
         {
             if (ServiceJetway?.State == GsxServiceState.Active)
                 _jetwayActiveSinceUtc ??= DateTime.UtcNow;
@@ -131,12 +135,19 @@ namespace Prosim2GSX.GSX
             else
                 _stairsActiveSinceUtc = null;
 
-            var now = DateTime.UtcNow;
-            if (_jetwayActiveSinceUtc.HasValue && (now - _jetwayActiveSinceUtc.Value).TotalSeconds >= GateActiveGraceSec)
-                return true;
-            if (_stairsActiveSinceUtc.HasValue && (now - _stairsActiveSinceUtc.Value).TotalSeconds >= GateActiveGraceSec)
-                return true;
-            return false;
+            // Log the fallback once per session, when it first becomes effective
+            // while the strict IsConnected check is still failing.
+            if (!_gateConnectedFallbackLogged
+                && !(ServiceJetway.IsConnected || ServiceStairs.IsConnected)
+                && HasStaleActiveGateService())
+            {
+                _gateConnectedFallbackLogged = true;
+                Logger.Information(
+                    $"IsGateConnected: strict IsConnected check failed (Jetway state={ServiceJetway?.State} op={ServiceJetway?.SubOperating?.GetNumber()}, "
+                  + $"Stairs state={ServiceStairs?.State} op={ServiceStairs?.SubOperating?.GetNumber()}) — "
+                  + $"falling back to >= {GateActiveGraceSec}s of stable Active state. "
+                  + "Suspect GSX operation LVAR stuck; check GsxRemoteControlExperimental.");
+            }
         }
 
         public virtual bool HasDepartBypassed => Controller.GsxServices[GsxServiceType.Refuel].State == GsxServiceState.Bypassed || Controller.GsxServices[GsxServiceType.Boarding].State == GsxServiceState.Bypassed;
@@ -295,6 +306,9 @@ namespace Prosim2GSX.GSX
                     }
                     if (Controller.IsGsxRunning && Controller.CanAutomationRun)
                     {
+                        // Advance the gate-connection grace timers deterministically
+                        // before the state machine reads IsGateConnected this tick.
+                        AdvanceGateConnectionState();
                         await EvaluateState();
                         if (Config.RunAutomationService && ServicesValid && Controller.Menu.FirstReadyReceived)
                             await RunServices();
