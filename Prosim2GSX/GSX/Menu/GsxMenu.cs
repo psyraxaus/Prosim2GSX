@@ -41,7 +41,15 @@ namespace Prosim2GSX.GSX.Menu
         public virtual string MenuTitle { get; protected set; }
         public virtual bool HasTitle { get { return !string.IsNullOrWhiteSpace(MenuTitle); } }
         public virtual int MenuLineCount { get { return MenuLines.Count; } }
-        public virtual List<string> MenuLines { get; } = [];
+
+        // Replace-by-reference: UpdateMenu builds a fresh list and publishes it
+        // atomically via this volatile field, so readers on other threads (the
+        // automation loop, parking selector, manual-selection callback) never
+        // observe a mid Clear()/Add() torn state or a "Collection was modified"
+        // enumeration. Exposed read-only; callers needing a stable copy snapshot
+        // (ExecuteIntent does .ToList()).
+        private volatile List<string> _menuLines = [];
+        public virtual IReadOnlyList<string> MenuLines => _menuLines;
 
         public virtual bool FirstReadyReceived { get; protected set; } = false;
         public virtual bool IsMenuReady => MenuState == GsxMenuState.READY || MenuState == GsxMenuState.HIDE;
@@ -489,7 +497,7 @@ namespace Prosim2GSX.GSX.Menu
         {
             LastMenuSelection = -2;
             MenuTitle = "";
-            MenuLines.Clear();
+            _menuLines = [];
             MenuState = GsxMenuState.UNKNOWN;
             FirstReadyReceived = false;
             DeIceQuestionAnswered = false;
@@ -517,8 +525,24 @@ namespace Prosim2GSX.GSX.Menu
             MenuCallbacks.TryRemove(title, out _);
         }
 
+        // Serializes OnMenuEvent: async void releases the SimConnect callback
+        // thread at the first await, so two rapid menu events could otherwise run
+        // UpdateMenu (and fire MenuTitleChanged / send messages) concurrently.
+        // Re-entrant-deadlock-safe: menu callbacks are delivered by the sim
+        // message pump, never synchronously re-entered from within a handler.
+        private readonly SemaphoreSlim _menuEventGate = new(1, 1);
+
         protected virtual async void OnMenuEvent(ISimResourceSubscription sub, object value)
         {
+            try
+            {
+                await _menuEventGate.WaitAsync(RequestToken);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
             try
             {
                 if (!Controller.IsActive)
@@ -547,6 +571,10 @@ namespace Prosim2GSX.GSX.Menu
                 if (ex is not TaskCanceledException)
                     Logger.LogException(ex);
             }
+            finally
+            {
+                _menuEventGate.Release();
+            }
         }
 
         public virtual async Task UpdateMenu()
@@ -555,13 +583,14 @@ namespace Prosim2GSX.GSX.Menu
             MenuOpenAfterReady = false;
             if (File.Exists(PathMenu))
             {
-                MenuLines.Clear();
-
-                var fileLines = File.ReadAllLines(PathMenu).ToArray();
+                var fileLines = File.ReadAllLines(PathMenu);
+                var newLines = new List<string>(fileLines.Length);
                 var fileIndex = 0;
                 MenuTitle = fileLines[fileIndex++];
                 while (fileIndex < fileLines.Length)
-                    MenuLines.Add(fileLines[fileIndex++]);
+                    newLines.Add(fileLines[fileIndex++]);
+                // Atomic publish — readers see the old or the new list, never torn.
+                _menuLines = newLines;
                 Logger.Verbose($"Read {MenuLineCount} Lines");
             }
             else
@@ -708,7 +737,7 @@ namespace Prosim2GSX.GSX.Menu
 
         public virtual async Task SelectOperator()
         {
-            var gsxOperator = GsxOperator.OperatorSelection(AircraftProfile, MenuLines);
+            var gsxOperator = GsxOperator.OperatorSelection(AircraftProfile, MenuLines.ToList());
             if (gsxOperator != null)
             {
                 Logger.Information($"Selecting Operator '{gsxOperator.Title}' (GSX Choice: {gsxOperator.GsxChoice})");
