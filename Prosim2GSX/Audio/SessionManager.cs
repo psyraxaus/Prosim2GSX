@@ -118,7 +118,22 @@ namespace Prosim2GSX.Audio
                 try { p.Dispose(); } catch { }
             }
             ProcessList.Clear();
-            ProcessList.AddRange(Process.GetProcesses());
+
+            // Fetch only the processes for the binaries we actually map, rather
+            // than snapshotting every process on the system each tick. CheckProcess
+            // matches by ProcessName (no extension), so GetProcessesByName(binary)
+            // is an exact — and far cheaper — equivalent of the old GetProcesses()
+            // + per-session O(processes) filter.
+            var binaries = MappedAudioSessions
+                .SelectMany(c => c.Value)
+                .Select(s => s.Binary)
+                .Where(b => !string.IsNullOrWhiteSpace(b))
+                .Distinct(StringComparer.InvariantCultureIgnoreCase);
+            foreach (var binary in binaries)
+            {
+                try { ProcessList.AddRange(Process.GetProcessesByName(binary)); }
+                catch (Exception ex) { Logger.Warning($"GetProcessesByName('{binary}') failed: {ex.Message}"); }
+            }
 
             foreach (var channel in MappedAudioSessions)
                 foreach (var session in channel.Value)
