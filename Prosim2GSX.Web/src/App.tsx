@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { AUTH_FAIL_EVENT, getStoredToken } from "./auth/auth";
 import { AuthGate } from "./auth/AuthGate";
-import { AppStateProvider, useAppState } from "./state/AppStateContext";
+import { AppStateProvider, useChannel, useDispatch } from "./state/AppStateContext";
 import { useWebSocket } from "./ws/useWebSocket";
 import { useApi } from "./api/useApi";
 import { useTheme } from "./theme/useTheme";
@@ -52,7 +52,8 @@ export function App() {
 }
 
 function AppShell() {
-  const { state, dispatch } = useAppState();
+  const dispatch = useDispatch();
+  const appSettings = useChannel("appSettings");
   useWebSocket(dispatch);
   const { get } = useApi();
 
@@ -79,7 +80,7 @@ function AppShell() {
   // the local "user saved a new theme" path and the cross-client "another
   // client / WPF window changed the theme" path (which arrives as a WS
   // patch on the appSettings channel into state.appSettings.currentTheme).
-  const themeName = (state.appSettings?.currentTheme as string | undefined) ?? null;
+  const themeName = appSettings?.currentTheme ?? null;
   useTheme(themeName);
 
   const [tab, setTab] = useState<TabKey>("flightStatus");

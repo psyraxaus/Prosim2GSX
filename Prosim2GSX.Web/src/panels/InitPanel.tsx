@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useApi } from "../api/useApi";
-import { useAppState } from "../state/AppStateContext";
+import { useChannel, useDispatch } from "../state/AppStateContext";
 import {
   EfbFlightPlanDto,
   FetchOfpRequest,
@@ -32,7 +32,7 @@ const FIELD_RANGES: Record<string, { min: number; max: number; integer?: boolean
 
 export function InitPanel() {
   const { get, post } = useApi();
-  const { state, dispatch } = useAppState();
+  const dispatch = useDispatch();
   const [busy, setBusy] = useState<"fetch" | "sync" | "clear" | "reset" | null>(null);
   const [resetArmed, setResetArmed] = useState(false);
 
@@ -67,7 +67,7 @@ export function InitPanel() {
     return () => { cancelled = true; };
   }, [get, dispatch]);
 
-  const efb = state.efbFlightPlan as unknown as EfbFlightPlanDto | null;
+  const efb = useChannel("efbFlightPlan");
 
   // Cycle the fetch-phase text while a fetch is in flight. Order matches
   // the actual server-side sequence (HTTP fetch → JSON parse → ProSim

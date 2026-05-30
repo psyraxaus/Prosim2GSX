@@ -3,15 +3,37 @@ import {
   ReactNode,
   createContext,
   useContext,
-  useReducer,
+  useRef,
+  useSyncExternalStore,
 } from "react";
-import { ConnectionStatus, StateChannel, WsChannel } from "../types";
+import {
+  ConnectionStatus,
+  StateChannel,
+  WsChannel,
+  FlightStatusDto,
+  AudioDto,
+  GsxSettingsDto,
+  AppSettingsDto,
+  OfpDto,
+  ChecklistDto,
+  WeightBalanceDto,
+  LoadsheetSnapshotDto,
+  EfbFlightPlanDto,
+  NotificationsSnapshotDto,
+  FuelDto,
+  TakeoffPerfStateDto,
+  LandingPerfStateDto,
+} from "../types";
 
 // Single source of truth for live state. WS deltas dispatch "patch"
-// actions; REST initial loads dispatch "set" actions. Each top-level
-// channel (flightStatus / audio / gsxSettings / appSettings) is opaque
-// here — the panels that consume it know the DTO shapes. Phase 7B will
-// strengthen the typing once the full DTO types are in.
+// actions; REST initial loads dispatch "set" actions.
+//
+// Backed by an external store (useSyncExternalStore) so consumers subscribe to
+// ONE channel via useChannel(...) and re-render only when that channel's
+// reference changes — the reducer produces a fresh object solely for the
+// patched channel, so an unrelated channel's tick never re-renders a panel.
+// Channels are stored opaquely (the wire shape is a partial-merge target); the
+// typed useChannel<K> hook is the single place the DTO cast lives.
 
 // MessageLog mirror cap — matches the server's FlightStatusState ring
 // buffer (set in Phase 1 to 500). Trimmed when WS log adds push past it.
@@ -32,6 +54,24 @@ export interface AppState {
   takeoffPerf: Record<string, unknown> | null;
   landingPerf: Record<string, unknown> | null;
   connection: ConnectionStatus;
+}
+
+// Channel → DTO map. useChannel<K> returns ChannelTypes[K] | null, so panels
+// get a typed value with no per-call cast.
+export interface ChannelTypes {
+  flightStatus: FlightStatusDto;
+  audio: AudioDto;
+  gsxSettings: GsxSettingsDto;
+  appSettings: AppSettingsDto;
+  ofp: OfpDto;
+  checklists: ChecklistDto;
+  weightBalance: WeightBalanceDto;
+  loadsheet: LoadsheetSnapshotDto;
+  efbFlightPlan: EfbFlightPlanDto;
+  notifications: NotificationsSnapshotDto;
+  fuel: FuelDto;
+  takeoffPerf: TakeoffPerfStateDto;
+  landingPerf: LandingPerfStateDto;
 }
 
 export type AppAction =
@@ -120,26 +160,71 @@ function reducer(state: AppState, action: AppAction): AppState {
   }
 }
 
-interface ContextValue {
-  state: AppState;
+// ── External store ──────────────────────────────────────────────────────────
+
+interface Store {
+  getState(): AppState;
+  subscribe(listener: () => void): () => void;
   dispatch: Dispatch<AppAction>;
 }
 
-const AppStateContext = createContext<ContextValue | null>(null);
+function createStore(): Store {
+  let state = initialState;
+  const listeners = new Set<() => void>();
+  return {
+    getState: () => state,
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    dispatch(action) {
+      const next = reducer(state, action);
+      // The reducer returns the same reference for no-op actions (e.g. a patch
+      // on a still-null channel) — skip the notify so nothing re-renders.
+      if (next !== state) {
+        state = next;
+        listeners.forEach((l) => l());
+      }
+    },
+  };
+}
+
+const StoreContext = createContext<Store | null>(null);
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const storeRef = useRef<Store | null>(null);
+  if (storeRef.current === null) storeRef.current = createStore();
   return (
-    <AppStateContext.Provider value={{ state, dispatch }}>
+    <StoreContext.Provider value={storeRef.current}>
       {children}
-    </AppStateContext.Provider>
+    </StoreContext.Provider>
   );
 }
 
-export function useAppState(): ContextValue {
-  const ctx = useContext(AppStateContext);
-  if (!ctx) {
-    throw new Error("useAppState must be used inside <AppStateProvider>.");
+function useStore(): Store {
+  const store = useContext(StoreContext);
+  if (!store) {
+    throw new Error("store hooks must be used inside <AppStateProvider>.");
   }
-  return ctx;
+  return store;
+}
+
+// Subscribe to a single channel; re-renders only when that channel changes.
+export function useChannel<K extends keyof ChannelTypes>(key: K): ChannelTypes[K] | null {
+  const store = useStore();
+  return useSyncExternalStore(
+    store.subscribe,
+    () => store.getState()[key] as ChannelTypes[K] | null,
+  );
+}
+
+// Connection status (non-nullable channel).
+export function useConnection(): ConnectionStatus {
+  const store = useStore();
+  return useSyncExternalStore(store.subscribe, () => store.getState().connection);
+}
+
+// Stable dispatch — never causes a re-render.
+export function useDispatch(): Dispatch<AppAction> {
+  return useStore().dispatch;
 }

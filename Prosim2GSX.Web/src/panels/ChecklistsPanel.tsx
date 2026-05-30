@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useApi } from "../api/useApi";
-import { useAppState } from "../state/AppStateContext";
+import { useChannel, useDispatch } from "../state/AppStateContext";
 import {
   ChecklistDto,
   ChecklistItemDto,
@@ -23,7 +23,7 @@ import styles from "./ChecklistsPanel.module.css";
 // clients (e.g. WPF + browser) stay in lockstep.
 export function ChecklistsPanel() {
   const { get, post } = useApi();
-  const { state, dispatch } = useAppState();
+  const dispatch = useDispatch();
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
@@ -41,7 +41,7 @@ export function ChecklistsPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const dto = state.checklists as unknown as ChecklistDto | null;
+  const dto = useChannel("checklists");
 
   const currentSection = useMemo<ChecklistSectionDto | null>(() => {
     if (!dto?.sections) return null;

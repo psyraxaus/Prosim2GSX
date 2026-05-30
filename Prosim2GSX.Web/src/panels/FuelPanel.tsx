@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useApi } from "../api/useApi";
-import { useAppState } from "../state/AppStateContext";
+import { useChannel, useDispatch } from "../state/AppStateContext";
 import { FuelDto } from "../types";
 import styles from "./FuelPanel.module.css";
 
@@ -25,7 +25,7 @@ const DELTA_RED_KG   = 100;
 
 export function FuelPanel() {
   const { get } = useApi();
-  const { state, dispatch } = useAppState();
+  const dispatch = useDispatch();
 
   useEffect(() => {
     let cancelled = false;
@@ -46,7 +46,7 @@ export function FuelPanel() {
     return () => { cancelled = true; };
   }, [get, dispatch]);
 
-  const f = state.fuel as unknown as FuelDto | null;
+  const f = useChannel("fuel");
   if (!f) {
     return <div className={styles.loading}>Loading fuel…</div>;
   }

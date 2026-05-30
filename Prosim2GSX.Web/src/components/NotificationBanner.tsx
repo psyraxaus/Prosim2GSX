@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useApi } from "../api/useApi";
-import { useAppState } from "../state/AppStateContext";
+import { useChannel, useDispatch } from "../state/AppStateContext";
 import { NotificationDto, NotificationsSnapshotDto } from "../types";
 import styles from "./NotificationBanner.module.css";
 
@@ -17,7 +17,8 @@ import styles from "./NotificationBanner.module.css";
 // optimistically update local state.
 export function NotificationBanner() {
   const { get, post } = useApi();
-  const { state, dispatch } = useAppState();
+  const dispatch = useDispatch();
+  const notifications = useChannel("notifications");
 
   // Initial fetch — same pattern the Loadsheet panel uses. WS will
   // overwrite as soon as it connects, but seeding via REST avoids a
@@ -44,13 +45,13 @@ export function NotificationBanner() {
 
   // Most-recent non-dismissed entry, or null when nothing to show.
   const current = useMemo<NotificationDto | null>(() => {
-    const snap = state.notifications as unknown as NotificationsSnapshotDto | null;
+    const snap = notifications;
     if (!snap?.items?.length) return null;
     for (let i = snap.items.length - 1; i >= 0; i--) {
       if (!snap.items[i].dismissed) return snap.items[i];
     }
     return null;
-  }, [state.notifications]);
+  }, [notifications]);
 
   // Track which ids have already had an auto-dismiss timer scheduled so
   // a re-render doesn't pile up duplicate timeouts (the snapshot fires

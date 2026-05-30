@@ -1,12 +1,11 @@
-import { useAppState } from "../state/AppStateContext";
+import { useChannel, useConnection } from "../state/AppStateContext";
 import { ConnectionIndicator } from "./ConnectionIndicator";
 import { SplitFlap } from "./SplitFlap";
-import { FlightStatusDto } from "../types";
 import styles from "./Header.module.css";
 
 export function Header() {
-  const { state } = useAppState();
-  const fs = state.flightStatus as unknown as FlightStatusDto | null;
+  const fs = useChannel("flightStatus");
+  const connection = useConnection();
 
   const flightNumber = fs?.flightNumber ?? "--------";
   const utcTime = fs?.utcTime ?? "--:--Z";
@@ -33,7 +32,7 @@ export function Header() {
           <SplitFlap text={utcDate} count={6} staggerDelayMs={80} />
           <span className={styles.flapLabel}>DATE</span>
         </div>
-        <ConnectionIndicator status={state.connection} />
+        <ConnectionIndicator status={connection} />
       </div>
     </header>
   );
