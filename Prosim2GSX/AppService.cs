@@ -524,6 +524,8 @@ namespace Prosim2GSX
         protected override Task FreeResources()
         {
             base.FreeResources();
+            // Persist any pending debounced config edit before we tear down.
+            try { Config?.FlushConfiguration(); } catch { }
             ReceiverStore.Remove<MsgSessionReady>().OnMessage -= OnSessionReady;
             ReceiverStore.Remove<MsgSessionEnded>().OnMessage -= OnSessionEnded;
 

@@ -301,9 +301,59 @@ namespace Prosim2GSX.AppConfig
             { new AircraftProfile() }
         };
 
+        // --- Debounced configuration save (APP-M2) ---
+        // SetModelValue, the audio CollectionChanged handlers, etc. call
+        // SaveConfiguration on every keystroke / DataGrid sort / multi-row
+        // paste, each serialising the whole ~130-field graph and rewriting the
+        // file. Coalesce a burst into a single write ~750ms after the last
+        // change. The write runs on the WPF dispatcher (where config mutations
+        // happen) so the serializer never races a concurrent mutation of
+        // AircraftProfiles / the audio mapping lists / FuelFobSaved.
+        private readonly object _saveLock = new();
+        private System.Threading.Timer _saveDebounceTimer;
+        private const int SaveDebounceMs = 750;
+
         public override void SaveConfiguration()
         {
-            SaveConfiguration<Config>(this, ConfigFile);
+            lock (_saveLock)
+            {
+                if (_saveDebounceTimer == null)
+                    _saveDebounceTimer = new System.Threading.Timer(
+                        _ => OnSaveDebounceElapsed(), null, SaveDebounceMs, System.Threading.Timeout.Infinite);
+                else
+                    _saveDebounceTimer.Change(SaveDebounceMs, System.Threading.Timeout.Infinite);
+            }
+        }
+
+        private void OnSaveDebounceElapsed()
+        {
+            // Runs on a threadpool timer thread — swallow/log so nothing escapes
+            // unobserved (e.g. BeginInvoke racing dispatcher shutdown).
+            try
+            {
+                // Marshal the actual write onto the dispatcher so it serialises
+                // against UI-thread mutations. If there's no live dispatcher
+                // (early init / shutdown) or we're already on it, write inline.
+                var dispatcher = System.Windows.Application.Current?.Dispatcher;
+                if (dispatcher != null && !dispatcher.HasShutdownStarted && !dispatcher.CheckAccess())
+                    dispatcher.BeginInvoke((Action)FlushConfiguration);
+                else
+                    FlushConfiguration();
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
+        }
+
+        // Serialize + write the whole config to disk now, cancelling any pending
+        // debounce. Safe from the dispatcher, or from any thread once mutations
+        // have stopped (called at shutdown by AppService.FreeResources).
+        public void FlushConfiguration()
+        {
+            lock (_saveLock)
+            {
+                _saveDebounceTimer?.Change(System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
+                try { SaveConfiguration<Config>(this, ConfigFile); }
+                catch (Exception ex) { Logger.LogException(ex); }
+            }
         }
 
         protected override void InitConfiguration()
