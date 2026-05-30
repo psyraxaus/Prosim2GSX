@@ -29,9 +29,21 @@ namespace Prosim2GSX.UI.Views.Monitor
     // booleans and apply its own theme.
     public partial class ModelMonitor(AppService source) : ViewModelBase<AppService>(source)
     {
-        protected static SolidColorBrush ColorValid { get; } = new(Colors.Green);
-        protected static SolidColorBrush ColorInvalid { get; } = new(Colors.Red);
-        protected static SolidColorBrush ColorGray { get; } = new(Color.FromArgb(0xFF, 0xD3, 0xD3, 0xD3));
+        // Frozen so these shared static brushes are explicitly immutable and
+        // cross-thread-safe (a frozen Freezable has no thread affinity and skips
+        // change-tracking). They're returned by colour-property getters that WPF
+        // evaluates on the UI thread during a binding update — see the note in
+        // OnFlightStatusStateChanged on why those getters are reached safely from
+        // a background-thread PropertyChanged.
+        protected static SolidColorBrush ColorValid { get; } = Frozen(new(Colors.Green));
+        protected static SolidColorBrush ColorInvalid { get; } = Frozen(new(Colors.Red));
+        protected static SolidColorBrush ColorGray { get; } = Frozen(new(Color.FromArgb(0xFF, 0xD3, 0xD3, 0xD3)));
+
+        private static SolidColorBrush Frozen(SolidColorBrush brush)
+        {
+            brush.Freeze();
+            return brush;
+        }
 
         protected virtual Config Config => this.Source.Config;
         protected virtual FlightStatusState FlightStatus => this.Source.FlightStatus;
@@ -196,6 +208,13 @@ namespace Prosim2GSX.UI.Views.Monitor
 
         protected virtual void OnFlightStatusStateChanged(object? sender, PropertyChangedEventArgs e)
         {
+            // Thread note: the store raises PropertyChanged on the StateUpdateWorker
+            // (background) thread. We deliberately do NOT marshal these scalar
+            // re-raises — WPF's binding engine auto-marshals a scalar source
+            // PropertyChanged to the target's dispatcher, so the colour-brush
+            // getters below run on the UI thread when applied. Only *collection*
+            // change notifications bypass that auto-marshal (they throw), which is
+            // why the MessageLog path in OnStoreMessageLogChanged marshals explicitly.
             var name = e?.PropertyName ?? "";
             // The Model property has the same name as the store property, so the
             // bare re-raise covers the value binding.
