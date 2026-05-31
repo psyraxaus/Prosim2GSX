@@ -78,7 +78,78 @@ namespace Prosim2GSX.GSX
         protected virtual GsxServiceBoarding ServiceBoard => GsxServices[GsxServiceType.Boarding] as GsxServiceBoarding;
         protected virtual GsxServiceDeboarding ServiceDeboard => GsxServices[GsxServiceType.Deboarding] as GsxServiceDeboarding;
         protected virtual GsxServiceDeice ServiceDeice => GsxServices[GsxServiceType.Deice] as GsxServiceDeice;
-        public virtual bool IsGateConnected => ServiceJetway.IsConnected || ServiceStairs.IsConnected;
+        // IsGateConnected is the gate-side "we're attached to a ground service"
+        // signal used by phase transitions (notably Prep => Departure). Strict
+        // path: GsxServiceJetway/Stairs.IsConnected, which requires the GSX
+        // service LVAR == Active AND the operation LVAR < 3 (docked idle).
+        //
+        // Fallback (Phase 6.5.B + 1): in GSX Pro v4 — particularly with
+        // GsxRemoteControlExperimental enabled — the operation LVAR has been
+        // observed to stay at "in motion" (>=3) indefinitely even after the
+        // jetway has visibly docked. The strict check then stays false forever
+        // and the Prep => Departure transition never fires. Once the service
+        // has held GsxServiceState.Active for >= GateActiveGraceSec, treat
+        // the gate as connected for transition purposes — by that point GSX
+        // has had enough time to physically dock regardless of what it reports
+        // on the operation LVAR. The first time the fallback fires per session
+        // it logs once at INFO so the log carries clear evidence we took the
+        // rescue path.
+        // Pure read: strict IsConnected, else the stale-Active fallback. The
+        // "active since" timers it relies on are advanced once per tick by
+        // AdvanceGateConnectionState() — NOT here — so this getter can be read
+        // any number of times per tick without perturbing the 30s grace timer.
+        public virtual bool IsGateConnected
+            => ServiceJetway.IsConnected || ServiceStairs.IsConnected || HasStaleActiveGateService();
+
+        private DateTime? _jetwayActiveSinceUtc;
+        private DateTime? _stairsActiveSinceUtc;
+        private bool _gateConnectedFallbackLogged;
+        private const double GateActiveGraceSec = 30;
+
+        // Pure check against the once-per-tick-advanced timers (no mutation).
+        private bool HasStaleActiveGateService()
+        {
+            var now = DateTime.UtcNow;
+            if (_jetwayActiveSinceUtc.HasValue && (now - _jetwayActiveSinceUtc.Value).TotalSeconds >= GateActiveGraceSec)
+                return true;
+            if (_stairsActiveSinceUtc.HasValue && (now - _stairsActiveSinceUtc.Value).TotalSeconds >= GateActiveGraceSec)
+                return true;
+            return false;
+        }
+
+        // Advance the gate-connection "active since" timers once per tick from
+        // the automation loop. This mutation previously lived in the
+        // IsGateConnected getter, so the 30s grace timer depended on how often /
+        // when the property was read each tick — a transient non-Active blip
+        // during one read could reset it. Advancing deterministically here makes
+        // the fallback robust and keeps IsGateConnected a pure read.
+        private void AdvanceGateConnectionState()
+        {
+            if (ServiceJetway?.State == GsxServiceState.Active)
+                _jetwayActiveSinceUtc ??= DateTime.UtcNow;
+            else
+                _jetwayActiveSinceUtc = null;
+
+            if (ServiceStairs?.State == GsxServiceState.Active)
+                _stairsActiveSinceUtc ??= DateTime.UtcNow;
+            else
+                _stairsActiveSinceUtc = null;
+
+            // Log the fallback once per session, when it first becomes effective
+            // while the strict IsConnected check is still failing.
+            if (!_gateConnectedFallbackLogged
+                && !(ServiceJetway.IsConnected || ServiceStairs.IsConnected)
+                && HasStaleActiveGateService())
+            {
+                _gateConnectedFallbackLogged = true;
+                Logger.Information(
+                    $"IsGateConnected: strict IsConnected check failed (Jetway state={ServiceJetway?.State} op={ServiceJetway?.SubOperating?.GetNumber()}, "
+                  + $"Stairs state={ServiceStairs?.State} op={ServiceStairs?.SubOperating?.GetNumber()}) — "
+                  + $"falling back to >= {GateActiveGraceSec}s of stable Active state. "
+                  + "Suspect GSX operation LVAR stuck; check GsxRemoteControlExperimental.");
+            }
+        }
+
         public virtual bool HasDepartBypassed => Controller.GsxServices[GsxServiceType.Refuel].State == GsxServiceState.Bypassed || Controller.GsxServices[GsxServiceType.Boarding].State == GsxServiceState.Bypassed;
         public virtual bool ServicesValid => ServiceStairs.State != GsxServiceState.Unknown || ServiceJetway.State != GsxServiceState.Unknown || !IsOnGround;
 
@@ -148,28 +219,13 @@ namespace Prosim2GSX.GSX
                 service.Value.ResetState();
 
             IsOnGround = true;
-
             ExecutedReposition = false;
-            GroundEquipmentPlaced = false;
-            JetwayStairRemoved = false;
-            ChockDelay = 0;
-            ChockFlashed = false;
-            CabinDinged = false;
-            DepartureIcao = "";
-            OfpArrivalId = "0";
             ServiceCountRunning = 0;
             ServiceCountCompleted = 0;
             ServiceCountTotal = 0;
 
-            DepartureServicesCompleted = false;
-            CancelChockTask();
-            ArrivalStableTicks = 0;
-            ArrivalEnteredAt = DateTime.MinValue;
-            ArrivalStallLastWarning = DateTime.MinValue;
-            LastFlightSummaryAt = DateTime.MinValue;
-            LastTaxiInSummaryAt = DateTime.MinValue;
-            LastStableParked = false;
-            ResetDepartureSequence();
+            ResetTurnaroundState();
+
             DepartureServicesCalled?.Clear();
             if (Profile?.DepartureServices != null)
             {
@@ -188,6 +244,20 @@ namespace Prosim2GSX.GSX
                 service.Value.ResetState(Config.ResetGsxStateVarsFlight);
 
             Aircraft.ResetFlight();
+
+            ResetTurnaroundState();
+
+            DepartureServicesCalled.Clear();
+            DepartureServicesEnumerator = Profile.DepartureServices.GetEnumerator();
+            DepartureServicesEnumerator.MoveNext();
+        }
+
+        // Shared turnaround-state reset for both the full session Reset() and
+        // the per-flight ResetFlight(), so the two can't drift. (They did:
+        // Reset() previously omitted the gate-connection fallback clears below,
+        // so a session reset left a stale 30s grace timer + "logged once" flag.)
+        private void ResetTurnaroundState()
+        {
             GroundEquipmentPlaced = false;
             JetwayStairRemoved = false;
             ChockDelay = 0;
@@ -195,7 +265,9 @@ namespace Prosim2GSX.GSX
             CabinDinged = false;
             DepartureIcao = "";
             OfpArrivalId = "0";
-
+            _jetwayActiveSinceUtc = null;
+            _stairsActiveSinceUtc = null;
+            _gateConnectedFallbackLogged = false;
             DepartureServicesCompleted = false;
             CancelChockTask();
             ArrivalStableTicks = 0;
@@ -205,9 +277,6 @@ namespace Prosim2GSX.GSX
             LastTaxiInSummaryAt = DateTime.MinValue;
             LastStableParked = false;
             ResetDepartureSequence();
-            DepartureServicesCalled.Clear();
-            DepartureServicesEnumerator = Profile.DepartureServices.GetEnumerator();
-            DepartureServicesEnumerator.MoveNext();
         }
 
         public virtual async Task Run()
@@ -232,6 +301,9 @@ namespace Prosim2GSX.GSX
                     }
                     if (Controller.IsGsxRunning && Controller.CanAutomationRun)
                     {
+                        // Advance the gate-connection grace timers deterministically
+                        // before the state machine reads IsGateConnected this tick.
+                        AdvanceGateConnectionState();
                         await EvaluateState();
                         if (Config.RunAutomationService && ServicesValid && Controller.Menu.FirstReadyReceived)
                             await RunServices();
@@ -913,6 +985,16 @@ namespace Prosim2GSX.GSX
                         Logger.Information($"Automation: Departure Service {DepartureServicesCurrent.ServiceType} already completed");
                     else if (current.IsCalled || current.IsRunning)
                     {
+                        // Boarding triggered from the GSX menu lands here, not on the
+                        // auto-call branch above — so SetPaxTarget is otherwise never
+                        // written on this path. If the Preparation=>Departure write
+                        // (line ~394) ran before SeatMap.PaxPlanned was populated, GSX
+                        // is left armed with 0 and boards cargo only (no passengers).
+                        // Re-arm the count here, before GSX goes active, so the
+                        // externally-called path always gets the right number.
+                        if (DepartureServicesCurrent.ServiceType == GsxServiceType.Boarding)
+                            await ServiceBoard.SetPaxTarget(Aircraft.GetPaxBoarding());
+
                         Logger.Information($"Automation: Departure Service {DepartureServicesCurrent.ServiceType} called externally");
                     }
                     else
@@ -1091,16 +1173,15 @@ namespace Prosim2GSX.GSX
                 }
             }
 
-            // GSX exposes the "good engine start" prompt via VEHICLE_PUSHBACK_STATE == 12
-            // (WaitForConfirmation) — the explicit signal that the tug has stopped and is
-            // waiting for crew to confirm engine start on the Interrupt menu. Auto-confirm
-            // once brakes are set and both engines are running.
-            if (ServicePushBack.VehiclePushbackState == 12
+            // GSX's "good engine start" prompt corresponds to
+            // PushbackPhase.AwaitingEngineStart (raw VEHICLE_PUSHBACK_STATE == 12).
+            // Auto-confirm once brakes are set and both engines are running.
+            if (ServicePushBack.Phase == PushbackPhase.AwaitingEngineStart
                 && Aircraft.IsBrakeSet
                 && Aircraft.AllEnginesRunning
                 && !ServicePushBack.EngineStartConfirmed)
             {
-                Logger.Information($"Automation: VehiclePushbackState=12 + brakes set + both engines running — sending Confirm good engine start");
+                Logger.Information($"Automation: Phase=AwaitingEngineStart + brakes set + both engines running — sending Confirm good engine start");
                 await ServicePushBack.ConfirmEngineStart();
                 await Task.Delay(Config.StateMachineInterval, RequestToken);
             }

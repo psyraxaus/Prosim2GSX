@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { AUTH_FAIL_EVENT, getStoredToken } from "./auth/auth";
 import { AuthGate } from "./auth/AuthGate";
-import { AppStateProvider, useAppState } from "./state/AppStateContext";
+import { AppStateProvider, useChannel, useDispatch } from "./state/AppStateContext";
 import { useWebSocket } from "./ws/useWebSocket";
 import { useApi } from "./api/useApi";
 import { useTheme } from "./theme/useTheme";
@@ -9,6 +9,7 @@ import { Header } from "./components/Header";
 import { NotificationBanner } from "./components/NotificationBanner";
 import { TabBar, TabKey } from "./components/TabBar";
 import { FitToViewport } from "./components/FitToViewport";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { FlightStatusPanel } from "./panels/FlightStatusPanel";
 import { AudioSettingsPanel } from "./panels/AudioSettingsPanel";
 import { AppSettingsPanel } from "./panels/AppSettingsPanel";
@@ -51,7 +52,8 @@ export function App() {
 }
 
 function AppShell() {
-  const { state, dispatch } = useAppState();
+  const dispatch = useDispatch();
+  const appSettings = useChannel("appSettings");
   useWebSocket(dispatch);
   const { get } = useApi();
 
@@ -78,7 +80,7 @@ function AppShell() {
   // the local "user saved a new theme" path and the cross-client "another
   // client / WPF window changed the theme" path (which arrives as a WS
   // patch on the appSettings channel into state.appSettings.currentTheme).
-  const themeName = (state.appSettings?.currentTheme as string | undefined) ?? null;
+  const themeName = appSettings?.currentTheme ?? null;
   useTheme(themeName);
 
   const [tab, setTab] = useState<TabKey>("flightStatus");
@@ -89,19 +91,23 @@ function AppShell() {
       <NotificationBanner />
       <TabBar active={tab} onSelect={setTab} />
       <main className={styles.main}>
-        {tab === "flightStatus" && <FlightStatusPanel />}
-        {tab === "init" && <InitPanel />}
-        {tab === "ofp" && <OfpPanel />}
-        {tab === "loadsheet" && <LoadsheetPanel />}
-        {tab === "weightBalance" && <WeightBalancePanel />}
-        {tab === "fuel" && <FuelPanel />}
-        {tab === "takeoff" && <FitToViewport><TakeoffPerfPanel /></FitToViewport>}
-        {tab === "landing" && <FitToViewport><LandingPerfPanel /></FitToViewport>}
-        {tab === "checklists" && <ChecklistsPanel />}
-        {tab === "gsxSettings" && <GsxSettingsPanel />}
-        {tab === "aircraftProfiles" && <AircraftProfilesPanel />}
-        {tab === "audioSettings" && <AudioSettingsPanel />}
-        {tab === "appSettings" && <AppSettingsPanel />}
+        {/* Keyed by tab so a crash in one panel shows a contained fallback
+            and switching tabs remounts the boundary (auto-recovers). */}
+        <ErrorBoundary key={tab} label={tab}>
+          {tab === "flightStatus" && <FlightStatusPanel />}
+          {tab === "init" && <InitPanel />}
+          {tab === "ofp" && <OfpPanel />}
+          {tab === "loadsheet" && <LoadsheetPanel />}
+          {tab === "weightBalance" && <WeightBalancePanel />}
+          {tab === "fuel" && <FuelPanel />}
+          {tab === "takeoff" && <FitToViewport><TakeoffPerfPanel /></FitToViewport>}
+          {tab === "landing" && <FitToViewport><LandingPerfPanel /></FitToViewport>}
+          {tab === "checklists" && <ChecklistsPanel />}
+          {tab === "gsxSettings" && <GsxSettingsPanel />}
+          {tab === "aircraftProfiles" && <AircraftProfilesPanel />}
+          {tab === "audioSettings" && <AudioSettingsPanel />}
+          {tab === "appSettings" && <AppSettingsPanel />}
+        </ErrorBoundary>
       </main>
     </div>
   );

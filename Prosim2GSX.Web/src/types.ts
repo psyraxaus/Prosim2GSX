@@ -93,7 +93,7 @@ export type AutomationState =
   | "TurnAround";
 
 export type AudioChannel = "VHF1" | "VHF2" | "VHF3" | "HF1" | "HF2" | "INT" | "CAB" | "PA";
-export type AcpSide = "CPT" | "FO";
+export type AcpSide = "CPT" | "FO" | "OBS";
 export type DataFlow = "Render" | "Capture" | "All";
 export type DeviceState = "Active" | "Disabled" | "NotPresent" | "Unplugged" | "MaskAll";
 
@@ -339,7 +339,12 @@ export interface AudioDto {
   audioDeviceFlow: DataFlow;
   audioDeviceState: DeviceState;
   mappings: AudioMappingDto[];
-  voiceMeeterMappings: VoiceMeeterMappingDto[];
+  // Multi-ACP VoiceMeeter routing. activeAcps lists 1-3 concurrent ACPs;
+  // voiceMeeterMappingsByAcp keys mappings by ACP name ("CPT"/"FO"/"OBS").
+  // voiceMeeterFallbackReason is read-only — server ignores on POST.
+  activeAcps: AcpSide[];
+  voiceMeeterMappingsByAcp: Partial<Record<AcpSide, VoiceMeeterMappingDto[]>>;
+  voiceMeeterFallbackReason: string | null;
   blacklist: string[];
 }
 
@@ -401,7 +406,17 @@ export const AUDIO_CHANNELS: AudioChannel[] = [
 export const ACP_SIDE_OPTIONS: { value: AcpSide; label: string }[] = [
   { value: "CPT", label: "Captain" },
   { value: "FO", label: "First Officer" },
+  { value: "OBS", label: "Observer" },
 ];
+
+// Order used by the VoiceMeeter Mappings cards (ACP1 → ACP2 → ACP3).
+export const ACP_SIDES_ORDERED: AcpSide[] = ["CPT", "FO", "OBS"];
+
+export const ACP_SIDE_LABELS: Record<AcpSide, string> = {
+  CPT: "ACP1 (Captain)",
+  FO: "ACP2 (First Officer)",
+  OBS: "ACP3 (Observer)",
+};
 
 export const DATA_FLOW_OPTIONS: { value: DataFlow; label: string }[] = [
   { value: "Render", label: "Render" },

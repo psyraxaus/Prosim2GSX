@@ -345,7 +345,6 @@ namespace Prosim2GSX.Web
 
             return new Dictionary<string, string>
             {
-                ["Registration"] = Try(() => ai?.Registration),
                 ["Airline"] = Try(() => ai?.Airline),
                 ["Title"] = Try(() => ai?.Title),
                 ["FlightNumber"] = Try(() => ai?.FlightNumber),

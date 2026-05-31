@@ -1,6 +1,7 @@
 using CFIT.AppLogger;
 using Prosim2GSX.GSX;
 using Prosim2GSX.GSX.Services;
+using Prosim2GSX.Services;
 using Prosim2GSX.UI.Views.Checklists;
 using ProsimInterface;
 using System;
@@ -67,8 +68,8 @@ namespace Prosim2GSX.State
             try
             {
                 try { UpdateSim(); } catch (Exception ex) { Logger.LogException(ex); }
-                try { UpdateGsx(); } catch { }
-                try { UpdateApp(); } catch { }
+                try { UpdateGsx(); } catch (Exception ex) { Logger.LogException(ex); }
+                try { UpdateApp(); } catch (Exception ex) { Logger.LogException(ex); }
                 try { UpdateChecklist(); } catch (Exception ex) { Logger.LogException(ex); }
                 try { _app?.WeightBalanceService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
                 try { _app?.FuelService?.Tick(); } catch (Exception ex) { Logger.LogException(ex); }
@@ -175,12 +176,26 @@ namespace Prosim2GSX.State
             if (services.TryGetValue(GsxServiceType.Jetway, out s))
             {
                 gsx.ServiceJetway = s.State;
-                gsx.ServiceJetwayConnected = (s as global::Prosim2GSX.GSX.Services.GsxServiceJetway)?.IsConnected ?? false;
+                // Display flag: use IsActive (state == Active) rather than the
+                // strict IsConnected (state == Active && operation idle). GSX Pro
+                // v4 has been observed to leave the operation LVAR stuck at
+                // "in motion" indefinitely after a docked jetway, which made
+                // the old IsConnected report false despite the jetway being
+                // physically attached. The UI "Jetway Connected" pill then
+                // showed "—" forever. IsActive aligns with what the user sees
+                // in GSX itself; strict IsConnected stays intact for code
+                // paths that need definitive "docked-and-idle" semantics
+                // (Remove(), automation gating, intent IsAlreadySatisfied).
+                gsx.ServiceJetwayConnected = (s as global::Prosim2GSX.GSX.Services.GsxServiceJetway)?.IsActive ?? false;
             }
             if (services.TryGetValue(GsxServiceType.Stairs, out s))
             {
                 gsx.ServiceStairs = s.State;
-                gsx.ServiceStairsConnected = (s as global::Prosim2GSX.GSX.Services.GsxServiceStairs)?.IsConnected ?? false;
+                // Same rationale as Jetway above — display flag uses IsActive.
+                // For gates with no stairs equipment, state stays
+                // GsxServiceState.NotAvailable so IsActive is correctly false
+                // and the UI shows "—".
+                gsx.ServiceStairsConnected = (s as global::Prosim2GSX.GSX.Services.GsxServiceStairs)?.IsActive ?? false;
             }
 
             UpdateAssignedGate();
@@ -290,7 +305,7 @@ namespace Prosim2GSX.State
             catch { }
 
             fs.AppProfile = ctrl?.AircraftProfile?.ToString() ?? "";
-            fs.AppAircraft = $"{ai?.Airline ?? ""} / {ai?.Title ?? ""} / {ai?.Registration ?? ""}";
+            fs.AppAircraft = $"{ai?.Airline ?? ""} / {ai?.Title ?? ""}";
 
             // Header strip values — mirror HeaderBarControl.OnUpdate so the web
             // header reads identically to the WPF top bar.
@@ -322,8 +337,7 @@ namespace Prosim2GSX.State
         // (pre-departure or post-landing), then engines stop. The takeoff
         // transition (on-ground -> airborne) auto-clears PRE-START/STARTUP/TAXI
         // so those sections are not stale when the user lands.
-        private bool _wasOnGround = true;
-        private bool _wasEnginesRunning = false;
+        private readonly FlightCycleEdgeDetector _flightCycle = new();
 
         protected virtual void UpdateChecklist()
         {
@@ -336,23 +350,21 @@ namespace Prosim2GSX.State
             // written by UpdateApp this tick) to the previous snapshot.
             var nowOnGround = fs.AppOnGround;
             var nowEnginesRunning = fs.AppEnginesRunning;
+            _flightCycle.Update(nowOnGround, nowEnginesRunning);
 
             // Takeoff: on-ground -> airborne. Clear pre-flight sections so the
             // user lands with a clean approach/landing flow.
-            if (_wasOnGround && !nowOnGround)
+            if (_flightCycle.Liftoff)
             {
                 cl.ResetSections("PRE START", "STARTUP", "BEFORE TAXI", "TAXI", "BEFORE TAKE-OFF", "TAKE-OFF");
             }
 
             // Shutdown: on-ground AND engines just transitioned running -> off.
             // Full reset of all sections (fresh flight cycle next time).
-            if (nowOnGround && _wasEnginesRunning && !nowEnginesRunning)
+            if (_flightCycle.EngineShutdownOnGround)
             {
                 cl.ResetAll();
             }
-
-            _wasOnGround = nowOnGround;
-            _wasEnginesRunning = nowEnginesRunning;
 
             // Dataref-driven item evaluation. Walk the current checklist's items;
             // for each item that has a dataref, read it via the SDK and update

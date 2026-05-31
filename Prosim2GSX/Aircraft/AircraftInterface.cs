@@ -43,7 +43,6 @@ namespace Prosim2GSX.Aircraft
             }
         }
         public virtual string Title => !string.IsNullOrWhiteSpace(SubLivery?.GetString()) ? SubLivery.GetString() : SubTitle?.GetString() ?? "";
-        public virtual string Registration => ProsimInterface.Registration;
         public virtual bool IsFlightPlanLoaded => ProsimInterface.IsFlightPlanLoaded;
         public virtual string FmsOrigin => ProsimInterface?.FmsOrigin ?? "";
         public virtual string FmsDestination => ProsimInterface?.FmsDestination ?? "";

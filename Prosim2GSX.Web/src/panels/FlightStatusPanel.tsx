@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useApi } from "../api/useApi";
-import { useAppState } from "../state/AppStateContext";
+import { useChannel, useDispatch } from "../state/AppStateContext";
 import { AutomationState, FlightStatusDto, GsxServiceState } from "../types";
 import styles from "./FlightStatusPanel.module.css";
 
@@ -9,7 +9,7 @@ import styles from "./FlightStatusPanel.module.css";
 // AppStateContext by the WS hook).
 export function FlightStatusPanel() {
   const { get } = useApi();
-  const { state, dispatch } = useAppState();
+  const dispatch = useDispatch();
 
   useEffect(() => {
     let cancelled = false;
@@ -24,7 +24,7 @@ export function FlightStatusPanel() {
     return () => { cancelled = true; };
   }, [get, dispatch]);
 
-  const fs = state.flightStatus as unknown as FlightStatusDto | null;
+  const fs = useChannel("flightStatus");
   if (!fs) {
     return <div className={styles.loading}>Loading flight status…</div>;
   }

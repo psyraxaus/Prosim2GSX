@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useApi } from "../api/useApi";
-import { useAppState } from "../state/AppStateContext";
+import { useChannel, useDispatch } from "../state/AppStateContext";
 import {
   FmsSyncResultDto,
   PassengerManifestDto,
@@ -181,7 +181,7 @@ const DOT_RADIUS = 11;
 
 export function WeightBalancePanel() {
   const { get, post } = useApi();
-  const { state, dispatch } = useAppState();
+  const dispatch = useDispatch();
 
   // Sync-to-FMS UI state. "idle" | "pending" | "success" | "error".
   // Success/error transitions are auto-cleared on a setTimeout matching
@@ -276,7 +276,7 @@ export function WeightBalancePanel() {
     return () => { cancelled = true; };
   }, [get]);
 
-  const wb = state.weightBalance as unknown as WeightBalanceDto | null;
+  const wb = useChannel("weightBalance");
   if (!wb) {
     return <div className={styles.loading}>Loading weight &amp; balance…</div>;
   }

@@ -12,6 +12,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Net.WebSockets;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -42,6 +43,14 @@ namespace Prosim2GSX.Web
         private readonly AppService _app;
         private readonly ConcurrentDictionary<Guid, Connection> _connections = new();
 
+        /// <summary>
+        /// Number of currently-open WebSocket connections. Read-only;
+        /// exposed for <c>ResourceDiagnosticsWorker</c> so the heartbeat
+        /// row can correlate dispatcher / request-rate metrics with how
+        /// many web clients are actually attached.
+        /// </summary>
+        public virtual int ConnectionCount => _connections.Count;
+
         // Whitelist for Config.PropertyChanged so we never leak internal /
         // operational fields to the wire (binary names, intervals, etc.).
         // Sourced from AppSettingsDto so the whitelist tracks the DTO without
@@ -49,11 +58,79 @@ namespace Prosim2GSX.Web
         private static readonly HashSet<string> ConfigBroadcastWhitelist =
             typeof(AppSettingsDto).GetProperties()
                 .Select(p => p.Name)
+                // Never broadcast the auth token over the WS patch channel — a
+                // regenerated bearer token would be pushed to every connected
+                // client. The QR/onboarding UI reads it via the authenticated
+                // REST GET instead.
+                .Where(n => n != nameof(AppSettingsDto.WebServerAuthToken))
                 .ToHashSet(StringComparer.Ordinal);
+
+        // Whitelist for the "gsx" channel. GsxState has no DTO — it's reflected —
+        // so this is default-DENY: a future internal/computed property added to
+        // GsxState won't silently leak onto the wire. To expose a new property,
+        // add its name here. Mirrors the current GsxState wire surface consumed
+        // by the Monitor tab and the web Flight Status panel.
+        private static readonly HashSet<string> GsxBroadcastWhitelist = new(StringComparer.Ordinal)
+        {
+            nameof(GsxState.GsxRunning), nameof(GsxState.GsxStarted), nameof(GsxState.GsxStartedValid),
+            nameof(GsxState.GsxMenu), nameof(GsxState.GsxPaxTarget), nameof(GsxState.GsxPaxTotal),
+            nameof(GsxState.GsxCargoProgress),
+            nameof(GsxState.ServiceReposition), nameof(GsxState.ServiceRefuel), nameof(GsxState.ServiceCatering),
+            nameof(GsxState.ServiceLavatory), nameof(GsxState.ServiceWater), nameof(GsxState.ServiceCleaning),
+            nameof(GsxState.ServiceGpuConnected), nameof(GsxState.ServiceGpuPhaseRelevant),
+            nameof(GsxState.ServiceBoarding), nameof(GsxState.ServiceDeboarding), nameof(GsxState.ServicePushback),
+            nameof(GsxState.PushbackVehicleState), nameof(GsxState.BypassPinInserted), nameof(GsxState.EngineStartConfirmed),
+            nameof(GsxState.ServiceJetway), nameof(GsxState.ServiceJetwayConnected),
+            nameof(GsxState.ServiceStairs), nameof(GsxState.ServiceStairsConnected),
+            nameof(GsxState.AppAutomationState), nameof(GsxState.AppAutomationDepartureServices),
+            nameof(GsxState.AssignedArrivalGate), nameof(GsxState.LastHandlerEvent),
+        };
+
+        // Per-type reflection caches. GetProperty/GetProperties do a linear
+        // member walk; Broadcast fires per changed property at the tick cadence
+        // and BroadcastStateAsPatch walks every property, so caching the
+        // PropertyInfo lookups keeps reflection off the hot broadcast path.
+        private static readonly ConcurrentDictionary<Type, Dictionary<string, PropertyInfo>> _propertyByName =
+            new ConcurrentDictionary<Type, Dictionary<string, PropertyInfo>>();
+        private static readonly ConcurrentDictionary<Type, PropertyInfo[]> _readableProps =
+            new ConcurrentDictionary<Type, PropertyInfo[]>();
+
+        private static PropertyInfo GetCachedProperty(Type type, string propertyName)
+        {
+            var map = _propertyByName.GetOrAdd(type, static t =>
+                t.GetProperties()
+                 .Where(p => p.CanRead && p.GetIndexParameters().Length == 0)
+                 // GroupBy guards against a shadowed (new) property name
+                 // throwing in ToDictionary; take the first match.
+                 .GroupBy(p => p.Name, StringComparer.Ordinal)
+                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal));
+            return map.TryGetValue(propertyName, out var prop) ? prop : null;
+        }
+
+        private static PropertyInfo[] GetCachedReadableProps(Type type)
+            => _readableProps.GetOrAdd(type, static t =>
+                t.GetProperties()
+                 .Where(p => p.CanRead && p.GetIndexParameters().Length == 0)
+                 .ToArray());
+
+        // Coalesce perf-tab snapshots: ApplyResult sets ~12 properties in a
+        // synchronous burst; without this each fired a full DTO serialize +
+        // broadcast. Collapses a burst into one send (see SnapshotCoalescer).
+        private readonly SnapshotCoalescer _takeoffPerfCoalescer;
+        private readonly SnapshotCoalescer _landingPerfCoalescer;
 
         public StateWebSocketHandler(AppService app)
         {
             _app = app;
+
+            _takeoffPerfCoalescer = new SnapshotCoalescer(
+                () => JsonSerializer.SerializeToUtf8Bytes(
+                    new { channel = "takeoffPerf", snapshot = TakeoffPerfStateDto.From(_app) }, WebJsonOptions.Default),
+                frame => BroadcastBytes(frame));
+            _landingPerfCoalescer = new SnapshotCoalescer(
+                () => JsonSerializer.SerializeToUtf8Bytes(
+                    new { channel = "landingPerf", snapshot = LandingPerfStateDto.From(_app) }, WebJsonOptions.Default),
+                frame => BroadcastBytes(frame));
 
             _app.FlightStatus.PropertyChanged += OnFlightStatusChanged;
             _app.Gsx.PropertyChanged += OnGsxChanged;
@@ -223,7 +300,11 @@ namespace Prosim2GSX.Web
             => Broadcast(channel: "flightStatus", e.PropertyName, sender);
 
         private void OnGsxChanged(object sender, PropertyChangedEventArgs e)
-            => Broadcast(channel: "gsx", e.PropertyName, sender);
+        {
+            // Default-deny: only whitelisted GsxState properties go on the wire.
+            if (e?.PropertyName != null && GsxBroadcastWhitelist.Contains(e.PropertyName))
+                Broadcast(channel: "gsx", e.PropertyName, sender);
+        }
 
         // Patch-only channel that the client merges into ofp.deiceHoldover
         // (same nesting scheme as "gsx" under flightStatus).
@@ -402,38 +483,50 @@ namespace Prosim2GSX.Web
         private void OnTakeoffPerfChanged(object sender, PropertyChangedEventArgs e)
         {
             if (_connections.IsEmpty) return;
-            Logger.Debug($"WS takeoffPerf: {e.PropertyName}");
-            try
-            {
-                var envelope = new
-                {
-                    channel = "takeoffPerf",
-                    snapshot = TakeoffPerfStateDto.From(_app),
-                };
-                BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default));
-            }
-            catch (Exception ex)
-            {
-                Logger.LogException(ex);
-            }
+            _takeoffPerfCoalescer.Request();
         }
 
         private void OnLandingPerfChanged(object sender, PropertyChangedEventArgs e)
         {
             if (_connections.IsEmpty) return;
-            Logger.Debug($"WS landingPerf: {e.PropertyName}");
-            try
+            _landingPerfCoalescer.Request();
+        }
+
+        // Collapses a burst of state changes into a single serialize+broadcast.
+        // The first Request() after idle arms a short timer; further Requests in
+        // the window are no-ops. When the timer fires it builds and sends one
+        // snapshot reflecting the final state — used by the perf-tab channels
+        // where ApplyResult mutates ~12 properties at once. _pending is cleared
+        // BEFORE the build so a change landing during/after the build re-arms a
+        // follow-up send rather than being lost.
+        private sealed class SnapshotCoalescer
+        {
+            private readonly Func<byte[]> _build;
+            private readonly Action<byte[]> _send;
+            private readonly System.Threading.Timer _timer;
+            private int _pending;
+            private const int CoalesceMs = 50;
+
+            public SnapshotCoalescer(Func<byte[]> build, Action<byte[]> send)
             {
-                var envelope = new
-                {
-                    channel = "landingPerf",
-                    snapshot = LandingPerfStateDto.From(_app),
-                };
-                BroadcastBytes(JsonSerializer.SerializeToUtf8Bytes(envelope, WebJsonOptions.Default));
+                _build = build;
+                _send = send;
+                _timer = new System.Threading.Timer(
+                    _ => Fire(), null, System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
             }
-            catch (Exception ex)
+
+            public void Request()
             {
-                Logger.LogException(ex);
+                // Arm only on the 0->1 transition; burst/concurrent Requests coalesce.
+                if (System.Threading.Interlocked.Exchange(ref _pending, 1) == 0)
+                    _timer.Change(CoalesceMs, System.Threading.Timeout.Infinite);
+            }
+
+            private void Fire()
+            {
+                System.Threading.Interlocked.Exchange(ref _pending, 0);
+                try { _send(_build()); }
+                catch (Exception ex) { Logger.LogException(ex); }
             }
         }
 
@@ -557,7 +650,7 @@ namespace Prosim2GSX.Web
             // so the client gets the same key set a tick's worth of per-property
             // patches would produce. (flightStatus is set just above, so the
             // client's gsx-patch branch finds a non-null flightStatus to nest into.)
-            BroadcastStateAsPatch("gsx", _app?.Gsx, target);
+            BroadcastStateAsPatch("gsx", _app?.Gsx, target, GsxBroadcastWhitelist);
 
             // Patch-only, nests under ofp.deiceHoldover on the client. The
             // "ofp" snapshot is sent just above, so the client's
@@ -671,16 +764,17 @@ namespace Prosim2GSX.Web
         // per-property INPC broadcasts would produce: every public readable
         // scalar, camelCased, packed into one patch envelope. When `target`
         // is non-null, sends to that connection only.
-        private void BroadcastStateAsPatch(string channel, object stateObject, Connection target = null)
+        private void BroadcastStateAsPatch(string channel, object stateObject, Connection target = null, ISet<string> whitelist = null)
         {
             if (stateObject == null) return;
             try
             {
                 var dict = new Dictionary<string, object>();
-                foreach (var prop in stateObject.GetType().GetProperties())
+                foreach (var prop in GetCachedReadableProps(stateObject.GetType()))
                 {
-                    if (prop.GetIndexParameters().Length > 0) continue;
-                    if (!prop.CanRead) continue;
+                    // Default-deny when a whitelist is supplied (the "gsx" channel)
+                    // so internal/computed properties aren't leaked onto the wire.
+                    if (whitelist != null && !whitelist.Contains(prop.Name)) continue;
                     try
                     {
                         var camel = JsonNamingPolicy.CamelCase.ConvertName(prop.Name);
@@ -759,7 +853,7 @@ namespace Prosim2GSX.Web
 
             try
             {
-                var prop = sender.GetType().GetProperty(propertyName);
+                var prop = GetCachedProperty(sender.GetType(), propertyName);
                 if (prop == null) return;
                 var value = prop.GetValue(sender);
                 var camel = JsonNamingPolicy.CamelCase.ConvertName(propertyName);

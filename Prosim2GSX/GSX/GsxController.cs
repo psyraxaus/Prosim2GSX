@@ -14,6 +14,7 @@ using Prosim2GSX.Prosim;
 using ProsimInterface;
 using System;
 using System.Collections.Concurrent;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,6 +34,7 @@ namespace Prosim2GSX.GSX
         public virtual bool IsMsfs2024 => SimConnectManager.GetSimVersion() == SimVersion.MSFS2024;
         public virtual string PathInstallation { get; }
         public virtual GsxMenu Menu { get; }
+        public virtual GsxMenuDiagnosticLog GsxMenuDiagnosticLog { get; }
         public virtual GsxParkingSelector ParkingSelector { get; }
         protected virtual DateTime NextMenuStartupCheck { get; set; } = DateTime.MinValue;
         public virtual AircraftInterface AircraftInterface { get; }
@@ -116,6 +118,17 @@ namespace Prosim2GSX.GSX
         public GsxController(Config config) : base(config)
         {
             PathInstallation = Sys.GetRegistryValue<string>(GsxConstants.RegPath, GsxConstants.RegValue, null) ?? GsxConstants.PathDefault;
+            // The diagnostic log is constructed before Menu so the menu engine
+            // (and Phase 5's GsxParkingSelector instrumentation) can read it via
+            // the controller without ordering surprises. The default log
+            // directory matches the main app log dir — same path the Monitor
+            // tab opens via Config.Definition.ProductPath + ProductLogPath
+            // (Definition is a static singleton on AppConfigBase<>, so it's
+            // accessed via the type name rather than the constructor parameter).
+            string appLogDirectory = Path.Join(
+                AppConfig.Config.Definition?.ProductPath ?? string.Empty,
+                AppConfig.Config.Definition?.ProductLogPath ?? "log");
+            GsxMenuDiagnosticLog = new GsxMenuDiagnosticLog(config, appLogDirectory);
             Menu = new(this);
             ParkingSelector = new(this);
             AircraftInterface = new(this);
@@ -730,11 +743,10 @@ namespace Prosim2GSX.GSX
 
         public virtual async Task ReloadSimbrief()
         {
-            var sequence = new GsxMenuSequence();
-            sequence.Commands.Add(new(15, "", true));
-            sequence.Commands.Add(GsxMenuCommand.CreateDummy());
-
-            await Menu.RunSequence(sequence);
+            if (await Menu.OpenHide() == false)
+                return;
+            await Menu.Select(15, waitReady: true);
+            await Task.Delay(Config.MenuCheckInterval * 2, Token);
         }
 
         public override Task Stop()

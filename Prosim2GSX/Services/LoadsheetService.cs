@@ -40,10 +40,8 @@ namespace Prosim2GSX.Services
         private string _prevPrelimRaw;
         private string _prevFinalRaw;
 
-        // Edge tracking for the shutdown-reset trigger. Mirrors the pattern
-        // in StateUpdateWorker.UpdateChecklist (_wasOnGround/_wasEnginesRunning).
-        private bool _wasOnGround = true;
-        private bool _wasEnginesRunning;
+        // Edge tracking for the shutdown-reset trigger (shared detector).
+        private readonly FlightCycleEdgeDetector _flightCycle = new();
 
         // First-tick priming guard. Subscribe alone is not enough for the EFB
         // loadsheet refs: it primes _subscriptions so ReadDataRef stops
@@ -145,8 +143,9 @@ namespace Prosim2GSX.Services
 
             bool nowOnGround = fs.AppOnGround;
             bool nowEnginesRunning = fs.AppEnginesRunning;
+            _flightCycle.Update(nowOnGround, nowEnginesRunning);
 
-            if (nowOnGround && _wasEnginesRunning && !nowEnginesRunning)
+            if (_flightCycle.EngineShutdownOnGround)
             {
                 ResetSlots(ls);
                 _prevPrelimRaw = null;
@@ -158,9 +157,6 @@ namespace Prosim2GSX.Services
                 _app?.FmsSyncService?.ResetSyncTracking();
                 Logger.Information("Loadsheet slots reset on flight-cycle shutdown");
             }
-
-            _wasOnGround = nowOnGround;
-            _wasEnginesRunning = nowEnginesRunning;
         }
 
         // Parses the JSON blob and writes the projected fields into the

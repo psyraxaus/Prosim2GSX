@@ -1,7 +1,7 @@
 using CFIT.AppLogger;
 using CFIT.AppTools;
 using CFIT.SimConnectLib.SimResources;
-using Prosim2GSX.GSX.Menu;
+using Prosim2GSX.GSX.Menu.Intents;
 using System;
 using System.Threading.Tasks;
 
@@ -22,15 +22,7 @@ namespace Prosim2GSX.GSX.Services
         public event Action<GsxServiceDeboarding> OnPaxChange;
         public event Action<GsxServiceDeboarding> OnCargoChange;
 
-        protected override GsxMenuSequence InitCallSequence()
-        {
-            var sequence = new GsxMenuSequence();
-            sequence.Commands.Add(new(1, GsxConstants.MenuGate, true));
-            sequence.Commands.Add(GsxMenuCommand.CreateOperator());
-            sequence.Commands.Add(GsxMenuCommand.CreateDummy());
-
-            return sequence;
-        }
+        protected override Task<bool> DoCall() => ExecuteIntentAsync(new RequestDeboarding());
 
         protected override void InitSubscriptions()
         {

@@ -1,5 +1,6 @@
 using CFIT.SimConnectLib.SimResources;
-using Prosim2GSX.GSX.Menu;
+using Prosim2GSX.GSX.Menu.Intents;
+using System.Threading.Tasks;
 
 namespace Prosim2GSX.GSX.Services
 {
@@ -10,18 +11,7 @@ namespace Prosim2GSX.GSX.Services
         public virtual ISimResourceSubscription SubCleaningService { get; protected set; }
         protected override ISimResourceSubscription SubStateVar => SubCleaningService;
 
-        protected override GsxMenuSequence InitCallSequence()
-        {
-            var sequence = new GsxMenuSequence();
-            sequence.Commands.Add(new(8, GsxConstants.MenuGate, true));
-            var additional = new GsxMenuCommand(5, GsxConstants.MenuAdditionalServices) { WaitReady = true };
-            additional.AlternateTitles.Add(GsxConstants.MenuGate);
-            sequence.Commands.Add(additional);
-            sequence.Commands.Add(GsxMenuCommand.CreateOperator());
-            sequence.Commands.Add(GsxMenuCommand.CreateReset());
-
-            return sequence;
-        }
+        protected override Task<bool> DoCall() => ExecuteIntentAsync(new RequestCleaning());
 
         protected override void InitSubscriptions()
         {

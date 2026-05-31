@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useApi } from "../api/useApi";
-import { useAppState } from "../state/AppStateContext";
-import { LoadsheetDto, LoadsheetSnapshotDto, StdResponse } from "../types";
+import { useChannel, useDispatch } from "../state/AppStateContext";
+import { LoadsheetDto, StdResponse } from "../types";
 import { getStoredToken, signalAuthFailure } from "../auth/auth";
 import styles from "./LoadsheetPanel.module.css";
 
@@ -16,7 +16,7 @@ import styles from "./LoadsheetPanel.module.css";
 // broadcasts the reset.
 export function LoadsheetPanel() {
   const { get, post } = useApi();
-  const { state, dispatch } = useAppState();
+  const dispatch = useDispatch();
   const [busy, setBusy] = useState<"resend" | "reset" | null>(null);
 
   // Initial fetch: hit both endpoints in parallel and seed the snapshot.
@@ -42,7 +42,7 @@ export function LoadsheetPanel() {
     return () => { cancelled = true; };
   }, [get, dispatch]);
 
-  const ls = state.loadsheet as unknown as LoadsheetSnapshotDto | null;
+  const ls = useChannel("loadsheet");
   if (!ls) {
     return <div className={styles.loading}>Loading loadsheet…</div>;
   }

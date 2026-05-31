@@ -75,7 +75,8 @@ namespace Prosim2GSX.AppConfig
         [JsonIgnore]
         public virtual string DisplayName => $"{(IsBus ? "Bus" : "Strip")} {StripIndex + 1}";
 
-        public int CompareTo(VoiceMeeterMapping? other) => Channel.CompareTo(other.Channel);
+        // Null sorts first so a List.Sort never NREs on a null element.
+        public int CompareTo(VoiceMeeterMapping? other) => other is null ? 1 : Channel.CompareTo(other.Channel);
 
         public override string ToString()
             => $"Channel: {Channel} - {(IsBus ? "Bus" : "Strip")}[{StripIndex}] (UseLatch: {UseLatch})";

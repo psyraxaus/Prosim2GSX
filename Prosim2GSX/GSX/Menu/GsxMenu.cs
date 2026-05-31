@@ -3,12 +3,17 @@ using CFIT.AppLogger;
 using CFIT.AppTools;
 using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.AppConfig;
+using Prosim2GSX.Diagnostics;
+using Prosim2GSX.GSX.Menu.Intents;
+using Prosim2GSX.GSX.Services;
 using ProsimInterface;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -36,11 +41,17 @@ namespace Prosim2GSX.GSX.Menu
         public virtual string MenuTitle { get; protected set; }
         public virtual bool HasTitle { get { return !string.IsNullOrWhiteSpace(MenuTitle); } }
         public virtual int MenuLineCount { get { return MenuLines.Count; } }
-        public virtual List<string> MenuLines { get; } = [];
+
+        // Replace-by-reference: UpdateMenu builds a fresh list and publishes it
+        // atomically via this volatile field, so readers on other threads (the
+        // automation loop, parking selector, manual-selection callback) never
+        // observe a mid Clear()/Add() torn state or a "Collection was modified"
+        // enumeration. Exposed read-only; callers needing a stable copy snapshot
+        // (ExecuteIntent does .ToList()).
+        private volatile List<string> _menuLines = [];
+        public virtual IReadOnlyList<string> MenuLines => _menuLines;
 
         public virtual bool FirstReadyReceived { get; protected set; } = false;
-        public virtual bool IsSequenceActive { get; protected set; } = false;
-        protected virtual bool WasOperatorSelected { get; set; } = false;
         public virtual bool IsMenuReady => MenuState == GsxMenuState.READY || MenuState == GsxMenuState.HIDE;
         public virtual bool IsGateMenu => MatchTitle(GsxConstants.MenuGate);
         public virtual bool IsOperatorMenu => MatchTitle(GsxConstants.MenuOperatorHandling) || MatchTitle(GsxConstants.MenuOperatorCater);
@@ -54,6 +65,11 @@ namespace Prosim2GSX.GSX.Menu
         protected virtual bool FollowMeAnswered { get; set; } = false;
         protected virtual bool MenuOpenRequesting { get; set; } = false;
         protected virtual bool MenuOpenAfterReady { get; set; } = false;
+        // Grace window so the passive FSDT_GSX_MENU_CHOICE observer can tell
+        // our own Select() writes apart from a real manual click. Set at the
+        // top of Select(); if the LVAR callback fires inside the window the
+        // write is ours and not a manual override.
+        private DateTime _lastSelectInFlightUntil = DateTime.MinValue;
         public virtual bool WaitingForGate { get; protected set; } = false;
         public virtual bool WarpedToGate { get; protected set; } = false;
         public virtual bool SuppressMenuRefresh { get; set; } = false;
@@ -96,6 +112,22 @@ namespace Prosim2GSX.GSX.Menu
             double num = sub.GetNumber();
             if (num != -2)
             {
+                // Passive manual-override detection. If the LVAR change arrived
+                // outside the in-flight grace window, the click came from the
+                // user (or another tool), not from our Select(). Surface it to
+                // the diagnostic log so the audit trail covers human input too.
+                if (DateTime.UtcNow > _lastSelectInFlightUntil)
+                {
+                    try
+                    {
+                        int choiceIndex = (int)num;
+                        string lineText = (choiceIndex >= 0 && choiceIndex < MenuLines.Count)
+                            ? MenuLines[choiceIndex] : null;
+                        Controller.GsxMenuDiagnosticLog?.LogManualOverride(MenuTitle, choiceIndex, lineText);
+                    }
+                    catch (Exception ex) { Logger.LogException(ex); }
+                }
+
                 if (MatchTitle(GsxConstants.MenuDeiceOnPush))
                 {
                     Logger.Debug($"Deice Question was answered: {num}");
@@ -122,6 +154,24 @@ namespace Prosim2GSX.GSX.Menu
         {
             var preference = Controller.PushbackPreference;
 
+            // GSX has been observed to re-open the direction menu after the
+            // push has already started (field log 2026-05-23 captured this
+            // on a TailLeft push at EFHK gate 24 — direction was selected
+            // at 16:32:25, push reached PushingBack, then the direction
+            // menu reopened at 16:33:02 and was auto-selected again). Once
+            // the pushback phase is past direction-needed, suppress the
+            // auto-select regardless of PushbackPreferenceReapplyOnChange —
+            // re-selecting direction mid-push is never the right action.
+            if (Controller != null
+                && Controller.GsxServices != null
+                && Controller.GsxServices.TryGetValue(GsxServiceType.Pushback, out var pushSvc)
+                && pushSvc is GsxServicePushback pushback
+                && pushback.Phase.IsPushInProgress())
+            {
+                Logger.Debug($"Pushback direction menu reopened while push already in progress (Phase={pushback.Phase}); skipping auto-select");
+                return;
+            }
+
             if (!Config.PushbackPreferenceReapplyOnChange && Controller.PushbackDirectionAutoSelected)
             {
                 Logger.Debug($"Pushback direction menu reopened; preference already applied this cycle, skipping");
@@ -147,6 +197,12 @@ namespace Prosim2GSX.GSX.Menu
                 strategy = "fixed-index";
             }
 
+            // Phase 5 diagnostic emission — captured AFTER the existing
+            // matching logic settles on its answer, BEFORE any side-effect
+            // (Select / log spam / state mutation). Purely observational; the
+            // matching algorithm above is unchanged.
+            EmitPushbackDirectionDiagnostic(preference, searchToken, index, strategy);
+
             if (index < 0)
             {
                 Logger.Information($"Pushback direction menu: could not auto-pick '{searchToken}' (text{(preference != PushbackPreference.Straight ? " and fixed-index" : "")} failed). Menu lines:");
@@ -159,6 +215,87 @@ namespace Prosim2GSX.GSX.Menu
             Logger.Information($"Auto-selecting pushback direction (preference={preference}, strategy={strategy}, item {index + 1}: '{MenuLines[index]}')");
             await Select(index + 1, false, false);
             Controller.PushbackDirectionAutoSelected = true;
+        }
+
+        private void EmitPushbackDirectionDiagnostic(PushbackPreference preference, string searchToken, int selectedIndex, string strategy)
+        {
+            var diag = Controller?.GsxMenuDiagnosticLog;
+            if (diag == null) return;
+
+            try
+            {
+                var sb = new StringBuilder();
+                sb.AppendLine("Pushback direction decision");
+                sb.Append("  Airport: ")
+                  .AppendLine(string.IsNullOrWhiteSpace(Controller?.AutomationController?.DepartureIcao)
+                      ? "unknown" : Controller.AutomationController.DepartureIcao);
+                sb.AppendLine("  Stand: unknown (not currently exposed through AircraftInterface)");
+                sb.AppendLine("  Heading: unknown (no SimConnect heading source wired — bearing-delta analysis disabled)");
+                sb.Append("  Preference: ").Append(preference)
+                  .Append(" (search token: '").Append(searchToken ?? "<null>").Append("')").AppendLine();
+                sb.Append("  MenuTitle: '").Append(MenuTitle).Append("'").AppendLine();
+                sb.Append("  MenuLines (").Append(MenuLineCount).Append("):").AppendLine();
+                for (int i = 0; i < MenuLines.Count; i++)
+                {
+                    var line = MenuLines[i] ?? string.Empty;
+                    var compass = PushbackCompassParser.TryParse(line);
+                    sb.Append("    [").Append(i + 1).Append("] ").Append(line);
+                    if (compass.HasValue)
+                        sb.Append("  -> parsed: ").Append(compass.Value.Token)
+                          .Append("=").Append(compass.Value.Degrees.ToString("F1", System.Globalization.CultureInfo.InvariantCulture))
+                          .Append("°");
+                    else
+                        sb.Append("  -> unparseable");
+                    sb.AppendLine();
+                }
+                if (selectedIndex >= 0 && selectedIndex < MenuLines.Count)
+                {
+                    sb.Append("  Selected: entry ").Append(selectedIndex + 1)
+                      .Append(" '").Append(MenuLines[selectedIndex])
+                      .Append("' via strategy '").Append(strategy).Append("'").AppendLine();
+                    sb.Append("  Verdict: ").AppendLine(strategy == "text"
+                        ? "OK (keyword match)"
+                        : strategy == "fixed-index"
+                            ? "FALLBACK (no keyword match, fixed-index fallback used)"
+                            : strategy);
+                }
+                else
+                {
+                    sb.AppendLine("  Selected: none");
+                    sb.AppendLine("  Verdict: MANUAL (no match, no fallback, menu left open for user)");
+                }
+
+                diag.LogDiagnostic("pushback-direction", sb.ToString());
+
+                // Record decision context so the pushback-completion observer
+                // can emit the follow-up diagnostic. Best-effort cast — if the
+                // service registry doesn't yet contain Pushback (degraded
+                // startup), we silently skip the follow-up.
+                if (Controller != null
+                    && Controller.GsxServices != null
+                    && Controller.GsxServices.TryGetValue(GsxServiceType.Pushback, out var svc)
+                    && svc is GsxServicePushback pushback)
+                {
+                    double? parsedBearing = null;
+                    if (selectedIndex >= 0 && selectedIndex < MenuLines.Count)
+                    {
+                        var parsed = PushbackCompassParser.TryParse(MenuLines[selectedIndex]);
+                        if (parsed.HasValue) parsedBearing = parsed.Value.Degrees;
+                    }
+                    pushback.LastDirectionDecision = new PushbackDirectionDecision
+                    {
+                        At = DateTime.UtcNow,
+                        Preference = preference,
+                        SelectedEntryText = (selectedIndex >= 0 && selectedIndex < MenuLines.Count) ? MenuLines[selectedIndex] : null,
+                        Strategy = strategy,
+                        ParsedSelectedHeading = parsedBearing,
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
         }
 
         protected virtual int FindPushbackLineByText(string tailToken)
@@ -223,11 +360,18 @@ namespace Prosim2GSX.GSX.Menu
             Logger.Debug($"FollowMe Question active");
             if (AircraftProfile.SkipFollowMe && !FollowMeAnswered)
             {
-                var sequence = new GsxMenuSequence();
-                sequence.Commands.Add(new GsxMenuCommand(2, GsxConstants.MenuFollowMe, false) { WaitReady = false});
-                sequence.Commands.Add(GsxMenuCommand.CreateOperator());
-                sequence.Commands.Add(GsxMenuCommand.CreateReset());
-                FollowMeAnswered = await RunSequence(sequence);
+                // Phase 4 migration: replaces the Select(2)+Operator+Reset
+                // legacy sequence with the AnswerFollowMe intent (accept=false
+                // matches the legacy "item 2 = No" choice). The trailing
+                // OpenHide preserves the legacy Reset command's forced-close
+                // semantic; without it the verify can time out waiting for
+                // GSX to dismiss the menu on its own.
+                var phase = Controller.AutomationController.State;
+                var result = await ExecuteIntent(new AnswerFollowMe(accept: false), phase, RequestToken);
+                bool success = result.IsSuccess || result.IsBenignSkip;
+                if (success)
+                    await OpenHide();
+                FollowMeAnswered = success;
             }
         }
 
@@ -235,15 +379,22 @@ namespace Prosim2GSX.GSX.Menu
         {
             Logger.Debug($"DeIce Question active");
 
+            // Phase 4 migration: both branches replaced with the
+            // AnswerDeIceQuestion intent. The legacy code did not OpenHide
+            // after either Select (hide:0 default), so the migrated paths
+            // also rely on GSX dismissing the menu naturally — the intent's
+            // VerifyOutcomeAsync polls for that title transition.
+            var phase = Controller.AutomationController.State;
+
             if (Config.AutoDeiceEnabled && !DeIceQuestionAnswered)
             {
-                Logger.Information($"Auto-deice enabled: answering Yes (item 1) to de-icing request");
-                await Select(1, false, false);
+                Logger.Information($"Auto-deice enabled: answering Yes to de-icing request");
+                await ExecuteIntent(new AnswerDeIceQuestion(accept: true), phase, RequestToken);
                 return;
             }
 
             if (AircraftProfile.KeepDirectionMenuOpen && DeIceQuestionAnswered)
-                await Select(2);
+                await ExecuteIntent(new AnswerDeIceQuestion(accept: false), phase, RequestToken);
         }
 
         protected static readonly System.Collections.Generic.Dictionary<AutoDeiceFluid, (string Type, string Concentration)> DeiceFluidTokens = new()
@@ -311,7 +462,14 @@ namespace Prosim2GSX.GSX.Menu
             Logger.Debug($"Board Crew Question active");
             if (AircraftProfile.SkipCrewQuestion)
             {
-                await Select(1, false, false, 2);
+                // Phase 4 migration: replaces Select(1,..,hide:2) with the
+                // OnBoardCrewIntent + explicit OpenHide. The hide:2 semantic
+                // (force-close via OpenHide) is preserved because GSX does
+                // not reliably dismiss this menu on its own after a Yes.
+                var phase = Controller.AutomationController.State;
+                var result = await ExecuteIntent(new OnBoardCrewIntent(), phase, RequestToken);
+                if (result.IsSuccess || result.IsBenignSkip)
+                    await OpenHide();
                 SuppressMenuRefresh = false;
             }
         }
@@ -321,9 +479,13 @@ namespace Prosim2GSX.GSX.Menu
             Logger.Debug($"Deboard Crew Question active");
             if (AircraftProfile.SkipCrewQuestion)
             {
-                await Select(1, false, false, 2);
+                // Phase 4 migration: see OnBoardCrew for the hide:2 rationale.
+                var phase = Controller.AutomationController.State;
+                var result = await ExecuteIntent(new OnDeboardCrewIntent(), phase, RequestToken);
+                if (result.IsSuccess || result.IsBenignSkip)
+                    await OpenHide();
                 SuppressMenuRefresh = false;
-            }            
+            }
         }
 
         protected virtual void OnCouatlStopped(MsgGsxCouatlStopped msg)
@@ -335,7 +497,7 @@ namespace Prosim2GSX.GSX.Menu
         {
             LastMenuSelection = -2;
             MenuTitle = "";
-            MenuLines.Clear();
+            _menuLines = [];
             MenuState = GsxMenuState.UNKNOWN;
             FirstReadyReceived = false;
             DeIceQuestionAnswered = false;
@@ -363,8 +525,24 @@ namespace Prosim2GSX.GSX.Menu
             MenuCallbacks.TryRemove(title, out _);
         }
 
+        // Serializes OnMenuEvent: async void releases the SimConnect callback
+        // thread at the first await, so two rapid menu events could otherwise run
+        // UpdateMenu (and fire MenuTitleChanged / send messages) concurrently.
+        // Re-entrant-deadlock-safe: menu callbacks are delivered by the sim
+        // message pump, never synchronously re-entered from within a handler.
+        private readonly SemaphoreSlim _menuEventGate = new(1, 1);
+
         protected virtual async void OnMenuEvent(ISimResourceSubscription sub, object value)
         {
+            try
+            {
+                await _menuEventGate.WaitAsync(RequestToken);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
             try
             {
                 if (!Controller.IsActive)
@@ -393,6 +571,10 @@ namespace Prosim2GSX.GSX.Menu
                 if (ex is not TaskCanceledException)
                     Logger.LogException(ex);
             }
+            finally
+            {
+                _menuEventGate.Release();
+            }
         }
 
         public virtual async Task UpdateMenu()
@@ -401,13 +583,14 @@ namespace Prosim2GSX.GSX.Menu
             MenuOpenAfterReady = false;
             if (File.Exists(PathMenu))
             {
-                MenuLines.Clear();
-
-                var fileLines = File.ReadAllLines(PathMenu).ToArray();
+                var fileLines = File.ReadAllLines(PathMenu);
+                var newLines = new List<string>(fileLines.Length);
                 var fileIndex = 0;
                 MenuTitle = fileLines[fileIndex++];
                 while (fileIndex < fileLines.Length)
-                    MenuLines.Add(fileLines[fileIndex++]);
+                    newLines.Add(fileLines[fileIndex++]);
+                // Atomic publish — readers see the old or the new list, never torn.
+                _menuLines = newLines;
                 Logger.Verbose($"Read {MenuLineCount} Lines");
             }
             else
@@ -426,6 +609,23 @@ namespace Prosim2GSX.GSX.Menu
                     for (int i = 0; i < MenuLines.Count; i++)
                         Logger.Information($"  [{i + 1}] {MenuLines[i]}");
                 }
+
+                // Phase 5 Part 3: passive menu snapshot. Legacy Select(N) paths
+                // (OnTugQuestion, GsxController.ReloadSimbrief, etc.) bypass
+                // the intent-execution log because the in-flight grace window
+                // correctly attributes their writes as ours. This per-title-
+                // change capture covers them — one diagnostic row per menu
+                // transition, sufficient to unblock the deferred AnswerTugQuestion
+                // and ReloadSimbrief intents once a turnaround flight runs.
+                try
+                {
+                    var sb = new StringBuilder();
+                    sb.Append("Title: '").Append(MenuTitle).Append("' (").Append(MenuLineCount).AppendLine(" entries)");
+                    for (int i = 0; i < MenuLines.Count; i++)
+                        sb.Append("  [").Append(i + 1).Append("] ").AppendLine(MenuLines[i]);
+                    Controller.GsxMenuDiagnosticLog?.LogDiagnostic("menu-snapshot", sb.ToString());
+                }
+                catch (Exception ex) { Logger.LogException(ex); }
             }
 
             if (IsOperatorMenu && AircraftProfile.OperatorAutoSelect)
@@ -521,6 +721,11 @@ namespace Prosim2GSX.GSX.Menu
                 await MsgMenuReady.ReceiveAsync(false, Config.MenuOpenTimeout, RequestToken);
             }
 
+            // Mark a short window during which any inbound FSDT_GSX_MENU_CHOICE
+            // change should be attributed to this write rather than to a user
+            // click — see OnMenuSelection.
+            _lastSelectInFlightUntil = DateTime.UtcNow + TimeSpan.FromSeconds(2);
+
             Logger.Debug($"Menu Select Item {number} => Value {number - 1}");
             await SubMenuChoice.WriteValue(number - 1);
 
@@ -530,145 +735,9 @@ namespace Prosim2GSX.GSX.Menu
                 await OpenHide();
         }
 
-        public virtual async Task<bool> RunSequence(GsxMenuSequence sequence)
-        {
-            bool result = false;
-            IsSequenceActive = true;
-            sequence.IsExecuting = true;
-            WasOperatorSelected = false;
-
-            int counter = 0;
-            bool justHidden = false;
-            foreach (var command in sequence.Commands)
-            {
-                if ((!Controller.IsGsxRunning && !sequence.IgnoreGsxState) || RequestToken.IsCancellationRequested)
-                    break;
-
-                if (await RunCommand(command, justHidden) == true)
-                    counter++;
-
-                justHidden = command.OpenMenu && !command.NoHide;
-            }
-            result = counter == sequence.Commands.Count;
-            if (result)
-                sequence.CallbackCompleted?.Invoke(sequence);
-            
-            sequence.IsExecuting = false;
-            IsSequenceActive = false;
-            sequence.IsSuccess = result;
-            return result;
-        }
-
-        protected virtual async Task<bool> RunCommand(GsxMenuCommand command, bool priorHidMenu = false)
-        {
-            bool result = false;
-            Logger.Verbose($"Run Cmd Type: {command.Type}");
-            if (command.OpenMenu)
-            {
-                Logger.Verbose($"wait menu");
-                if (command.NoHide)
-                {
-                    if (await Open(command.WaitReady) == false)
-                        return result;
-                }
-                else
-                {
-                    if (await OpenHide() == false)
-                        return result;
-                }
-            }
-            else if (command.WaitReady && (priorHidMenu || MenuState != GsxMenuState.READY))
-            {
-                Logger.Verbose($"wait rdy (priorHid={priorHidMenu})");
-                var ready = await MsgMenuReady.ReceiveAsync(true, Config.MenuOpenTimeout, RequestToken);
-                if (priorHidMenu)
-                {
-                    if (ready == null)
-                    {
-                        Logger.Warning($"Menu Command aborted - expected submenu did not open after previous hide (MenuTitle: '{MenuTitle}')");
-                        return result;
-                    }
-                    await Task.Delay(Config.MenuCheckInterval, RequestToken);
-                }
-            }
-
-            if (command.HasTitle && !command.MatchesAny(MatchTitle))
-            {
-                // An operator-selection menu ("Select … operator") still on
-                // screen when the next service command arrives is a normal
-                // transient — RunDeparture retries on the next tick and it
-                // resolves. Log that at Debug to avoid alarming WRN noise;
-                // a mismatch against any other title stays a Warning.
-                bool transientOperatorMenu = MenuTitle?.TrimEnd()
-                    .EndsWith("operator", StringComparison.OrdinalIgnoreCase) == true;
-                string msg = $"Menu Command skipped - Title did not match: '{MenuTitle}' does not start with '{command.Title}'";
-                if (transientOperatorMenu)
-                    Logger.Debug(msg);
-                else
-                    Logger.Warning(msg);
-                return result;
-            }
-
-            if (command.Type == GsxMenuCommandType.Number)
-            {
-                Logger.Verbose($"op num");
-                await Select(command.Number, command.WaitReady);
-            }
-            else if (command.Type == GsxMenuCommandType.DummyWait)
-            {
-                await Task.Delay(Config.MenuCheckInterval * 2, RequestToken);
-            }
-            else if (command.Type == GsxMenuCommandType.Reset)
-            {
-                await Task.Delay(Config.MenuCheckInterval, RequestToken);
-                await OpenHide();
-            }
-            else if (command.Type == GsxMenuCommandType.Operator)
-            {
-                Logger.Verbose($"Op Cmd");
-                int timeWaited = 0;
-                do
-                {
-                    if (!IsMenuReady || !WasOperatorSelected)
-                        await Task.Delay(Config.MenuCheckInterval, RequestToken);
-                    timeWaited += Config.MenuCheckInterval;
-                }
-                while (timeWaited < Config.OperatorWaitTimeout && !IsMenuReady && !WasOperatorSelected && !Controller.Token.IsCancellationRequested && !RequestToken.IsCancellationRequested);
-                Logger.Verbose($"Rdy wait ended");
-                if (Controller.Token.IsCancellationRequested || RequestToken.IsCancellationRequested)
-                    return false;
-
-                if (IsOperatorMenu && !AircraftProfile.OperatorAutoSelect)
-                {
-                    timeWaited = 0;
-                    LastMenuSelection = -2;
-                    Logger.Information($"Waiting for manual Operator Selection ... (Timeout {Config.OperatorSelectTimeout / 1000}s)");
-                    do
-                    {
-                        if (LastMenuSelection == -2)
-                            await Task.Delay(Config.MenuCheckInterval, Controller.Token);
-                        timeWaited += Config.MenuCheckInterval;
-                    }
-                    while (timeWaited < Config.OperatorSelectTimeout && LastMenuSelection == -2 && !Controller.Token.IsCancellationRequested && !RequestToken.IsCancellationRequested);
-                    if (Controller.Token.IsCancellationRequested)
-                        return false;
-                    Logger.Debug($"Wait ended after {timeWaited}ms - LastSelection {LastMenuSelection}");
-                    if (timeWaited >= Config.OperatorSelectTimeout)
-                        Timeout();
-                    else
-                        await OpenHide();
-                }
-                else if (IsOperatorMenu && WasOperatorSelected)
-                    await OpenHide();
-            }
-
-            result = true;
-            return result;
-        }
-
         public virtual async Task SelectOperator()
         {
-            var gsxOperator = GsxOperator.OperatorSelection(AircraftProfile, MenuLines);
+            var gsxOperator = GsxOperator.OperatorSelection(AircraftProfile, MenuLines.ToList());
             if (gsxOperator != null)
             {
                 Logger.Information($"Selecting Operator '{gsxOperator.Title}' (GSX Choice: {gsxOperator.GsxChoice})");
@@ -695,6 +764,337 @@ namespace Prosim2GSX.GSX.Menu
         public virtual bool MatchTitle(string match)
         {
             return MenuTitle?.StartsWith(match, StringComparison.InvariantCultureIgnoreCase) == true;
+        }
+
+        /// <summary>
+        /// Waits up to <paramref name="timeout"/> for the live menu to transition
+        /// into an operator-selection picker (either handling or catering). Used
+        /// by intent-migrated services after a service-request intent succeeds —
+        /// the operator picker materialises asynchronously when GSX needs it,
+        /// and the request intent's verify only confirms the LVAR state change,
+        /// not the follow-up menu transition. Returns true when the operator
+        /// menu is observed, false on timeout. Polls at <c>Config.MenuCheckInterval</c>.
+        /// </summary>
+        public virtual async Task<bool> WaitForOperatorMenuAsync(TimeSpan timeout, CancellationToken token)
+        {
+            int waited = 0;
+            int interval = Math.Max(50, Config.MenuCheckInterval);
+            int budget = (int)timeout.TotalMilliseconds;
+            while (waited < budget && !IsOperatorMenu)
+            {
+                if (token.IsCancellationRequested) return IsOperatorMenu;
+                try { await Task.Delay(interval, token); }
+                catch (OperationCanceledException) { return IsOperatorMenu; }
+                waited += interval;
+            }
+            return IsOperatorMenu;
+        }
+
+        /// <summary>
+        /// Waits for a human menu click on the open operator-selection picker,
+        /// up to <c>Config.OperatorSelectTimeout</c>. On timeout, fires
+        /// <see cref="Timeout"/>; on success, closes the menu via
+        /// <see cref="OpenHide"/>. Returns true if a selection was observed.
+        /// </summary>
+        public virtual async Task<bool> WaitForManualOperatorSelectionAsync(CancellationToken token)
+        {
+            int waited = 0;
+            int interval = Math.Max(50, Config.MenuCheckInterval);
+            int budget = Config.OperatorSelectTimeout;
+            LastMenuSelection = -2;
+            Logger.Information($"Waiting for manual Operator Selection ... (Timeout {budget / 1000}s)");
+            while (waited < budget && LastMenuSelection == -2)
+            {
+                if (token.IsCancellationRequested) return false;
+                try { await Task.Delay(interval, token); }
+                catch (OperationCanceledException) { return false; }
+                waited += interval;
+            }
+            Logger.Debug($"Wait ended after {waited}ms - LastSelection {LastMenuSelection}");
+            if (waited >= budget)
+            {
+                Timeout();
+                return false;
+            }
+            await OpenHide();
+            return true;
+        }
+
+        /// <summary>
+        /// Resolves and executes a <see cref="GsxMenuIntent"/> against the live
+        /// menu. The single entry point for menu interaction. The result is rich
+        /// enough that callers don't need to consult any other state to know
+        /// what happened, and the diagnostic log is emitted once per call
+        /// (success or failure) at the single return path.
+        /// </summary>
+        public virtual async Task<GsxMenuResult> ExecuteIntent(GsxMenuIntent intent, AutomationState currentPhase, CancellationToken token = default)
+        {
+            if (intent == null) throw new ArgumentNullException(nameof(intent));
+
+            // Phase 6.5.B: any UiMarshal.Post/PostBackground that fires while
+            // this intent (or one of its callees) is executing is attributed
+            // to "intent:{IntentName}" in the ResourceDiagnosticsWorker
+            // top-N report. Nested intents (ParentMenu navigation) save and
+            // restore the outer name, so attribution follows the call chain.
+            using var _intentScope = UiMarshal.BeginIntentContext(intent.IntentName);
+
+            var stopwatch = Stopwatch.StartNew();
+            GsxMenuResult result;
+
+            // Step 1: plausibility
+            if (!intent.IsValidForPhase(currentPhase))
+            {
+                result = MakeResult(MenuOutcome.PhaseMismatch, intent, MenuTitle, Array.Empty<string>(),
+                    null, null, currentPhase,
+                    $"Phase {currentPhase} not valid for intent {intent.IntentName}",
+                    stopwatch);
+                EmitResult(result);
+                return result;
+            }
+
+            // Step 2: already-satisfied short-circuit
+            if (intent.IsAlreadySatisfied(Controller))
+            {
+                result = MakeResult(MenuOutcome.StatePreconditionSatisfiedAlready, intent, MenuTitle, Array.Empty<string>(),
+                    null, null, currentPhase,
+                    $"Intent {intent.IntentName} reports already satisfied — no menu interaction needed",
+                    stopwatch);
+                EmitResult(result);
+                return result;
+            }
+
+            // Step 3: precondition
+            if (!intent.ArePreconditionsSatisfied(Controller))
+            {
+                result = MakeResult(MenuOutcome.StatePreconditionFailed, intent, MenuTitle, Array.Empty<string>(),
+                    null, null, currentPhase,
+                    $"Preconditions for intent {intent.IntentName} not met",
+                    stopwatch);
+                EmitResult(result);
+                return result;
+            }
+
+            // Step 4: navigate to parent (recurse) or open at top level
+            if (intent.ParentMenu != null)
+            {
+                var parent = await ExecuteIntent(intent.ParentMenu, currentPhase, token);
+                if (!parent.IsSuccess && !parent.IsBenignSkip)
+                {
+                    result = MakeResult(MenuOutcome.NavigationFailed, intent, MenuTitle, Array.Empty<string>(),
+                        null, null, currentPhase,
+                        $"Parent navigation '{intent.ParentMenu.IntentName}' returned {parent.Outcome}: {parent.Reason}",
+                        stopwatch);
+                    EmitResult(result);
+                    return result;
+                }
+            }
+            else
+            {
+                bool opened = await Open(waitReady: true);
+                if (!opened)
+                {
+                    result = MakeResult(MenuOutcome.NavigationFailed, intent, MenuTitle, Array.Empty<string>(),
+                        null, null, currentPhase,
+                        "Open(waitReady:true) returned false — menu did not become ready",
+                        stopwatch);
+                    EmitResult(result);
+                    return result;
+                }
+            }
+
+            // Step 5: defensive snapshot — every later check reads from snap*, never the live list.
+            string snapTitle = MenuTitle;
+            IReadOnlyList<string> snapLines = MenuLines.ToList();
+
+            // Step 6: title check (multi-prefix; default impl wraps the single ExpectedMenuTitlePrefix)
+            if (!MenuTitleMatchesAny(snapTitle, intent.ExpectedMenuTitlePrefixes))
+            {
+                string prefixes = string.Join(" | ", intent.ExpectedMenuTitlePrefixes ?? Array.Empty<string>());
+                result = MakeResult(MenuOutcome.MenuTitleMismatch, intent, snapTitle, snapLines,
+                    null, null, currentPhase,
+                    $"Live menu title '{snapTitle}' does not match any of: [{prefixes}]",
+                    stopwatch);
+                EmitResult(result);
+                return result;
+            }
+
+            // Step 7: door-action-prompt guard — must run BEFORE resolution.
+            int doorIdx = FindDoorActionPromptIndex(snapLines);
+            if (doorIdx >= 0)
+            {
+                result = MakeResult(MenuOutcome.DoorActionPrompt, intent, snapTitle, snapLines,
+                    null, null, currentPhase,
+                    $"Menu shows door-action prompt at entry {doorIdx + 1}: '{snapLines[doorIdx]}'",
+                    stopwatch);
+                EmitResult(result);
+                return result;
+            }
+
+            // Step 8: resolve
+            int idx;
+            try
+            {
+                idx = intent.ResolveMenuLineIndex(snapLines);
+            }
+            catch (AmbiguousMatchException amx)
+            {
+                result = MakeResult(MenuOutcome.AmbiguousMatch, intent, snapTitle, snapLines,
+                    null, null, currentPhase,
+                    amx.Message,
+                    stopwatch,
+                    exception: amx);
+                EmitResult(result);
+                return result;
+            }
+
+            if (idx < 0)
+            {
+                // Navigation-intent special case: a top-level intent whose
+                // ResolveMenuLineIndex returns -1 and whose live title already
+                // matches the expected prefix is treated as success without a
+                // write — the Open() in step 4 IS the operation. This is the
+                // pattern OpenGateMenu uses; gating it on ParentMenu == null
+                // keeps non-navigation intents from accidentally claiming
+                // success when their pattern fails to match.
+                if (intent.ParentMenu == null && MenuTitleMatchesAny(snapTitle, intent.ExpectedMenuTitlePrefixes))
+                {
+                    result = MakeResult(MenuOutcome.Success, intent, snapTitle, snapLines,
+                        null, null, currentPhase,
+                        "Navigation-only intent: live menu is the expected destination; no choice written",
+                        stopwatch);
+                    EmitResult(result);
+                    return result;
+                }
+
+                result = MakeResult(MenuOutcome.ItemNotAvailable, intent, snapTitle, snapLines,
+                    null, null, currentPhase,
+                    $"No menu line matched intent {intent.IntentName}",
+                    stopwatch);
+                EmitResult(result);
+                return result;
+            }
+
+            string matchedText = snapLines[idx];
+
+            // Step 9: write choice — Select(N) writes N-1, so the 1-based form is idx+1.
+            try
+            {
+                await Select(idx + 1, waitReady: false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                result = MakeResult(MenuOutcome.GsxError, intent, snapTitle, snapLines,
+                    idx, matchedText, currentPhase,
+                    $"Select threw during write: {ex.Message}",
+                    stopwatch,
+                    exception: ex);
+                EmitResult(result);
+                return result;
+            }
+
+            // Step 10: verify
+            bool verified;
+            try
+            {
+                verified = await intent.VerifyOutcomeAsync(Controller,
+                    TimeSpan.FromMilliseconds(Config.IntentVerificationTimeout), token);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                result = MakeResult(MenuOutcome.GsxError, intent, snapTitle, snapLines,
+                    idx, matchedText, currentPhase,
+                    $"VerifyOutcomeAsync threw: {ex.Message}",
+                    stopwatch,
+                    exception: ex);
+                EmitResult(result);
+                return result;
+            }
+
+            if (!verified)
+            {
+                result = MakeResult(MenuOutcome.GsxNoResponse, intent, snapTitle, snapLines,
+                    idx, matchedText, currentPhase,
+                    $"Wrote choice {idx + 1} ('{matchedText}') but verification did not observe the expected change within {Config.IntentVerificationTimeout}ms",
+                    stopwatch);
+                EmitResult(result);
+                return result;
+            }
+
+            // Step 11: success
+            result = MakeResult(MenuOutcome.Success, intent, snapTitle, snapLines,
+                idx, matchedText, currentPhase,
+                $"Resolved '{matchedText}' at entry {idx + 1}; wrote and verified",
+                stopwatch);
+            EmitResult(result);
+            return result;
+        }
+
+        private static GsxMenuResult MakeResult(
+            MenuOutcome outcome,
+            GsxMenuIntent intent,
+            string title,
+            IReadOnlyList<string> lines,
+            int? resolvedIndex,
+            string matchedEntryText,
+            AutomationState phase,
+            string reason,
+            Stopwatch stopwatch,
+            Exception exception = null,
+            string postWriteStateObservation = null)
+        {
+            return new GsxMenuResult(
+                outcome,
+                intent,
+                title,
+                lines,
+                resolvedIndex,
+                matchedEntryText,
+                phase,
+                reason,
+                exception,
+                stopwatch?.Elapsed,
+                postWriteStateObservation);
+        }
+
+        private void EmitResult(GsxMenuResult result)
+        {
+            try { Controller.GsxMenuDiagnosticLog?.LogIntentExecution(result); }
+            catch (Exception ex) { Logger.LogException(ex); }
+        }
+
+        private static bool MenuTitleMatchesAny(string title, IReadOnlyList<string> prefixes)
+        {
+            if (string.IsNullOrWhiteSpace(title) || prefixes == null || prefixes.Count == 0)
+                return false;
+            for (int i = 0; i < prefixes.Count; i++)
+            {
+                var p = prefixes[i];
+                if (!string.IsNullOrWhiteSpace(p) && title.StartsWith(p, StringComparison.InvariantCultureIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
+
+        private static int FindDoorActionPromptIndex(IReadOnlyList<string> lines)
+        {
+            const string prefix = "Waiting for your action:";
+            if (lines == null) return -1;
+            for (int i = 0; i < lines.Count; i++)
+            {
+                var line = lines[i];
+                if (!string.IsNullOrEmpty(line)
+                    && line.StartsWith(prefix, StringComparison.InvariantCultureIgnoreCase))
+                    return i;
+            }
+            return -1;
         }
     }
 }

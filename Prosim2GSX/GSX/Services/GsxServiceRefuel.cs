@@ -1,7 +1,7 @@
 using CFIT.AppLogger;
 using CFIT.AppTools;
 using CFIT.SimConnectLib.SimResources;
-using Prosim2GSX.GSX.Menu;
+using Prosim2GSX.GSX.Menu.Intents;
 using System;
 using System.Threading.Tasks;
 
@@ -20,15 +20,7 @@ namespace Prosim2GSX.GSX.Services
 
         public event Func<bool, Task> OnHoseConnection;
 
-        protected override GsxMenuSequence InitCallSequence()
-        {
-            var sequence = new GsxMenuSequence();
-            sequence.Commands.Add(new(3, GsxConstants.MenuGate, true));
-            sequence.Commands.Add(GsxMenuCommand.CreateOperator());
-            sequence.Commands.Add(GsxMenuCommand.CreateDummy());
-
-            return sequence;
-        }
+        protected override Task<bool> DoCall() => ExecuteIntentAsync(new RequestRefuel());
 
         protected override void InitSubscriptions()
         {

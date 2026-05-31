@@ -9,14 +9,12 @@ import {
   syncTakeoffLoadsheet,
   uplinkTakeoff,
 } from "../api/perf";
-import { useAppState } from "../state/AppStateContext";
+import { useChannel, useDispatch } from "../state/AppStateContext";
 import type {
-  LoadsheetSnapshotDto,
   TakeoffAntiIce,
   TakeoffFlap,
   TakeoffInputsDto,
   TakeoffPacks,
-  TakeoffPerfStateDto,
   TakeoffSurface,
 } from "../types";
 import { KeyboardNumberInput } from "./perf-shared/KeyboardNumberInput";
@@ -43,9 +41,9 @@ const UPLINK_BADGE_MS = 5000;
 
 export function TakeoffPerfPanel() {
   const api = useApi();
-  const { state, dispatch } = useAppState();
-  const to = state.takeoffPerf as unknown as TakeoffPerfStateDto | null;
-  const ls = state.loadsheet as unknown as LoadsheetSnapshotDto | null;
+  const dispatch = useDispatch();
+  const to = useChannel("takeoffPerf");
+  const ls = useChannel("loadsheet");
 
   const [uplinkBadgeUntil, setUplinkBadgeUntil] = useState<number>(0);
   const pendingInputs = useRef<TakeoffInputsDto>({});

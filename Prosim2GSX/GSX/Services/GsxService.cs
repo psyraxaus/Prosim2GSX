@@ -4,6 +4,7 @@ using CFIT.AppTools;
 using CFIT.SimConnectLib.SimResources;
 using Prosim2GSX.AppConfig;
 using Prosim2GSX.GSX.Menu;
+using Prosim2GSX.GSX.Menu.Intents;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -69,11 +70,13 @@ namespace Prosim2GSX.GSX.Services
         protected virtual bool IsProsimAircraft => AppService.Instance.IsProsimAircraft;
 
         public virtual bool IsCalled { get; protected set; } = false;
-        protected virtual bool SequenceResult => CallSequence?.IsSuccess ?? false;
-        protected virtual GsxMenuSequence CallSequence { get; }
+        // Per-cycle success flag set by ExecuteIntentAsync (or subclass DoCall
+        // overrides). Lavatory/Water/Cleaning/Reposition consult it through
+        // SequenceResult in their CheckCalled / GetState overrides.
+        protected bool LastCallResult { get; set; } = false;
+        protected virtual bool SequenceResult => LastCallResult;
         protected abstract ISimResourceSubscription SubStateVar { get; }
         public virtual GsxServiceState State => GetState();
-        public virtual bool IsCalling => CallSequence.IsExecuting;
         public virtual bool IsRunning => State == GsxServiceState.Requested || State == GsxServiceState.Active;
         public virtual bool IsActive => State == GsxServiceState.Active;
         public virtual bool IsCompleted => State == GsxServiceState.Completed || WasCompleted;
@@ -108,12 +111,9 @@ namespace Prosim2GSX.GSX.Services
         public GsxService(GsxController controller)
         {
             Controller = controller;
-            CallSequence = InitCallSequence();
             InitSubscriptions();
             Controller.GsxServices.Add(Type, this);
         }
-
-        protected abstract GsxMenuSequence InitCallSequence();
 
         protected abstract void InitSubscriptions();
 
@@ -217,7 +217,7 @@ namespace Prosim2GSX.GSX.Services
             _lastNotifiedState = GsxServiceState.Unknown;
             _activeNotified = false;
             _completedNotified = false;
-            CallSequence.Reset();
+            LastCallResult = false;
             if (resetVariable)
                 SetStateVariable(GsxServiceState.Callable);
             DoReset();
@@ -294,11 +294,81 @@ namespace Prosim2GSX.GSX.Services
             IsCalled = CheckCalled();
         }
 
-        protected virtual async Task<bool> DoCall()
+        protected abstract Task<bool> DoCall();
+
+        /// <summary>
+        /// Intent-execution helper. Routes a single <see cref="GsxMenuIntent"/>
+        /// through <see cref="GsxMenu.ExecuteIntent"/>, optionally chains
+        /// operator-picker handling, and records the per-cycle result in
+        /// <see cref="LastCallResult"/> (consumed by subclasses such as
+        /// Lavatory/Water/Cleaning/Reposition via <see cref="SequenceResult"/>).
+        ///
+        /// <para>
+        /// Operator chaining semantics (preserved from the legacy CreateOperator
+        /// flow): wait up to <c>OperatorWaitTimeout</c> for the menu to
+        /// transition into an operator picker. If it does:
+        /// <list type="bullet">
+        /// <item><description>When <see cref="AircraftProfile.OperatorAutoSelect"/> is true → invoke the
+        /// <see cref="SelectOperator"/> intent. (Note: the existing
+        /// <see cref="GsxMenu.UpdateMenu"/> auto-select may race with this — both
+        /// paths compute the same target via <c>GsxOperator.OperatorSelection</c>,
+        /// so the second write is benign / no-op.)</description></item>
+        /// <item><description>Otherwise → call <see cref="GsxMenu.WaitForManualOperatorSelectionAsync"/>
+        /// to block until a human click or timeout.</description></item>
+        /// </list>
+        /// When the menu does not transition to an operator picker (the request
+        /// didn't need one, or GSX skipped it), the helper returns immediately
+        /// — matching the legacy behaviour where the CreateOperator command's
+        /// polls fall through after OperatorWaitTimeout.
+        /// </para>
+        /// </summary>
+        protected virtual async Task<bool> ExecuteIntentAsync(GsxMenuIntent intent, bool handleOperatorPicker = true)
         {
-            bool result = await Controller.Menu.RunSequence(CallSequence);
-            Logger.Debug($"{Type} Sequence completed: Success {result}");
-            return result;
+            if (intent == null) return false;
+
+            var phase = Controller.AutomationController.State;
+            var result = await Controller.Menu.ExecuteIntent(intent, phase, Controller.Token);
+            bool success = result.IsSuccess || result.IsBenignSkip;
+
+            if (!success)
+            {
+                Logger.Warning($"{Type}: intent {intent.IntentName} did not succeed ({result.Outcome}) — {result.Reason}");
+            }
+            else if (handleOperatorPicker && !Controller.Token.IsCancellationRequested)
+            {
+                var operatorWait = TimeSpan.FromMilliseconds(Controller.Config.OperatorWaitTimeout);
+                bool opMenu = await Controller.Menu.WaitForOperatorMenuAsync(operatorWait, Controller.Token);
+                if (opMenu)
+                {
+                    if (Profile != null && Profile.OperatorAutoSelect)
+                    {
+                        // UpdateMenu's existing synchronous auto-select path
+                        // (the if (IsOperatorMenu && AircraftProfile.OperatorAutoSelect)
+                        // block in UpdateMenu) typically fires the moment the
+                        // operator picker renders — before this helper's
+                        // WaitForOperatorMenuAsync has even returned. By the
+                        // time we'd invoke SelectOperator the menu has already
+                        // moved on, producing a noisy MenuTitleMismatch in the
+                        // diagnostic log on every service call. Re-check after
+                        // a short settle: if the menu has transitioned away,
+                        // the existing auto-select already picked the operator
+                        // and the redundant intent call is skipped.
+                        try { await Task.Delay(150, Controller.Token); }
+                        catch (OperationCanceledException) { return false; }
+
+                        if (Controller.Menu.IsOperatorMenu)
+                            await Controller.Menu.ExecuteIntent(new SelectOperator(Profile), phase, Controller.Token);
+                        // else: UpdateMenu's auto-select already handled it.
+                    }
+                    else
+                    {
+                        await Controller.Menu.WaitForManualOperatorSelectionAsync(Controller.Token);
+                    }
+                }
+            }
+
+            LastCallResult = success;
+            return success;
         }
 
         protected virtual void NotifyStateChange()

@@ -32,8 +32,7 @@ namespace Prosim2GSX.Services
         // both pin to 38).
         private static readonly int[] CrosswindLimitKt = { 15, 20, 25, 29, 38, 38 };
 
-        private bool _wasOnGround = true;
-        private bool _wasEnginesRunning;
+        private readonly FlightCycleEdgeDetector _flightCycle = new();
         private bool _primed;
 
         // One-shot guard for the tick-driven runway auto-load. Holds the
@@ -113,16 +112,14 @@ namespace Prosim2GSX.Services
 
             bool nowOnGround = fs.AppOnGround;
             bool nowEnginesRunning = fs.AppEnginesRunning;
+            _flightCycle.Update(nowOnGround, nowEnginesRunning);
 
-            if (nowOnGround && _wasEnginesRunning && !nowEnginesRunning)
+            if (_flightCycle.EngineShutdownOnGround)
             {
                 st.Reset();
                 _autoLoadedRunwaysForIcao = "";
                 Logger.Information("LandingPerfState reset on flight-cycle shutdown");
             }
-
-            _wasOnGround = nowOnGround;
-            _wasEnginesRunning = nowEnginesRunning;
         }
 
         // Fire-and-forget runway load triggered from the tick path. The

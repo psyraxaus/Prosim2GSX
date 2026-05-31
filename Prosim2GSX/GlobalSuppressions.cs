@@ -5,7 +5,6 @@
 
 using System.Diagnostics.CodeAnalysis;
 
-[assembly: SuppressMessage("Style", "IDE0059:Unnötige Zuweisung eines Werts.", Justification = "<Ausstehend>", Scope = "member", Target = "~M:Prosim2GSX.GSX.Menu.GsxMenu.RunSequence(Prosim2GSX.GSX.Menu.GsxMenuSequence)~System.Threading.Tasks.Task{System.Boolean}")]
 [assembly: SuppressMessage("Performance", "CA1864:Methode \"Dictionary.TryAdd(TKey, TValue)\" bevorzugen", Justification = "<Ausstehend>", Scope = "member", Target = "~M:Prosim2GSX.AppConfig.Config.SetFuelFob(System.String,System.Double)")]
 [assembly: SuppressMessage("Performance", "CA1854:Methode „IDictionary.TryGetValue(TKey, out TValue)“ bevorzugen", Justification = "<Ausstehend>", Scope = "member", Target = "~M:Prosim2GSX.Audio.AudioSession.OnVolumeChange(CFIT.SimConnectLib.SimResources.ISimResourceSubscription,System.Object)")]
 [assembly: SuppressMessage("Performance", "CA1854:Methode „IDictionary.TryGetValue(TKey, out TValue)“ bevorzugen", Justification = "<Ausstehend>", Scope = "member", Target = "~M:Prosim2GSX.Audio.AudioSession.OnMuteChange(CFIT.SimConnectLib.SimResources.ISimResourceSubscription,System.Object)")]

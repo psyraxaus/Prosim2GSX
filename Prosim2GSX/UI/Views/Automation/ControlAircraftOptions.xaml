@@ -44,7 +44,7 @@
                 </Grid>
 
                 <CheckBox IsChecked="{Binding FuelSaveLoadFob}" Style="{StaticResource CheckBoxSettingItem}"
-                          ToolTip="Save the Fuel on Board permanently per Aircraft Registration on Arrival (~Engine Shutdown).&#x0a;Prosim2GSX can then set the Fuel on Board on Session Start to last known Value for this Aircraft.&#x0a;When no saved Value is found, the Fuel on Board will be set to Default Value (App Settings).">
+                          ToolTip="Save the Fuel on Board permanently per Aircraft (by livery/title) on Arrival (~Engine Shutdown).&#x0a;Prosim2GSX can then set the Fuel on Board on Session Start to last known Value for this Aircraft.&#x0a;When no saved Value is found, the Fuel on Board will be set to Default Value (App Settings).">
                     <TextBlock><Underline>Save FOB</Underline> on Arrival and <Underline>Load</Underline> on Session Start (per Aircraft)</TextBlock>
                 </CheckBox>
 

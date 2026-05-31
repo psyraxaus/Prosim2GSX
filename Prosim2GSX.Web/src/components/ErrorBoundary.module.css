@@ -1,0 +1,52 @@
+/* Theme-token-with-fallback so the fallback recolours with the active
+   airline theme where the tokens exist, but stays legible if they don't. */
+.fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  min-height: 12rem;
+  text-align: center;
+  color: var(--efb-fg, #e6e6e6);
+}
+
+.title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.detail {
+  margin: 0;
+  max-width: 36rem;
+  opacity: 0.8;
+  font-size: 0.9rem;
+}
+
+.message {
+  margin: 0;
+  max-width: 36rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.8rem;
+  color: #ff8a80;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+}
+
+.retry {
+  cursor: pointer;
+  padding: 0.4rem 1rem;
+  border: 1px solid var(--efb-accent, #4a90d9);
+  background: transparent;
+  color: var(--efb-accent, #4a90d9);
+  border-radius: 4px;
+  font: inherit;
+}
+
+.retry:hover {
+  background: rgba(255, 255, 255, 0.06);
+}

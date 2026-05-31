@@ -3,6 +3,7 @@ using CFIT.AppLogger;
 using CoreAudio;
 using Prosim2GSX.Aircraft;
 using Prosim2GSX.Audio;
+using Prosim2GSX.GSX.Menu;
 using Prosim2GSX.GSX.Services;
 using ProsimInterface;
 using System;
@@ -141,6 +142,26 @@ namespace Prosim2GSX.AppConfig
         public virtual int DelayAircraftModeChange { get; set; } = 1250;
         public virtual int MenuCheckInterval { get; set; } = 250;
         public virtual int MenuOpenTimeout { get; set; } = 2500;
+
+        // Intent-based menu engine (Phase 2 refactor). The new GsxMenu.ExecuteIntent
+        // path resolves menu lines against live content + GSX state LVARs instead of
+        // fixed ordinals. The settings below control the dedicated CMTrace-format
+        // diagnostic log that records every resolution.
+        //   - Level: Off disables the file entirely; Normal logs one row per
+        //     intent (full menu dump on non-success); Verbose adds navigation +
+        //     per-poll rows and always dumps.
+        //   - RetainSessions: how many previous Prosim2GSX-GsxMenu-*.log files
+        //     to keep around the current session (older ones pruned at startup).
+        //   - Path: optional override for the log directory. Empty → same dir
+        //     as Prosim2GSX.log. Relative paths resolve against ProductPath
+        //     (matches the AudioDebugFile convention); absolute paths used as-is.
+        //   - IntentVerificationTimeout: budget (ms) for an intent's
+        //     VerifyOutcomeAsync poll to observe the expected LVAR transition
+        //     before the resolver returns MenuOutcome.GsxNoResponse.
+        public virtual GsxMenuDiagnosticLevel GsxMenuDiagnosticLevel { get; set; } = GsxMenuDiagnosticLevel.Normal;
+        public virtual int GsxMenuDiagnosticRetainSessions { get; set; } = 10;
+        public virtual string GsxMenuDiagnosticPath { get; set; } = "";
+        public virtual int IntentVerificationTimeout { get; set; } = 5000;
         public virtual int EfbCheckInterval { get; set; } = 1500;
         public virtual bool DingOnStartup { get; set; } = true;
         public virtual bool DingOnFinal { get; set; } = true;
@@ -180,6 +201,16 @@ namespace Prosim2GSX.AppConfig
         // the next drain trims the queue to UiLogMaxMessages and emits a single warning.
         public virtual int UiLogQueueWarnThreshold { get; set; } = 1000;
 
+        // Phase 6.5.B ground-reproduction switch for the recurring
+        // ERROR_NOT_ENOUGH_QUOTA dispatcher saturation crash. When true,
+        // the app forces MainWindowShowOnStartup=false regardless of the
+        // user's normal setting AND ResourceDiagnosticsWorker drops its
+        // heartbeat cadence from 300s to 30s so trends show up in
+        // ground-test timescales. Off in production; enable only when
+        // actively trying to reproduce the crash on the ground without a
+        // flight. See docs/phase2-prompts/phase-6-5-resource-diagnostics-summary.md.
+        public virtual bool StressMode { get; set; } = false;
+
         // Theme
         public virtual string CurrentTheme { get; set; } = "Light";
 
@@ -213,7 +244,20 @@ namespace Prosim2GSX.AppConfig
         // VoiceMeeter routing is per-mixer-target, not per-process. These
         // mappings are independent of AudioMappings and only consulted when
         // UseVoiceMeeter is true; the CoreAudio AudioMappings sit dormant.
+        //
+        // VoiceMeeterMappings (legacy, pre-v33): flat list of channel-to-strip
+        // bindings keyed to a single ACP (Config.AudioAcpSide). Retained for
+        // back-compat — the v33 migration copies its contents into
+        // VoiceMeeterMappingsByAcp[AudioAcpSide]. No longer authoritative.
         public virtual List<VoiceMeeterMapping> VoiceMeeterMappings { get; set; } = new();
+
+        // Multi-ACP VoiceMeeter support (v33+). ActiveAcps lists the 1-2 ACPs
+        // the binder drives concurrently; VoiceMeeterMappingsByAcp holds each
+        // ACP's channel-to-strip bindings. Default ships single-ACP (CPT only)
+        // matching pre-v33 behaviour. Invariants (1-2 unique entries from
+        // {CPT,FO,OBS}) enforced by NormalizeActiveAcps on load.
+        public virtual List<AcpSide> ActiveAcps { get; set; } = new() { AcpSide.CPT };
+        public virtual Dictionary<AcpSide, List<VoiceMeeterMapping>> VoiceMeeterMappingsByAcp { get; set; } = new();
 
         //ProsimSDK
         public virtual string ProSimSdkPath { get; set; } = "";
@@ -257,9 +301,59 @@ namespace Prosim2GSX.AppConfig
             { new AircraftProfile() }
         };
 
+        // --- Debounced configuration save (APP-M2) ---
+        // SetModelValue, the audio CollectionChanged handlers, etc. call
+        // SaveConfiguration on every keystroke / DataGrid sort / multi-row
+        // paste, each serialising the whole ~130-field graph and rewriting the
+        // file. Coalesce a burst into a single write ~750ms after the last
+        // change. The write runs on the WPF dispatcher (where config mutations
+        // happen) so the serializer never races a concurrent mutation of
+        // AircraftProfiles / the audio mapping lists / FuelFobSaved.
+        private readonly object _saveLock = new();
+        private System.Threading.Timer _saveDebounceTimer;
+        private const int SaveDebounceMs = 750;
+
         public override void SaveConfiguration()
         {
-            SaveConfiguration<Config>(this, ConfigFile);
+            lock (_saveLock)
+            {
+                if (_saveDebounceTimer == null)
+                    _saveDebounceTimer = new System.Threading.Timer(
+                        _ => OnSaveDebounceElapsed(), null, SaveDebounceMs, System.Threading.Timeout.Infinite);
+                else
+                    _saveDebounceTimer.Change(SaveDebounceMs, System.Threading.Timeout.Infinite);
+            }
+        }
+
+        private void OnSaveDebounceElapsed()
+        {
+            // Runs on a threadpool timer thread — swallow/log so nothing escapes
+            // unobserved (e.g. BeginInvoke racing dispatcher shutdown).
+            try
+            {
+                // Marshal the actual write onto the dispatcher so it serialises
+                // against UI-thread mutations. If there's no live dispatcher
+                // (early init / shutdown) or we're already on it, write inline.
+                var dispatcher = System.Windows.Application.Current?.Dispatcher;
+                if (dispatcher != null && !dispatcher.HasShutdownStarted && !dispatcher.CheckAccess())
+                    dispatcher.BeginInvoke((Action)FlushConfiguration);
+                else
+                    FlushConfiguration();
+            }
+            catch (Exception ex) { Logger.LogException(ex); }
+        }
+
+        // Serialize + write the whole config to disk now, cancelling any pending
+        // debounce. Safe from the dispatcher, or from any thread once mutations
+        // have stopped (called at shutdown by AppService.FreeResources).
+        public void FlushConfiguration()
+        {
+            lock (_saveLock)
+            {
+                _saveDebounceTimer?.Change(System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
+                try { SaveConfiguration<Config>(this, ConfigFile); }
+                catch (Exception ex) { Logger.LogException(ex); }
+            }
         }
 
         protected override void InitConfiguration()
@@ -268,6 +362,39 @@ namespace Prosim2GSX.AppConfig
             {
                 AircraftProfiles.Add(new AircraftProfile());
                 this.SaveConfiguration();
+            }
+
+            NormalizeActiveAcps();
+        }
+
+        // Enforce ActiveAcps invariants on load: 1-3 unique entries from
+        // {CPT, FO, OBS}. Empty/null → [CPT]; out-of-range or duplicate
+        // entries dropped. Logs once when normalization changes the list
+        // so a hand-edited AppConfig.json surfaces a warning instead of
+        // silently mis-binding. No upper-count break — the enum only has
+        // three values, so de-dupe self-caps at 3.
+        protected virtual void NormalizeActiveAcps()
+        {
+            var original = ActiveAcps;
+            var normalized = new List<AcpSide>();
+            if (original != null)
+            {
+                foreach (var side in original)
+                {
+                    if (!Enum.IsDefined(typeof(AcpSide), side)) continue;
+                    if (normalized.Contains(side)) continue;
+                    normalized.Add(side);
+                }
+            }
+            if (normalized.Count == 0) normalized.Add(AcpSide.CPT);
+
+            bool changed = original == null
+                || original.Count != normalized.Count
+                || !original.SequenceEqual(normalized);
+            if (changed)
+            {
+                Logger.Warning($"ActiveAcps normalized from [{(original == null ? "null" : string.Join(",", original))}] to [{string.Join(",", normalized)}]");
+                ActiveAcps = normalized;
             }
         }
 
@@ -392,6 +519,36 @@ namespace Prosim2GSX.AppConfig
             // upgrade keeps existing installs on the standard boot order;
             // users running ProSim on a remote machine that starts after MSFS
             // enable it via Settings > ProSim SDK & Data.
+
+            // v31: Intent-based menu engine settings added — GsxMenuDiagnosticLevel
+            // (Normal), GsxMenuDiagnosticRetainSessions (10), GsxMenuDiagnosticPath
+            // (empty = same dir as Prosim2GSX.log), and IntentVerificationTimeout
+            // (5000ms). All four take effect via System.Text.Json's default-for-
+            // missing-key behaviour — no explicit migration needed.
+
+            // v32: StressMode flag added (Phase 6.5.B) for ground reproduction
+            // of the recurring ERROR_NOT_ENOUGH_QUOTA crash. Default false on
+            // upgrade keeps existing installs in normal operation; the user
+            // flips it manually in the JSON when actively investigating.
+
+            // v33: Multi-ACP VoiceMeeter support. VoiceMeeterMappings (flat list
+            // implicitly keyed to AudioAcpSide) is superseded by
+            // VoiceMeeterMappingsByAcp (explicit per-ACP buckets) and ActiveAcps
+            // (1-2 concurrent ACPs). Migrate the existing list into the bucket
+            // matching the saved AudioAcpSide; leave the legacy field populated
+            // as a back-compat snapshot for transitional UI bindings.
+            if (ConfigVersion < 33 && buildConfigVersion >= 33)
+            {
+                if (VoiceMeeterMappings?.Count > 0 && (VoiceMeeterMappingsByAcp == null || VoiceMeeterMappingsByAcp.Count == 0))
+                {
+                    VoiceMeeterMappingsByAcp = new Dictionary<AcpSide, List<VoiceMeeterMapping>>
+                    {
+                        [AudioAcpSide] = new List<VoiceMeeterMapping>(VoiceMeeterMappings),
+                    };
+                    ActiveAcps = new List<AcpSide> { AudioAcpSide };
+                    Logger.Information($"v33 migration: moved {VoiceMeeterMappings.Count} VoiceMeeter mapping(s) into ACP{(int)AudioAcpSide + 1} bucket; ActiveAcps=[{AudioAcpSide}]");
+                }
+            }
         }
 
         public virtual void SetFuelFob(string registration, double fuel)
@@ -414,43 +571,9 @@ namespace Prosim2GSX.AppConfig
 
         public virtual AircraftProfile GetAircraftProfile(AircraftInterface aircraft)
         {
-            if (aircraft.IsLoaded)
-            {
-                foreach (var profile in AircraftProfiles)
-                {
-                    if (profile.MatchType != ProfileMatchType.Title)
-                        continue;
-                    var strings = profile.MatchString.Split('|');
-                    foreach (var s in strings)
-                    {
-                        if (aircraft.Title.Contains(s, StringComparison.InvariantCultureIgnoreCase))
-                        {
-                            Logger.Information($"Loading Profile '{profile.Name}' (matched on Title/Livery - '{aircraft.Title}' contains '{s}')");
-                            return profile;
-                        }
-                    }
-                }
-
-                foreach (var profile in AircraftProfiles)
-                {
-                    if (profile.MatchType != ProfileMatchType.Airline)
-                        continue;
-                    var strings = profile.MatchString.Split('|');
-                    foreach (var s in strings)
-                    {
-                        if (!AppService.Instance.GsxService.IsMsfs2024 && aircraft.Airline.StartsWith(s, StringComparison.InvariantCultureIgnoreCase))
-                        {
-                            Logger.Information($"Loading Profile '{profile.Name}' (matched on Airline - '{aircraft.Airline}' starts with '{s}')");
-                            return profile;
-                        }
-                        else if (AppService.Instance.GsxService.IsMsfs2024 && aircraft.Title.Contains(s, StringComparison.InvariantCultureIgnoreCase))
-                        {
-                            Logger.Information($"Loading Profile '{profile.Name}' (matched on Livery - '{aircraft.Title}' contains '{s}')");
-                            return profile;
-                        }
-                    }
-                }
-            }
+            var matched = ProfileMatcher.Match(aircraft, AircraftProfiles, AppService.Instance.GsxService.IsMsfs2024);
+            if (matched != null)
+                return matched;
 
             Logger.Information($"Loading default Aircraft Profile");
             return CheckServices(AircraftProfiles.Where(p => p.Name == "default").First() ?? new AircraftProfile());

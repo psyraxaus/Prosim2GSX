@@ -7,13 +7,12 @@ import {
   postLandingInputs,
   resetLanding,
 } from "../api/perf";
-import { useAppState } from "../state/AppStateContext";
+import { useChannel, useDispatch } from "../state/AppStateContext";
 import type {
   LandingAutoMode,
   LandingBrakeMode,
   LandingFlapConfig,
   LandingInputsDto,
-  LandingPerfStateDto,
   LandingRevMode,
 } from "../types";
 import { KeyboardNumberInput } from "./perf-shared/KeyboardNumberInput";
@@ -50,8 +49,8 @@ const SURFACE_OPTIONS: { code: number; label: string }[] = [
 
 export function LandingPerfPanel() {
   const api = useApi();
-  const { state, dispatch } = useAppState();
-  const ld = state.landingPerf as unknown as LandingPerfStateDto | null;
+  const dispatch = useDispatch();
+  const ld = useChannel("landingPerf");
 
   const pendingInputs = useRef<LandingInputsDto>({});
   const flushTimer = useRef<number | null>(null);

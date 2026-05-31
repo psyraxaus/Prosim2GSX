@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useApi } from "../api/useApi";
-import { useAppState } from "../state/AppStateContext";
+import { useChannel, useDispatch } from "../state/AppStateContext";
 import { Section } from "../components/forms/Section";
 import { PrimaryButton } from "../components/forms/PrimaryButton";
 import { KorryPushbackButton } from "../components/KorryPushbackButton";
@@ -26,7 +26,8 @@ import styles from "./OfpPanel.module.css";
 // once on mount; subsequent updates merge into AppStateContext.ofp.
 export function OfpPanel() {
   const { get, post } = useApi();
-  const { state, dispatch } = useAppState();
+  const dispatch = useDispatch();
+  const ofp = useChannel("ofp");
 
   const [arrivalGateInput, setArrivalGateInput] = useState("");
   const [busy, setBusy] = useState<"confirm" | "sendNow" | "weather" | "pushback" | null>(null);
@@ -66,7 +67,7 @@ export function OfpPanel() {
     // re-mounting on every tab flip.
     (async () => {
       await loadOfp();
-      const fetched = (state.ofp as unknown as OfpDto | null)?.weatherFetchedAt;
+      const fetched = ofp?.weatherFetchedAt;
       const ttlMs = 10 * 60 * 1000;
       const fresh = fetched ? (Date.now() - new Date(fetched).getTime()) < ttlMs : false;
       if (!fresh) refreshWeather();
@@ -74,7 +75,6 @@ export function OfpPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const ofp = state.ofp as unknown as OfpDto | null;
   if (!ofp) {
     return (
       <div className={styles.loading}>

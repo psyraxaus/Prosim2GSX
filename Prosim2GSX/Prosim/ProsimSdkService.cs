@@ -336,14 +336,6 @@ namespace Prosim2GSX.Prosim
         }
 
         /// <summary>
-        /// Get aircraft registration
-        /// </summary>
-        public virtual string GetRegistration()
-        {
-            return AircraftInterface?.Registration ?? string.Empty;
-        }
-
-        /// <summary>
         /// Get whether aircraft is currently refueling
         /// </summary>
         public virtual bool GetIsRefueling()

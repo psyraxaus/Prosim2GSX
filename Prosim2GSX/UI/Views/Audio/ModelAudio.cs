@@ -120,12 +120,19 @@ namespace Prosim2GSX.UI.Views.Audio
             AppMappingCollection.CollectionChanged += OnMappingCollectionChanged;
             AppMappingCollection.CollectionChanged += (_, _) => { SaveConfig(); AudioController.ResetMappings = true; };
 
-            VoiceMeeterMappingCollection = new(this);
-            VoiceMeeterMappingCollection.CollectionChanged += (_, _) =>
+            Acp1MappingCollection = new(this, AcpSide.CPT);
+            Acp2MappingCollection = new(this, AcpSide.FO);
+            Acp3MappingCollection = new(this, AcpSide.OBS);
+            foreach (var coll in new[] { Acp1MappingCollection, Acp2MappingCollection, Acp3MappingCollection })
             {
-                SaveConfig();
-                AudioController.ResetVoiceMeeterBindings = true;
-            };
+                coll.CollectionChanged += (_, _) =>
+                {
+                    SaveConfig();
+                    AudioController.ResetVoiceMeeterBindings = true;
+                    ValidateMappings();
+                    RefreshRuntimeState();
+                };
+            }
 
             BlacklistCollection = new(this);
             BlacklistCollection.CollectionChanged += (_, _) => SaveConfig();
@@ -135,6 +142,10 @@ namespace Prosim2GSX.UI.Views.Audio
             // value. Done in the ctor (after AppMappingCollection exists) —
             // InitializeModel runs from the base ctor before this point.
             HookMappings(Source.AudioMappings);
+
+            // Initial validator pass so a user with a hand-edited config sees
+            // the conflict banner the first time they open the tab.
+            ValidateMappings();
         }
 
         protected override void InitializeModel()
@@ -161,6 +172,7 @@ namespace Prosim2GSX.UI.Views.Audio
         {
             { AcpSide.CPT, "Captain" },
             { AcpSide.FO, "First Officer" },
+            { AcpSide.OBS, "Observer" },
         };
 
         public virtual AcpSide AudioAcpSide
@@ -180,7 +192,100 @@ namespace Prosim2GSX.UI.Views.Audio
 
         public virtual ModelAppMappings AppMappingCollection { get; }
 
-        public virtual ModelVoiceMeeterMappings VoiceMeeterMappingCollection { get; }
+        // Per-ACP VoiceMeeter mapping collections. Each wraps the matching
+        // bucket in Config.VoiceMeeterMappingsByAcp; the XAML binds each
+        // active-ACP card to its own collection. The single flat
+        // VoiceMeeterMappingCollection used by pre-multi-ACP builds is gone.
+        public virtual ModelVoiceMeeterMappings Acp1MappingCollection { get; }
+        public virtual ModelVoiceMeeterMappings Acp2MappingCollection { get; }
+        public virtual ModelVoiceMeeterMappings Acp3MappingCollection { get; }
+
+        // Active-ACP checkboxes. Setters enforce the min-1 invariant: the
+        // last-checked ACP can't be unchecked (otherwise VoiceMeeter mode
+        // would look broken with zero bindings). Up to all three may be
+        // checked simultaneously. Rejected toggles re-notify the checkbox
+        // so the UI snaps back to the stored state.
+        public virtual bool IsAcp1Active
+        {
+            get => Source.ActiveAcps?.Contains(AcpSide.CPT) == true;
+            set => SetAcpActive(AcpSide.CPT, value);
+        }
+        public virtual bool IsAcp2Active
+        {
+            get => Source.ActiveAcps?.Contains(AcpSide.FO) == true;
+            set => SetAcpActive(AcpSide.FO, value);
+        }
+        public virtual bool IsAcp3Active
+        {
+            get => Source.ActiveAcps?.Contains(AcpSide.OBS) == true;
+            set => SetAcpActive(AcpSide.OBS, value);
+        }
+
+        protected virtual void SetAcpActive(AcpSide acp, bool active)
+        {
+            if (Source.ActiveAcps == null) Source.ActiveAcps = new();
+            bool currentlyActive = Source.ActiveAcps.Contains(acp);
+            if (currentlyActive == active) return;
+
+            if (active)
+            {
+                Source.ActiveAcps.Add(acp);
+            }
+            else
+            {
+                if (Source.ActiveAcps.Count <= 1)
+                {
+                    // Reject — at least one ACP must stay active so
+                    // VoiceMeeter mode always has something to drive.
+                    NotifyActiveAcpsChanged();
+                    return;
+                }
+                Source.ActiveAcps.Remove(acp);
+            }
+
+            Source.SaveConfiguration();
+            AudioController.ResetVoiceMeeterBindings = true;
+            NotifyActiveAcpsChanged();
+            ValidateMappings();
+            RefreshRuntimeState();
+        }
+
+        protected virtual void NotifyActiveAcpsChanged()
+        {
+            NotifyPropertyChanged(nameof(IsAcp1Active));
+            NotifyPropertyChanged(nameof(IsAcp2Active));
+            NotifyPropertyChanged(nameof(IsAcp3Active));
+        }
+
+        // Live config validation. Re-runs whenever the user changes active
+        // ACPs or edits a mapping; the binder runs the same validator at
+        // bind time and falls back to ACP1-only on conflict.
+        public virtual string ConflictMessage { get; protected set; }
+        public virtual bool HasConflict => !string.IsNullOrEmpty(ConflictMessage);
+
+        public virtual void ValidateMappings()
+        {
+            var result = VoiceMeeterMappingValidator.Validate(Source);
+            if (ConflictMessage != result.Message)
+            {
+                ConflictMessage = result.Message;
+                NotifyPropertyChanged(nameof(ConflictMessage));
+                NotifyPropertyChanged(nameof(HasConflict));
+            }
+        }
+
+        // Runtime fallback banner — surfaces the binder's last fallback
+        // outcome. The binder sets VoiceMeeterFallbackReason on the audio
+        // service thread; the UI re-reads on every user interaction that
+        // touches the VM tab (no INPC chain from AudioController).
+        public virtual string FallbackReason => AudioController?.VoiceMeeterFallbackReason;
+        public virtual bool HasFallbackReason => !string.IsNullOrEmpty(FallbackReason);
+
+        public virtual void RefreshRuntimeState()
+        {
+            NotifyPropertyChanged(nameof(FallbackReason));
+            NotifyPropertyChanged(nameof(HasFallbackReason));
+        }
 
         public virtual List<string> AudioDevices
         {

@@ -50,6 +50,9 @@ namespace Prosim2GSX.AppConfig
 
         public int CompareTo(AudioMapping? other)
         {
+            // Null sorts first: a List.Sort over a hand-edited config with a
+            // null element (or a not-yet-committed DataGrid row) must not NRE.
+            if (other is null) return 1;
             return Channel.CompareTo(other.Channel);
         }
 

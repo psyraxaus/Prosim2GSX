@@ -1,5 +1,10 @@
 {
   "compilerOptions": {
+    // Type-check only — Vite (esbuild) owns the real build into dist/.
+    // Without this, tsc emitted a .js next to every source file in src/,
+    // which were stale duplicates committed by mistake. The build script
+    // runs `tsc --noEmit` so nothing is written here.
+    "noEmit": true,
     "target": "ES2022",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",

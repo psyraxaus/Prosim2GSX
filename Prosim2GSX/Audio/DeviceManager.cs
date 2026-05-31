@@ -33,7 +33,6 @@ namespace Prosim2GSX.Audio
         public virtual ConcurrentDictionary<string, MMDevice> Devices { get; } = [];
         protected virtual DateTime LastDeviceScan { get; set; } = DateTime.MinValue;
         protected virtual int LastDeviceCount { get; set; } = 0;
-        protected virtual int SessionCount => Devices.Sum(d => d.Value.AudioSessionManager2.Sessions.Count);
         protected virtual int LastSessionCount { get; set; } = 0;
 
         public event Action DevicesChanged;
@@ -70,7 +69,9 @@ namespace Prosim2GSX.Audio
                         Add(deviceList);
                     }
 
-                    LastSessionCount = SessionCount;
+                    // Reuse the count EnumerateDevices already computed instead
+                    // of re-walking every device's COM Sessions collection again.
+                    LastSessionCount = sessionCount;
                     LastDeviceCount = Devices.Count;
                     LastDeviceScan = DateTime.Now;
                 }

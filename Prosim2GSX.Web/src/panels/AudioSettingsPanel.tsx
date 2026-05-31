@@ -4,7 +4,10 @@ import { Section } from "../components/forms/Section";
 import { RadioField, SelectField } from "../components/forms/Field";
 import { PrimaryButton } from "../components/forms/PrimaryButton";
 import {
+  ACP_SIDE_LABELS,
   ACP_SIDE_OPTIONS,
+  ACP_SIDES_ORDERED,
+  AcpSide,
   AUDIO_CHANNELS,
   AudioChannel,
   AudioDto,
@@ -116,17 +119,26 @@ export function AudioSettingsPanel() {
     setDraft((d) => (d ? { ...d, blacklist: d.blacklist.filter((_, i) => i !== idx) } : d));
   }
 
-  function updateVmMapping(idx: number, partial: Partial<VoiceMeeterMappingDto>) {
+  function acpMappings(d: AudioDto, acp: AcpSide): VoiceMeeterMappingDto[] {
+    return d.voiceMeeterMappingsByAcp?.[acp] ?? [];
+  }
+  function setAcpMappings(d: AudioDto, acp: AcpSide, list: VoiceMeeterMappingDto[]): AudioDto {
+    return {
+      ...d,
+      voiceMeeterMappingsByAcp: { ...(d.voiceMeeterMappingsByAcp ?? {}), [acp]: list },
+    };
+  }
+  function updateVmMapping(acp: AcpSide, idx: number, partial: Partial<VoiceMeeterMappingDto>) {
     setDraft((d) => {
       if (!d) return d;
-      const list = d.voiceMeeterMappings.map((m, i) => (i === idx ? { ...m, ...partial } : m));
-      return { ...d, voiceMeeterMappings: list };
+      const list = acpMappings(d, acp).map((m, i) => (i === idx ? { ...m, ...partial } : m));
+      return setAcpMappings(d, acp, list);
     });
   }
-  function removeVmMapping(idx: number) {
-    setDraft((d) => (d ? { ...d, voiceMeeterMappings: d.voiceMeeterMappings.filter((_, i) => i !== idx) } : d));
+  function removeVmMapping(acp: AcpSide, idx: number) {
+    setDraft((d) => (d ? setAcpMappings(d, acp, acpMappings(d, acp).filter((_, i) => i !== idx)) : d));
   }
-  function addVmMapping() {
+  function addVmMapping(acp: AcpSide) {
     setDraft((d) => {
       if (!d) return d;
       const fresh: VoiceMeeterMappingDto = {
@@ -135,20 +147,60 @@ export function AudioSettingsPanel() {
         isBus: false,
         useLatch: true,
       };
-      return { ...d, voiceMeeterMappings: [...d.voiceMeeterMappings, fresh] };
+      return setAcpMappings(d, acp, [...acpMappings(d, acp), fresh]);
     });
   }
-  function setVmMappingTargetFromKey(idx: number, key: string) {
+  function setVmMappingTargetFromKey(acp: AcpSide, idx: number, key: string) {
     if (!key) return;
     const colon = key.indexOf(":");
     if (colon <= 0) return;
     const isBus = key.slice(0, colon) === "bus";
     const stripIdx = parseInt(key.slice(colon + 1), 10);
     if (Number.isNaN(stripIdx)) return;
-    updateVmMapping(idx, { stripIndex: stripIdx, isBus });
+    updateVmMapping(acp, idx, { stripIndex: stripIdx, isBus });
   }
   function vmMappingKey(m: VoiceMeeterMappingDto) {
     return `${m.isBus ? "bus" : "strip"}:${m.stripIndex}`;
+  }
+  function toggleAcp(acp: AcpSide, checked: boolean) {
+    setDraft((d) => {
+      if (!d) return d;
+      const cur = d.activeAcps ?? [];
+      if (checked) {
+        if (cur.includes(acp)) return d;
+        return { ...d, activeAcps: [...cur, acp] };
+      }
+      // Min-1 invariant: silently reject the uncheck if it would empty the list.
+      if (!cur.includes(acp) || cur.length <= 1) return d;
+      return { ...d, activeAcps: cur.filter((s) => s !== acp) };
+    });
+  }
+
+  // Mirrors VoiceMeeterMappingValidator.cs: within-ACP channel duplicates +
+  // across-ACP strip duplicates. Returns null when valid.
+  function validateVmMappings(d: AudioDto): string | null {
+    const conflicts: string[] = [];
+    const stripOwner = new Map<string, { acp: AcpSide; ch: AudioChannel }>();
+    for (const acp of d.activeAcps ?? []) {
+      const list = acpMappings(d, acp);
+      const channelSeen = new Set<AudioChannel>();
+      for (const m of list) {
+        if (channelSeen.has(m.channel))
+          conflicts.push(`${ACP_SIDE_LABELS[acp]} has duplicate channel ${m.channel}`);
+        channelSeen.add(m.channel);
+      }
+      for (const m of list) {
+        const key = `${m.isBus ? "bus" : "strip"}:${m.stripIndex}`;
+        const existing = stripOwner.get(key);
+        if (existing) {
+          const target = `${m.isBus ? "Bus" : "Strip"} ${m.stripIndex + 1}`;
+          conflicts.push(`${target} used by both ${ACP_SIDE_LABELS[existing.acp]}.${existing.ch} and ${ACP_SIDE_LABELS[acp]}.${m.channel}`);
+        } else {
+          stripOwner.set(key, { acp, ch: m.channel });
+        }
+      }
+    }
+    return conflicts.length > 0 ? conflicts.join("; ") : null;
   }
 
   // Per-mapping elevated-status derived from suggestions: matching binary
@@ -176,6 +228,10 @@ export function AudioSettingsPanel() {
         ? "VoiceMeeter is not running or the Remote API DLL was not found."
         : "";
 
+  // Live conflict check + active-ACP set, computed once per render.
+  const vmConflict = vmEnabled ? validateVmMappings(draft) : null;
+  const activeAcps = (draft.activeAcps ?? []) as AcpSide[];
+
   function setBackend(useVm: boolean) {
     setDraft((d) => (d ? { ...d, useVoiceMeeter: useVm, isCoreAudioSelected: !useVm } : d));
     if (useVm) reloadStrips();
@@ -184,7 +240,7 @@ export function AudioSettingsPanel() {
   return (
     <div className={styles.panel}>
       <div className={styles.toolbar}>
-        <PrimaryButton onClick={save} disabled={saving}>Save</PrimaryButton>
+        <PrimaryButton onClick={save} disabled={saving || !!vmConflict}>Save</PrimaryButton>
         <PrimaryButton onClick={reload} variant="secondary" disabled={saving}>Reload</PrimaryButton>
         <div className={styles.toolbarStatus}>
           {error && <span className={styles.error}>{error}</span>}
@@ -203,15 +259,19 @@ export function AudioSettingsPanel() {
           ]}
           onChange={(v) => setBackend(v === "voicemeeter")}
         />
-        <SelectField label="ACP Side" value={draft.audioAcpSide}
-          options={ACP_SIDE_OPTIONS}
-          onChange={(v) => update("audioAcpSide", v)} />
-        <SelectField label="Device Flow" value={draft.audioDeviceFlow}
-          options={DATA_FLOW_OPTIONS}
-          onChange={(v) => update("audioDeviceFlow", v)} />
-        <SelectField label="Device State" value={draft.audioDeviceState}
-          options={DEVICE_STATE_OPTIONS}
-          onChange={(v) => update("audioDeviceState", v)} />
+        {!vmEnabled && (
+          <>
+            <SelectField label="ACP Side" value={draft.audioAcpSide}
+              options={ACP_SIDE_OPTIONS}
+              onChange={(v) => update("audioAcpSide", v)} />
+            <SelectField label="Device Flow" value={draft.audioDeviceFlow}
+              options={DATA_FLOW_OPTIONS}
+              onChange={(v) => update("audioDeviceFlow", v)} />
+            <SelectField label="Device State" value={draft.audioDeviceState}
+              options={DEVICE_STATE_OPTIONS}
+              onChange={(v) => update("audioDeviceState", v)} />
+          </>
+        )}
       </Section>
 
       <Section title="VoiceMeeter">
@@ -293,35 +353,73 @@ export function AudioSettingsPanel() {
 
       {vmEnabled && (
         <Section title="VoiceMeeter Mappings">
-          <div className={styles.vmMappingsHeader}>
-            <span>Channel</span>
-            <span>Strip / Bus</span>
-            <span>Latch</span>
-            <span />
+          {/* Active ACPs picker */}
+          <div className={styles.activeAcpsRow}>
+            <span className={styles.activeAcpsLabel}>Active ACPs (1–3)</span>
+            {ACP_SIDES_ORDERED.map((acp) => (
+              <label key={acp} className={styles.acpCheckbox}>
+                <input type="checkbox"
+                  checked={activeAcps.includes(acp)}
+                  onChange={(e) => toggleAcp(acp, e.target.checked)} />
+                {ACP_SIDE_LABELS[acp]}
+              </label>
+            ))}
           </div>
-          {draft.voiceMeeterMappings.length === 0 && <div className={styles.empty}>No VoiceMeeter mappings configured.</div>}
-          {draft.voiceMeeterMappings.map((m, i) => (
-            <div key={i} className={styles.vmMappingsRow}>
-              <select value={m.channel}
-                onChange={(e) => updateVmMapping(i, { channel: e.target.value as AudioChannel })}
-                className={styles.cellSelect}>
-                {AUDIO_CHANNELS.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-              <select value={vmMappingKey(m)}
-                onChange={(e) => setVmMappingTargetFromKey(i, e.target.value)}
-                disabled={strips.length === 0}
-                className={styles.cellSelect}>
-                {strips.length === 0 && <option value="">(no strips available — load DLL or start VoiceMeeter)</option>}
-                {strips.map((s) => (
-                  <option key={s.key} value={s.key}>{s.displayName}</option>
-                ))}
-              </select>
-              <input type="checkbox" checked={m.useLatch}
-                onChange={(e) => updateVmMapping(i, { useLatch: e.target.checked })} />
-              <button type="button" className={styles.removeBtn} onClick={() => removeVmMapping(i)}>×</button>
+
+          {/* Live conflict banner (mirrors WPF) */}
+          {vmConflict && (
+            <div className={styles.warningBanner}>
+              <strong>Mapping conflict</strong> — Save disabled until resolved. {vmConflict}
             </div>
-          ))}
-          <PrimaryButton onClick={addVmMapping} variant="secondary">Add VoiceMeeter mapping</PrimaryButton>
+          )}
+
+          {/* Runtime fallback banner — surfaces the binder's last fallback */}
+          {draft.voiceMeeterFallbackReason && (
+            <div className={styles.warningBanner}>
+              <strong>Fell back to ACP1 only at last bind</strong> — {draft.voiceMeeterFallbackReason}
+            </div>
+          )}
+
+          {/* One card per active ACP — side-by-side on wide viewports */}
+          <div className={styles.acpCards}>
+            {ACP_SIDES_ORDERED.filter((acp) => activeAcps.includes(acp)).map((acp) => {
+              const list = acpMappings(draft, acp);
+              return (
+                <div key={acp} className={styles.acpCard}>
+                  <div className={styles.acpCardTitle}>{ACP_SIDE_LABELS[acp]}</div>
+                  <div className={styles.vmMappingsHeader}>
+                    <span>Channel</span>
+                    <span>Strip / Bus</span>
+                    <span>Latch</span>
+                    <span />
+                  </div>
+                  {list.length === 0 && <div className={styles.empty}>No mappings on this ACP.</div>}
+                  {list.map((m, i) => (
+                    <div key={i} className={styles.vmMappingsRow}>
+                      <select value={m.channel}
+                        onChange={(e) => updateVmMapping(acp, i, { channel: e.target.value as AudioChannel })}
+                        className={styles.cellSelect}>
+                        {AUDIO_CHANNELS.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                      <select value={vmMappingKey(m)}
+                        onChange={(e) => setVmMappingTargetFromKey(acp, i, e.target.value)}
+                        disabled={strips.length === 0}
+                        className={styles.cellSelect}>
+                        {strips.length === 0 && <option value="">(no strips available — load DLL or start VoiceMeeter)</option>}
+                        {strips.map((s) => (
+                          <option key={s.key} value={s.key}>{s.displayName}</option>
+                        ))}
+                      </select>
+                      <input type="checkbox" checked={m.useLatch}
+                        onChange={(e) => updateVmMapping(acp, i, { useLatch: e.target.checked })} />
+                      <button type="button" className={styles.removeBtn} onClick={() => removeVmMapping(acp, i)}>×</button>
+                    </div>
+                  ))}
+                  <PrimaryButton onClick={() => addVmMapping(acp)} variant="secondary">Add mapping</PrimaryButton>
+                </div>
+              );
+            })}
+          </div>
         </Section>
       )}
 

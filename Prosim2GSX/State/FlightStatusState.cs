@@ -29,7 +29,7 @@ namespace Prosim2GSX.State
         [ObservableProperty] private bool _AppEnginesRunning;
         [ObservableProperty] private bool _AppInMotion;
         [ObservableProperty] private string _AppProfile = "";
-        [ObservableProperty] private string _AppAircraft = "Airline / Title / Registration";
+        [ObservableProperty] private string _AppAircraft = "Airline / Title";
 
         // Header-strip parity with the WPF HeaderBarControl. Read-only on the wire.
         [ObservableProperty] private string _FlightNumber = "--------";

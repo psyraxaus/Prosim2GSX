@@ -26,6 +26,18 @@ try {
 	$pathProject = $args[2]
 	$appName = $args[3]
 	$appCfg = $args[4]
+
+	# Only run the app publish/installer when invoked from the app's OWN
+	# solution. When Prosim2GSX is built as a project-reference of another
+	# solution (e.g. ProsimInterface), $pathBase is THAT solution's dir, so
+	# this PostBuild must no-op — otherwise it dotnet-publishes the app and
+	# looks for "$appName.sln" under the wrong base ("Project file does not
+	# exist"). Detect via the expected solution file under $pathBase.
+	if (-not (Test-Path -Path (Join-Path $pathBase "$appName.sln"))) {
+		Write-Host "Skipping BuildApp.ps1 - not building from $appName.sln (base '$pathBase')"
+		exit 0
+	}
+
 	$msBuildDir = "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\amd64"
 	
 	$pathPublish = Join-Path $pathProject "bin\publish"

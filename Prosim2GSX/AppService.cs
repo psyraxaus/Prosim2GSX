@@ -8,6 +8,7 @@ using Prosim2GSX.Audio;
 using Prosim2GSX.Checklists;
 using Prosim2GSX.UI.Views.Checklists;
 using Prosim2GSX.Commands;
+using Prosim2GSX.Diagnostics;
 using Prosim2GSX.GSX;
 using Prosim2GSX.Prosim;
 using Prosim2GSX.SayIntentions;
@@ -71,10 +72,27 @@ namespace Prosim2GSX
         protected virtual MessageLogDrainWorker MessageLogDrainWorker { get; set; }
 
         // Always-on resource telemetry (USER/GDI/handle counts + CFIT log queue
-        // depth). Lives here rather than on AppWindow because the headless
-        // scenario — window never shown — is exactly the one that crashed, and
-        // the AppWindow-hosted heartbeat never ran in that case.
-        protected virtual ResourceDiagnosticsWorker ResourceDiagnosticsWorker { get; set; }
+        // depth + WPF dispatcher post/complete/pending counters). Lives here
+        // rather than on AppWindow because the headless scenario — window
+        // never shown — is exactly the one that crashed, and the
+        // AppWindow-hosted heartbeat never ran in that case.
+        //
+        // Public (was protected) so ResourceSnapshot.Capture() can read the
+        // live dispatcher counters without going through a separate accessor.
+        public virtual ResourceDiagnosticsWorker ResourceDiagnosticsWorker { get; protected set; }
+
+        // Dedicated CMTrace-format resource log (Phase 6.5.B). Paired with
+        // ResourceDiagnosticsWorker: the worker measures, this writes the
+        // detailed per-tick / per-top-poster / per-WARN rows. Owned by
+        // AppService for the same headless-survival reason as the worker.
+        public virtual ResourceDiagnosticsLog ResourceDiagnosticsLog { get; protected set; }
+
+        // Resilience handler for the recurring WPF dispatcher quota
+        // exception (Win32 native error 1816). Public so the Prosim2GSX
+        // unhandled-exception override can read it via AppService.Instance
+        // when the exception fires. See DispatcherQuotaHandler for the
+        // rationale (Phase 6.6).
+        public virtual DispatcherQuotaHandler DispatcherQuotaHandler { get; protected set; }
 
         // Embedded Kestrel host for the LAN browser interface. Constructed
         // unconditionally so it can react to Config.WebServerEnabled changes
@@ -211,9 +229,23 @@ namespace Prosim2GSX
             // log drain still surfaces messages in degraded mode, and the state
             // poller is null-safe so it simply leaves store fields at defaults
             // until controllers come up.
+            // ResourceDiagnosticsLog is constructed first so the worker can
+            // emit into it from the very first heartbeat. Path resolution
+            // mirrors GsxController's appLogDirectory derivation so both
+            // diagnostic logs land in the same directory.
+            string appLogDirectory = Path.Join(
+                AppConfig.Config.Definition?.ProductPath ?? string.Empty,
+                AppConfig.Config.Definition?.ProductLogPath ?? "log");
+            ResourceDiagnosticsLog = new ResourceDiagnosticsLog(appLogDirectory);
+            // DispatcherQuotaHandler is constructed before the worker so the
+            // worker's heartbeat can include the handler's running stats from
+            // the very first tick. It also lets the Prosim2GSX unhandled-
+            // exception override read it via AppService.Instance the moment
+            // CreateServiceControllers completes.
+            DispatcherQuotaHandler = new DispatcherQuotaHandler(ResourceDiagnosticsLog);
             StateUpdateWorker = new StateUpdateWorker(this);
             MessageLogDrainWorker = new MessageLogDrainWorker(FlightStatus, Config);
-            ResourceDiagnosticsWorker = new ResourceDiagnosticsWorker(Config);
+            ResourceDiagnosticsWorker = new ResourceDiagnosticsWorker(this, Config, ResourceDiagnosticsLog, DispatcherQuotaHandler);
             StateUpdateWorker.Start();
             MessageLogDrainWorker.Start();
             ResourceDiagnosticsWorker.Start();
@@ -492,12 +524,15 @@ namespace Prosim2GSX
         protected override Task FreeResources()
         {
             base.FreeResources();
+            // Persist any pending debounced config edit before we tear down.
+            try { Config?.FlushConfiguration(); } catch { }
             ReceiverStore.Remove<MsgSessionReady>().OnMessage -= OnSessionReady;
             ReceiverStore.Remove<MsgSessionEnded>().OnMessage -= OnSessionEnded;
 
             try { StateUpdateWorker?.Stop(); } catch { }
             try { MessageLogDrainWorker?.Stop(); } catch { }
             try { ResourceDiagnosticsWorker?.Stop(); } catch { }
+            try { ResourceDiagnosticsLog?.Dispose(); } catch { }
             try { WebHost?.Stop(); } catch { }
             try { OfpAutoSend?.Detach(); } catch { }
 
