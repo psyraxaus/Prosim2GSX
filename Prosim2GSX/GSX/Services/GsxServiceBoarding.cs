@@ -50,7 +50,16 @@ namespace Prosim2GSX.GSX.Services
                 await SimStore[GsxConstants.VarNoPilotsBoard].WriteValue(1);
             }
 
-            Logger.Debug($"Setting GSX Pax Number/Target to {num}");
+            // Promoted to INFO so the value GSX is armed with is always captured
+            // at Debug-level logging. A 0 target while an OFP is loaded means GSX
+            // boards cargo only and no passengers (the 2026-05-31 pax-stall
+            // signature) — surface that loudly instead of silently arming GSX
+            // with 0.
+            if (num <= 0 && Controller.AircraftInterface?.IsFlightPlanLoaded == true)
+                Logger.Warning($"Setting GSX Pax Number/Target to {num} while an OFP is loaded - GSX will board no passengers");
+            else
+                Logger.Information($"Setting GSX Pax Number/Target to {num}");
+
             return await SubPaxTarget.WriteValue(num);
         }
 

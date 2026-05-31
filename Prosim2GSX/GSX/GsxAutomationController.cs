@@ -985,6 +985,16 @@ namespace Prosim2GSX.GSX
                         Logger.Information($"Automation: Departure Service {DepartureServicesCurrent.ServiceType} already completed");
                     else if (current.IsCalled || current.IsRunning)
                     {
+                        // Boarding triggered from the GSX menu lands here, not on the
+                        // auto-call branch above — so SetPaxTarget is otherwise never
+                        // written on this path. If the Preparation=>Departure write
+                        // (line ~394) ran before SeatMap.PaxPlanned was populated, GSX
+                        // is left armed with 0 and boards cargo only (no passengers).
+                        // Re-arm the count here, before GSX goes active, so the
+                        // externally-called path always gets the right number.
+                        if (DepartureServicesCurrent.ServiceType == GsxServiceType.Boarding)
+                            await ServiceBoard.SetPaxTarget(Aircraft.GetPaxBoarding());
+
                         Logger.Information($"Automation: Departure Service {DepartureServicesCurrent.ServiceType} called externally");
                     }
                     else
